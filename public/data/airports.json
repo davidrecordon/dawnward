@@ -1,0 +1,3740 @@
+[
+  {
+    "code": "AAN",
+    "name": "Al Ain International",
+    "city": "Al Ain",
+    "country": "AE",
+    "tz": "Asia/Dubai"
+  },
+  {
+    "code": "ABJ",
+    "name": "Félix-Houphouët-Boigny International",
+    "city": "Abidjan",
+    "country": "CI",
+    "tz": "Africa/Abidjan"
+  },
+  {
+    "code": "ABQ",
+    "name": "Albuquerque International Sunport",
+    "city": "Albuquerque",
+    "country": "US",
+    "tz": "America/Denver"
+  },
+  {
+    "code": "ABV",
+    "name": "Nnamdi Azikiwe International",
+    "city": "Abuja",
+    "country": "NG",
+    "tz": "Africa/Lagos"
+  },
+  {
+    "code": "ACC",
+    "name": "Kotoka International",
+    "city": "Accra",
+    "country": "GH",
+    "tz": "Africa/Abidjan"
+  },
+  {
+    "code": "ACE",
+    "name": "César Manrique-Lanzarote",
+    "city": "San Bartolomé",
+    "country": "ES",
+    "tz": "Atlantic/Canary"
+  },
+  {
+    "code": "ADB",
+    "name": "Adnan Menderes International",
+    "city": "Gaziemir",
+    "country": "TR",
+    "tz": "Europe/Istanbul"
+  },
+  {
+    "code": "ADD",
+    "name": "Addis Ababa Bole International",
+    "city": "Addis Ababa",
+    "country": "ET",
+    "tz": "Asia/Riyadh"
+  },
+  {
+    "code": "ADL",
+    "name": "Adelaide International",
+    "city": "Adelaide",
+    "country": "AU",
+    "tz": "Australia/Adelaide"
+  },
+  {
+    "code": "AEP",
+    "name": "Jorge Newbery Airpark",
+    "city": "Buenos Aires",
+    "country": "AR",
+    "tz": "America/Argentina/Buenos_Aires"
+  },
+  {
+    "code": "AER",
+    "name": "Sochi International",
+    "city": "Sochi",
+    "country": "RU",
+    "tz": "Europe/Moscow"
+  },
+  {
+    "code": "AGA",
+    "name": "Al Massira",
+    "city": "Agadir (Temsia)",
+    "country": "MA",
+    "tz": "Africa/Casablanca"
+  },
+  {
+    "code": "AGP",
+    "name": "Málaga-Costa del Sol",
+    "city": "Málaga",
+    "country": "ES",
+    "tz": "Europe/Madrid"
+  },
+  {
+    "code": "AGT",
+    "name": "Aeropuerto Internacional Guaraní",
+    "city": "Ciudad del Este",
+    "country": "PY",
+    "tz": "America/Asuncion"
+  },
+  {
+    "code": "AHB",
+    "name": "Abha International",
+    "city": "Abha",
+    "country": "SA",
+    "tz": "Asia/Riyadh"
+  },
+  {
+    "code": "AKL",
+    "name": "Auckland International",
+    "city": "Auckland",
+    "country": "NZ",
+    "tz": "Pacific/Auckland"
+  },
+  {
+    "code": "ALA",
+    "name": "Almaty International",
+    "city": "Almaty",
+    "country": "KZ",
+    "tz": "Asia/Almaty"
+  },
+  {
+    "code": "ALC",
+    "name": "Alicante-Elche Miguel Hernández",
+    "city": "Alicante",
+    "country": "ES",
+    "tz": "Europe/Madrid"
+  },
+  {
+    "code": "ALG",
+    "name": "Houari Boumediene",
+    "city": "Algiers",
+    "country": "DZ",
+    "tz": "Africa/Algiers"
+  },
+  {
+    "code": "AMM",
+    "name": "Queen Alia International",
+    "city": "Amman",
+    "country": "JO",
+    "tz": "Asia/Amman"
+  },
+  {
+    "code": "AMS",
+    "name": "Amsterdam Schiphol",
+    "city": "Amsterdam",
+    "country": "NL",
+    "tz": "Europe/Brussels"
+  },
+  {
+    "code": "ANC",
+    "name": "Ted Stevens Anchorage International",
+    "city": "Anchorage",
+    "country": "US",
+    "tz": "America/Anchorage"
+  },
+  {
+    "code": "ARN",
+    "name": "Stockholm-Arlanda",
+    "city": "Stockholm",
+    "country": "SE",
+    "tz": "Europe/Berlin"
+  },
+  {
+    "code": "ASB",
+    "name": "Ashgabat International",
+    "city": "Ashgabat",
+    "country": "TM",
+    "tz": "Asia/Ashgabat"
+  },
+  {
+    "code": "ASU",
+    "name": "Aeropuerto Internacional Silvio Pettirossi",
+    "city": "Asunción",
+    "country": "PY",
+    "tz": "America/Asuncion"
+  },
+  {
+    "code": "ATH",
+    "name": "Athens Eleftherios Venizelos International",
+    "city": "Spata-Artemida",
+    "country": "GR",
+    "tz": "Europe/Athens"
+  },
+  {
+    "code": "ATL",
+    "name": "Hartsfield Jackson Atlanta International",
+    "city": "Atlanta",
+    "country": "US",
+    "tz": "America/New_York"
+  },
+  {
+    "code": "AUA",
+    "name": "Queen Beatrix International",
+    "city": "Oranjestad",
+    "country": "AW",
+    "tz": "America/Puerto_Rico"
+  },
+  {
+    "code": "AUH",
+    "name": "Zayed International",
+    "city": "Abu Dhabi",
+    "country": "AE",
+    "tz": "Asia/Dubai"
+  },
+  {
+    "code": "AUS",
+    "name": "Austin Bergstrom International",
+    "city": "Austin",
+    "country": "US",
+    "tz": "America/Chicago"
+  },
+  {
+    "code": "AXA",
+    "name": "Clayton J Lloyd International",
+    "city": "The Valley",
+    "country": "AI",
+    "tz": "America/Puerto_Rico"
+  },
+  {
+    "code": "AYT",
+    "name": "Antalya International",
+    "city": "Antalya",
+    "country": "TR",
+    "tz": "Europe/Istanbul"
+  },
+  {
+    "code": "BAH",
+    "name": "Bahrain International",
+    "city": "Manama",
+    "country": "BH",
+    "tz": "Asia/Qatar"
+  },
+  {
+    "code": "BCN",
+    "name": "Josep Tarradellas Barcelona-El Prat",
+    "city": "Barcelona",
+    "country": "ES",
+    "tz": "Europe/Madrid"
+  },
+  {
+    "code": "BDL",
+    "name": "Bradley International",
+    "city": "Hartford",
+    "country": "US",
+    "tz": "America/New_York"
+  },
+  {
+    "code": "BDS",
+    "name": "Brindisi",
+    "city": "Brindisi",
+    "country": "IT",
+    "tz": "Europe/Rome"
+  },
+  {
+    "code": "BEG",
+    "name": "Belgrade Nikola Tesla",
+    "city": "Belgrade",
+    "country": "RS",
+    "tz": "Europe/Belgrade"
+  },
+  {
+    "code": "BEL",
+    "name": "Val de Cans/Júlio Cezar Ribeiro International",
+    "city": "Belém",
+    "country": "BR",
+    "tz": "America/Belem"
+  },
+  {
+    "code": "BER",
+    "name": "Berlin Brandenburg",
+    "city": "Berlin",
+    "country": "DE",
+    "tz": "Europe/Berlin"
+  },
+  {
+    "code": "BEW",
+    "name": "Beira International",
+    "city": "Beira",
+    "country": "MZ",
+    "tz": "Africa/Johannesburg"
+  },
+  {
+    "code": "BEY",
+    "name": "Beirut Rafic Hariri International",
+    "city": "Beirut",
+    "country": "LB",
+    "tz": "Asia/Beirut"
+  },
+  {
+    "code": "BFN",
+    "name": "Bram Fischer International",
+    "city": "Bloemfontain",
+    "country": "ZA",
+    "tz": "Africa/Johannesburg"
+  },
+  {
+    "code": "BFS",
+    "name": "Belfast International",
+    "city": "Belfast",
+    "country": "GB",
+    "tz": "Europe/London"
+  },
+  {
+    "code": "BGO",
+    "name": "Bergen, Flesland",
+    "city": "Bergen",
+    "country": "NO",
+    "tz": "Europe/Berlin"
+  },
+  {
+    "code": "BGW",
+    "name": "Baghdad International / New Al Muthana Air Base",
+    "city": "Baghdad",
+    "country": "IQ",
+    "tz": "Asia/Baghdad"
+  },
+  {
+    "code": "BGY",
+    "name": "Milan Bergamo / Antonio Locatelli Air Base",
+    "city": "Orio al Serio (BG)",
+    "country": "IT",
+    "tz": "Europe/Rome"
+  },
+  {
+    "code": "BHX",
+    "name": "Birmingham",
+    "city": "Birmingham, West Midlands",
+    "country": "GB",
+    "tz": "Europe/London"
+  },
+  {
+    "code": "BJL",
+    "name": "Banjul International",
+    "city": "Yundum",
+    "country": "GM",
+    "tz": "Africa/Abidjan"
+  },
+  {
+    "code": "BJM",
+    "name": "Bujumbura Melchior Ndadaye International",
+    "city": "Bujumbura",
+    "country": "BI",
+    "tz": "Africa/Johannesburg"
+  },
+  {
+    "code": "BJV",
+    "name": "Milas Bodrum International",
+    "city": "Bodrum",
+    "country": "TR",
+    "tz": "Europe/Istanbul"
+  },
+  {
+    "code": "BKK",
+    "name": "Suvarnabhumi",
+    "city": "Bangkok",
+    "country": "TH",
+    "tz": "Asia/Jakarta"
+  },
+  {
+    "code": "BKO",
+    "name": "Modibo Keita International",
+    "city": "Bamako",
+    "country": "ML",
+    "tz": "Africa/Abidjan"
+  },
+  {
+    "code": "BLA",
+    "name": "General José Antonio Anzoategui International",
+    "city": "Barcelona",
+    "country": "VE",
+    "tz": "America/Caracas"
+  },
+  {
+    "code": "BLL",
+    "name": "Billund",
+    "city": "Billund",
+    "country": "DK",
+    "tz": "Europe/Berlin"
+  },
+  {
+    "code": "BLQ",
+    "name": "Bologna Guglielmo Marconi",
+    "city": "Bologna",
+    "country": "IT",
+    "tz": "Europe/Rome"
+  },
+  {
+    "code": "BLR",
+    "name": "Kempegowda International Bengaluru",
+    "city": "Bangaluru",
+    "country": "IN",
+    "tz": "Asia/Kolkata"
+  },
+  {
+    "code": "BME",
+    "name": "Broome International",
+    "city": "Broome",
+    "country": "AU",
+    "tz": "Australia/Perth"
+  },
+  {
+    "code": "BNA",
+    "name": "Nashville International",
+    "city": "Nashville",
+    "country": "US",
+    "tz": "America/Chicago"
+  },
+  {
+    "code": "BNE",
+    "name": "Brisbane International",
+    "city": "Brisbane",
+    "country": "AU",
+    "tz": "Australia/Brisbane"
+  },
+  {
+    "code": "BOD",
+    "name": "Bordeaux–Mérignac",
+    "city": "Bordeaux",
+    "country": "FR",
+    "tz": "Europe/Paris"
+  },
+  {
+    "code": "BOG",
+    "name": "El Dorado International",
+    "city": "Bogota",
+    "country": "CO",
+    "tz": "America/Bogota"
+  },
+  {
+    "code": "BOJ",
+    "name": "Burgas",
+    "city": "Burgas",
+    "country": "BG",
+    "tz": "Europe/Sofia"
+  },
+  {
+    "code": "BOM",
+    "name": "Chhatrapati Shivaji International",
+    "city": "Mumbai",
+    "country": "IN",
+    "tz": "Asia/Kolkata"
+  },
+  {
+    "code": "BON",
+    "name": "Flamingo International",
+    "city": "Kralendijk",
+    "country": "BQ",
+    "tz": "America/Puerto_Rico"
+  },
+  {
+    "code": "BOS",
+    "name": "Logan International",
+    "city": "Boston",
+    "country": "US",
+    "tz": "America/New_York"
+  },
+  {
+    "code": "BPN",
+    "name": "Sultan Aji Muhammad Sulaiman Sepinggan International",
+    "city": "Balikpapan",
+    "country": "ID",
+    "tz": "Asia/Makassar"
+  },
+  {
+    "code": "BPS",
+    "name": "Porto Seguro",
+    "city": "Porto Seguro",
+    "country": "BR",
+    "tz": "America/Bahia"
+  },
+  {
+    "code": "BQN",
+    "name": "Rafael Hernández International",
+    "city": "Aguadilla",
+    "country": "PR",
+    "tz": "America/Puerto_Rico"
+  },
+  {
+    "code": "BRE",
+    "name": "Bremen",
+    "city": "Bremen",
+    "country": "DE",
+    "tz": "Europe/Berlin"
+  },
+  {
+    "code": "BRI",
+    "name": "Bari Karol Wojtyła International",
+    "city": "Bari",
+    "country": "IT",
+    "tz": "Europe/Rome"
+  },
+  {
+    "code": "BRU",
+    "name": "Brussels",
+    "city": "Zaventem",
+    "country": "BE",
+    "tz": "Europe/Brussels"
+  },
+  {
+    "code": "BSB",
+    "name": "Presidente Juscelino Kubitschek International",
+    "city": "Brasília",
+    "country": "BR",
+    "tz": "America/Sao_Paulo"
+  },
+  {
+    "code": "BSL",
+    "name": "EuroAirport Basel–Mulhouse–Freiburg",
+    "city": "Bâle / Mulhouse",
+    "country": "FR",
+    "tz": "Europe/Paris"
+  },
+  {
+    "code": "BSZ",
+    "name": "Manas International",
+    "city": "Bishkek",
+    "country": "KG",
+    "tz": "Asia/Bishkek"
+  },
+  {
+    "code": "BTS",
+    "name": "M. R. Štefánik",
+    "city": "Bratislava",
+    "country": "SK",
+    "tz": "Europe/Prague"
+  },
+  {
+    "code": "BUD",
+    "name": "Budapest Liszt Ferenc International",
+    "city": "Budapest",
+    "country": "HU",
+    "tz": "Europe/Budapest"
+  },
+  {
+    "code": "BUF",
+    "name": "Buffalo Niagara International",
+    "city": "Buffalo",
+    "country": "US",
+    "tz": "America/New_York"
+  },
+  {
+    "code": "BWI",
+    "name": "Baltimore/Washington International Thurgood Marshall",
+    "city": "Baltimore",
+    "country": "US",
+    "tz": "America/New_York"
+  },
+  {
+    "code": "BWN",
+    "name": "Brunei International",
+    "city": "Bandar Seri Begawan",
+    "country": "BN",
+    "tz": "Asia/Makassar"
+  },
+  {
+    "code": "BZE",
+    "name": "Philip S. W. Goldson International",
+    "city": "Belize City",
+    "country": "BZ",
+    "tz": "America/Belize"
+  },
+  {
+    "code": "BZV",
+    "name": "Maya-Maya International",
+    "city": "Brazzaville",
+    "country": "CG",
+    "tz": "Africa/Lagos"
+  },
+  {
+    "code": "CAG",
+    "name": "Cagliari Elmas",
+    "city": "Cagliari",
+    "country": "IT",
+    "tz": "Europe/Rome"
+  },
+  {
+    "code": "CAI",
+    "name": "Cairo International",
+    "city": "Cairo",
+    "country": "EG",
+    "tz": "Africa/Cairo"
+  },
+  {
+    "code": "CAN",
+    "name": "Guangzhou Baiyun International",
+    "city": "Guangzhou (Huadu)",
+    "country": "CN",
+    "tz": "Asia/Shanghai"
+  },
+  {
+    "code": "CAY",
+    "name": "Cayenne – Félix Eboué",
+    "city": "Matoury",
+    "country": "GF",
+    "tz": "America/Cayenne"
+  },
+  {
+    "code": "CCS",
+    "name": "Maiquetía Simón Bolívar International",
+    "city": "Maiquetía",
+    "country": "VE",
+    "tz": "America/Caracas"
+  },
+  {
+    "code": "CCU",
+    "name": "Netaji Subhash Chandra Bose International",
+    "city": "Kolkata",
+    "country": "IN",
+    "tz": "Asia/Kolkata"
+  },
+  {
+    "code": "CDG",
+    "name": "Charles de Gaulle International",
+    "city": "Paris (Roissy-en-France, Val-d'Oise)",
+    "country": "FR",
+    "tz": "Europe/Paris"
+  },
+  {
+    "code": "CEB",
+    "name": "Mactan Cebu International",
+    "city": "Lapu-Lapu City",
+    "country": "PH",
+    "tz": "Asia/Manila"
+  },
+  {
+    "code": "CGK",
+    "name": "Soekarno-Hatta International",
+    "city": "Jakarta",
+    "country": "ID",
+    "tz": "Asia/Jakarta"
+  },
+  {
+    "code": "CGN",
+    "name": "Cologne Bonn",
+    "city": "Köln (Cologne)",
+    "country": "DE",
+    "tz": "Europe/Berlin"
+  },
+  {
+    "code": "CGO",
+    "name": "Zhengzhou Xinzheng International",
+    "city": "Zhengzhou",
+    "country": "CN",
+    "tz": "Asia/Shanghai"
+  },
+  {
+    "code": "CGQ",
+    "name": "Changchun Longjia International",
+    "city": "Changchun",
+    "country": "CN",
+    "tz": "Asia/Shanghai"
+  },
+  {
+    "code": "CHC",
+    "name": "Christchurch International",
+    "city": "Christchurch",
+    "country": "NZ",
+    "tz": "Pacific/Auckland"
+  },
+  {
+    "code": "CJU",
+    "name": "Jeju International",
+    "city": "Jeju City",
+    "country": "KR",
+    "tz": "Asia/Seoul"
+  },
+  {
+    "code": "CKG",
+    "name": "Chongqing Jiangbei International",
+    "city": "Chongqing",
+    "country": "CN",
+    "tz": "Asia/Shanghai"
+  },
+  {
+    "code": "CLE",
+    "name": "Cleveland Hopkins International",
+    "city": "Cleveland",
+    "country": "US",
+    "tz": "America/New_York"
+  },
+  {
+    "code": "CLT",
+    "name": "Charlotte Douglas International",
+    "city": "Charlotte",
+    "country": "US",
+    "tz": "America/New_York"
+  },
+  {
+    "code": "CMB",
+    "name": "Bandaranaike International Colombo",
+    "city": "Colombo",
+    "country": "LK",
+    "tz": "Asia/Colombo"
+  },
+  {
+    "code": "CMH",
+    "name": "John Glenn Columbus International",
+    "city": "Columbus",
+    "country": "US",
+    "tz": "America/New_York"
+  },
+  {
+    "code": "CMN",
+    "name": "Mohammed V International",
+    "city": "Casablanca",
+    "country": "MA",
+    "tz": "Africa/Casablanca"
+  },
+  {
+    "code": "CNF",
+    "name": "Tancredo Neves International",
+    "city": "Belo Horizonte",
+    "country": "BR",
+    "tz": "America/Sao_Paulo"
+  },
+  {
+    "code": "CNS",
+    "name": "Cairns International",
+    "city": "Cairns",
+    "country": "AU",
+    "tz": "Australia/Brisbane"
+  },
+  {
+    "code": "CNX",
+    "name": "Chiang Mai International",
+    "city": "Chiang Mai",
+    "country": "TH",
+    "tz": "Asia/Jakarta"
+  },
+  {
+    "code": "COK",
+    "name": "Cochin International",
+    "city": "Kochi",
+    "country": "IN",
+    "tz": "Asia/Kolkata"
+  },
+  {
+    "code": "COO",
+    "name": "Cotonou Cadjehoun International",
+    "city": "Cotonou",
+    "country": "BJ",
+    "tz": "Africa/Lagos"
+  },
+  {
+    "code": "COV",
+    "name": "Çukurova International",
+    "city": "Tarsus",
+    "country": "TR",
+    "tz": "Europe/Istanbul"
+  },
+  {
+    "code": "CPH",
+    "name": "Copenhagen Kastrup",
+    "city": "Copenhagen",
+    "country": "DK",
+    "tz": "Europe/Berlin"
+  },
+  {
+    "code": "CPT",
+    "name": "Cape Town International",
+    "city": "Cape Town",
+    "country": "ZA",
+    "tz": "Africa/Johannesburg"
+  },
+  {
+    "code": "CSX",
+    "name": "Changsha Huanghua International",
+    "city": "Changsha (Changsha)",
+    "country": "CN",
+    "tz": "Asia/Shanghai"
+  },
+  {
+    "code": "CTA",
+    "name": "Catania-Fontanarossa",
+    "city": "Catania",
+    "country": "IT",
+    "tz": "Europe/Rome"
+  },
+  {
+    "code": "CTS",
+    "name": "New Chitose",
+    "city": "Sapporo",
+    "country": "JP",
+    "tz": "Asia/Tokyo"
+  },
+  {
+    "code": "CTU",
+    "name": "Chengdu Shuangliu International",
+    "city": "Chengdu (Shuangliu)",
+    "country": "CN",
+    "tz": "Asia/Shanghai"
+  },
+  {
+    "code": "CUN",
+    "name": "Cancún International",
+    "city": "Cancún",
+    "country": "MX",
+    "tz": "America/Cancun"
+  },
+  {
+    "code": "CUR",
+    "name": "Hato International",
+    "city": "Willemstad",
+    "country": "CW",
+    "tz": "America/Puerto_Rico"
+  },
+  {
+    "code": "CUZ",
+    "name": "Alejandro Velasco Astete International",
+    "city": "Cusco",
+    "country": "PE",
+    "tz": "America/Lima"
+  },
+  {
+    "code": "CVG",
+    "name": "Cincinnati Northern Kentucky International",
+    "city": "Cincinnati / Covington",
+    "country": "US",
+    "tz": "America/New_York"
+  },
+  {
+    "code": "CZM",
+    "name": "Cozumel International",
+    "city": "Cozumel",
+    "country": "MX",
+    "tz": "America/Cancun"
+  },
+  {
+    "code": "DAC",
+    "name": "Hazrat Shahjalal International",
+    "city": "Dhaka",
+    "country": "BD",
+    "tz": "Asia/Dhaka"
+  },
+  {
+    "code": "DAM",
+    "name": "Damascus International",
+    "city": "Damascus",
+    "country": "SY",
+    "tz": "Asia/Damascus"
+  },
+  {
+    "code": "DAR",
+    "name": "Julius Nyerere International",
+    "city": "Dar es Salaam",
+    "country": "TZ",
+    "tz": "Asia/Riyadh"
+  },
+  {
+    "code": "DCA",
+    "name": "Ronald Reagan Washington National",
+    "city": "Washington",
+    "country": "US",
+    "tz": "America/New_York"
+  },
+  {
+    "code": "DDG",
+    "name": "Dandong Langtou International",
+    "city": "Dandong (Zhenxing)",
+    "country": "CN",
+    "tz": "Asia/Shanghai"
+  },
+  {
+    "code": "DEL",
+    "name": "Indira Gandhi International",
+    "city": "New Delhi",
+    "country": "IN",
+    "tz": "Asia/Kolkata"
+  },
+  {
+    "code": "DEN",
+    "name": "Denver International",
+    "city": "Denver",
+    "country": "US",
+    "tz": "America/Denver"
+  },
+  {
+    "code": "DFW",
+    "name": "Dallas Fort Worth International",
+    "city": "Dallas-Fort Worth",
+    "country": "US",
+    "tz": "America/Chicago"
+  },
+  {
+    "code": "DGO",
+    "name": "General Guadalupe Victoria International",
+    "city": "Durango",
+    "country": "MX",
+    "tz": "America/Monterrey"
+  },
+  {
+    "code": "DJJ",
+    "name": "Dortheys Hiyo Eluay International",
+    "city": "Sentani",
+    "country": "ID",
+    "tz": "Asia/Tokyo"
+  },
+  {
+    "code": "DLA",
+    "name": "Douala International",
+    "city": "Douala",
+    "country": "CM",
+    "tz": "Africa/Lagos"
+  },
+  {
+    "code": "DLC",
+    "name": "Dalian Zhoushuizi International",
+    "city": "Dalian (Ganjingzi)",
+    "country": "CN",
+    "tz": "Asia/Shanghai"
+  },
+  {
+    "code": "DLM",
+    "name": "Dalaman International",
+    "city": "Dalaman",
+    "country": "TR",
+    "tz": "Europe/Istanbul"
+  },
+  {
+    "code": "DME",
+    "name": "Domodedovo International",
+    "city": "Moscow",
+    "country": "RU",
+    "tz": "Europe/Moscow"
+  },
+  {
+    "code": "DMK",
+    "name": "Don Mueang International",
+    "city": "Bangkok",
+    "country": "TH",
+    "tz": "Asia/Jakarta"
+  },
+  {
+    "code": "DMM",
+    "name": "King Fahd International",
+    "city": "Ad Dammam",
+    "country": "SA",
+    "tz": "Asia/Riyadh"
+  },
+  {
+    "code": "DOH",
+    "name": "Hamad International",
+    "city": "Doha",
+    "country": "QA",
+    "tz": "Asia/Qatar"
+  },
+  {
+    "code": "DPS",
+    "name": "Denpasar I Gusti Ngurah Rai International",
+    "city": "Kuta, Badung",
+    "country": "ID",
+    "tz": "Asia/Makassar"
+  },
+  {
+    "code": "DQM",
+    "name": "Duqm International",
+    "city": "Duqm",
+    "country": "OM",
+    "tz": "Asia/Dubai"
+  },
+  {
+    "code": "DRW",
+    "name": "Darwin International / RAAF Darwin",
+    "city": "Darwin",
+    "country": "AU",
+    "tz": "Australia/Darwin"
+  },
+  {
+    "code": "DSS",
+    "name": "Blaise Diagne International",
+    "city": "Dakar",
+    "country": "SN",
+    "tz": "Africa/Abidjan"
+  },
+  {
+    "code": "DTM",
+    "name": "Dortmund",
+    "city": "Dortmund",
+    "country": "DE",
+    "tz": "Europe/Berlin"
+  },
+  {
+    "code": "DTW",
+    "name": "Detroit Metropolitan Wayne County",
+    "city": "Detroit",
+    "country": "US",
+    "tz": "America/Detroit"
+  },
+  {
+    "code": "DUB",
+    "name": "Dublin",
+    "city": "Dublin",
+    "country": "IE",
+    "tz": "Europe/Dublin"
+  },
+  {
+    "code": "DUR",
+    "name": "King Shaka International",
+    "city": "Durban",
+    "country": "ZA",
+    "tz": "Africa/Johannesburg"
+  },
+  {
+    "code": "DUS",
+    "name": "Düsseldorf",
+    "city": "Düsseldorf",
+    "country": "DE",
+    "tz": "Europe/Berlin"
+  },
+  {
+    "code": "DVO",
+    "name": "Francisco Bangoy International",
+    "city": "Davao",
+    "country": "PH",
+    "tz": "Asia/Manila"
+  },
+  {
+    "code": "DWC",
+    "name": "Al Maktoum International",
+    "city": "Jebel Ali",
+    "country": "AE",
+    "tz": "Asia/Dubai"
+  },
+  {
+    "code": "DXB",
+    "name": "Dubai International",
+    "city": "Dubai",
+    "country": "AE",
+    "tz": "Asia/Dubai"
+  },
+  {
+    "code": "DZA",
+    "name": "Dzaoudzi Pamandzi International",
+    "city": "Dzaoudzi",
+    "country": "YT",
+    "tz": "Asia/Riyadh"
+  },
+  {
+    "code": "EBB",
+    "name": "Entebbe International",
+    "city": "Kampala",
+    "country": "UG",
+    "tz": "Asia/Riyadh"
+  },
+  {
+    "code": "EDI",
+    "name": "Edinburgh",
+    "city": "Edinburgh",
+    "country": "GB",
+    "tz": "Europe/London"
+  },
+  {
+    "code": "EDL",
+    "name": "Eldoret International",
+    "city": "Eldoret",
+    "country": "KE",
+    "tz": "Asia/Riyadh"
+  },
+  {
+    "code": "EHU",
+    "name": "Ezhou Huahu",
+    "city": "Ezhou",
+    "country": "CN",
+    "tz": "Asia/Shanghai"
+  },
+  {
+    "code": "EIN",
+    "name": "Eindhoven",
+    "city": "Eindhoven",
+    "country": "NL",
+    "tz": "Europe/Brussels"
+  },
+  {
+    "code": "EIS",
+    "name": "Terrance B. Lettsome International",
+    "city": "Beef Island",
+    "country": "VG",
+    "tz": "America/Puerto_Rico"
+  },
+  {
+    "code": "ENO",
+    "name": "Aeropuerto Internacional Tte. Amín Ayub González",
+    "city": "Encarnación",
+    "country": "PY",
+    "tz": "America/Asuncion"
+  },
+  {
+    "code": "ESB",
+    "name": "Esenboğa International",
+    "city": "Ankara",
+    "country": "TR",
+    "tz": "Europe/Istanbul"
+  },
+  {
+    "code": "ETM",
+    "name": "Ramon International",
+    "city": "Eilat",
+    "country": "IL",
+    "tz": "Asia/Jerusalem"
+  },
+  {
+    "code": "EVN",
+    "name": "Zvartnots International",
+    "city": "Yerevan",
+    "country": "AM",
+    "tz": "Asia/Yerevan"
+  },
+  {
+    "code": "EWR",
+    "name": "Newark Liberty International",
+    "city": "Newark",
+    "country": "US",
+    "tz": "America/New_York"
+  },
+  {
+    "code": "EZE",
+    "name": "Minister Pistarini International",
+    "city": "Buenos Aires (Ezeiza)",
+    "country": "AR",
+    "tz": "America/Argentina/Buenos_Aires"
+  },
+  {
+    "code": "FAO",
+    "name": "Faro",
+    "city": "Faro",
+    "country": "PT",
+    "tz": "Europe/Lisbon"
+  },
+  {
+    "code": "FCO",
+    "name": "Rome–Fiumicino Leonardo da Vinci International",
+    "city": "Rome",
+    "country": "IT",
+    "tz": "Europe/Rome"
+  },
+  {
+    "code": "FDF",
+    "name": "Martinique Aimé Césaire International",
+    "city": "Fort-de-France",
+    "country": "MQ",
+    "tz": "America/Martinique"
+  },
+  {
+    "code": "FEZ",
+    "name": "Fes Saïss International",
+    "city": "Saïss",
+    "country": "MA",
+    "tz": "Africa/Casablanca"
+  },
+  {
+    "code": "FIH",
+    "name": "Ndjili International",
+    "city": "Kinshasa",
+    "country": "CD",
+    "tz": "Africa/Lagos"
+  },
+  {
+    "code": "FLL",
+    "name": "Fort Lauderdale Hollywood International",
+    "city": "Fort Lauderdale",
+    "country": "US",
+    "tz": "America/New_York"
+  },
+  {
+    "code": "FLN",
+    "name": "Hercílio Luz International",
+    "city": "Florianópolis",
+    "country": "BR",
+    "tz": "America/Sao_Paulo"
+  },
+  {
+    "code": "FLR",
+    "name": "Florence, Peretola",
+    "city": "Firenze (FI)",
+    "country": "IT",
+    "tz": "Europe/Rome"
+  },
+  {
+    "code": "FNA",
+    "name": "Lungi International",
+    "city": "Freetown (Lungi-Town)",
+    "country": "SL",
+    "tz": "Africa/Abidjan"
+  },
+  {
+    "code": "FNC",
+    "name": "Madeira International Cristiano Ronaldo",
+    "city": "Funchal",
+    "country": "PT",
+    "tz": "Atlantic/Madeira"
+  },
+  {
+    "code": "FOC",
+    "name": "Fuzhou Changle International",
+    "city": "Fuzhou (Changle)",
+    "country": "CN",
+    "tz": "Asia/Shanghai"
+  },
+  {
+    "code": "FOR",
+    "name": "Pinto Martins International",
+    "city": "Fortaleza",
+    "country": "BR",
+    "tz": "America/Fortaleza"
+  },
+  {
+    "code": "FRA",
+    "name": "Frankfurt",
+    "city": "Frankfurt am Main",
+    "country": "DE",
+    "tz": "Europe/Berlin"
+  },
+  {
+    "code": "FUE",
+    "name": "Fuerteventura",
+    "city": "El Matorral",
+    "country": "ES",
+    "tz": "Atlantic/Canary"
+  },
+  {
+    "code": "FUK",
+    "name": "Fukuoka",
+    "city": "Fukuoka",
+    "country": "JP",
+    "tz": "Asia/Tokyo"
+  },
+  {
+    "code": "GBE",
+    "name": "Sir Seretse Khama International",
+    "city": "Gaborone",
+    "country": "BW",
+    "tz": "Africa/Johannesburg"
+  },
+  {
+    "code": "GCM",
+    "name": "Owen Roberts International",
+    "city": "George Town",
+    "country": "KY",
+    "tz": "America/Panama"
+  },
+  {
+    "code": "GDL",
+    "name": "Guadalajara International",
+    "city": "Guadalajara",
+    "country": "MX",
+    "tz": "America/Mexico_City"
+  },
+  {
+    "code": "GDN",
+    "name": "Gdańsk Lech Wałęsa",
+    "city": "Gdańsk",
+    "country": "PL",
+    "tz": "Europe/Warsaw"
+  },
+  {
+    "code": "GHV",
+    "name": "Brașov-Ghimbav International",
+    "city": "Brașov (Ghimbav)",
+    "country": "RO",
+    "tz": "Europe/Bucharest"
+  },
+  {
+    "code": "GIB",
+    "name": "Gibraltar",
+    "city": "Gibraltar",
+    "country": "GI",
+    "tz": "Europe/Gibraltar"
+  },
+  {
+    "code": "GIG",
+    "name": "Rio Galeão – Tom Jobim International",
+    "city": "Rio De Janeiro",
+    "country": "BR",
+    "tz": "America/Sao_Paulo"
+  },
+  {
+    "code": "GLA",
+    "name": "Glasgow",
+    "city": "Glasgow",
+    "country": "GB",
+    "tz": "Europe/London"
+  },
+  {
+    "code": "GMP",
+    "name": "Gimpo International",
+    "city": "Seoul",
+    "country": "KR",
+    "tz": "Asia/Seoul"
+  },
+  {
+    "code": "GOA",
+    "name": "Genoa Cristoforo Colombo",
+    "city": "Genova (GE)",
+    "country": "IT",
+    "tz": "Europe/Rome"
+  },
+  {
+    "code": "GOH",
+    "name": "Nuuk International",
+    "city": "Nuuk",
+    "country": "GL",
+    "tz": "America/Nuuk"
+  },
+  {
+    "code": "GOI",
+    "name": "Dabolim",
+    "city": "Vasco da Gama",
+    "country": "IN",
+    "tz": "Asia/Kolkata"
+  },
+  {
+    "code": "GOT",
+    "name": "Göteborg Landvetter",
+    "city": "Göteborg",
+    "country": "SE",
+    "tz": "Europe/Berlin"
+  },
+  {
+    "code": "GOX",
+    "name": "Manohar International",
+    "city": "Mopa",
+    "country": "IN",
+    "tz": "Asia/Kolkata"
+  },
+  {
+    "code": "GRU",
+    "name": "Guarulhos - Governador André Franco Montoro International",
+    "city": "São Paulo",
+    "country": "BR",
+    "tz": "America/Sao_Paulo"
+  },
+  {
+    "code": "GSV",
+    "name": "Gagarin International",
+    "city": "Saratov",
+    "country": "RU",
+    "tz": "Europe/Saratov"
+  },
+  {
+    "code": "GUA",
+    "name": "La Aurora",
+    "city": "Guatemala City",
+    "country": "GT",
+    "tz": "America/Guatemala"
+  },
+  {
+    "code": "GUM",
+    "name": "Antonio B. Won Pat International",
+    "city": "Hagåtña",
+    "country": "GU",
+    "tz": "Pacific/Guam"
+  },
+  {
+    "code": "GVA",
+    "name": "Geneva Cointrin International",
+    "city": "Geneva",
+    "country": "CH",
+    "tz": "Europe/Zurich"
+  },
+  {
+    "code": "GYD",
+    "name": "Heydar Aliyev International",
+    "city": "Baku",
+    "country": "AZ",
+    "tz": "Asia/Baku"
+  },
+  {
+    "code": "GYE",
+    "name": "José Joaquín de Olmedo International",
+    "city": "Guayaquil",
+    "country": "EC",
+    "tz": "America/Guayaquil"
+  },
+  {
+    "code": "HAH",
+    "name": "Prince Said Ibrahim International",
+    "city": "Moroni",
+    "country": "KM",
+    "tz": "Asia/Riyadh"
+  },
+  {
+    "code": "HAJ",
+    "name": "Hannover",
+    "city": "Hannover",
+    "country": "DE",
+    "tz": "Europe/Berlin"
+  },
+  {
+    "code": "HAK",
+    "name": "Haikou Meilan International",
+    "city": "Haikou (Meilan)",
+    "country": "CN",
+    "tz": "Asia/Shanghai"
+  },
+  {
+    "code": "HAM",
+    "name": "Hamburg Helmut Schmidt",
+    "city": "Hamburg",
+    "country": "DE",
+    "tz": "Europe/Berlin"
+  },
+  {
+    "code": "HAN",
+    "name": "Noi Bai International",
+    "city": "Hanoi (Soc Son)",
+    "country": "VN",
+    "tz": "Asia/Jakarta"
+  },
+  {
+    "code": "HAV",
+    "name": "José Martí International",
+    "city": "Havana",
+    "country": "CU",
+    "tz": "America/Havana"
+  },
+  {
+    "code": "HBE",
+    "name": "Alexandria International",
+    "city": "Alexandria",
+    "country": "EG",
+    "tz": "Africa/Cairo"
+  },
+  {
+    "code": "HEL",
+    "name": "Helsinki Vantaa",
+    "city": "Helsinki (Vantaa)",
+    "country": "FI",
+    "tz": "Europe/Helsinki"
+  },
+  {
+    "code": "HER",
+    "name": "Heraklion International Nikos Kazantzakis",
+    "city": "Heraklion",
+    "country": "GR",
+    "tz": "Europe/Athens"
+  },
+  {
+    "code": "HET",
+    "name": "Hohhot Baita International",
+    "city": "Hohhot",
+    "country": "CN",
+    "tz": "Asia/Shanghai"
+  },
+  {
+    "code": "HGH",
+    "name": "Hangzhou Xiaoshan International",
+    "city": "Hangzhou",
+    "country": "CN",
+    "tz": "Asia/Shanghai"
+  },
+  {
+    "code": "HIR",
+    "name": "Honiara International",
+    "city": "Honiara",
+    "country": "SB",
+    "tz": "Pacific/Guadalcanal"
+  },
+  {
+    "code": "HKG",
+    "name": "Hong Kong International",
+    "city": "Hong Kong",
+    "country": "HK",
+    "tz": "Asia/Hong_Kong"
+  },
+  {
+    "code": "HKT",
+    "name": "Phuket International",
+    "city": "Phuket",
+    "country": "TH",
+    "tz": "Asia/Jakarta"
+  },
+  {
+    "code": "HMB",
+    "name": "Sohag International",
+    "city": "Suhaj",
+    "country": "EG",
+    "tz": "Africa/Cairo"
+  },
+  {
+    "code": "HND",
+    "name": "Tokyo Haneda International",
+    "city": "Tokyo",
+    "country": "JP",
+    "tz": "Asia/Tokyo"
+  },
+  {
+    "code": "HNL",
+    "name": "Daniel K Inouye International",
+    "city": "Honolulu, Oahu",
+    "country": "US",
+    "tz": "Pacific/Honolulu"
+  },
+  {
+    "code": "HRB",
+    "name": "Harbin Taiping International",
+    "city": "Harbin",
+    "country": "CN",
+    "tz": "Asia/Shanghai"
+  },
+  {
+    "code": "HRE",
+    "name": "Robert Gabriel Mugabe International",
+    "city": "Harare",
+    "country": "ZW",
+    "tz": "Africa/Johannesburg"
+  },
+  {
+    "code": "HRG",
+    "name": "Hurghada International",
+    "city": "Hurghada",
+    "country": "EG",
+    "tz": "Africa/Cairo"
+  },
+  {
+    "code": "HRI",
+    "name": "Mattala Rajapaksa International",
+    "city": "Mattala",
+    "country": "LK",
+    "tz": "Asia/Colombo"
+  },
+  {
+    "code": "HYD",
+    "name": "Rajiv Gandhi International",
+    "city": "Hyderabad",
+    "country": "IN",
+    "tz": "Asia/Kolkata"
+  },
+  {
+    "code": "IAD",
+    "name": "Washington Dulles International",
+    "city": "Dulles",
+    "country": "US",
+    "tz": "America/New_York"
+  },
+  {
+    "code": "IAH",
+    "name": "George Bush Intercontinental Houston",
+    "city": "Houston",
+    "country": "US",
+    "tz": "America/Chicago"
+  },
+  {
+    "code": "IBZ",
+    "name": "Ibiza",
+    "city": "Ibiza (Eivissa)",
+    "country": "ES",
+    "tz": "Europe/Madrid"
+  },
+  {
+    "code": "ICN",
+    "name": "Incheon International",
+    "city": "Seoul",
+    "country": "KR",
+    "tz": "Asia/Seoul"
+  },
+  {
+    "code": "IKA",
+    "name": "Imam Khomeini International",
+    "city": "Tehran",
+    "country": "IR",
+    "tz": "Asia/Tehran"
+  },
+  {
+    "code": "IND",
+    "name": "Indianapolis International",
+    "city": "Indianapolis",
+    "country": "US",
+    "tz": "America/Indiana/Indianapolis"
+  },
+  {
+    "code": "ISB",
+    "name": "Islamabad International",
+    "city": "Attock",
+    "country": "PK",
+    "tz": "Asia/Karachi"
+  },
+  {
+    "code": "IST",
+    "name": "İstanbul",
+    "city": "Arnavutköy, Istanbul",
+    "country": "TR",
+    "tz": "Europe/Istanbul"
+  },
+  {
+    "code": "ITM",
+    "name": "Osaka International",
+    "city": "Osaka",
+    "country": "JP",
+    "tz": "Asia/Tokyo"
+  },
+  {
+    "code": "ITO",
+    "name": "Hilo International",
+    "city": "Hilo",
+    "country": "US",
+    "tz": "Pacific/Honolulu"
+  },
+  {
+    "code": "IUE",
+    "name": "Niue International",
+    "city": "Alofi",
+    "country": "NU",
+    "tz": "Pacific/Pago_Pago"
+  },
+  {
+    "code": "JAI",
+    "name": "Jaipur International",
+    "city": "Jaipur",
+    "country": "IN",
+    "tz": "Asia/Kolkata"
+  },
+  {
+    "code": "JAX",
+    "name": "Jacksonville International",
+    "city": "Jacksonville",
+    "country": "US",
+    "tz": "America/New_York"
+  },
+  {
+    "code": "JED",
+    "name": "King Abdulaziz International",
+    "city": "Jeddah",
+    "country": "SA",
+    "tz": "Asia/Riyadh"
+  },
+  {
+    "code": "JFK",
+    "name": "John F Kennedy International",
+    "city": "New York",
+    "country": "US",
+    "tz": "America/New_York"
+  },
+  {
+    "code": "JIB",
+    "name": "Djibouti-Ambouli",
+    "city": "Djibouti City",
+    "country": "DJ",
+    "tz": "Asia/Riyadh"
+  },
+  {
+    "code": "JNB",
+    "name": "O.R. Tambo International",
+    "city": "Johannesburg",
+    "country": "ZA",
+    "tz": "Africa/Johannesburg"
+  },
+  {
+    "code": "JUB",
+    "name": "Juba International",
+    "city": "Juba",
+    "country": "SS",
+    "tz": "Africa/Juba"
+  },
+  {
+    "code": "KBP",
+    "name": "Boryspil International",
+    "city": "Boryspil",
+    "country": "UA",
+    "tz": "Europe/Kyiv"
+  },
+  {
+    "code": "KEF",
+    "name": "Keflavik International",
+    "city": "Reykjavík",
+    "country": "IS",
+    "tz": "Africa/Abidjan"
+  },
+  {
+    "code": "KGL",
+    "name": "Kigali International",
+    "city": "Kigali",
+    "country": "RW",
+    "tz": "Africa/Johannesburg"
+  },
+  {
+    "code": "KHH",
+    "name": "Kaohsiung International",
+    "city": "Kaohsiung (Xiaogang)",
+    "country": "TW",
+    "tz": "Asia/Taipei"
+  },
+  {
+    "code": "KHI",
+    "name": "Jinnah International",
+    "city": "Karachi",
+    "country": "PK",
+    "tz": "Asia/Karachi"
+  },
+  {
+    "code": "KHN",
+    "name": "Nanchang Changbei International",
+    "city": "Nanchang",
+    "country": "CN",
+    "tz": "Asia/Shanghai"
+  },
+  {
+    "code": "KIN",
+    "name": "Norman Manley International",
+    "city": "Kingston",
+    "country": "JM",
+    "tz": "America/Jamaica"
+  },
+  {
+    "code": "KIS",
+    "name": "Kisumu International",
+    "city": "Kisumu",
+    "country": "KE",
+    "tz": "Asia/Riyadh"
+  },
+  {
+    "code": "KIX",
+    "name": "Kansai International",
+    "city": "Osaka",
+    "country": "JP",
+    "tz": "Asia/Tokyo"
+  },
+  {
+    "code": "KJA",
+    "name": "Krasnoyarsk International",
+    "city": "Krasnoyarsk",
+    "country": "RU",
+    "tz": "Asia/Krasnoyarsk"
+  },
+  {
+    "code": "KMG",
+    "name": "Kunming Changshui International",
+    "city": "Kunming",
+    "country": "CN",
+    "tz": "Asia/Shanghai"
+  },
+  {
+    "code": "KMS",
+    "name": "Prempeh I International",
+    "city": "Kumasi",
+    "country": "GH",
+    "tz": "Africa/Abidjan"
+  },
+  {
+    "code": "KNO",
+    "name": "Kualanamu International",
+    "city": "Beringin",
+    "country": "ID",
+    "tz": "Asia/Jakarta"
+  },
+  {
+    "code": "KOA",
+    "name": "Ellison Onizuka Kona International at Keahole",
+    "city": "Kailua-Kona",
+    "country": "US",
+    "tz": "Pacific/Honolulu"
+  },
+  {
+    "code": "KOJ",
+    "name": "Kagoshima",
+    "city": "Kagoshima",
+    "country": "JP",
+    "tz": "Asia/Tokyo"
+  },
+  {
+    "code": "KRK",
+    "name": "Kraków John Paul II International",
+    "city": "Balice",
+    "country": "PL",
+    "tz": "Europe/Warsaw"
+  },
+  {
+    "code": "KRT",
+    "name": "Khartoum International",
+    "city": "Khartoum",
+    "country": "SD",
+    "tz": "Africa/Khartoum"
+  },
+  {
+    "code": "KTI",
+    "name": "Techo International",
+    "city": "Phnom Penh (Boeng Khyang)",
+    "country": "KH",
+    "tz": "Asia/Jakarta"
+  },
+  {
+    "code": "KTM",
+    "name": "Tribhuvan International",
+    "city": "Kathmandu",
+    "country": "NP",
+    "tz": "Asia/Kathmandu"
+  },
+  {
+    "code": "KTW",
+    "name": "Katowice Wojciech Korfanty International",
+    "city": "Katowice",
+    "country": "PL",
+    "tz": "Europe/Warsaw"
+  },
+  {
+    "code": "KUF",
+    "name": "Kurumoch International",
+    "city": "Samara",
+    "country": "RU",
+    "tz": "Europe/Samara"
+  },
+  {
+    "code": "KUL",
+    "name": "Kuala Lumpur International",
+    "city": "Sepang",
+    "country": "MY",
+    "tz": "Asia/Singapore"
+  },
+  {
+    "code": "KWE",
+    "name": "Guiyang Longdongbao International",
+    "city": "Guiyang (Nanming)",
+    "country": "CN",
+    "tz": "Asia/Shanghai"
+  },
+  {
+    "code": "KWI",
+    "name": "Kuwait International",
+    "city": "Kuwait City",
+    "country": "KW",
+    "tz": "Asia/Riyadh"
+  },
+  {
+    "code": "KWL",
+    "name": "Guilin Liangjiang International",
+    "city": "Guilin (Lingui)",
+    "country": "CN",
+    "tz": "Asia/Shanghai"
+  },
+  {
+    "code": "KZN",
+    "name": "Kazan International",
+    "city": "Kazan",
+    "country": "RU",
+    "tz": "Europe/Moscow"
+  },
+  {
+    "code": "LAD",
+    "name": "Quatro de Fevereiro International",
+    "city": "Luanda",
+    "country": "AO",
+    "tz": "Africa/Lagos"
+  },
+  {
+    "code": "LAS",
+    "name": "Harry Reid International",
+    "city": "Las Vegas",
+    "country": "US",
+    "tz": "America/Los_Angeles"
+  },
+  {
+    "code": "LAX",
+    "name": "Los Angeles International",
+    "city": "Los Angeles",
+    "country": "US",
+    "tz": "America/Los_Angeles"
+  },
+  {
+    "code": "LBV",
+    "name": "Libreville Leon M'ba International",
+    "city": "Libreville",
+    "country": "GA",
+    "tz": "Africa/Lagos"
+  },
+  {
+    "code": "LCA",
+    "name": "Larnaca International",
+    "city": "Larnaca",
+    "country": "CY",
+    "tz": "Asia/Nicosia"
+  },
+  {
+    "code": "LCJ",
+    "name": "Łódź Władysław Reymont",
+    "city": "Łódź",
+    "country": "PL",
+    "tz": "Europe/Warsaw"
+  },
+  {
+    "code": "LED",
+    "name": "Pulkovo",
+    "city": "St. Petersburg",
+    "country": "RU",
+    "tz": "Europe/Moscow"
+  },
+  {
+    "code": "LEJ",
+    "name": "Leipzig/Halle",
+    "city": "Schkeuditz",
+    "country": "DE",
+    "tz": "Europe/Berlin"
+  },
+  {
+    "code": "LFW",
+    "name": "Lomé–Tokoin International",
+    "city": "Lomé",
+    "country": "TG",
+    "tz": "Africa/Abidjan"
+  },
+  {
+    "code": "LGA",
+    "name": "LaGuardia",
+    "city": "New York",
+    "country": "US",
+    "tz": "America/New_York"
+  },
+  {
+    "code": "LGB",
+    "name": "Long Beach International",
+    "city": "Long Beach",
+    "country": "US",
+    "tz": "America/Los_Angeles"
+  },
+  {
+    "code": "LGW",
+    "name": "London Gatwick",
+    "city": "London",
+    "country": "GB",
+    "tz": "Europe/London"
+  },
+  {
+    "code": "LHE",
+    "name": "Allama Iqbal International",
+    "city": "Lahore",
+    "country": "PK",
+    "tz": "Asia/Karachi"
+  },
+  {
+    "code": "LHR",
+    "name": "London Heathrow",
+    "city": "London",
+    "country": "GB",
+    "tz": "Europe/London"
+  },
+  {
+    "code": "LHW",
+    "name": "Lanzhou Zhongchuan International",
+    "city": "Lanzhou (Yongdeng)",
+    "country": "CN",
+    "tz": "Asia/Shanghai"
+  },
+  {
+    "code": "LIM",
+    "name": "Jorge Chávez International",
+    "city": "Lima",
+    "country": "PE",
+    "tz": "America/Lima"
+  },
+  {
+    "code": "LIR",
+    "name": "Guanacaste",
+    "city": "Liberia",
+    "country": "CR",
+    "tz": "America/Costa_Rica"
+  },
+  {
+    "code": "LIS",
+    "name": "Lisbon Humberto Delgado",
+    "city": "Lisbon",
+    "country": "PT",
+    "tz": "Europe/Lisbon"
+  },
+  {
+    "code": "LJU",
+    "name": "Ljubljana Jože Pučnik",
+    "city": "Zgornji Brnik",
+    "country": "SI",
+    "tz": "Europe/Belgrade"
+  },
+  {
+    "code": "LKO",
+    "name": "Chaudhary Charan Singh International",
+    "city": "Lucknow",
+    "country": "IN",
+    "tz": "Asia/Kolkata"
+  },
+  {
+    "code": "LOS",
+    "name": "Murtala Muhammed International",
+    "city": "Lagos",
+    "country": "NG",
+    "tz": "Africa/Lagos"
+  },
+  {
+    "code": "LPA",
+    "name": "Gran Canaria",
+    "city": "Gran Canaria Island",
+    "country": "ES",
+    "tz": "Atlantic/Canary"
+  },
+  {
+    "code": "LRM",
+    "name": "Casa De Campo International",
+    "city": "La Romana",
+    "country": "DO",
+    "tz": "America/Santo_Domingo"
+  },
+  {
+    "code": "LTN",
+    "name": "London Luton",
+    "city": "Luton, Bedfordshire",
+    "country": "GB",
+    "tz": "Europe/London"
+  },
+  {
+    "code": "LUN",
+    "name": "Kenneth Kaunda International",
+    "city": "Lusaka",
+    "country": "ZM",
+    "tz": "Africa/Johannesburg"
+  },
+  {
+    "code": "LUX",
+    "name": "Luxembourg-Findel International",
+    "city": "Luxembourg",
+    "country": "LU",
+    "tz": "Europe/Brussels"
+  },
+  {
+    "code": "LUZ",
+    "name": "Lublin",
+    "city": "Lublin",
+    "country": "PL",
+    "tz": "Europe/Warsaw"
+  },
+  {
+    "code": "LWO",
+    "name": "Lviv International",
+    "city": "Lviv",
+    "country": "UA",
+    "tz": "Europe/Kyiv"
+  },
+  {
+    "code": "LYS",
+    "name": "Lyon Saint-Exupéry",
+    "city": "Colombier-Saugnieu, Rhône",
+    "country": "FR",
+    "tz": "Europe/Paris"
+  },
+  {
+    "code": "MAA",
+    "name": "Chennai International",
+    "city": "Chennai",
+    "country": "IN",
+    "tz": "Asia/Kolkata"
+  },
+  {
+    "code": "MAD",
+    "name": "Adolfo Suárez Madrid–Barajas",
+    "city": "Madrid",
+    "country": "ES",
+    "tz": "Europe/Madrid"
+  },
+  {
+    "code": "MAN",
+    "name": "Manchester",
+    "city": "Manchester, Greater Manchester",
+    "country": "GB",
+    "tz": "Europe/London"
+  },
+  {
+    "code": "MAO",
+    "name": "Eduardo Gomes International",
+    "city": "Manaus",
+    "country": "BR",
+    "tz": "America/Manaus"
+  },
+  {
+    "code": "MBA",
+    "name": "Moi International",
+    "city": "Mombasa",
+    "country": "KE",
+    "tz": "Asia/Riyadh"
+  },
+  {
+    "code": "MCI",
+    "name": "Kansas City International",
+    "city": "Kansas City",
+    "country": "US",
+    "tz": "America/Chicago"
+  },
+  {
+    "code": "MCO",
+    "name": "Orlando International",
+    "city": "Orlando",
+    "country": "US",
+    "tz": "America/New_York"
+  },
+  {
+    "code": "MCT",
+    "name": "Muscat International",
+    "city": "Muscat",
+    "country": "OM",
+    "tz": "Asia/Dubai"
+  },
+  {
+    "code": "MCY",
+    "name": "Sunshine Coast",
+    "city": "Maroochydore",
+    "country": "AU",
+    "tz": "Australia/Brisbane"
+  },
+  {
+    "code": "MDL",
+    "name": "Mandalay International",
+    "city": "Mandalay",
+    "country": "MM",
+    "tz": "Asia/Yangon"
+  },
+  {
+    "code": "MDW",
+    "name": "Chicago Midway International",
+    "city": "Chicago",
+    "country": "US",
+    "tz": "America/Chicago"
+  },
+  {
+    "code": "MED",
+    "name": "Prince Mohammad Bin Abdulaziz",
+    "city": "Medina",
+    "country": "SA",
+    "tz": "Asia/Riyadh"
+  },
+  {
+    "code": "MEL",
+    "name": "Melbourne",
+    "city": "Melbourne",
+    "country": "AU",
+    "tz": "Australia/Melbourne"
+  },
+  {
+    "code": "MEM",
+    "name": "Memphis International",
+    "city": "Memphis",
+    "country": "US",
+    "tz": "America/Chicago"
+  },
+  {
+    "code": "MEX",
+    "name": "Benito Juárez International",
+    "city": "Ciudad de México",
+    "country": "MX",
+    "tz": "America/Mexico_City"
+  },
+  {
+    "code": "MFM",
+    "name": "Macau International",
+    "city": "Nossa Senhora do Carmo",
+    "country": "MO",
+    "tz": "Asia/Macau"
+  },
+  {
+    "code": "MGQ",
+    "name": "Aden Adde International",
+    "city": "Mogadishu",
+    "country": "SO",
+    "tz": "Asia/Riyadh"
+  },
+  {
+    "code": "MHD",
+    "name": "Mashhad International",
+    "city": "Mashhad",
+    "country": "IR",
+    "tz": "Asia/Tehran"
+  },
+  {
+    "code": "MIA",
+    "name": "Miami International",
+    "city": "Miami",
+    "country": "US",
+    "tz": "America/New_York"
+  },
+  {
+    "code": "MID",
+    "name": "Manuel Crescencio Rejón International",
+    "city": "Mérida",
+    "country": "MX",
+    "tz": "America/Merida"
+  },
+  {
+    "code": "MJI",
+    "name": "Mitiga International",
+    "city": "Tripoli",
+    "country": "LY",
+    "tz": "Africa/Tripoli"
+  },
+  {
+    "code": "MKE",
+    "name": "General Mitchell International",
+    "city": "Milwaukee",
+    "country": "US",
+    "tz": "America/Chicago"
+  },
+  {
+    "code": "MLA",
+    "name": "Malta International",
+    "city": "Valletta",
+    "country": "MT",
+    "tz": "Europe/Malta"
+  },
+  {
+    "code": "MLE",
+    "name": "Malé International",
+    "city": "Malé",
+    "country": "MV",
+    "tz": "Indian/Maldives"
+  },
+  {
+    "code": "MNL",
+    "name": "Ninoy Aquino International",
+    "city": "Manila (Pasay)",
+    "country": "PH",
+    "tz": "Asia/Manila"
+  },
+  {
+    "code": "MPM",
+    "name": "Maputo",
+    "city": "Maputo",
+    "country": "MZ",
+    "tz": "Africa/Johannesburg"
+  },
+  {
+    "code": "MRS",
+    "name": "Marseille Provence",
+    "city": "Marignane, Bouches-du-Rhône",
+    "country": "FR",
+    "tz": "Europe/Paris"
+  },
+  {
+    "code": "MRU",
+    "name": "Sir Seewoosagur Ramgoolam International",
+    "city": "Plaine Magnien",
+    "country": "MU",
+    "tz": "Indian/Mauritius"
+  },
+  {
+    "code": "MSP",
+    "name": "Minneapolis–Saint Paul International / Wold–Chamberlain Field",
+    "city": "Minneapolis",
+    "country": "US",
+    "tz": "America/Chicago"
+  },
+  {
+    "code": "MSQ",
+    "name": "Minsk National",
+    "city": "Minsk",
+    "country": "BY",
+    "tz": "Europe/Minsk"
+  },
+  {
+    "code": "MSU",
+    "name": "Moshoeshoe I International",
+    "city": "Mazenod",
+    "country": "LS",
+    "tz": "Africa/Johannesburg"
+  },
+  {
+    "code": "MSY",
+    "name": "Louis Armstrong New Orleans International",
+    "city": "New Orleans",
+    "country": "US",
+    "tz": "America/Chicago"
+  },
+  {
+    "code": "MTY",
+    "name": "Monterrey International",
+    "city": "Monterrey",
+    "country": "MX",
+    "tz": "America/Monterrey"
+  },
+  {
+    "code": "MUC",
+    "name": "Munich",
+    "city": "Munich",
+    "country": "DE",
+    "tz": "Europe/Berlin"
+  },
+  {
+    "code": "MVB",
+    "name": "M'Vengue El Hadj Omar Bongo Ondimba International",
+    "city": "Franceville",
+    "country": "GA",
+    "tz": "Africa/Lagos"
+  },
+  {
+    "code": "MVD",
+    "name": "Carrasco General Cesáreo L. Berisso International",
+    "city": "Ciudad de la Costa",
+    "country": "UY",
+    "tz": "America/Montevideo"
+  },
+  {
+    "code": "MWX",
+    "name": "Muan International",
+    "city": "Muan (Piseo-ri)",
+    "country": "KR",
+    "tz": "Asia/Seoul"
+  },
+  {
+    "code": "MXP",
+    "name": "Milan Malpensa International",
+    "city": "Ferno (VA)",
+    "country": "IT",
+    "tz": "Europe/Rome"
+  },
+  {
+    "code": "MZT",
+    "name": "General Rafael Buelna International",
+    "city": "Mazatlàn",
+    "country": "MX",
+    "tz": "America/Mazatlan"
+  },
+  {
+    "code": "NAG",
+    "name": "Dr. Babasaheb Ambedkar International",
+    "city": "Nagpur",
+    "country": "IN",
+    "tz": "Asia/Kolkata"
+  },
+  {
+    "code": "NAP",
+    "name": "Naples International",
+    "city": "Napoli",
+    "country": "IT",
+    "tz": "Europe/Rome"
+  },
+  {
+    "code": "NAS",
+    "name": "Lynden Pindling International",
+    "city": "Nassau",
+    "country": "BS",
+    "tz": "America/Toronto"
+  },
+  {
+    "code": "NBO",
+    "name": "Jomo Kenyatta International",
+    "city": "Nairobi",
+    "country": "KE",
+    "tz": "Asia/Riyadh"
+  },
+  {
+    "code": "NCE",
+    "name": "Nice-Côte d'Azur",
+    "city": "Nice, Alpes-Maritimes",
+    "country": "FR",
+    "tz": "Europe/Paris"
+  },
+  {
+    "code": "NDJ",
+    "name": "N'Djamena International",
+    "city": "N'Djamena",
+    "country": "TD",
+    "tz": "Africa/Ndjamena"
+  },
+  {
+    "code": "NGB",
+    "name": "Ningbo Lishe International",
+    "city": "Ningbo",
+    "country": "CN",
+    "tz": "Asia/Shanghai"
+  },
+  {
+    "code": "NGO",
+    "name": "Chubu Centrair International",
+    "city": "Tokoname",
+    "country": "JP",
+    "tz": "Asia/Tokyo"
+  },
+  {
+    "code": "NIM",
+    "name": "Diori Hamani International",
+    "city": "Niamey",
+    "country": "NE",
+    "tz": "Africa/Lagos"
+  },
+  {
+    "code": "NKC",
+    "name": "Nouakchott–Oumtounsy International",
+    "city": "Nouakchott",
+    "country": "MR",
+    "tz": "Africa/Abidjan"
+  },
+  {
+    "code": "NKG",
+    "name": "Nanjing Lukou International",
+    "city": "Nanjing",
+    "country": "CN",
+    "tz": "Asia/Shanghai"
+  },
+  {
+    "code": "NLU",
+    "name": "General Felipe Ángeles International",
+    "city": "Mexico City",
+    "country": "MX",
+    "tz": "America/Mexico_City"
+  },
+  {
+    "code": "NMI",
+    "name": "Navi Mumbai International",
+    "city": "Navi Mumbai",
+    "country": "IN",
+    "tz": "Asia/Kolkata"
+  },
+  {
+    "code": "NNG",
+    "name": "Nanning Wuxu",
+    "city": "Nanning (Jiangnan)",
+    "country": "CN",
+    "tz": "Asia/Shanghai"
+  },
+  {
+    "code": "NQZ",
+    "name": "Nursultan Nazarbayev International",
+    "city": "Astana",
+    "country": "KZ",
+    "tz": "Asia/Almaty"
+  },
+  {
+    "code": "NRT",
+    "name": "Narita International",
+    "city": "Narita",
+    "country": "JP",
+    "tz": "Asia/Tokyo"
+  },
+  {
+    "code": "NSI",
+    "name": "Yaoundé Nsimalen International",
+    "city": "Yaoundé",
+    "country": "CM",
+    "tz": "Africa/Lagos"
+  },
+  {
+    "code": "NUE",
+    "name": "Nuremberg",
+    "city": "Nuremberg",
+    "country": "DE",
+    "tz": "Europe/Berlin"
+  },
+  {
+    "code": "OAK",
+    "name": "San Francisco Bay Oakland International",
+    "city": "Oakland",
+    "country": "US",
+    "tz": "America/Los_Angeles"
+  },
+  {
+    "code": "ODE",
+    "name": "Odense Hans Christian Andersen",
+    "city": "Odense",
+    "country": "DK",
+    "tz": "Europe/Berlin"
+  },
+  {
+    "code": "OGG",
+    "name": "Kahului International",
+    "city": "Kahului",
+    "country": "US",
+    "tz": "Pacific/Honolulu"
+  },
+  {
+    "code": "OKA",
+    "name": "Naha / JASDF Naha Air Base",
+    "city": "Naha",
+    "country": "JP",
+    "tz": "Asia/Tokyo"
+  },
+  {
+    "code": "OKC",
+    "name": "Will Rogers World",
+    "city": "Oklahoma City",
+    "country": "US",
+    "tz": "America/Chicago"
+  },
+  {
+    "code": "OMA",
+    "name": "Eppley Airfield",
+    "city": "Omaha",
+    "country": "US",
+    "tz": "America/Chicago"
+  },
+  {
+    "code": "ONT",
+    "name": "Ontario International",
+    "city": "Ontario",
+    "country": "US",
+    "tz": "America/Los_Angeles"
+  },
+  {
+    "code": "OOL",
+    "name": "Gold Coast",
+    "city": "Gold Coast",
+    "country": "AU",
+    "tz": "Australia/Sydney"
+  },
+  {
+    "code": "OPO",
+    "name": "Francisco de Sá Carneiro",
+    "city": "Porto",
+    "country": "PT",
+    "tz": "Europe/Lisbon"
+  },
+  {
+    "code": "ORD",
+    "name": "Chicago O'Hare International",
+    "city": "Chicago",
+    "country": "US",
+    "tz": "America/Chicago"
+  },
+  {
+    "code": "ORF",
+    "name": "Norfolk International",
+    "city": "Norfolk",
+    "country": "US",
+    "tz": "America/New_York"
+  },
+  {
+    "code": "ORY",
+    "name": "Paris-Orly",
+    "city": "Paris (Orly, Val-de-Marne)",
+    "country": "FR",
+    "tz": "Europe/Paris"
+  },
+  {
+    "code": "OSL",
+    "name": "Oslo-Gardermoen International",
+    "city": "Oslo (Gardermoen)",
+    "country": "NO",
+    "tz": "Europe/Berlin"
+  },
+  {
+    "code": "OSS",
+    "name": "Osh International",
+    "city": "Osh",
+    "country": "KG",
+    "tz": "Asia/Bishkek"
+  },
+  {
+    "code": "OTP",
+    "name": "Bucharest Henri Coandă International",
+    "city": "Otopeni",
+    "country": "RO",
+    "tz": "Europe/Bucharest"
+  },
+  {
+    "code": "OVB",
+    "name": "Novosibirsk Tolmachevo",
+    "city": "Novosibirsk",
+    "country": "RU",
+    "tz": "Asia/Novosibirsk"
+  },
+  {
+    "code": "PAP",
+    "name": "Toussaint Louverture International",
+    "city": "Port-au-Prince",
+    "country": "HT",
+    "tz": "America/Port-au-Prince"
+  },
+  {
+    "code": "PBH",
+    "name": "Paro International",
+    "city": "Paro",
+    "country": "BT",
+    "tz": "Asia/Thimphu"
+  },
+  {
+    "code": "PBI",
+    "name": "Palm Beach International",
+    "city": "West Palm Beach",
+    "country": "US",
+    "tz": "America/New_York"
+  },
+  {
+    "code": "PBM",
+    "name": "Johan Adolf Pengel International",
+    "city": "Zandery",
+    "country": "SR",
+    "tz": "America/Paramaribo"
+  },
+  {
+    "code": "PDL",
+    "name": "João Paulo II",
+    "city": "Ponta Delgada",
+    "country": "PT",
+    "tz": "Atlantic/Azores"
+  },
+  {
+    "code": "PDX",
+    "name": "Portland International",
+    "city": "Portland",
+    "country": "US",
+    "tz": "America/Los_Angeles"
+  },
+  {
+    "code": "PEK",
+    "name": "Beijing Capital International",
+    "city": "Beijing",
+    "country": "CN",
+    "tz": "Asia/Shanghai"
+  },
+  {
+    "code": "PER",
+    "name": "Perth International",
+    "city": "Perth",
+    "country": "AU",
+    "tz": "Australia/Perth"
+  },
+  {
+    "code": "PHL",
+    "name": "Philadelphia International",
+    "city": "Philadelphia",
+    "country": "US",
+    "tz": "America/New_York"
+  },
+  {
+    "code": "PHX",
+    "name": "Phoenix Sky Harbor International",
+    "city": "Phoenix",
+    "country": "US",
+    "tz": "America/Phoenix"
+  },
+  {
+    "code": "PIT",
+    "name": "Pittsburgh International",
+    "city": "Pittsburgh",
+    "country": "US",
+    "tz": "America/New_York"
+  },
+  {
+    "code": "PKC",
+    "name": "Yelizovo",
+    "city": "Petropavlovsk-Kamchatsky",
+    "country": "RU",
+    "tz": "Asia/Kamchatka"
+  },
+  {
+    "code": "PKX",
+    "name": "Beijing Daxing International",
+    "city": "Beijing",
+    "country": "CN",
+    "tz": "Asia/Shanghai"
+  },
+  {
+    "code": "PLS",
+    "name": "Providenciales International",
+    "city": "Providenciales",
+    "country": "TC",
+    "tz": "America/Grand_Turk"
+  },
+  {
+    "code": "PLZ",
+    "name": "Chief Dawid Stuurman International",
+    "city": "Gqeberha (Port Elizabeth)",
+    "country": "ZA",
+    "tz": "Africa/Johannesburg"
+  },
+  {
+    "code": "PMI",
+    "name": "Palma de Mallorca",
+    "city": "Palma de Mallorca",
+    "country": "ES",
+    "tz": "Europe/Madrid"
+  },
+  {
+    "code": "PMO",
+    "name": "Falcone–Borsellino",
+    "city": "Palermo",
+    "country": "IT",
+    "tz": "Europe/Rome"
+  },
+  {
+    "code": "PNH",
+    "name": "Phnom Penh International",
+    "city": "Phnom Penh (Pou Senchey)",
+    "country": "KH",
+    "tz": "Asia/Jakarta"
+  },
+  {
+    "code": "PNQ",
+    "name": "Pune International",
+    "city": "Pune",
+    "country": "IN",
+    "tz": "Asia/Kolkata"
+  },
+  {
+    "code": "POG",
+    "name": "Port Gentil International",
+    "city": "Port Gentil",
+    "country": "GA",
+    "tz": "Africa/Lagos"
+  },
+  {
+    "code": "POM",
+    "name": "Port Moresby Jacksons International",
+    "city": "Port Moresby",
+    "country": "PG",
+    "tz": "Pacific/Port_Moresby"
+  },
+  {
+    "code": "POZ",
+    "name": "Poznań-Ławica",
+    "city": "Poznań",
+    "country": "PL",
+    "tz": "Europe/Warsaw"
+  },
+  {
+    "code": "PPT",
+    "name": "Faa'a International",
+    "city": "Papeete",
+    "country": "PF",
+    "tz": "Pacific/Honolulu"
+  },
+  {
+    "code": "PRG",
+    "name": "Václav Havel Prague",
+    "city": "Prague",
+    "country": "CZ",
+    "tz": "Europe/Prague"
+  },
+  {
+    "code": "PRN",
+    "name": "Priština Adem Jashari International",
+    "city": "Prishtina",
+    "country": "XK",
+    "tz": "Europe/Belgrade"
+  },
+  {
+    "code": "PSA",
+    "name": "Pisa International",
+    "city": "Pisa (PI)",
+    "country": "IT",
+    "tz": "Europe/Rome"
+  },
+  {
+    "code": "PSE",
+    "name": "Mercedita International",
+    "city": "Ponce",
+    "country": "PR",
+    "tz": "America/Puerto_Rico"
+  },
+  {
+    "code": "PTP",
+    "name": "Guadeloupe - Maryse Condé International",
+    "city": "Pointe-à-Pitre",
+    "country": "GP",
+    "tz": "America/Puerto_Rico"
+  },
+  {
+    "code": "PTY",
+    "name": "Tocumen International",
+    "city": "Tocumen",
+    "country": "PA",
+    "tz": "America/Panama"
+  },
+  {
+    "code": "PUJ",
+    "name": "Punta Cana International",
+    "city": "Punta Cana",
+    "country": "DO",
+    "tz": "America/Santo_Domingo"
+  },
+  {
+    "code": "PUS",
+    "name": "Gimhae International",
+    "city": "Busan",
+    "country": "KR",
+    "tz": "Asia/Seoul"
+  },
+  {
+    "code": "PVD",
+    "name": "Theodore Francis Green State",
+    "city": "Warwick",
+    "country": "US",
+    "tz": "America/New_York"
+  },
+  {
+    "code": "PVG",
+    "name": "Shanghai Pudong International",
+    "city": "Shanghai (Pudong)",
+    "country": "CN",
+    "tz": "Asia/Shanghai"
+  },
+  {
+    "code": "PVR",
+    "name": "Puerto Vallarta International",
+    "city": "Puerto Vallarta",
+    "country": "MX",
+    "tz": "America/Mexico_City"
+  },
+  {
+    "code": "PWM",
+    "name": "Portland International Jetport",
+    "city": "Portland",
+    "country": "US",
+    "tz": "America/New_York"
+  },
+  {
+    "code": "RAI",
+    "name": "Nelson Mandela International",
+    "city": "Praia",
+    "country": "CV",
+    "tz": "Atlantic/Cape_Verde"
+  },
+  {
+    "code": "RAK",
+    "name": "Menara",
+    "city": "Marrakech",
+    "country": "MA",
+    "tz": "Africa/Casablanca"
+  },
+  {
+    "code": "RBA",
+    "name": "Rabat-Salé",
+    "city": "Rabat",
+    "country": "MA",
+    "tz": "Africa/Casablanca"
+  },
+  {
+    "code": "RDU",
+    "name": "Raleigh Durham International",
+    "city": "Raleigh/Durham",
+    "country": "US",
+    "tz": "America/New_York"
+  },
+  {
+    "code": "RGN",
+    "name": "Yangon International",
+    "city": "Yangon",
+    "country": "MM",
+    "tz": "Asia/Yangon"
+  },
+  {
+    "code": "RIC",
+    "name": "Richmond International",
+    "city": "Richmond",
+    "country": "US",
+    "tz": "America/New_York"
+  },
+  {
+    "code": "RIX",
+    "name": "Riga International",
+    "city": "Riga",
+    "country": "LV",
+    "tz": "Europe/Riga"
+  },
+  {
+    "code": "RNO",
+    "name": "Reno Tahoe International",
+    "city": "Reno",
+    "country": "US",
+    "tz": "America/Los_Angeles"
+  },
+  {
+    "code": "ROB",
+    "name": "Roberts International",
+    "city": "Monrovia",
+    "country": "LR",
+    "tz": "Africa/Monrovia"
+  },
+  {
+    "code": "ROV",
+    "name": "Platov International",
+    "city": "Rostov-on-Don",
+    "country": "RU",
+    "tz": "Europe/Moscow"
+  },
+  {
+    "code": "RSW",
+    "name": "Southwest Florida International",
+    "city": "Fort Myers",
+    "country": "US",
+    "tz": "America/New_York"
+  },
+  {
+    "code": "RTM",
+    "name": "Rotterdam The Hague",
+    "city": "Rotterdam",
+    "country": "NL",
+    "tz": "Europe/Brussels"
+  },
+  {
+    "code": "RUH",
+    "name": "King Khalid International",
+    "city": "Riyadh",
+    "country": "SA",
+    "tz": "Asia/Riyadh"
+  },
+  {
+    "code": "RUN",
+    "name": "Roland Garros",
+    "city": "Sainte-Marie",
+    "country": "RE",
+    "tz": "Asia/Dubai"
+  },
+  {
+    "code": "RZE",
+    "name": "Rzeszów-Jasionka",
+    "city": "Jasionka",
+    "country": "PL",
+    "tz": "Europe/Warsaw"
+  },
+  {
+    "code": "SAI",
+    "name": "Siem Reap-Angkor International",
+    "city": "Siem Reap",
+    "country": "KH",
+    "tz": "Asia/Jakarta"
+  },
+  {
+    "code": "SAL",
+    "name": "Monseñor Óscar Arnulfo Romero International",
+    "city": "San Salvador (San Luis Talpa)",
+    "country": "SV",
+    "tz": "America/El_Salvador"
+  },
+  {
+    "code": "SAN",
+    "name": "San Diego International",
+    "city": "San Diego",
+    "country": "US",
+    "tz": "America/Los_Angeles"
+  },
+  {
+    "code": "SAT",
+    "name": "San Antonio International",
+    "city": "San Antonio",
+    "country": "US",
+    "tz": "America/Chicago"
+  },
+  {
+    "code": "SAV",
+    "name": "Savannah Hilton Head International",
+    "city": "Savannah",
+    "country": "US",
+    "tz": "America/New_York"
+  },
+  {
+    "code": "SAW",
+    "name": "Istanbul Sabiha Gökçen International",
+    "city": "Pendik, Istanbul",
+    "country": "TR",
+    "tz": "Europe/Istanbul"
+  },
+  {
+    "code": "SCL",
+    "name": "Comodoro Arturo Merino Benítez International",
+    "city": "Santiago",
+    "country": "CL",
+    "tz": "America/Santiago"
+  },
+  {
+    "code": "SCQ",
+    "name": "Santiago-Rosalía de Castro",
+    "city": "Santiago de Compostela",
+    "country": "ES",
+    "tz": "Europe/Madrid"
+  },
+  {
+    "code": "SDF",
+    "name": "Louisville Muhammad Ali International",
+    "city": "Louisville",
+    "country": "US",
+    "tz": "America/Kentucky/Louisville"
+  },
+  {
+    "code": "SDJ",
+    "name": "Sendai",
+    "city": "Natori",
+    "country": "JP",
+    "tz": "Asia/Tokyo"
+  },
+  {
+    "code": "SDQ",
+    "name": "Las Américas International",
+    "city": "Santo Domingo",
+    "country": "DO",
+    "tz": "America/Santo_Domingo"
+  },
+  {
+    "code": "SEA",
+    "name": "Seattle–Tacoma International",
+    "city": "Seattle",
+    "country": "US",
+    "tz": "America/Los_Angeles"
+  },
+  {
+    "code": "SEZ",
+    "name": "Seychelles International",
+    "city": "Mahe Island",
+    "country": "SC",
+    "tz": "Asia/Dubai"
+  },
+  {
+    "code": "SFB",
+    "name": "Orlando Sanford International",
+    "city": "Orlando",
+    "country": "US",
+    "tz": "America/New_York"
+  },
+  {
+    "code": "SFJ",
+    "name": "Kangerlussuaq International",
+    "city": "Kangerlussuaq",
+    "country": "GL",
+    "tz": "America/Nuuk"
+  },
+  {
+    "code": "SFO",
+    "name": "San Francisco International",
+    "city": "San Francisco",
+    "country": "US",
+    "tz": "America/Los_Angeles"
+  },
+  {
+    "code": "SGN",
+    "name": "Tan Son Nhat International",
+    "city": "Ho Chi Minh City",
+    "country": "VN",
+    "tz": "Asia/Ho_Chi_Minh"
+  },
+  {
+    "code": "SHA",
+    "name": "Shanghai Hongqiao International",
+    "city": "Shanghai (Minhang)",
+    "country": "CN",
+    "tz": "Asia/Shanghai"
+  },
+  {
+    "code": "SHE",
+    "name": "Shenyang Taoxian International",
+    "city": "Hunnan, Shenyang",
+    "country": "CN",
+    "tz": "Asia/Shanghai"
+  },
+  {
+    "code": "SHJ",
+    "name": "Sharjah International",
+    "city": "Sharjah",
+    "country": "AE",
+    "tz": "Asia/Dubai"
+  },
+  {
+    "code": "SHO",
+    "name": "King Mswati III International",
+    "city": "Mpaka",
+    "country": "SZ",
+    "tz": "Africa/Johannesburg"
+  },
+  {
+    "code": "SID",
+    "name": "Amílcar Cabral International",
+    "city": "Espargos",
+    "country": "CV",
+    "tz": "Atlantic/Cape_Verde"
+  },
+  {
+    "code": "SIN",
+    "name": "Singapore Changi",
+    "city": "Singapore",
+    "country": "SG",
+    "tz": "Asia/Singapore"
+  },
+  {
+    "code": "SJC",
+    "name": "Norman Y. Mineta San Jose International",
+    "city": "San Jose",
+    "country": "US",
+    "tz": "America/Los_Angeles"
+  },
+  {
+    "code": "SJD",
+    "name": "Los Cabos International",
+    "city": "San José del Cabo",
+    "country": "MX",
+    "tz": "America/Mazatlan"
+  },
+  {
+    "code": "SJJ",
+    "name": "Sarajevo International",
+    "city": "Sarajevo",
+    "country": "BA",
+    "tz": "Europe/Belgrade"
+  },
+  {
+    "code": "SJO",
+    "name": "Juan Santamaría International",
+    "city": "San José (Alajuela)",
+    "country": "CR",
+    "tz": "America/Costa_Rica"
+  },
+  {
+    "code": "SJU",
+    "name": "Luis Munoz Marin International",
+    "city": "San Juan",
+    "country": "PR",
+    "tz": "America/Puerto_Rico"
+  },
+  {
+    "code": "SKG",
+    "name": "Thessaloniki Macedonia International",
+    "city": "Thessaloniki",
+    "country": "GR",
+    "tz": "Europe/Athens"
+  },
+  {
+    "code": "SKP",
+    "name": "Skopje International",
+    "city": "Ilinden",
+    "country": "MK",
+    "tz": "Europe/Belgrade"
+  },
+  {
+    "code": "SLC",
+    "name": "Salt Lake City International",
+    "city": "Salt Lake City",
+    "country": "US",
+    "tz": "America/Denver"
+  },
+  {
+    "code": "SMF",
+    "name": "Sacramento International",
+    "city": "Sacramento",
+    "country": "US",
+    "tz": "America/Los_Angeles"
+  },
+  {
+    "code": "SNA",
+    "name": "John Wayne Orange County International",
+    "city": "Santa Ana",
+    "country": "US",
+    "tz": "America/Los_Angeles"
+  },
+  {
+    "code": "SNN",
+    "name": "Shannon",
+    "city": "Shannon",
+    "country": "IE",
+    "tz": "Europe/Dublin"
+  },
+  {
+    "code": "SOF",
+    "name": "Sofia",
+    "city": "Sofia",
+    "country": "BG",
+    "tz": "Europe/Sofia"
+  },
+  {
+    "code": "SRQ",
+    "name": "Sarasota Bradenton International",
+    "city": "Sarasota/Bradenton",
+    "country": "US",
+    "tz": "America/New_York"
+  },
+  {
+    "code": "SSA",
+    "name": "Deputado Luiz Eduardo Magalhães International",
+    "city": "Salvador",
+    "country": "BR",
+    "tz": "America/Bahia"
+  },
+  {
+    "code": "SSH",
+    "name": "Sharm El Sheikh International",
+    "city": "Sharm El Sheikh",
+    "country": "EG",
+    "tz": "Africa/Cairo"
+  },
+  {
+    "code": "STL",
+    "name": "St. Louis Lambert International",
+    "city": "St Louis",
+    "country": "US",
+    "tz": "America/Chicago"
+  },
+  {
+    "code": "STN",
+    "name": "London Stansted",
+    "city": "London",
+    "country": "GB",
+    "tz": "Europe/London"
+  },
+  {
+    "code": "STR",
+    "name": "Stuttgart",
+    "city": "Stuttgart",
+    "country": "DE",
+    "tz": "Europe/Berlin"
+  },
+  {
+    "code": "STT",
+    "name": "Cyril E. King",
+    "city": "Charlotte Amalie",
+    "country": "VI",
+    "tz": "America/Puerto_Rico"
+  },
+  {
+    "code": "SUB",
+    "name": "Juanda International",
+    "city": "Surabaya",
+    "country": "ID",
+    "tz": "Asia/Jakarta"
+  },
+  {
+    "code": "SVG",
+    "name": "Stavanger, Sola",
+    "city": "Stavanger",
+    "country": "NO",
+    "tz": "Europe/Berlin"
+  },
+  {
+    "code": "SVO",
+    "name": "Sheremetyevo International",
+    "city": "Moscow",
+    "country": "RU",
+    "tz": "Europe/Moscow"
+  },
+  {
+    "code": "SVX",
+    "name": "Koltsovo",
+    "city": "Yekaterinburg",
+    "country": "RU",
+    "tz": "Asia/Yekaterinburg"
+  },
+  {
+    "code": "SXM",
+    "name": "Princess Juliana International",
+    "city": "Sint Maarten",
+    "country": "SX",
+    "tz": "America/Puerto_Rico"
+  },
+  {
+    "code": "SYD",
+    "name": "Sydney Kingsford Smith International",
+    "city": "Sydney (Mascot)",
+    "country": "AU",
+    "tz": "Australia/Sydney"
+  },
+  {
+    "code": "SYR",
+    "name": "Syracuse Hancock International",
+    "city": "Syracuse",
+    "country": "US",
+    "tz": "America/New_York"
+  },
+  {
+    "code": "SYX",
+    "name": "Sanya Phoenix International",
+    "city": "Sanya (Tianya)",
+    "country": "CN",
+    "tz": "Asia/Shanghai"
+  },
+  {
+    "code": "SYZ",
+    "name": "Shiraz Shahid Dastghaib International",
+    "city": "Shiraz",
+    "country": "IR",
+    "tz": "Asia/Tehran"
+  },
+  {
+    "code": "SZX",
+    "name": "Shenzhen Bao'an International",
+    "city": "Shenzhen (Bao'an)",
+    "country": "CN",
+    "tz": "Asia/Shanghai"
+  },
+  {
+    "code": "TAO",
+    "name": "Qingdao Jiaodong International",
+    "city": "Qingdao (Jiaozhou)",
+    "country": "CN",
+    "tz": "Asia/Shanghai"
+  },
+  {
+    "code": "TAS",
+    "name": "Tashkent International",
+    "city": "Tashkent",
+    "country": "UZ",
+    "tz": "Asia/Tashkent"
+  },
+  {
+    "code": "TBS",
+    "name": "Tbilisi International",
+    "city": "Tbilisi",
+    "country": "GE",
+    "tz": "Asia/Tbilisi"
+  },
+  {
+    "code": "TFS",
+    "name": "Tenerife Sur",
+    "city": "Tenerife",
+    "country": "ES",
+    "tz": "Atlantic/Canary"
+  },
+  {
+    "code": "TFU",
+    "name": "Chengdu Tianfu International",
+    "city": "Chengdu (Jianyang)",
+    "country": "CN",
+    "tz": "Asia/Shanghai"
+  },
+  {
+    "code": "TGD",
+    "name": "Podgorica / Podgorica Golubovci Airbase",
+    "city": "Podgorica",
+    "country": "ME",
+    "tz": "Europe/Belgrade"
+  },
+  {
+    "code": "THR",
+    "name": "Mehrabad International",
+    "city": "Tehran",
+    "country": "IR",
+    "tz": "Asia/Tehran"
+  },
+  {
+    "code": "TIA",
+    "name": "Tirana International Mother Teresa",
+    "city": "Rinas",
+    "country": "AL",
+    "tz": "Europe/Tirane"
+  },
+  {
+    "code": "TIJ",
+    "name": "General Abelardo L. Rodriguez International",
+    "city": "Tijuana",
+    "country": "MX",
+    "tz": "America/Tijuana"
+  },
+  {
+    "code": "TLL",
+    "name": "Lennart Meri Tallinn",
+    "city": "Tallinn",
+    "country": "EE",
+    "tz": "Europe/Tallinn"
+  },
+  {
+    "code": "TLS",
+    "name": "Toulouse-Blagnac",
+    "city": "Toulouse/Blagnac",
+    "country": "FR",
+    "tz": "Europe/Paris"
+  },
+  {
+    "code": "TLV",
+    "name": "Ben Gurion International",
+    "city": "Tel Aviv",
+    "country": "IL",
+    "tz": "Asia/Jerusalem"
+  },
+  {
+    "code": "TNA",
+    "name": "Jinan Yaoqiang International",
+    "city": "Jinan (Licheng)",
+    "country": "CN",
+    "tz": "Asia/Shanghai"
+  },
+  {
+    "code": "TNG",
+    "name": "Tangier Ibn Battuta",
+    "city": "Tangier",
+    "country": "MA",
+    "tz": "Africa/Casablanca"
+  },
+  {
+    "code": "TNR",
+    "name": "Ivato",
+    "city": "Antananarivo",
+    "country": "MG",
+    "tz": "Asia/Riyadh"
+  },
+  {
+    "code": "TOS",
+    "name": "Tromsø, Langnes",
+    "city": "Tromsø",
+    "country": "NO",
+    "tz": "Europe/Berlin"
+  },
+  {
+    "code": "TPA",
+    "name": "Tampa International",
+    "city": "Tampa",
+    "country": "US",
+    "tz": "America/New_York"
+  },
+  {
+    "code": "TPE",
+    "name": "Taiwan Taoyuan International",
+    "city": "Taoyuan",
+    "country": "TW",
+    "tz": "Asia/Taipei"
+  },
+  {
+    "code": "TRD",
+    "name": "Trondheim, Værnes",
+    "city": "Trondheim",
+    "country": "NO",
+    "tz": "Europe/Berlin"
+  },
+  {
+    "code": "TRN",
+    "name": "Turin",
+    "city": "Caselle Torinese (TO)",
+    "country": "IT",
+    "tz": "Europe/Rome"
+  },
+  {
+    "code": "TRV",
+    "name": "Thiruvananthapuram International",
+    "city": "Thiruvananthapuram",
+    "country": "IN",
+    "tz": "Asia/Kolkata"
+  },
+  {
+    "code": "TSN",
+    "name": "Tianjin Binhai International",
+    "city": "Tianjin",
+    "country": "CN",
+    "tz": "Asia/Shanghai"
+  },
+  {
+    "code": "TUL",
+    "name": "Tulsa International",
+    "city": "Tulsa",
+    "country": "US",
+    "tz": "America/Chicago"
+  },
+  {
+    "code": "TUN",
+    "name": "Tunis Carthage International",
+    "city": "Tunis",
+    "country": "TN",
+    "tz": "Africa/Tunis"
+  },
+  {
+    "code": "TYN",
+    "name": "Taiyuan Wusu International",
+    "city": "Taiyuan",
+    "country": "CN",
+    "tz": "Asia/Shanghai"
+  },
+  {
+    "code": "UBN",
+    "name": "Ulaanbaatar Chinggis Khaan International",
+    "city": "Ulaanbaatar (Sergelen)",
+    "country": "MN",
+    "tz": "Asia/Ulaanbaatar"
+  },
+  {
+    "code": "UFA",
+    "name": "Ufa International",
+    "city": "Ufa",
+    "country": "RU",
+    "tz": "Asia/Yekaterinburg"
+  },
+  {
+    "code": "UIO",
+    "name": "Mariscal Sucre International",
+    "city": "Quito",
+    "country": "EC",
+    "tz": "America/Guayaquil"
+  },
+  {
+    "code": "UPG",
+    "name": "Hasanuddin International",
+    "city": "Ujung Pandang",
+    "country": "ID",
+    "tz": "Asia/Makassar"
+  },
+  {
+    "code": "URC",
+    "name": "Ürümqi Tianshan International",
+    "city": "Ürümqi",
+    "country": "CN",
+    "tz": "Asia/Urumqi"
+  },
+  {
+    "code": "UVF",
+    "name": "Hewanorra International",
+    "city": "Vieux Fort",
+    "country": "LC",
+    "tz": "America/Puerto_Rico"
+  },
+  {
+    "code": "VAR",
+    "name": "Varna",
+    "city": "Varna",
+    "country": "BG",
+    "tz": "Europe/Sofia"
+  },
+  {
+    "code": "VCE",
+    "name": "Venice Marco Polo",
+    "city": "Venezia (VE)",
+    "country": "IT",
+    "tz": "Europe/Rome"
+  },
+  {
+    "code": "VIE",
+    "name": "Vienna International",
+    "city": "Vienna",
+    "country": "AT",
+    "tz": "Europe/Vienna"
+  },
+  {
+    "code": "VIX",
+    "name": "Eurico de Aguiar Salles",
+    "city": "Vitória",
+    "country": "BR",
+    "tz": "America/Sao_Paulo"
+  },
+  {
+    "code": "VKO",
+    "name": "Vnukovo International",
+    "city": "Moscow",
+    "country": "RU",
+    "tz": "Europe/Moscow"
+  },
+  {
+    "code": "VLC",
+    "name": "Valencia",
+    "city": "Valencia",
+    "country": "ES",
+    "tz": "Europe/Madrid"
+  },
+  {
+    "code": "VLI",
+    "name": "Bauerfield International",
+    "city": "Port Vila",
+    "country": "VU",
+    "tz": "Pacific/Efate"
+  },
+  {
+    "code": "VNO",
+    "name": "Vilnius International",
+    "city": "Vilnius",
+    "country": "LT",
+    "tz": "Europe/Vilnius"
+  },
+  {
+    "code": "VRA",
+    "name": "Juan Gualberto Gomez International",
+    "city": "Matanzas",
+    "country": "CU",
+    "tz": "America/Havana"
+  },
+  {
+    "code": "VRN",
+    "name": "Verona Villafranca Valerio Catullo",
+    "city": "Caselle (VR)",
+    "country": "IT",
+    "tz": "Europe/Rome"
+  },
+  {
+    "code": "VVI",
+    "name": "Viru Viru International",
+    "city": "Santa Cruz",
+    "country": "BO",
+    "tz": "America/Puerto_Rico"
+  },
+  {
+    "code": "VVO",
+    "name": "Vladivostok International",
+    "city": "Artyom",
+    "country": "RU",
+    "tz": "Asia/Vladivostok"
+  },
+  {
+    "code": "WAW",
+    "name": "Warsaw Chopin",
+    "city": "Warsaw",
+    "country": "PL",
+    "tz": "Europe/Warsaw"
+  },
+  {
+    "code": "WDH",
+    "name": "Hosea Kutako International",
+    "city": "Windhoek",
+    "country": "NA",
+    "tz": "Africa/Windhoek"
+  },
+  {
+    "code": "WLG",
+    "name": "Wellington International",
+    "city": "Wellington",
+    "country": "NZ",
+    "tz": "Pacific/Auckland"
+  },
+  {
+    "code": "WNZ",
+    "name": "Wenzhou Longwan International",
+    "city": "Wenzhou (Longwan)",
+    "country": "CN",
+    "tz": "Asia/Shanghai"
+  },
+  {
+    "code": "WRO",
+    "name": "Copernicus Wrocław",
+    "city": "Wrocław",
+    "country": "PL",
+    "tz": "Europe/Warsaw"
+  },
+  {
+    "code": "WUH",
+    "name": "Wuhan Tianhe International",
+    "city": "Wuhan (Huangpi)",
+    "country": "CN",
+    "tz": "Asia/Shanghai"
+  },
+  {
+    "code": "XBJ",
+    "name": "Birjand International",
+    "city": "Birjand",
+    "country": "IR",
+    "tz": "Asia/Tehran"
+  },
+  {
+    "code": "XIY",
+    "name": "Xi'an Xianyang International",
+    "city": "Xianyang (Weicheng)",
+    "country": "CN",
+    "tz": "Asia/Shanghai"
+  },
+  {
+    "code": "XMN",
+    "name": "Xiamen Gaoqi International",
+    "city": "Xiamen",
+    "country": "CN",
+    "tz": "Asia/Shanghai"
+  },
+  {
+    "code": "YEG",
+    "name": "Edmonton International",
+    "city": "Edmonton",
+    "country": "CA",
+    "tz": "America/Edmonton"
+  },
+  {
+    "code": "YFB",
+    "name": "Iqaluit",
+    "city": "Iqaluit",
+    "country": "CA",
+    "tz": "America/Iqaluit"
+  },
+  {
+    "code": "YHZ",
+    "name": "Halifax / Stanfield International",
+    "city": "Halifax",
+    "country": "CA",
+    "tz": "America/Halifax"
+  },
+  {
+    "code": "YNT",
+    "name": "Yantai Penglai International",
+    "city": "Yantai",
+    "country": "CN",
+    "tz": "Asia/Shanghai"
+  },
+  {
+    "code": "YOW",
+    "name": "Ottawa Macdonald-Cartier International",
+    "city": "Ottawa",
+    "country": "CA",
+    "tz": "America/Toronto"
+  },
+  {
+    "code": "YQB",
+    "name": "Quebec Jean Lesage International",
+    "city": "Quebec",
+    "country": "CA",
+    "tz": "America/Toronto"
+  },
+  {
+    "code": "YUL",
+    "name": "Montreal / Pierre Elliott Trudeau International",
+    "city": "Montréal",
+    "country": "CA",
+    "tz": "America/Toronto"
+  },
+  {
+    "code": "YVR",
+    "name": "Vancouver International",
+    "city": "Vancouver",
+    "country": "CA",
+    "tz": "America/Vancouver"
+  },
+  {
+    "code": "YWG",
+    "name": "Winnipeg / James Armstrong Richardson International",
+    "city": "Winnipeg",
+    "country": "CA",
+    "tz": "America/Winnipeg"
+  },
+  {
+    "code": "YYC",
+    "name": "Calgary International",
+    "city": "Calgary",
+    "country": "CA",
+    "tz": "America/Edmonton"
+  },
+  {
+    "code": "YYT",
+    "name": "St. John's International",
+    "city": "St. John's",
+    "country": "CA",
+    "tz": "America/St_Johns"
+  },
+  {
+    "code": "YYZ",
+    "name": "Toronto Lester B. Pearson International",
+    "city": "Toronto",
+    "country": "CA",
+    "tz": "America/Toronto"
+  },
+  {
+    "code": "ZAG",
+    "name": "Zagreb Franjo Tuđman International",
+    "city": "Velika Gorica",
+    "country": "HR",
+    "tz": "Europe/Belgrade"
+  },
+  {
+    "code": "ZIA",
+    "name": "Zhukovsky International",
+    "city": "Moscow",
+    "country": "RU",
+    "tz": "Europe/Moscow"
+  },
+  {
+    "code": "ZNZ",
+    "name": "Abeid Amani Karume International",
+    "city": "Zanzibar",
+    "country": "TZ",
+    "tz": "Asia/Riyadh"
+  },
+  {
+    "code": "ZRH",
+    "name": "Zürich",
+    "city": "Zurich",
+    "country": "CH",
+    "tz": "Europe/Zurich"
+  }
+]

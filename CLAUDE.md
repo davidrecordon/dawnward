@@ -51,7 +51,7 @@ design_docs/          # Product specifications and design decisions
 
 **Import alias**: Use `@/*` for `src/*` imports (e.g., `@/lib/utils`, `@/components/ui/button`)
 
-**UI Components**: Using shadcn/ui with Radix primitives. Components use `class-variance-authority` for variants and the `cn()` helper for class merging.
+**UI Components**: Using shadcn/ui with Radix primitives. Components use `class-variance-authority` for variants and the `cn()` helper for class merging. Add new components with `bunx shadcn@latest add <component>` (use bunx, not npx).
 
 **Auth Flow**: Progressive signup - anonymous users can generate one schedule (stored in localStorage), then sign in with Google to save trips to database and sync to Google Calendar.
 
