@@ -7,7 +7,13 @@
       "Bash(eslint:*)",
       "Bash(prettier:*)",
       "Bash(tsc:*)",
+      "Bash(python:*)",
+      "Bash(python3:*)",
+      "Bash(pip:*)",
+      "Bash(pip3:*)",
       "Skill(frontend-design)",
+      "Skill(feature-dev:*)",
+      "WebFetch(domain:arcascope.github.io)",
       "WebSearch"
     ]
   },

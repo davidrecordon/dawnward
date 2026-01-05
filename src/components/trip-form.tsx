@@ -1,12 +1,13 @@
 "use client";
 
 import * as React from "react";
-import { Activity, ChevronRight, Coffee, MapPin, Pill } from "lucide-react";
+import { Activity, Calendar, ChevronRight, Coffee, MapPin, Pill } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Slider } from "@/components/ui/slider";
 import { AirportSelect } from "@/components/airport-select";
 import { PreferenceToggle } from "@/components/preference-toggle";
 import { FormError } from "@/components/form-error";
@@ -210,6 +211,30 @@ export function TripForm({ formState, onFormChange }: TripFormProps) {
               onCheckedChange={(checked) => updateField("useExercise", checked)}
               colorScheme="sky"
             />
+
+            {/* Prep days slider */}
+            <div className="space-y-3 pt-1">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4 text-sky-500" />
+                  <Label className="text-sm font-medium">Days before departure</Label>
+                </div>
+                <span className="text-sm font-semibold text-sky-600">
+                  {formState.prepDays} {formState.prepDays === 1 ? "day" : "days"}
+                </span>
+              </div>
+              <Slider
+                value={[formState.prepDays]}
+                onValueChange={([value]) => updateField("prepDays", value)}
+                min={1}
+                max={7}
+                step={1}
+                className="[&_[data-slot=slider-track]]:bg-slate-200 [&_[data-slot=slider-range]]:bg-sky-500 [&_[data-slot=slider-thumb]]:border-sky-500"
+              />
+              <p className="text-xs text-muted-foreground">
+                Start adapting earlier for a gentler transition (auto-adjusts if trip is sooner)
+              </p>
+            </div>
           </div>
 
           <hr className="border-slate-200" />

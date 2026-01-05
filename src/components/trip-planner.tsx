@@ -23,6 +23,7 @@ export function TripPlanner() {
           destination={formState.destination}
           departureDateTime={formState.departureDateTime}
           arrivalDateTime={formState.arrivalDateTime}
+          prepDays={formState.prepDays}
         />
 
         {/* Calendar Sync */}

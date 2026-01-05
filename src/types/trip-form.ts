@@ -22,6 +22,8 @@ export interface TripFormState {
   wakeTime: string;
   /** User's usual sleep time in HH:MM format */
   sleepTime: string;
+  /** Number of days before departure to start adapting (1-7) */
+  prepDays: number;
 }
 
 /**
@@ -37,4 +39,5 @@ export const defaultFormState: TripFormState = {
   useExercise: false,
   wakeTime: "07:00",
   sleepTime: "23:00",
+  prepDays: 3,
 };

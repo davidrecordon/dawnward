@@ -102,6 +102,26 @@ Required:
 
 **Layout**: Mobile-first. Cards use white with `shadow-sm`, add `backdrop-blur-sm` over gradients. Border radius is `0.625rem` (the `--radius` CSS variable).
 
+## Claude Code Skills
+
+This project uses two Claude Code plugins that should be invoked for significant work:
+
+**`/frontend-design`** - Use when building or modifying UI components
+- Designs distinctive, production-grade interfaces
+- Ensures brand consistency (colors, typography, spacing)
+- Avoids generic "AI slop" aesthetics
+
+**`/feature-dev`** - Use when implementing new features
+- Guided feature development with codebase understanding
+- Explores existing patterns before writing code
+- Asks clarifying questions, designs architecture, then implements
+- Includes code review phase
+
+**When to use them:**
+- Building new components or pages → `/frontend-design`
+- Implementing backend features, APIs, or complex logic → `/feature-dev`
+- Small fixes, typos, or simple changes → No skill needed
+
 ## Design Documents
 
 See `design_docs/` for detailed specifications:

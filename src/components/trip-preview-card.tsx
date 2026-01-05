@@ -17,6 +17,7 @@ interface TripPreviewCardProps {
   destination: Airport | null;
   departureDateTime: string;
   arrivalDateTime: string;
+  prepDays: number;
 }
 
 export function TripPreviewCard({
@@ -24,6 +25,7 @@ export function TripPreviewCard({
   destination,
   departureDateTime,
   arrivalDateTime,
+  prepDays,
 }: TripPreviewCardProps) {
   // Calculate time shift
   const timeShift = React.useMemo(() => {
@@ -65,8 +67,8 @@ export function TripPreviewCard({
         </div>
         <div className="grid grid-cols-3 gap-2 text-center">
           <div className="p-3 rounded-lg bg-slate-50">
-            <p className="text-2xl font-bold text-sky-600">3</p>
-            <p className="text-xs text-slate-500">Days before</p>
+            <p className="text-2xl font-bold text-sky-600">{prepDays}</p>
+            <p className="text-xs text-slate-500">{prepDays === 1 ? "Day" : "Days"} before</p>
           </div>
           <div className="p-3 rounded-lg bg-slate-50">
             <p className="text-2xl font-bold text-orange-600">
