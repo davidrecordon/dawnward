@@ -1,0 +1,114 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## Project Overview
+
+Dawnward is a free, open-source jet lag optimization web app. It uses the Arcascope circadian library (Forger99 model) to generate personalized schedules for adapting to new timezones via light exposure, melatonin timing, and caffeine strategy.
+
+## Commands
+
+```bash
+# Development
+bun dev              # Start Next.js dev server (localhost:3000)
+bun run build        # Production build
+bun start            # Start production server
+bun run lint         # Run ESLint
+
+# Database (Prisma)
+bun prisma generate     # Generate Prisma client to src/generated/prisma
+bun prisma migrate dev  # Run migrations in development
+bun prisma studio       # Open Prisma Studio GUI
+```
+
+## Tech Stack
+
+- **Framework**: Next.js 16+ (App Router, React 19)
+- **Auth**: NextAuth.js v5 with Google provider (includes Calendar scope)
+- **Database**: PostgreSQL via Prisma (Vercel Postgres in prod)
+- **Styling**: Tailwind CSS v4 with shadcn/ui components
+- **Python Runtime**: Vercel Python Functions for circadian model (Arcascope library)
+
+## Architecture
+
+### Directory Structure
+
+```
+src/
+├── app/              # Next.js App Router pages and API routes
+├── components/ui/    # shadcn/ui components (Button, Card, Input, etc.)
+├── lib/              # Shared utilities (cn() for Tailwind class merging)
+└── generated/prisma/ # Prisma client (generated, do not edit)
+
+prisma/
+├── schema.prisma     # Database schema
+└── migrations/       # Database migrations
+
+design_docs/          # Product specifications and design decisions
+```
+
+### Key Patterns
+
+**Import alias**: Use `@/*` for `src/*` imports (e.g., `@/lib/utils`, `@/components/ui/button`)
+
+**UI Components**: Using shadcn/ui with Radix primitives. Components use `class-variance-authority` for variants and the `cn()` helper for class merging.
+
+**Auth Flow**: Progressive signup - anonymous users can generate one schedule (stored in localStorage), then sign in with Google to save trips to database and sync to Google Calendar.
+
+### Database Schema (Key Tables)
+
+- `users` - Google ID, email, default preferences (prep_days, wake/sleep times, melatonin/caffeine prefs)
+- `trips` - Container for legs with status (planned/active/completed) and prep_days
+- `legs` - Individual flight segments with origin/destination timezones and datetimes
+- `schedules` - Generated plans with model_version and inputs_hash for cache invalidation
+- `calendar_syncs` - Track Google Calendar event IDs for delete-and-replace sync
+
+### Schedule Generation
+
+Schedules are computed by Python functions using the Arcascope `circadian` library (Forger99 model). Key intervention types:
+- `light_seek` / `light_avoid` - Light exposure windows
+- `melatonin` - Optimal melatonin timing
+- `caffeine_ok` / `caffeine_cutoff` / `caffeine_boost` - Caffeine strategy
+- `sleep_target` / `wake_target` - Target sleep schedule
+
+### MCP Interface
+
+Public read-only endpoint at `/api/mcp` for Claude to answer jet lag questions. No auth required, rate limited by IP.
+
+## Environment Variables
+
+Required:
+- `DATABASE_URL` - PostgreSQL connection string
+- `NEXTAUTH_URL` - App URL (https://dawnward.app)
+- `NEXTAUTH_SECRET` - Session encryption key
+- `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` - Google OAuth credentials
+
+## Brand & UI Guidelines
+
+**Voice & Tone**: Direct but warm. Explain the "why" briefly. Use plain language (not clinical jargon). Be specific with times ("9:30 PM" not "evening").
+
+**Microcopy**: "Generate My Schedule" not "Submit", "Add to Calendar" not "Sync", "Sign in with Google" not "Login"
+
+**Semantic Colors** (for intervention styling):
+- Light interventions → Sunrise/amber `#F4A574`
+- Caffeine → Sunset/orange `#E8B456`
+- Melatonin → Sage/green `#7DBB9C`
+- Sleep → Night/purple `#6B5BA3`
+- Travel/flights → Sky blue `#3B9CC9`
+
+**Icons** (Lucide): `Sun` for light, `Coffee` for caffeine, `Pill` for melatonin, `Moon` for sleep, `Plane` for travel
+
+**Layout**: Mobile-first. Cards use white with `shadow-sm`, add `backdrop-blur-sm` over gradients. Border radius is `0.625rem` (the `--radius` CSS variable).
+
+## Design Documents
+
+See `design_docs/` for detailed specifications:
+- `decisions-overview.md` - All key decisions in one place
+- `backend-design.md` - API routes, database schema, MCP tools
+- `auth-design.md` - NextAuth.js setup, progressive signup flow
+- `testing-design.md` - Validation strategy against Forger99 model
+
+## Visual and Branding Design Documents
+- `design_docs/brand.md` - All of Dawnward's color, tone and style
+- `design_docs/frontend-design.md` - Screen structure, components, user flows, and responsive behavior
+- `design_docs/ui-v2.html` - An initial static mockup of key screens

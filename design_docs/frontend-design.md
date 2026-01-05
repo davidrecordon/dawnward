@@ -1,0 +1,245 @@
+# Dawnward: Frontend Design
+
+> Screen structure, components, and user flows documented from `ui-v2.html` mockup.
+
+---
+
+## Screens Overview
+
+| Screen | Route | Purpose |
+|--------|-------|---------|
+| New Trip | `/` | Landing page with trip input form |
+| Trip History | `/history` | List of past and upcoming trips |
+| Settings | `/settings` | User preferences and account |
+| Schedule Detail | `/trip/[id]` | Daily intervention schedule |
+
+---
+
+## Screen Details
+
+### 1. New Trip (Landing Page)
+
+**URL:** `/`
+
+**Layout:** Two-column on desktop, stacked on mobile
+- Left: Trip input form
+- Right: Trip preview card + Calendar sync card
+
+**Components:**
+- **Header** — Logo, nav (New Trip, History, Settings), Sign in button
+- **Hero section** — Badge ("Science-backed jet lag optimization"), headline, subtitle
+- **Plan Your Trip form:**
+  - Airport selects (Departing from, Arriving at) with code + city display
+  - Datetime pickers (Departure, Arrival)
+  - "+ Add Connection" button for multi-leg trips
+- **Your Preferences section:**
+  - Toggle: Use melatonin (default on)
+  - Toggle: Strategic caffeine (default on)
+  - Toggle: Include exercise (default off)
+  - Time inputs: Usual wake time, Usual sleep time
+- **CTA:** "Generate My Schedule" (primary button, full width on mobile)
+- **Trip Preview card** (sidebar on desktop):
+  - Route display (SFO → SIN)
+  - Time shift badge (+16h)
+  - Stats row: Days before | Flight time | Day after
+- **Calendar Sync card** (sidebar):
+  - Icon, heading, description
+  - "Connect Calendar" button
+
+**Footer:** "Built with circadian science from Arcascope. Not medical advice."
+
+---
+
+### 2. Trip History
+
+**URL:** `/history`
+
+**Layout:** Single column, card list
+
+**Components:**
+- **Header** — Same as landing, "History" nav item highlighted
+- **Page title:** "Trip History" with subtitle
+- **Trip cards** (one per trip):
+  - Route (SFO → NRT)
+  - Time shift badge (+17h / -17h)
+  - Status badge:
+    - `Completed` — gray
+    - `Active` — green, card has green border highlight
+    - `Planned` — gray
+  - Date
+  - Route description (San Francisco → Tokyo)
+  - Star rating (completed trips only, 1-5 stars)
+  - Chevron arrow (clickable trips)
+
+**Empty state:** "No trips yet — Your completed schedules will appear here"
+
+---
+
+### 3. Settings
+
+**URL:** `/settings`
+
+**Layout:** Single column, card sections
+
+**Components:**
+- **Header** — "Settings" nav item highlighted
+- **Page title:** "Settings" with subtitle "Your default preferences for new trips"
+
+**Sleep Schedule card:**
+- Usual wake time (time input)
+- Usual bedtime (time input)
+
+**Intervention Preferences card:**
+- Toggle: Include melatonin — "Low-dose timed supplements (0.5mg)"
+- Toggle: Include caffeine timing — "Strategic coffee windows and cutoffs"
+
+**Account card:**
+- Signed out: "Sign in to save your preferences and sync trips" + Google sign-in button
+- Signed in: User email, "Sign out" link
+
+---
+
+### 4. Schedule Detail
+
+**URL:** `/trip/[id]`
+
+**Layout:** Single column with sticky footer
+
+**Components:**
+- **Back button** — Returns to History
+- **Save prompt** (anonymous users): "Save this schedule?" with Google sign-in button
+- **Trip header card:**
+  - Route (SFO → SIN)
+  - Time shift badge (+16h shift)
+  - Dates (Jan 28-29, 2026)
+  - Flight duration (17h flight)
+- **Day tabs:** Horizontal scrollable
+  - Day -2, Day -1, Flight, Arrival (etc.)
+  - Active tab has filled background
+  - Each tab shows date below label
+- **Progress bar:**
+  - "Today's progress" label
+  - Fraction display (0 / 7)
+  - Green fill proportional to completion
+
+**Intervention cards** (one per intervention):
+- Circular checkbox (left)
+- Icon in colored circle (matches intervention type)
+- Title (e.g., "Seek bright light early")
+- Description (e.g., "Get outside or use a light box")
+- Time badge (right, e.g., "6:00 AM")
+- Completed state: checkbox checked, text strikethrough, reduced opacity
+
+**Intervention types and icons:**
+| Type | Icon | Color | Example title |
+|------|------|-------|---------------|
+| Light seek | Sun | Sunrise/amber | "Seek bright light early" |
+| Light avoid | Glasses | Sky blue | "Avoid bright light" |
+| Caffeine window | Coffee | Sunset/orange | "Earlier coffee window" |
+| Caffeine cutoff | Coffee | Sunset/orange | "Last caffeine" |
+| Melatonin | Pill | Sage/green | "Take melatonin (0.5mg)" |
+| Sleep target | Moon | Night/purple | "Target sleep" |
+| Meal timing | Utensils | Rose/pink | "Light early dinner" |
+
+**Footer actions:**
+- "Add to Calendar" (outline button)
+- "Sign in to Save" (primary button) — or "Saved" when signed in
+
+---
+
+## User Flows
+
+### Anonymous User Flow
+1. Land on New Trip page
+2. Fill in flight details and preferences
+3. Click "Generate My Schedule"
+4. View Schedule Detail with interventions
+5. Prompted to sign in to save
+6. If sign in: Trip saved to database, added to History
+
+### Signed-In User Flow
+1. Land on New Trip page (or click "+ New Trip")
+2. Fill in flight details (preferences pre-filled from Settings)
+3. Click "Generate My Schedule"
+4. View Schedule Detail
+5. Trip automatically saved to History
+6. Option to "Add to Calendar"
+
+### Returning User Flow
+1. Navigate to History
+2. Click on Active or Planned trip
+3. View Schedule Detail for that day
+4. Check off completed interventions
+5. Progress bar updates
+
+---
+
+## Responsive Behavior
+
+### Breakpoints
+- **Mobile:** < 768px — single column, stacked layout
+- **Desktop:** >= 768px — multi-column where applicable
+
+### Mobile Adaptations
+
+**Header:**
+- Logo visible
+- Nav items show as icons only (clock for History, gear for Settings)
+- "Sign in" text visible
+
+**New Trip page:**
+- Form takes full width
+- Trip preview card and Calendar sync card stack below form
+- Airport selects stack (Departing from above Arriving at)
+- Date inputs stack (Departure above Arrival)
+- CTA button full width
+
+**History page:**
+- Trip cards full width
+- All card content fits in single column layout
+
+**Schedule Detail:**
+- Day tabs horizontally scrollable
+- Intervention cards full width
+- Footer buttons stack or side-by-side depending on width
+
+---
+
+## State Management Notes
+
+### Form State
+- Airport selection: typeahead search, stores code + name
+- Datetime: native datetime-local or custom picker
+- Toggles: boolean state
+- Time inputs: stored as HH:MM
+
+### Schedule State
+- Active day tab (index or date)
+- Completion checkboxes (intervention ID → boolean)
+- Progress derived from completion count
+
+### Auth State
+- Anonymous: can generate 1 schedule, stored in localStorage
+- Signed in: schedules stored in database, preferences synced
+
+---
+
+## Component Reusability
+
+These components appear across multiple screens:
+
+| Component | Used in |
+|-----------|---------|
+| Header | All screens |
+| Footer | All screens |
+| Trip card | History, New Trip (preview) |
+| Toggle row | Settings, New Trip |
+| Time input | Settings, New Trip |
+| Primary button | All screens |
+| Badge | Trip cards, Schedule header |
+| Progress bar | Schedule Detail |
+| Intervention card | Schedule Detail |
+
+---
+
+*Reference: `design_docs/ui-v2.html` for visual mockup, `design_docs/brand.md` for styling details.*
