@@ -1,6 +1,17 @@
 # Dawnward: Frontend Design
 
-> Screen structure, components, and user flows documented from `ui-v2.html` mockup.
+> Screen structure, components, and user flows for Dawnward.
+
+---
+
+## Mockup Reference Files
+
+| File | Purpose |
+|------|---------|
+| `design_docs/ui-v2.html` | Full app mockup (multiple screens, minified/bundled) |
+| `design_docs/ui-v2-homepage-only.html` | Homepage only (readable source, use for styling reference) |
+
+Use `ui-v2-homepage-only.html` when you need to inspect exact CSS values, Tailwind classes, or HTML structure.
 
 ---
 
@@ -46,7 +57,57 @@
   - Icon, heading, description
   - "Connect Calendar" button
 
-**Footer:** "Built with circadian science from Arcascope. Not medical advice."
+**Footer:** "Built with circadian science. Not medical advice." (links to `/science`)
+
+---
+
+### Homepage Styling Reference
+
+*Source: `ui-v2-homepage-only.html`*
+
+**Page Background Gradient:**
+```css
+background: linear-gradient(
+  180deg,
+  hsl(199 80% 95%) 0%,    /* light blue */
+  hsl(199 70% 92%) 15%,
+  hsl(38 60% 96%) 35%,    /* cream */
+  hsl(16 70% 94%) 55%,    /* peach */
+  hsl(280 50% 92%) 75%,   /* lavender */
+  hsl(265 45% 88%) 100%   /* purple */
+);
+```
+
+**Component Background Opacities:**
+| Component | Tailwind Classes |
+|-----------|------------------|
+| Header | `bg-white/70 backdrop-blur-sm` |
+| Main cards | `bg-white/90 backdrop-blur-sm rounded-xl shadow-sm border border-slate-200/50` |
+| Calendar sync card | `bg-white/50 border-2 border-dashed border-slate-200` |
+| "How it works" card | `bg-white/60 border border-purple-100` |
+| Footer | `bg-white/30 backdrop-blur-sm` |
+
+**Hero Badge:**
+- Classes: `bg-white/80 text-orange-600 text-sm font-medium shadow-sm`
+- Sparkles icon before text
+
+**"How it works" Card:**
+- Title: `text-purple-700 font-medium text-sm`
+- Description: `text-xs text-slate-500 leading-relaxed`
+
+**Preference Toggle Backgrounds:**
+| Preference | Background | Icon Color |
+|------------|------------|------------|
+| Melatonin | `bg-emerald-50/80` | `text-emerald-600` |
+| Caffeine | `bg-orange-50/80` | `text-orange-600` |
+| Exercise | `bg-sky-50/80` | `text-sky-600` |
+
+**Trip Preview Stats Colors:**
+| Stat | Color |
+|------|-------|
+| Days before | `text-sky-600` |
+| Flight time | `text-orange-600` |
+| Day after | `text-purple-600` |
 
 ---
 
@@ -242,4 +303,4 @@ These components appear across multiple screens:
 
 ---
 
-*Reference: `design_docs/ui-v2.html` for visual mockup, `design_docs/brand.md` for styling details.*
+*Reference: `design_docs/ui-v2.html` for full app mockup, `design_docs/ui-v2-homepage-only.html` for readable homepage source, `design_docs/brand.md` for brand guidelines.*

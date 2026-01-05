@@ -111,4 +111,5 @@ See `design_docs/` for detailed specifications:
 ## Visual and Branding Design Documents
 - `design_docs/brand.md` - All of Dawnward's color, tone and style
 - `design_docs/frontend-design.md` - Screen structure, components, user flows, and responsive behavior
+- `design_docs/ui-v2-homepage-only.html` - An initial static mockup of the homepage which is small enough to fit into your context window
 - `design_docs/ui-v2.html` - An initial static mockup of key screens
