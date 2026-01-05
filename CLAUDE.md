@@ -98,6 +98,8 @@ Required:
 
 **Icons** (Lucide): `Sun` for light, `Coffee` for caffeine, `Pill` for melatonin, `Moon` for sleep, `Plane` for travel
 
+**Typography**: System font stack (`system-ui, -apple-system, sans-serif`). Body text is `text-slate-800`. Headings use `font-semibold` or `font-bold` with `tracking-tight`.
+
 **Layout**: Mobile-first. Cards use white with `shadow-sm`, add `backdrop-blur-sm` over gradients. Border radius is `0.625rem` (the `--radius` CSS variable).
 
 ## Design Documents

@@ -65,6 +65,14 @@ Use `ui-v2-homepage-only.html` when you need to inspect exact CSS values, Tailwi
 
 *Source: `ui-v2-homepage-only.html`*
 
+**Typography:**
+- Font family: `system-ui, -apple-system, sans-serif` (set on body via inline style)
+- Body text: `text-slate-800 antialiased`
+- Logo: `font-semibold text-lg tracking-tight`
+- Page title (h1): `text-3xl sm:text-4xl font-bold tracking-tight`
+- Card titles: `text-xl font-semibold`
+- Labels: `text-sm font-medium`
+
 **Page Background Gradient:**
 ```css
 background: linear-gradient(
