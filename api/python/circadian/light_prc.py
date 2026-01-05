@@ -19,6 +19,7 @@ from .circadian_math import (
     time_to_minutes,
     minutes_to_time,
     format_time,
+    format_time_12h,
     shift_time,
 )
 
@@ -72,7 +73,7 @@ def generate_light_windows(
             time=format_time(avoid_start),
             type="light_avoid",
             title="Avoid bright light",
-            description=f"Wear sunglasses or stay indoors until {format_time(avoid_end)}. "
+            description=f"Wear sunglasses or stay indoors until {format_time_12h(avoid_end)}. "
                        "Light now would shift your clock the wrong direction.",
             duration_min=240  # 4 hours
         ))
@@ -102,7 +103,7 @@ def generate_light_windows(
             time=format_time(avoid_start),
             type="light_avoid",
             title="Avoid bright light",
-            description=f"Wear sunglasses or stay indoors until {format_time(avoid_end)}. "
+            description=f"Wear sunglasses or stay indoors until {format_time_12h(avoid_end)}. "
                        "Morning light would shift your clock the wrong direction.",
             duration_min=240  # 4 hours
         ))

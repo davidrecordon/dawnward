@@ -6,9 +6,27 @@ import { Calendar } from "lucide-react";
 import { TripForm } from "@/components/trip-form";
 import { TripPreviewCard } from "@/components/trip-preview-card";
 import { defaultFormState, type TripFormState } from "@/types/trip-form";
+import { getFormState, saveFormState } from "@/lib/schedule-storage";
 
 export function TripPlanner() {
   const [formState, setFormState] = React.useState<TripFormState>(defaultFormState);
+  const [isHydrated, setIsHydrated] = React.useState(false);
+
+  // Load saved form state on mount
+  React.useEffect(() => {
+    const saved = getFormState();
+    if (saved) {
+      setFormState(saved);
+    }
+    setIsHydrated(true);
+  }, []);
+
+  // Save form state when it changes (after hydration)
+  React.useEffect(() => {
+    if (isHydrated) {
+      saveFormState(formState);
+    }
+  }, [formState, isHydrated]);
 
   return (
     <div className="grid gap-6 md:grid-cols-[1fr_340px]">

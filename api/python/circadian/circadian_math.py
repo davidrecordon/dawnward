@@ -28,8 +28,19 @@ def minutes_to_time(minutes: int) -> time:
 
 
 def format_time(t: time) -> str:
-    """Format time as "HH:MM"."""
+    """Format time as "HH:MM" (24-hour format for data fields)."""
     return f"{t.hour:02d}:{t.minute:02d}"
+
+
+def format_time_12h(t: time) -> str:
+    """Format time as "H:MM AM/PM" (12-hour format for user-facing text)."""
+    hour = t.hour
+    period = "AM" if hour < 12 else "PM"
+    if hour == 0:
+        hour = 12
+    elif hour > 12:
+        hour -= 12
+    return f"{hour}:{t.minute:02d} {period}"
 
 
 def estimate_cbtmin_from_wake(wake_time: str) -> time:

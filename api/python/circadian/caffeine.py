@@ -24,6 +24,7 @@ from .circadian_math import (
     time_to_minutes,
     minutes_to_time,
     format_time,
+    format_time_12h,
     shift_time,
 )
 
@@ -60,7 +61,7 @@ def generate_caffeine_strategy(
         time=format_time(wake_time),
         type="caffeine_ok",
         title="Caffeine OK",
-        description=f"Coffee and caffeinated drinks are fine until {format_time(cutoff_time)}.",
+        description=f"Coffee and caffeinated drinks are fine until {format_time_12h(cutoff_time)}.",
         duration_min=None
     ))
 

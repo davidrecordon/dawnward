@@ -1,7 +1,10 @@
 "use client";
 
 import * as React from "react";
-import { Activity, Calendar, ChevronRight, Coffee, MapPin, Pill } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Activity, Calendar, ChevronRight, Coffee, Loader2, MapPin, Pill } from "lucide-react";
+import { saveSchedule, getSchedule } from "@/lib/schedule-storage";
+import type { ScheduleResponse, StoredSchedule } from "@/types/schedule";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -36,7 +39,9 @@ function FieldError({ message }: { message?: string }) {
 }
 
 export function TripForm({ formState, onFormChange }: TripFormProps) {
+  const router = useRouter();
   const [errors, setErrors] = React.useState<FormErrors>({});
+  const [isLoading, setIsLoading] = React.useState(false);
 
   const updateField = <K extends keyof TripFormState>(
     field: K,
@@ -97,13 +102,98 @@ export function TripForm({ formState, onFormChange }: TripFormProps) {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!validate()) {
       return;
     }
 
-    console.log("Form submission:", formState);
-    // TODO: Call API route to generate schedule
+    // Ensure we have airports (validation should catch this, but TypeScript needs it)
+    if (!formState.origin || !formState.destination) {
+      return;
+    }
+
+    // Check if we already have a schedule with the same inputs
+    const existingSchedule = getSchedule();
+    if (existingSchedule) {
+      const req = existingSchedule.request;
+      const inputsMatch =
+        req.origin.code === formState.origin.code &&
+        req.destination.code === formState.destination.code &&
+        req.departureDateTime === formState.departureDateTime &&
+        req.arrivalDateTime === formState.arrivalDateTime &&
+        req.prepDays === formState.prepDays &&
+        req.wakeTime === formState.wakeTime &&
+        req.sleepTime === formState.sleepTime &&
+        req.usesMelatonin === formState.useMelatonin &&
+        req.usesCaffeine === formState.useCaffeine &&
+        req.usesExercise === formState.useExercise;
+
+      if (inputsMatch) {
+        // Same inputs - just navigate to existing schedule
+        router.push(`/trip/${existingSchedule.id}`);
+        return;
+      }
+    }
+
+    setIsLoading(true);
+    setErrors({});
+
+    try {
+      const response = await fetch("/api/schedule/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          origin_tz: formState.origin.tz,
+          dest_tz: formState.destination.tz,
+          departure_datetime: formState.departureDateTime,
+          arrival_datetime: formState.arrivalDateTime,
+          prep_days: formState.prepDays,
+          wake_time: formState.wakeTime,
+          sleep_time: formState.sleepTime,
+          uses_melatonin: formState.useMelatonin,
+          uses_caffeine: formState.useCaffeine,
+          uses_exercise: formState.useExercise,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to generate schedule");
+      }
+
+      const data: { id: string; schedule: ScheduleResponse } = await response.json();
+
+      // Save to localStorage
+      const storedSchedule: StoredSchedule = {
+        id: data.id,
+        createdAt: new Date().toISOString(),
+        request: {
+          origin: formState.origin,
+          destination: formState.destination,
+          departureDateTime: formState.departureDateTime,
+          arrivalDateTime: formState.arrivalDateTime,
+          prepDays: formState.prepDays,
+          wakeTime: formState.wakeTime,
+          sleepTime: formState.sleepTime,
+          usesMelatonin: formState.useMelatonin,
+          usesCaffeine: formState.useCaffeine,
+          usesExercise: formState.useExercise,
+        },
+        schedule: data.schedule,
+        completedItems: [],
+      };
+
+      saveSchedule(storedSchedule);
+
+      // Navigate to trip detail page
+      router.push(`/trip/${data.id}`);
+    } catch (error) {
+      console.error("Schedule generation error:", error);
+      setErrors({
+        form: error instanceof Error ? error.message : "Failed to generate schedule",
+      });
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -264,11 +354,21 @@ export function TripForm({ formState, onFormChange }: TripFormProps) {
 
         <Button
           onClick={handleSubmit}
-          className="w-full bg-sky-500 hover:bg-sky-600 text-white"
+          disabled={isLoading}
+          className="w-full bg-sky-500 hover:bg-sky-600 text-white disabled:opacity-70"
           size="lg"
         >
-          Generate My Schedule
-          <ChevronRight className="ml-2 h-4 w-4" />
+          {isLoading ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Generating Schedule...
+            </>
+          ) : (
+            <>
+              Generate My Schedule
+              <ChevronRight className="ml-2 h-4 w-4" />
+            </>
+          )}
         </Button>
       </CardContent>
     </Card>
