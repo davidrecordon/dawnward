@@ -101,8 +101,9 @@ class ScheduleGenerator:
                 request=request
             )
 
-            # Sort interventions by time
-            interventions.sort(key=lambda x: x.time)
+            # Sort interventions by time, with secondary ordering for same-time items
+            # Use sorted() to avoid issues with in-place sort referencing the list being sorted
+            interventions = sorted(interventions, key=lambda x: self._intervention_sort_key(x, interventions))
 
             day_schedules.append(DaySchedule(
                 day=day_num,
@@ -204,6 +205,8 @@ class ScheduleGenerator:
 
         # Light interventions (always included - primary intervention)
         light_interventions = generate_shifted_light_windows(
+            base_wake=base_wake,
+            base_sleep=base_sleep,
             base_cbtmin=base_cbtmin,
             cumulative_shift=cumulative_shift,
             direction=direction
@@ -249,7 +252,154 @@ class ScheduleGenerator:
         )
         interventions.extend(sleep_wake)
 
+        # Filter out interventions that fall during sleep
+        interventions = self._filter_sleep_interventions(interventions)
+
         return interventions
+
+    def _is_during_sleep(self, time_str: str, sleep_time: str, wake_time: str) -> bool:
+        """
+        Check if a time falls within the sleep window (sleep_time to wake_time).
+
+        Handles the common case where sleep crosses midnight (e.g., 23:00 to 07:00).
+
+        Args:
+            time_str: Time to check in "HH:MM" format
+            sleep_time: Sleep target time in "HH:MM" format
+            wake_time: Wake target time in "HH:MM" format
+
+        Returns:
+            True if time falls within the sleep window
+        """
+        from .circadian_math import parse_time, time_to_minutes
+
+        t = time_to_minutes(parse_time(time_str))
+        sleep = time_to_minutes(parse_time(sleep_time))
+        wake = time_to_minutes(parse_time(wake_time))
+
+        if sleep > wake:  # Sleep crosses midnight (e.g., 23:00 to 07:00)
+            return t >= sleep or t < wake
+        else:  # Sleep doesn't cross midnight (rare, but handle it)
+            return sleep <= t < wake
+
+    def _filter_sleep_interventions(
+        self,
+        interventions: List[Intervention]
+    ) -> List[Intervention]:
+        """
+        Filter out interventions that fall during sleep hours.
+
+        Users can't act on interventions while asleep, so remove:
+        - light_seek, light_avoid, caffeine_ok, caffeine_cutoff, exercise
+
+        Always keep:
+        - sleep_target, wake_target (these define the window)
+        - melatonin (taken just before sleep, so it's actionable)
+
+        Args:
+            interventions: List of interventions for the day
+
+        Returns:
+            Filtered list with sleep-period interventions removed
+        """
+        # Find sleep and wake target times
+        sleep_time = None
+        wake_time = None
+
+        for intervention in interventions:
+            if intervention.type == "sleep_target":
+                sleep_time = intervention.time
+            elif intervention.type == "wake_target":
+                wake_time = intervention.time
+
+        # If we don't have both targets, can't filter
+        if not sleep_time or not wake_time:
+            return interventions
+
+        # Types to filter during sleep (melatonin is kept - it's taken before sleep)
+        filterable_types = {
+            "light_seek",
+            "light_avoid",
+            "caffeine_ok",
+            "caffeine_cutoff",
+            "exercise",
+        }
+
+        filtered = []
+        for intervention in interventions:
+            # Always keep non-filterable types
+            if intervention.type not in filterable_types:
+                filtered.append(intervention)
+                continue
+
+            # Keep if not during sleep
+            if not self._is_during_sleep(intervention.time, sleep_time, wake_time):
+                filtered.append(intervention)
+
+        return filtered
+
+    def _intervention_sort_key(
+        self,
+        intervention: Intervention,
+        all_interventions: List[Intervention]
+    ) -> tuple:
+        """
+        Generate sort key for an intervention.
+
+        Primary sort: by time
+        Secondary sort (for same-time items):
+        - If wake_target is at this time: wake_target first, then non-optional, then optional
+        - If sleep_target is at this time: non-optional first, then optional, then sleep_target last
+
+        Non-optional: light_seek, light_avoid
+        Optional: melatonin, caffeine_ok, caffeine_cutoff, exercise
+        """
+        # Check what targets are at this time
+        same_time_types = {i.type for i in all_interventions if i.time == intervention.time}
+        has_wake = "wake_target" in same_time_types
+        has_sleep = "sleep_target" in same_time_types
+
+        # Define priority groups
+        non_optional = {"light_seek", "light_avoid"}
+        # Optional items in priority order (caffeine first since it's actionable in morning)
+        optional_priority = {
+            "caffeine_ok": 0,
+            "caffeine_cutoff": 1,
+            "exercise": 2,
+            "melatonin": 3,
+        }
+
+        # Calculate secondary sort order
+        if has_wake:
+            # wake_target first (0), then non-optional (1), then optional (2+)
+            if intervention.type == "wake_target":
+                order = (0, 0)
+            elif intervention.type in non_optional:
+                order = (1, 0)
+            elif intervention.type in optional_priority:
+                order = (2, optional_priority[intervention.type])
+            else:
+                order = (3, 0)
+        elif has_sleep:
+            # non-optional first (0), then optional (1+), then sleep_target last (2)
+            if intervention.type in non_optional:
+                order = (0, 0)
+            elif intervention.type in optional_priority:
+                order = (1, optional_priority[intervention.type])
+            elif intervention.type == "sleep_target":
+                order = (2, 0)
+            else:
+                order = (3, 0)
+        else:
+            # Default: non-optional before optional
+            if intervention.type in non_optional:
+                order = (0, 0)
+            elif intervention.type in optional_priority:
+                order = (1, optional_priority[intervention.type])
+            else:
+                order = (2, 0)
+
+        return (intervention.time, order)
 
     def _generate_sleep_wake_targets(
         self,

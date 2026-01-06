@@ -74,15 +74,28 @@ class TestScheduleStructure:
 class TestInterventionGeneration:
     """Tests for intervention types and content."""
 
-    def test_light_interventions_always_present(self, generator, eastward_request):
-        """Light seek and avoid should always be generated."""
-        response = generator.generate_schedule(eastward_request)
-        all_types = []
-        for day in response.interventions:
-            all_types.extend([item.type for item in day.items])
+    def test_light_prc_module_generates_interventions(self):
+        """Light PRC module should generate light_seek interventions.
 
-        assert "light_seek" in all_types, "Should have light_seek interventions"
-        assert "light_avoid" in all_types, "Should have light_avoid interventions"
+        Note: light_avoid may be filtered if it falls entirely during sleep.
+        This test verifies the underlying light generation works.
+        """
+        from datetime import time
+        from circadian.light_prc import generate_light_windows
+
+        wake = time(7, 0)
+        sleep = time(23, 0)
+        cbtmin = time(4, 30)
+
+        # Test advance direction (eastward)
+        interventions = generate_light_windows(wake, sleep, cbtmin, "advance")
+        types = [i.type for i in interventions]
+        assert "light_seek" in types, "Should generate light_seek for advance"
+
+        # Test delay direction (westward)
+        interventions = generate_light_windows(wake, sleep, cbtmin, "delay")
+        types = [i.type for i in interventions]
+        assert "light_seek" in types, "Should generate light_seek for delay"
 
     def test_melatonin_when_enabled(self, generator, eastward_request):
         """Melatonin should appear when uses_melatonin=True."""
@@ -217,3 +230,278 @@ class TestInterventionContent:
                     assert item.duration_min is not None, \
                         f"{item.type} should have duration_min"
                     assert item.duration_min > 0
+
+
+class TestSleepFiltering:
+    """Tests for filtering out interventions during sleep hours."""
+
+    def _time_to_minutes(self, time_str: str) -> int:
+        """Convert HH:MM to minutes since midnight."""
+        h, m = time_str.split(":")
+        return int(h) * 60 + int(m)
+
+    def _is_during_sleep(self, time_str: str, sleep_time: str, wake_time: str) -> bool:
+        """Check if time falls within sleep window."""
+        t = self._time_to_minutes(time_str)
+        sleep = self._time_to_minutes(sleep_time)
+        wake = self._time_to_minutes(wake_time)
+
+        if sleep > wake:  # Crosses midnight
+            return t >= sleep or t < wake
+        else:
+            return sleep <= t < wake
+
+    def test_no_light_seek_during_sleep(self, generator, eastward_request):
+        """Light seek should not appear during sleep hours."""
+        response = generator.generate_schedule(eastward_request)
+
+        for day in response.interventions:
+            # Find sleep and wake times for this day
+            sleep_time = None
+            wake_time = None
+            for item in day.items:
+                if item.type == "sleep_target":
+                    sleep_time = item.time
+                elif item.type == "wake_target":
+                    wake_time = item.time
+
+            if not sleep_time or not wake_time:
+                continue
+
+            # Check no light_seek during sleep
+            for item in day.items:
+                if item.type == "light_seek":
+                    assert not self._is_during_sleep(item.time, sleep_time, wake_time), \
+                        f"light_seek at {item.time} is during sleep ({sleep_time} to {wake_time})"
+
+    def test_no_light_avoid_during_sleep(self, generator, eastward_request):
+        """Light avoid should not appear during sleep hours."""
+        response = generator.generate_schedule(eastward_request)
+
+        for day in response.interventions:
+            sleep_time = None
+            wake_time = None
+            for item in day.items:
+                if item.type == "sleep_target":
+                    sleep_time = item.time
+                elif item.type == "wake_target":
+                    wake_time = item.time
+
+            if not sleep_time or not wake_time:
+                continue
+
+            for item in day.items:
+                if item.type == "light_avoid":
+                    assert not self._is_during_sleep(item.time, sleep_time, wake_time), \
+                        f"light_avoid at {item.time} is during sleep ({sleep_time} to {wake_time})"
+
+    def test_no_caffeine_during_sleep(self, generator, eastward_request):
+        """Caffeine interventions should not appear during sleep hours."""
+        response = generator.generate_schedule(eastward_request)
+
+        for day in response.interventions:
+            sleep_time = None
+            wake_time = None
+            for item in day.items:
+                if item.type == "sleep_target":
+                    sleep_time = item.time
+                elif item.type == "wake_target":
+                    wake_time = item.time
+
+            if not sleep_time or not wake_time:
+                continue
+
+            for item in day.items:
+                if item.type in ["caffeine_ok", "caffeine_cutoff"]:
+                    assert not self._is_during_sleep(item.time, sleep_time, wake_time), \
+                        f"{item.type} at {item.time} is during sleep ({sleep_time} to {wake_time})"
+
+    def test_no_exercise_during_sleep(self, generator, westward_request):
+        """Exercise should not appear during sleep hours."""
+        response = generator.generate_schedule(westward_request)
+
+        for day in response.interventions:
+            sleep_time = None
+            wake_time = None
+            for item in day.items:
+                if item.type == "sleep_target":
+                    sleep_time = item.time
+                elif item.type == "wake_target":
+                    wake_time = item.time
+
+            if not sleep_time or not wake_time:
+                continue
+
+            for item in day.items:
+                if item.type == "exercise":
+                    assert not self._is_during_sleep(item.time, sleep_time, wake_time), \
+                        f"exercise at {item.time} is during sleep ({sleep_time} to {wake_time})"
+
+    def test_sleep_wake_targets_always_preserved(self, generator, eastward_request):
+        """Sleep and wake targets should never be filtered out."""
+        response = generator.generate_schedule(eastward_request)
+
+        for day in response.interventions:
+            types = [item.type for item in day.items]
+            assert "sleep_target" in types, f"Day {day.day} missing sleep_target"
+            assert "wake_target" in types, f"Day {day.day} missing wake_target"
+
+    def test_melatonin_preserved(self, generator, eastward_request):
+        """Melatonin should be preserved (it's taken before sleep, so actionable)."""
+        response = generator.generate_schedule(eastward_request)
+
+        # Check melatonin appears in at least one day
+        all_types = []
+        for day in response.interventions:
+            all_types.extend([item.type for item in day.items])
+
+        assert "melatonin" in all_types, "Melatonin should be preserved"
+
+    def test_sleep_window_crosses_midnight(self, generator, westward_request):
+        """Sleep filtering should work when sleep crosses midnight."""
+        # Westward trips (delays) can result in late sleep times
+        response = generator.generate_schedule(westward_request)
+
+        for day in response.interventions:
+            sleep_time = None
+            wake_time = None
+            for item in day.items:
+                if item.type == "sleep_target":
+                    sleep_time = item.time
+                elif item.type == "wake_target":
+                    wake_time = item.time
+
+            if not sleep_time or not wake_time:
+                continue
+
+            # Verify no filterable interventions during sleep
+            filterable = ["light_seek", "light_avoid", "caffeine_ok", "caffeine_cutoff", "exercise"]
+            for item in day.items:
+                if item.type in filterable:
+                    assert not self._is_during_sleep(item.time, sleep_time, wake_time), \
+                        f"{item.type} at {item.time} during sleep ({sleep_time} to {wake_time})"
+
+    def test_filtering_preserves_all_intervention_fields(self, generator, eastward_request):
+        """Filtering should preserve all intervention data (title, description, etc.)."""
+        response = generator.generate_schedule(eastward_request)
+
+        for day in response.interventions:
+            for item in day.items:
+                assert item.time is not None
+                assert item.type is not None
+                assert item.title is not None
+                assert item.description is not None
+                # duration_min can be None for point-in-time interventions
+
+
+class TestLightTimingLogic:
+    """Tests for sleep-aware light intervention timing."""
+
+    def test_advance_light_seek_at_wake_time(self):
+        """ADVANCE light_seek should be at or after wake time (not during sleep)."""
+        from datetime import time
+        from circadian.light_prc import generate_light_windows
+
+        wake = time(7, 0)
+        sleep = time(23, 0)
+        cbtmin = time(4, 30)  # PRC optimal would be 06:30 (during sleep)
+
+        interventions = generate_light_windows(wake, sleep, cbtmin, "advance")
+        light_seek = next(i for i in interventions if i.type == "light_seek")
+
+        # Should be at wake time (07:00), not 06:30
+        assert light_seek.time == "07:00", \
+            f"Expected light_seek at 07:00, got {light_seek.time}"
+
+    def test_delay_light_seek_evening_timing(self):
+        """DELAY light_seek should be in evening (2-3h before sleep), not pre-dawn."""
+        from datetime import time
+        from circadian.light_prc import generate_light_windows
+
+        wake = time(7, 0)
+        sleep = time(23, 0)
+        cbtmin = time(4, 30)
+
+        interventions = generate_light_windows(wake, sleep, cbtmin, "delay")
+        light_seek = next(i for i in interventions if i.type == "light_seek")
+
+        # Should be evening (around 20:00), not 02:30
+        seek_hour = int(light_seek.time.split(":")[0])
+        assert 18 <= seek_hour <= 22, \
+            f"Expected evening time (18-22), got {light_seek.time}"
+
+    def test_light_avoid_truncated_to_waking_hours(self):
+        """light_avoid should be truncated to waking hours when it overlaps sleep."""
+        from datetime import time
+        from circadian.light_prc import generate_light_windows
+
+        wake = time(7, 0)
+        sleep = time(23, 0)
+        cbtmin = time(6, 0)  # Avoid window 02:00-06:00 overlaps sleep; 06:00-10:00 partially awake
+
+        # For DELAY: avoid window is 06:00-10:00 (CBTmin to CBTmin+4h)
+        # Start is at 6am (during sleep), should be truncated to 7am wake
+        interventions = generate_light_windows(wake, sleep, cbtmin, "delay")
+        light_avoid = [i for i in interventions if i.type == "light_avoid"]
+
+        if light_avoid:
+            avoid = light_avoid[0]
+            avoid_hour = int(avoid.time.split(":")[0])
+            # Should start at or after wake time (7)
+            assert avoid_hour >= 7, \
+                f"light_avoid should start at wake time or later, got {avoid.time}"
+
+    def test_light_avoid_fully_during_sleep_not_shown(self):
+        """light_avoid should not appear if entirely during sleep."""
+        from datetime import time
+        from circadian.light_prc import generate_light_windows
+
+        wake = time(7, 0)
+        sleep = time(23, 0)
+        cbtmin = time(4, 30)
+
+        # ADVANCE avoid window (00:30-04:30) is fully during sleep (23:00-07:00)
+        interventions = generate_light_windows(wake, sleep, cbtmin, "advance")
+        light_avoid = [i for i in interventions if i.type == "light_avoid"]
+
+        # Should be empty since the entire window is during sleep
+        assert len(light_avoid) == 0, \
+            f"light_avoid should not appear when fully during sleep, got {light_avoid}"
+
+    def test_schedule_always_has_light_seek(self, generator, eastward_request):
+        """Schedules should always include light_seek on every day (primary intervention)."""
+        response = generator.generate_schedule(eastward_request)
+
+        for day in response.interventions:
+            types = [item.type for item in day.items]
+            assert "light_seek" in types, \
+                f"Day {day.day} missing light_seek - all days should have light guidance"
+
+    def test_schedule_always_has_light_seek_delay(self, generator, westward_request):
+        """Delay schedules should always include light_seek on every day."""
+        response = generator.generate_schedule(westward_request)
+
+        for day in response.interventions:
+            types = [item.type for item in day.items]
+            assert "light_seek" in types, \
+                f"Day {day.day} missing light_seek - all days should have light guidance"
+
+    def test_light_avoid_duration_adjusted(self):
+        """light_avoid duration should be adjusted when truncated to waking hours."""
+        from datetime import time
+        from circadian.light_prc import generate_light_windows
+
+        wake = time(7, 0)
+        sleep = time(23, 0)
+        cbtmin = time(6, 0)
+
+        # For DELAY: avoid window is 06:00-10:00 (4 hours)
+        # Truncated to 07:00-10:00 (3 hours = 180 min)
+        interventions = generate_light_windows(wake, sleep, cbtmin, "delay")
+        light_avoid = [i for i in interventions if i.type == "light_avoid"]
+
+        if light_avoid:
+            avoid = light_avoid[0]
+            # Duration should be less than original 240 min
+            assert avoid.duration_min < 240, \
+                f"Duration should be truncated, got {avoid.duration_min}"
