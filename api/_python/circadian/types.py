@@ -15,6 +15,9 @@ class TripLeg:
     arrival_datetime: str       # ISO format local time at destination
 
 
+NapPreference = Literal["no", "flight_only", "all_days"]
+
+
 @dataclass
 class ScheduleRequest:
     """Input from the trip form."""
@@ -25,6 +28,7 @@ class ScheduleRequest:
     uses_melatonin: bool = True
     uses_caffeine: bool = True
     uses_exercise: bool = False
+    nap_preference: NapPreference = "flight_only"
 
 
 InterventionType = Literal[
@@ -36,6 +40,7 @@ InterventionType = Literal[
     "caffeine_cutoff",
     "sleep_target",
     "wake_target",
+    "nap_window",
 ]
 
 
@@ -47,6 +52,8 @@ class Intervention:
     title: str                          # Display title
     description: str                    # User-facing explanation
     duration_min: Optional[int] = None  # For time-window interventions
+    window_end: Optional[str] = None    # "HH:MM" for nap window end time
+    ideal_time: Optional[str] = None    # "HH:MM" for ideal nap time
 
 
 @dataclass

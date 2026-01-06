@@ -1,5 +1,11 @@
 # Jet Lag: Research Foundations and Scientific Methodology
 
+**Status:** Living Document  
+**Last Updated:** January 2026  
+**Project:** Dawnward
+
+---
+
 ## Executive Summary
 
 This document compiles the scientific foundations underlying circadian-based jet lag management. It serves as both a reference for Dawnward's algorithmic approach and a transparent accounting of the research confidence levels, known limitations, and areas of ongoing scientific debate.
@@ -224,11 +230,24 @@ Spitzer et al. (1999) in *American Journal of Psychiatry* found no significant d
 - May enhance light entrainment effects
 - Accelerates re-entrainment to shifted light-dark cycles in animal models
 
+**Phase Response Curve (Youngstedt et al., 2019):**
+- Exercise at 7:00 AM and 1:00-4:00 PM → phase advance
+- Exercise at 7:00-10:00 PM → phase delay
+- Pattern roughly parallels the light PRC
+- Largest effects during the subjective night
+
 **Practical value:**
-- Not as potent as light alone
+- Not as potent as light alone (smaller effect sizes)
 - Provides additive benefit when combined with light
 - Additional health benefits independent of circadian effects
 - Particularly useful for late chronotypes ("night owls")
+- Difficult to isolate effects from concurrent light exposure in real-world settings
+
+**Implementation notes:**
+- Exercise is offered as an optional intervention in Dawnward
+- Timing recommendations align with the Youngstedt PRC
+- Users who can maintain an exercise routine during travel may see faster adaptation
+- Intensity and duration relationships not fully characterized in literature
 
 ### Interventions Without Circadian Mechanism
 
@@ -266,6 +285,95 @@ A 2025 study analyzing 1.5 million nights of sleep data found distinct recovery 
 - **Sleep timing:** Takes 7+ days to fully adjust
 - **Sleep architecture:** Deep sleep and REM patterns may take longest to normalize
 
+---
+
+## Part VI: Strategic Napping
+
+### The Two-Process Model of Sleep Regulation
+
+Sleep timing is governed by two interacting biological processes, first described by Alexander Borbély (1982):
+
+**Process S (Homeostatic Sleep Pressure):**
+- A "sleep debt" that accumulates during wakefulness
+- Rises approximately linearly while awake, declines exponentially during sleep
+- Reflected in EEG slow-wave activity during NREM sleep
+- The longer you've been awake, the easier it is to fall asleep
+
+**Process C (Circadian Alertness):**
+- A ~24-hour rhythm controlled by the SCN
+- Creates peaks and troughs of alertness independent of time awake
+- The "wake maintenance zone" 1-3 hours before habitual bedtime makes sleep difficult even when tired
+
+**The interaction:** Sleep propensity ≈ Process S × Process C (multiplicative)
+
+### The Post-Lunch Dip: A Circasemidian Rhythm
+
+The "post-lunch dip" in alertness is **not caused by eating**. Research demonstrates:
+- Occurs even in subjects who skip lunch
+- Occurs when subjects are unaware of clock time
+- Occurs across cultures and environments
+- Linked to a 12-hour harmonic in the circadian system
+
+**For conventional schedules (wake ~7 AM, sleep ~11 PM):**
+- Primary alertness dip: 2:00-5:00 AM (during sleep)
+- Secondary alertness dip: 1:00-3:00 PM (the "post-lunch dip")
+- Wake maintenance zone: 8:00-10:00 PM (hard to nap)
+
+### Optimal Nap Window Calculation
+
+For jet lag management with unconventional sleep schedules, clock time (e.g., "nap at 2 PM") becomes meaningless. Instead, optimal nap timing is calculated relative to the wake period:
+
+**The algorithm:**
+- **Nap window:** 30-50% into the wake period
+- **Ideal nap time:** ~38% into the wake period
+- **Hard constraint:** End nap at least 4 hours before main sleep
+
+| % of Wake Period | Sleep Pressure | Circadian State | Nap Quality |
+|------------------|----------------|-----------------|-------------|
+| 0-20% | Low | Rising alertness | Hard to fall asleep |
+| 20-30% | Building | Approaching peak | Possible but suboptimal |
+| **30-50%** | **Moderate** | **Natural dip zone** | **Optimal window** |
+| 50-70% | High | Recovering alertness | Risk of deep sleep entry |
+| 70-85% | Very high | Wake maintenance zone | Hard to fall asleep |
+| 85-100% | Peak | Pre-sleep | Save for main sleep |
+
+**Example validation:** For a conventional 7 AM wake / 11 PM sleep schedule (16-hour wake period):
+- Calculated window: 11:48 AM - 3:00 PM
+- Ideal time: ~1:00 PM
+- This aligns precisely with the documented 1-3 PM post-lunch dip
+
+### Nap Duration and Sleep Architecture
+
+| Duration | Sleep Stages | Benefits | Risks |
+|----------|-------------|----------|-------|
+| **10-20 min** | Light sleep (N1-N2) | Quick alertness boost, no grogginess | Minimal if very sleep deprived |
+| **20-30 min** | Deep N2 | Better cognitive restoration | Slight risk of N3 entry |
+| **30-60 min** | Entering N3 (deep sleep) | Physical restoration | **High sleep inertia risk** |
+| **90 min** | Full cycle (N1→N2→N3→REM) | Complete restoration, memory consolidation | May interfere with main sleep |
+
+**Key research findings (Lovato & Lack, 2010; Milner & Cote, 2009):**
+- 20-minute naps provide optimal alertness benefit without grogginess
+- The 30-60 minute range should be avoided due to sleep inertia
+- 90-minute naps (full sleep cycle) are appropriate only for significant sleep debt with adequate buffer time
+
+### Sleep Inertia
+
+Sleep inertia is the period of impaired performance and grogginess immediately after waking. It is most severe when:
+- Waking from deep sleep (N3/slow-wave sleep)
+- Naps of 30-60 minutes duration
+- Already sleep-deprived
+
+For users who must be alert immediately after napping:
+- Strongly recommend 20 minutes or less
+- Allow 30+ minutes for awakening after 90-minute naps
+
+### The "Nappuccino" Technique
+
+A research-supported approach combining caffeine and napping:
+- **Mechanism:** Caffeine takes ~20 minutes to reach peak effect
+- **Technique:** Consume caffeine, immediately take a 20-minute nap, wake as caffeine activates
+- **Constraint:** Only appropriate if nap occurs 6+ hours before main sleep (to avoid caffeine interference)
+
 ### Direction Asymmetry
 
 The human circadian period averages ~24.2 hours (slightly longer than 24 hours), making:
@@ -274,7 +382,7 @@ The human circadian period averages ~24.2 hours (slightly longer than 24 hours),
 
 ---
 
-## Part VI: Individual Variation and Chronotype
+## Part VII: Individual Variation and Chronotype
 
 ### Chronotype Effects
 
@@ -305,7 +413,7 @@ Polymorphisms in clock genes and adenosine receptors contribute to:
 
 ---
 
-## Part VII: Scientific Disputes and Uncertainties
+## Part VIII: Scientific Disputes and Uncertainties
 
 ### Areas of Active Debate
 
@@ -347,7 +455,7 @@ While meal timing powerfully entrains peripheral clocks in animal models, human 
 
 ---
 
-## Part VIII: Application to Dawnward
+## Part IX: Application to Dawnward
 
 ### Core Algorithm Principles
 
@@ -368,7 +476,17 @@ Based on this scientific foundation, Dawnward implements:
 
 5. **Caffeine strategy:** Calculate cutoff times relative to destination sleep and provide alertness guidance
 
-6. **Exercise suggestions:** Recommend morning exercise for advances, evening for delays
+6. **Optional exercise timing:** Recommend exercise windows aligned with the exercise PRC
+   - Morning exercise for phase advances (eastward travel)
+   - Evening exercise for phase delays (westward travel)
+   - Additive benefit when combined with properly timed light exposure
+
+7. **Strategic napping:** Calculate optimal nap windows based on the two-process model
+   - Default: Recommend naps during flights (when schedules are most disrupted)
+   - Optional: Naps on any day where the scheduler recommends them
+   - Window calculation: 30-50% into the wake period
+   - Duration: Default 20 minutes to avoid sleep inertia
+   - Constraint: End at least 4 hours before main sleep
 
 ### Validation Strategy
 
@@ -419,7 +537,18 @@ See the Testing Design Document for our five-layer validation approach:
 - Eastman CI, Burgess HJ. (2009). How to travel the world without jet lag. *Sleep Med Clin*, 4(2), 241-255.
 - Sack RL, Auckley D, Auger RR, et al. (2007). Circadian rhythm sleep disorders: Part I. *Sleep*, 30(11), 1460-1483.
 
+**Napping and Sleep Regulation:**
+- Borbély AA. (1982). A two process model of sleep regulation. *Human Neurobiology*, 1(3), 195-204.
+- Dijk DJ, Czeisler CA. (1995). Contribution of the circadian pacemaker and the sleep homeostat to sleep propensity, sleep structure, electroencephalographic slow waves, and sleep spindle activity in humans. *J Neurosci*, 15(5), 3526-3538.
+- Monk TH. (2005). The post-lunch dip in performance. *Clin Sports Med*, 24(2), e15-e23.
+- Lovato N, Lack L. (2010). The effects of napping on cognitive functioning. *Prog Brain Res*, 185, 155-166.
+- Milner CE, Cote KA. (2009). Benefits of napping in healthy adults: impact of nap length, time of day, age, and experience with napping. *J Sleep Res*, 18(2), 272-281.
+
 ### Software and Data Sources
 
 - **Arcascope circadian library:** https://github.com/Arcascope/circadian (Forger99 model implementation)
 - **OurAirports:** Airport timezone data source
+
+---
+
+*This document is maintained as part of the Dawnward project. For testing protocols, see the Testing Design Document. For nap timing implementation details, see the Nap Timing Design Document. For backend architecture, see the Backend Design Document.*

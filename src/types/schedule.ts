@@ -3,6 +3,7 @@
  */
 
 import type { Airport } from "./airport";
+import type { NapPreference } from "./trip-form";
 
 /**
  * Intervention types from the circadian schedule generator
@@ -15,7 +16,8 @@ export type InterventionType =
   | "caffeine_ok"
   | "caffeine_cutoff"
   | "sleep_target"
-  | "wake_target";
+  | "wake_target"
+  | "nap_window";
 
 /**
  * Single scheduled intervention
@@ -31,6 +33,10 @@ export interface Intervention {
   description: string;
   /** Duration in minutes for time-window interventions (light, exercise) */
   duration_min?: number;
+  /** End time for nap window in HH:MM format */
+  window_end?: string;
+  /** Ideal time within nap window in HH:MM format */
+  ideal_time?: string;
 }
 
 /**
@@ -79,6 +85,7 @@ export interface StoredSchedule {
     usesMelatonin: boolean;
     usesCaffeine: boolean;
     usesExercise: boolean;
+    napPreference: NapPreference;
   };
   /** Generated schedule */
   schedule: ScheduleResponse;

@@ -82,6 +82,13 @@ export function getInterventionStyle(type: InterventionType): InterventionStyle 
         textColor: "text-amber-600",
         label: "Wake Target",
       };
+    case "nap_window":
+      return {
+        icon: Moon,
+        bgColor: "bg-purple-100",
+        textColor: "text-purple-600",
+        label: "Nap Window",
+      };
     default:
       return {
         icon: Sun,

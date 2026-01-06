@@ -181,3 +181,78 @@ def late_start_request():
         uses_caffeine=True,
         uses_exercise=False
     )
+
+
+@pytest.fixture
+def nap_flight_only_request(future_date):
+    """Request with nap_preference='flight_only' (default)."""
+    departure = future_date
+    arrival = departure + timedelta(hours=7)
+
+    return ScheduleRequest(
+        legs=[
+            TripLeg(
+                origin_tz="America/New_York",
+                dest_tz="Europe/London",
+                departure_datetime=departure.strftime("%Y-%m-%dT19:00"),
+                arrival_datetime=arrival.strftime("%Y-%m-%dT07:00")
+            )
+        ],
+        prep_days=3,
+        wake_time="07:00",
+        sleep_time="23:00",
+        uses_melatonin=True,
+        uses_caffeine=True,
+        uses_exercise=False,
+        nap_preference="flight_only"
+    )
+
+
+@pytest.fixture
+def nap_all_days_request(future_date):
+    """Request with nap_preference='all_days'."""
+    departure = future_date
+    arrival = departure + timedelta(hours=7)
+
+    return ScheduleRequest(
+        legs=[
+            TripLeg(
+                origin_tz="America/New_York",
+                dest_tz="Europe/London",
+                departure_datetime=departure.strftime("%Y-%m-%dT19:00"),
+                arrival_datetime=arrival.strftime("%Y-%m-%dT07:00")
+            )
+        ],
+        prep_days=3,
+        wake_time="07:00",
+        sleep_time="23:00",
+        uses_melatonin=True,
+        uses_caffeine=True,
+        uses_exercise=False,
+        nap_preference="all_days"
+    )
+
+
+@pytest.fixture
+def nap_disabled_request(future_date):
+    """Request with nap_preference='no'."""
+    departure = future_date
+    arrival = departure + timedelta(hours=7)
+
+    return ScheduleRequest(
+        legs=[
+            TripLeg(
+                origin_tz="America/New_York",
+                dest_tz="Europe/London",
+                departure_datetime=departure.strftime("%Y-%m-%dT19:00"),
+                arrival_datetime=arrival.strftime("%Y-%m-%dT07:00")
+            )
+        ],
+        prep_days=3,
+        wake_time="07:00",
+        sleep_time="23:00",
+        uses_melatonin=True,
+        uses_caffeine=True,
+        uses_exercise=False,
+        nap_preference="no"
+    )

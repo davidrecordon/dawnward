@@ -18,6 +18,7 @@ from .types import (
 from .circadian_math import (
     parse_time,
     format_time,
+    time_to_minutes,
     estimate_cbtmin_from_wake,
     estimate_dlmo_from_sleep,
     calculate_timezone_shift,
@@ -31,6 +32,7 @@ from .light_prc import generate_shifted_light_windows
 from .melatonin_prc import generate_shifted_melatonin_timing
 from .exercise_prc import generate_shifted_exercise_windows
 from .caffeine import generate_shifted_caffeine_strategy
+from .nap import generate_shifted_nap_intervention
 
 
 class ScheduleGenerator:
@@ -298,10 +300,88 @@ class ScheduleGenerator:
         )
         interventions.extend(sleep_wake)
 
+        # Nap window (if enabled and appropriate day)
+        if self._should_include_nap(request.nap_preference, day):
+            nap_intervention = generate_shifted_nap_intervention(
+                base_wake=base_wake,
+                base_sleep=base_sleep,
+                cumulative_shift=cumulative_shift,
+                direction=direction,
+                total_shift=total_shift,
+                day=day,
+                sleep_debt_hours=0.0  # Base debt, will be adjusted in function
+            )
+            if nap_intervention:
+                # For flight_only mode, filter by actual flight times
+                if self._is_nap_during_flight(nap_intervention, request, day):
+                    interventions.append(nap_intervention)
+
         # Filter out interventions that fall during sleep
         interventions = self._filter_sleep_interventions(interventions)
 
         return interventions
+
+    def _should_include_nap(self, nap_preference: str, day: int) -> bool:
+        """
+        Determine if nap intervention should be included for a given day.
+
+        Args:
+            nap_preference: "no", "flight_only", or "all_days"
+            day: Day relative to departure (0 = flight, 1 = first arrival day)
+
+        Returns:
+            True if nap should be included for this day
+        """
+        if nap_preference == "no":
+            return False
+        elif nap_preference == "flight_only":
+            return day in (0, 1)
+        else:  # "all_days"
+            return True
+
+    def _is_nap_during_flight(
+        self,
+        nap: Intervention,
+        request: ScheduleRequest,
+        day: int
+    ) -> bool:
+        """
+        Check if nap falls within flight time for flight_only preference.
+
+        For "On the flight" naps:
+        - Day 0 (departure): Only show naps AFTER takeoff
+        - Day 1 (arrival): Only show naps BEFORE landing
+
+        Args:
+            nap: The nap intervention with time in HH:MM format
+            request: Schedule request containing legs and preference
+            day: Day number (0 = departure, 1 = arrival)
+
+        Returns:
+            True if nap should be shown (always True for non-flight_only modes)
+        """
+        # Always include for non-flight_only preferences
+        if request.nap_preference != "flight_only":
+            return True
+
+        # Get first leg (handles single-leg trips)
+        leg = request.legs[0]
+        nap_minutes = time_to_minutes(parse_time(nap.time))
+
+        if day == 0:
+            # Day 0: Nap must be AFTER departure (origin timezone)
+            departure_time = leg.departure_datetime.split("T")[1]  # "HH:MM"
+            departure_minutes = time_to_minutes(parse_time(departure_time))
+            return nap_minutes >= departure_minutes
+
+        elif day == 1:
+            # Day 1: Nap must be BEFORE arrival (destination timezone)
+            arrival_time = leg.arrival_datetime.split("T")[1]  # "HH:MM"
+            arrival_minutes = time_to_minutes(parse_time(arrival_time))
+            return nap_minutes < arrival_minutes
+
+        # Days other than 0 and 1: shouldn't reach here for flight_only
+        return True
 
     def _is_during_sleep(self, time_str: str, sleep_time: str, wake_time: str) -> bool:
         """
@@ -369,6 +449,7 @@ class ScheduleGenerator:
             "caffeine_ok",
             "caffeine_cutoff",
             "exercise",
+            "nap_window",
         }
 
         filtered = []
@@ -462,8 +543,9 @@ class ScheduleGenerator:
         optional_priority = {
             "caffeine_ok": 0,
             "caffeine_cutoff": 1,
-            "exercise": 2,
-            "melatonin": 3,
+            "nap_window": 2,
+            "exercise": 3,
+            "melatonin": 4,
         }
 
         # Calculate secondary sort order

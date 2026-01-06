@@ -26,8 +26,12 @@ const mockSchedule: StoredSchedule = {
     usesMelatonin: true,
     usesCaffeine: true,
     usesExercise: false,
+    napPreference: "flight_only",
   },
   schedule: {
+    total_shift_hours: 8,
+    direction: "advance",
+    estimated_adaptation_days: 5,
     interventions: [
       {
         date: "2026-01-18",
@@ -37,11 +41,6 @@ const mockSchedule: StoredSchedule = {
         ],
       },
     ],
-    summary: {
-      direction: "east",
-      time_shift_hours: 8,
-      total_days: 5,
-    },
   },
 };
 
@@ -56,6 +55,7 @@ const mockFormState: TripFormState = {
   useMelatonin: true,
   useCaffeine: true,
   useExercise: false,
+  napPreference: "flight_only",
 };
 
 describe("schedule storage", () => {
@@ -186,6 +186,7 @@ describe("form state storage", () => {
         useMelatonin: false,
         useCaffeine: false,
         useExercise: false,
+        napPreference: "flight_only",
       };
 
       saveFormState(partialState);

@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { Activity, Calendar, ChevronRight, Coffee, Loader2, MapPin, Pill } from "lucide-react";
+import { Activity, Calendar, ChevronRight, Coffee, Loader2, MapPin, Moon, Pill } from "lucide-react";
 import { saveSchedule, getSchedule } from "@/lib/schedule-storage";
 import { formatDateTimeLocal } from "@/lib/time-utils";
 import { getErrorMessage } from "@/lib/error-utils";
@@ -15,6 +15,7 @@ import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { AirportSelect } from "@/components/airport-select";
 import { PreferenceToggle } from "@/components/preference-toggle";
+import { PreferenceSelector } from "@/components/preference-selector";
 import { FormError } from "@/components/form-error";
 import { DateTimeSelect } from "@/components/ui/datetime-select";
 import { TimeSelect } from "@/components/ui/time-select";
@@ -188,7 +189,8 @@ export function TripForm({ formState, onFormChange }: TripFormProps) {
           req.sleepTime === formState.sleepTime &&
           req.usesMelatonin === formState.useMelatonin &&
           req.usesCaffeine === formState.useCaffeine &&
-          req.usesExercise === formState.useExercise;
+          req.usesExercise === formState.useExercise &&
+          req.napPreference === formState.napPreference;
 
         if (inputsMatch) {
           // Same inputs - just navigate to existing schedule
@@ -216,6 +218,7 @@ export function TripForm({ formState, onFormChange }: TripFormProps) {
           uses_melatonin: formState.useMelatonin,
           uses_caffeine: formState.useCaffeine,
           uses_exercise: formState.useExercise,
+          nap_preference: formState.napPreference,
         }),
       });
 
@@ -241,6 +244,7 @@ export function TripForm({ formState, onFormChange }: TripFormProps) {
           usesMelatonin: formState.useMelatonin,
           usesCaffeine: formState.useCaffeine,
           usesExercise: formState.useExercise,
+          napPreference: formState.napPreference,
         },
         schedule: data.schedule,
       };
@@ -366,6 +370,20 @@ export function TripForm({ formState, onFormChange }: TripFormProps) {
               checked={formState.useCaffeine}
               onCheckedChange={(checked) => updateField("useCaffeine", checked)}
               colorScheme="orange"
+            />
+
+            <PreferenceSelector
+              icon={<Moon className="h-4 w-4" />}
+              title="Recommend naps"
+              description="Strategic napping to reduce sleep debt"
+              value={formState.napPreference}
+              onValueChange={(value) => updateField("napPreference", value)}
+              options={[
+                { value: "no", label: "No" },
+                { value: "flight_only", label: "On the flight" },
+                { value: "all_days", label: "On all days" },
+              ]}
+              colorScheme="purple"
             />
 
             <PreferenceToggle

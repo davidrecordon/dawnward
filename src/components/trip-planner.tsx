@@ -12,11 +12,12 @@ export function TripPlanner() {
   const [formState, setFormState] = React.useState<TripFormState>(defaultFormState);
   const [isHydrated, setIsHydrated] = React.useState(false);
 
-  // Load saved form state on mount
+  // Load saved form state on mount, merging with defaults for any missing fields
   React.useEffect(() => {
     const saved = getFormState();
     if (saved) {
-      setFormState(saved);
+      // Merge with defaults to handle old data missing new fields (e.g., napPreference)
+      setFormState({ ...defaultFormState, ...saved });
     }
     setIsHydrated(true);
   }, []);

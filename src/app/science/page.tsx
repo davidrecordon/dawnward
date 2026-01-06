@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Sun, Moon, Coffee, Pill } from "lucide-react";
+import { ArrowLeft, Sun, Moon, Coffee, Pill, Activity } from "lucide-react";
 
 export const metadata = {
   title: "The Science - Dawnward",
@@ -150,6 +150,83 @@ export default function SciencePage() {
           </CardContent>
         </Card>
 
+        {/* Exercise */}
+        <Card className="bg-white/90 backdrop-blur-sm border border-slate-200/50">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Activity className="h-5 w-5 text-sky-500" />
+              Exercise Timing
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4 text-muted-foreground">
+            <p>
+              Physical activity can help shift your circadian clock, following a
+              pattern that roughly parallels the light response curve. Research
+              by Youngstedt and colleagues (2019) mapped out these effects.
+            </p>
+            <ul className="list-disc space-y-2 pl-5">
+              <li>
+                <strong>Morning exercise</strong> (around 7 AM) and{" "}
+                <strong>afternoon exercise</strong> (1-4 PM) help advance your
+                clock—useful for eastward travel
+              </li>
+              <li>
+                <strong>Evening exercise</strong> (7-10 PM) helps delay your
+                clock—useful for westward travel
+              </li>
+            </ul>
+            <p>
+              While not as powerful as light alone, exercise provides an
+              additive benefit when combined with properly timed light exposure.
+              It&apos;s particularly helpful for &quot;night owls&quot; who may
+              struggle with morning light exposure.
+            </p>
+          </CardContent>
+        </Card>
+
+        {/* Napping */}
+        <Card className="bg-white/90 backdrop-blur-sm border border-slate-200/50">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Moon className="h-5 w-5 text-purple-500" />
+              Strategic Napping
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4 text-muted-foreground">
+            <p>
+              Sleep scientists describe sleep timing using the &quot;Two-Process
+              Model&quot; (Borbély, 1982): a homeostatic drive that builds while
+              you&apos;re awake, and a circadian rhythm that creates natural
+              peaks and dips in alertness.
+            </p>
+            <p>
+              The &quot;post-lunch dip&quot; you feel around 1-3 PM isn&apos;t
+              caused by eating—it&apos;s a biological rhythm that occurs even
+              when people skip lunch. This makes mid-afternoon an ideal time for
+              a strategic nap.
+            </p>
+            <p>For jet lag management, optimal nap timing depends on your shifted schedule:</p>
+            <ul className="list-disc space-y-2 pl-5">
+              <li>
+                <strong>Best window:</strong> 30-50% into your wake period
+                (roughly mid-afternoon for conventional schedules)
+              </li>
+              <li>
+                <strong>Duration:</strong> 20 minutes is ideal—long enough to
+                restore alertness but short enough to avoid grogginess
+              </li>
+              <li>
+                <strong>Avoid 30-60 minutes:</strong> This range risks waking
+                from deep sleep, causing significant sleep inertia
+              </li>
+              <li>
+                <strong>End 4+ hours before bedtime:</strong> Napping too late
+                interferes with your main sleep
+              </li>
+            </ul>
+          </CardContent>
+        </Card>
+
         {/* The Math */}
         <Card className="bg-white/90 backdrop-blur-sm border border-slate-200/50">
           <CardHeader>
@@ -245,6 +322,20 @@ export default function SciencePage() {
               <strong>Caffeine Effects:</strong> Burke et al. (2015).{" "}
               <em>Sci Transl Med</em>. Discovery that caffeine shifts circadian
               phase.
+            </p>
+            <p>
+              <strong>Exercise PRC:</strong> Youngstedt et al. (2019).{" "}
+              <em>J Physiol</em>. Phase response curve for exercise timing.
+            </p>
+            <p>
+              <strong>Two-Process Model:</strong> Borbély (1982).{" "}
+              <em>Human Neurobiology</em>. Foundation of modern sleep regulation
+              theory.
+            </p>
+            <p>
+              <strong>Napping Benefits:</strong> Lovato & Lack (2010).{" "}
+              <em>Prog Brain Res</em>. Effects of napping on cognitive
+              functioning.
             </p>
             <p>
               <strong>Clinical Guidelines:</strong> Eastman & Burgess (2009).{" "}

@@ -1,6 +1,11 @@
 import type { Airport } from "./airport";
 
 /**
+ * Nap preference options for schedule generation
+ */
+export type NapPreference = "no" | "flight_only" | "all_days";
+
+/**
  * Form state for the trip planning form
  */
 export interface TripFormState {
@@ -18,6 +23,8 @@ export interface TripFormState {
   useCaffeine: boolean;
   /** Whether to include exercise recommendations in schedule */
   useExercise: boolean;
+  /** Nap preference: "no", "flight_only", or "all_days" */
+  napPreference: NapPreference;
   /** User's usual wake time in HH:MM format */
   wakeTime: string;
   /** User's usual sleep time in HH:MM format */
@@ -37,6 +44,7 @@ export const defaultFormState: TripFormState = {
   useMelatonin: true,
   useCaffeine: true,
   useExercise: false,
+  napPreference: "flight_only",
   wakeTime: "07:00",
   sleepTime: "23:00",
   prepDays: 3,

@@ -165,18 +165,17 @@ function createMockSchedule(
       usesMelatonin: true,
       usesCaffeine: true,
       usesExercise: false,
+      napPreference: "flight_only",
     },
     schedule: {
+      total_shift_hours: 8,
+      direction: "advance",
+      estimated_adaptation_days: interventions.length,
       interventions: interventions.map((i) => ({
         date: i.date,
         day: i.day,
         items: [],
       })),
-      summary: {
-        direction: "east",
-        time_shift_hours: 8,
-        total_days: interventions.length,
-      },
     },
   };
 }

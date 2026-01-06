@@ -124,6 +124,14 @@ class handler(BaseHTTPRequestHandler):
                 self._send_json_response(400, {"error": validation_error})
                 return
 
+            # Validate nap_preference if provided
+            nap_preference = data.get("nap_preference", "flight_only")
+            if nap_preference not in ("no", "flight_only", "all_days"):
+                self._send_json_response(
+                    400, {"error": f"Invalid nap_preference: {nap_preference}"}
+                )
+                return
+
             # Build schedule request
             request = ScheduleRequest(
                 legs=[
@@ -140,6 +148,7 @@ class handler(BaseHTTPRequestHandler):
                 uses_melatonin=data.get("uses_melatonin", True),
                 uses_caffeine=data.get("uses_caffeine", True),
                 uses_exercise=data.get("uses_exercise", False),
+                nap_preference=nap_preference,
             )
 
             # Generate schedule
