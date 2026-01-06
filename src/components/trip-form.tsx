@@ -8,12 +8,13 @@ import type { ScheduleResponse, StoredSchedule } from "@/types/schedule";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { AirportSelect } from "@/components/airport-select";
 import { PreferenceToggle } from "@/components/preference-toggle";
 import { FormError } from "@/components/form-error";
+import { DateTimeSelect } from "@/components/ui/datetime-select";
+import { TimeSelect } from "@/components/ui/time-select";
 import type { TripFormState } from "@/types/trip-form";
 
 interface TripFormProps {
@@ -244,23 +245,19 @@ export function TripForm({ formState, onFormChange }: TripFormProps) {
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2">
             <Label>Departure</Label>
-            <Input
-              type="datetime-local"
+            <DateTimeSelect
               value={formState.departureDateTime}
-              onChange={(e) => updateField("departureDateTime", e.target.value)}
-              className="bg-white"
-              aria-invalid={!!errors.departureDateTime}
+              onChange={(value) => updateField("departureDateTime", value)}
+              hasError={!!errors.departureDateTime}
             />
             <FieldError message={errors.departureDateTime} />
           </div>
           <div className="space-y-2">
             <Label>Arrival</Label>
-            <Input
-              type="datetime-local"
+            <DateTimeSelect
               value={formState.arrivalDateTime}
-              onChange={(e) => updateField("arrivalDateTime", e.target.value)}
-              className="bg-white"
-              aria-invalid={!!errors.arrivalDateTime}
+              onChange={(value) => updateField("arrivalDateTime", value)}
+              hasError={!!errors.arrivalDateTime}
             />
             <FieldError message={errors.arrivalDateTime} />
           </div>
@@ -333,20 +330,18 @@ export function TripForm({ formState, onFormChange }: TripFormProps) {
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label>Usual wake time</Label>
-              <Input
-                type="time"
+              <TimeSelect
                 value={formState.wakeTime}
-                onChange={(e) => updateField("wakeTime", e.target.value)}
-                className="bg-white"
+                onChange={(value) => updateField("wakeTime", value)}
+                placeholder="Select wake time"
               />
             </div>
             <div className="space-y-2">
               <Label>Usual sleep time</Label>
-              <Input
-                type="time"
+              <TimeSelect
                 value={formState.sleepTime}
-                onChange={(e) => updateField("sleepTime", e.target.value)}
-                className="bg-white"
+                onChange={(value) => updateField("sleepTime", value)}
+                placeholder="Select sleep time"
               />
             </div>
           </div>
