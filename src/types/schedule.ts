@@ -82,6 +82,4 @@ export interface StoredSchedule {
   };
   /** Generated schedule */
   schedule: ScheduleResponse;
-  /** Completed intervention keys (e.g., "day_time_type") */
-  completedItems: string[];
 }

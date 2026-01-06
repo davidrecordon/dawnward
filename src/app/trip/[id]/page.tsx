@@ -5,12 +5,8 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { ArrowLeft, Calendar, Check, Loader2, Plane, PlaneLanding, PlaneTakeoff } from "lucide-react";
-import {
-  getSchedule,
-  toggleItemCompletion,
-  getItemKey,
-} from "@/lib/schedule-storage";
+import { ArrowLeft, Calendar, Loader2, Plane, PlaneLanding, PlaneTakeoff } from "lucide-react";
+import { getSchedule } from "@/lib/schedule-storage";
 import {
   getInterventionStyle,
   formatTime,
@@ -28,7 +24,6 @@ export default function TripDetailPage({
   const [schedule, setSchedule] = useState<StoredSchedule | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [activeDay, setActiveDay] = useState<number>(0);
-  const [completedItems, setCompletedItems] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     const stored = getSchedule();
@@ -36,7 +31,6 @@ export default function TripDetailPage({
     // This prevents stale data if they regenerate a schedule
     if (stored && stored.id === id) {
       setSchedule(stored);
-      setCompletedItems(new Set(stored.completedItems));
       // Set active day to first day in schedule
       if (stored.schedule.interventions.length > 0) {
         setActiveDay(stored.schedule.interventions[0].day);
@@ -44,12 +38,6 @@ export default function TripDetailPage({
     }
     setIsLoading(false);
   }, [id]);
-
-  const handleToggleItem = (day: number, time: string, type: string) => {
-    const itemKey = getItemKey(day, time, type);
-    const updated = toggleItemCompletion(itemKey);
-    setCompletedItems(new Set(updated));
-  };
 
   if (isLoading) {
     return (
@@ -94,12 +82,6 @@ export default function TripDetailPage({
   const activeDaySchedule = sched.interventions.find(
     (d) => d.day === activeDay
   );
-
-  // Calculate today's progress
-  const todayItems = activeDaySchedule?.items || [];
-  const todayCompletedCount = todayItems.filter((item) =>
-    completedItems.has(getItemKey(activeDay, item.time, item.type))
-  ).length;
 
   // Format shift badge
   const shiftSign = sched.direction === "advance" ? "-" : "+";
@@ -195,27 +177,6 @@ export default function TripDetailPage({
           })}
         </div>
 
-        {/* Progress bar */}
-        <div className="space-y-2">
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-muted-foreground">Today&apos;s progress</span>
-            <span className="font-medium">
-              {todayCompletedCount} / {todayItems.length}
-            </span>
-          </div>
-          <div className="h-2 overflow-hidden rounded-full bg-slate-200">
-            <div
-              className="h-full bg-sky-500 transition-all duration-300"
-              style={{
-                width:
-                  todayItems.length > 0
-                    ? `${(todayCompletedCount / todayItems.length) * 100}%`
-                    : "0%",
-              }}
-            />
-          </div>
-        </div>
-
         {/* Intervention cards (with flight events in chronological order) */}
         <div className="space-y-3">
           {(() => {
@@ -243,7 +204,7 @@ export default function TripDetailPage({
             // Sort by time
             items.sort((a, b) => a.time.localeCompare(b.time));
 
-            return items.map((item, idx) => {
+            return items.map((item) => {
               if (item.kind === "departure") {
                 return (
                   <Card key="flight-departure" className="bg-sky-50 border-sky-200">
@@ -296,40 +257,20 @@ export default function TripDetailPage({
               const intervention = item.data;
               const style = getInterventionStyle(intervention.type);
               const Icon = style.icon;
-              const itemKey = getItemKey(activeDay, intervention.time, intervention.type);
-              const isCompleted = completedItems.has(itemKey);
 
               return (
                 <Card
                   key={`${intervention.time}-${intervention.type}-${item.index}`}
-                  className={`transition-all duration-200 ${
-                    isCompleted
-                      ? "bg-green-50/50 border-green-200 opacity-60"
-                      : "bg-white/90 backdrop-blur-sm"
-                  }`}
+                  className="bg-white/90 backdrop-blur-sm"
                 >
                   <CardContent className="flex items-center gap-4 py-4">
-                    <button
-                      onClick={() =>
-                        handleToggleItem(activeDay, intervention.time, intervention.type)
-                      }
-                      className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 transition-colors ${
-                        isCompleted
-                          ? "border-green-500 bg-green-500 text-white"
-                          : "border-slate-300 hover:border-green-400"
-                      }`}
-                    >
-                      {isCompleted && <Check className="h-4 w-4" />}
-                    </button>
                     <div
                       className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${style.bgColor}`}
                     >
                       <Icon className={`h-6 w-6 ${style.textColor}`} />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className={`font-medium ${isCompleted ? "line-through text-slate-500" : ""}`}>
-                        {intervention.title}
-                      </p>
+                      <p className="font-medium">{intervention.title}</p>
                       <p className="text-sm text-muted-foreground">{intervention.description}</p>
                     </div>
                     <Badge variant="secondary" className="shrink-0">

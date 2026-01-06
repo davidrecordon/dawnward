@@ -183,7 +183,6 @@ export function TripForm({ formState, onFormChange }: TripFormProps) {
           usesExercise: formState.useExercise,
         },
         schedule: data.schedule,
-        completedItems: [],
       };
 
       saveSchedule(storedSchedule);

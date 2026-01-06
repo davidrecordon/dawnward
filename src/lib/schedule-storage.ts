@@ -40,36 +40,6 @@ export function deleteSchedule(): void {
 }
 
 /**
- * Toggle completion status for an intervention item
- */
-export function toggleItemCompletion(itemKey: string): string[] {
-  const schedule = getSchedule();
-  if (!schedule) return [];
-
-  const completedItems = new Set(schedule.completedItems);
-  if (completedItems.has(itemKey)) {
-    completedItems.delete(itemKey);
-  } else {
-    completedItems.add(itemKey);
-  }
-
-  const updatedItems = Array.from(completedItems);
-  saveSchedule({
-    ...schedule,
-    completedItems: updatedItems,
-  });
-
-  return updatedItems;
-}
-
-/**
- * Generate a unique key for an intervention item
- */
-export function getItemKey(day: number, time: string, type: string): string {
-  return `${day}_${time}_${type}`;
-}
-
-/**
  * Generate a UUID for new schedules
  */
 export function generateId(): string {
