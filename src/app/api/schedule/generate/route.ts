@@ -108,8 +108,8 @@ export async function POST(request: Request) {
 
     await writeFile(tempFilePath, JSON.stringify(requestData));
 
-    // Path to Python module
-    const pythonPath = path.resolve(process.cwd(), "api/python");
+    // Path to Python module (underscore prefix for Vercel compatibility)
+    const pythonPath = path.resolve(process.cwd(), "api/_python");
 
     // Python script that reads from the JSON file
     const pythonScript = `

@@ -1,6 +1,6 @@
 # Python dependencies for Dawnward
 # Install with: pip install -r requirements.txt
+# Note: We use local circadian module in api/_python/, not the pip package
 
-circadian>=0.1.0    # Arcascope Forger99 circadian model
 numpy>=1.24.0       # Numerical computations
 pytz>=2024.1        # Timezone handling
