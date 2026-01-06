@@ -113,26 +113,28 @@ export function TripForm({ formState, onFormChange }: TripFormProps) {
       return;
     }
 
-    // Check if we already have a schedule with the same inputs
-    const existingSchedule = getSchedule();
-    if (existingSchedule) {
-      const req = existingSchedule.request;
-      const inputsMatch =
-        req.origin.code === formState.origin.code &&
-        req.destination.code === formState.destination.code &&
-        req.departureDateTime === formState.departureDateTime &&
-        req.arrivalDateTime === formState.arrivalDateTime &&
-        req.prepDays === formState.prepDays &&
-        req.wakeTime === formState.wakeTime &&
-        req.sleepTime === formState.sleepTime &&
-        req.usesMelatonin === formState.useMelatonin &&
-        req.usesCaffeine === formState.useCaffeine &&
-        req.usesExercise === formState.useExercise;
+    // Check if we already have a schedule with the same inputs (skip in dev for testing)
+    if (process.env.NODE_ENV !== "development") {
+      const existingSchedule = getSchedule();
+      if (existingSchedule) {
+        const req = existingSchedule.request;
+        const inputsMatch =
+          req.origin.code === formState.origin.code &&
+          req.destination.code === formState.destination.code &&
+          req.departureDateTime === formState.departureDateTime &&
+          req.arrivalDateTime === formState.arrivalDateTime &&
+          req.prepDays === formState.prepDays &&
+          req.wakeTime === formState.wakeTime &&
+          req.sleepTime === formState.sleepTime &&
+          req.usesMelatonin === formState.useMelatonin &&
+          req.usesCaffeine === formState.useCaffeine &&
+          req.usesExercise === formState.useExercise;
 
-      if (inputsMatch) {
-        // Same inputs - just navigate to existing schedule
-        router.push(`/trip/${existingSchedule.id}`);
-        return;
+        if (inputsMatch) {
+          // Same inputs - just navigate to existing schedule
+          router.push(`/trip/${existingSchedule.id}`);
+          return;
+        }
       }
     }
 
