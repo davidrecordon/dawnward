@@ -3,10 +3,17 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Compass, Plane } from "lucide-react";
-import type { StoredSchedule } from "@/types/schedule";
+import type { ScheduleResponse } from "@/types/schedule";
+import type { Airport } from "@/types/airport";
 
 interface ScheduleHeaderProps {
-  schedule: StoredSchedule;
+  schedule: {
+    request: {
+      origin: Airport;
+      destination: Airport;
+    };
+    schedule: ScheduleResponse;
+  };
   isPreTrip?: boolean;
   scheduleStartDate?: string;
 }

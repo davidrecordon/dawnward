@@ -10,7 +10,7 @@ import {
   getCurrentDayNumber,
   getTimePeriod,
 } from "../time-utils";
-import type { StoredSchedule } from "@/types/schedule";
+import type { ScheduleData } from "../time-utils";
 
 describe("getCurrentTime", () => {
   beforeEach(() => {
@@ -146,26 +146,14 @@ describe("getTimePeriod", () => {
   });
 });
 
-// Helper to create mock schedule
+// Helper to create mock schedule data
 function createMockSchedule(
   interventions: Array<{ date: string; day: number }>,
   originTz: string = "America/Los_Angeles"
-): StoredSchedule {
+): ScheduleData {
   return {
-    id: "test-id",
-    createdAt: "2026-01-10T12:00:00Z",
     request: {
-      origin: { code: "SFO", name: "San Francisco", city: "San Francisco", country: "US", tz: originTz },
-      destination: { code: "LHR", name: "Heathrow", city: "London", country: "GB", tz: "Europe/London" },
-      departureDateTime: "2026-01-20T20:00",
-      arrivalDateTime: "2026-01-21T14:00",
-      prepDays: 3,
-      wakeTime: "07:00",
-      sleepTime: "23:00",
-      usesMelatonin: true,
-      usesCaffeine: true,
-      usesExercise: false,
-      napPreference: "flight_only",
+      origin: { tz: originTz },
     },
     schedule: {
       total_shift_hours: 8,

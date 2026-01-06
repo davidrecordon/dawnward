@@ -38,7 +38,11 @@ export function PostTripCard() {
   );
 }
 
-export function ScheduleNotFoundCard() {
+interface ScheduleNotFoundCardProps {
+  message?: string | null;
+}
+
+export function ScheduleNotFoundCard({ message }: ScheduleNotFoundCardProps = {}) {
   return (
     <Card className="bg-white/90 backdrop-blur-sm">
       <CardContent className="py-12 text-center">
@@ -47,11 +51,11 @@ export function ScheduleNotFoundCard() {
         </div>
 
         <h2 className="text-lg font-semibold text-slate-800 mb-2">
-          Schedule Not Found
+          {message ? "Something went wrong" : "Schedule Not Found"}
         </h2>
 
         <p className="text-sm text-slate-500 mb-4">
-          This schedule may have been deleted or the link is invalid.
+          {message || "This schedule may have been deleted or the link is invalid."}
         </p>
 
         <Button asChild>

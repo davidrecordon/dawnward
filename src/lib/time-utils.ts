@@ -2,7 +2,18 @@
  * Time and date utilities for schedule display
  */
 
-import type { StoredSchedule } from "@/types/schedule";
+import type { ScheduleResponse } from "@/types/schedule";
+
+/**
+ * Common schedule data shape used by time utility functions.
+ * Works with both in-memory generated schedules and stored schedules.
+ */
+export interface ScheduleData {
+  request: {
+    origin: { tz: string };
+  };
+  schedule: ScheduleResponse;
+}
 
 /**
  * Get current time in HH:MM format (24-hour)
@@ -63,7 +74,7 @@ export function formatLongDate(dateStr: string): string {
  * Check if current date is before schedule starts.
  * Uses the origin timezone from the schedule to determine "today".
  */
-export function isBeforeSchedule(schedule: StoredSchedule): boolean {
+export function isBeforeSchedule(schedule: ScheduleData): boolean {
   const originTz = schedule.request.origin.tz;
   const today = getCurrentDateInTimezone(originTz);
   const firstDay = schedule.schedule.interventions[0]?.date;
@@ -74,7 +85,7 @@ export function isBeforeSchedule(schedule: StoredSchedule): boolean {
  * Check if current date is after schedule ends.
  * Uses the origin timezone from the schedule to determine "today".
  */
-export function isAfterSchedule(schedule: StoredSchedule): boolean {
+export function isAfterSchedule(schedule: ScheduleData): boolean {
   const originTz = schedule.request.origin.tz;
   const today = getCurrentDateInTimezone(originTz);
   const interventions = schedule.schedule.interventions;
@@ -87,7 +98,7 @@ export function isAfterSchedule(schedule: StoredSchedule): boolean {
  * Uses the origin timezone from the schedule to determine "today".
  * Returns null if today is not a schedule day.
  */
-export function getCurrentDayNumber(schedule: StoredSchedule): number | null {
+export function getCurrentDayNumber(schedule: ScheduleData): number | null {
   const originTz = schedule.request.origin.tz;
   const today = getCurrentDateInTimezone(originTz);
   const daySchedule = schedule.schedule.interventions.find(

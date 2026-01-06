@@ -1,51 +1,12 @@
 /**
- * localStorage helpers for schedule and form state persistence
+ * localStorage helpers for form state persistence
  *
- * Only stores ONE trip at a time - used as a bridge to logged-in state
+ * Only stores form inputs for the homepage - schedules are regenerated on demand
  */
 
-import type { StoredSchedule } from "@/types/schedule";
 import type { TripFormState } from "@/types/trip-form";
 
-const SCHEDULE_KEY = "dawnward_schedule";
 const FORM_STATE_KEY = "dawnward_form_state";
-
-/**
- * Get the stored schedule (only one at a time)
- */
-export function getSchedule(): StoredSchedule | null {
-  if (typeof window === "undefined") return null;
-  try {
-    const data = localStorage.getItem(SCHEDULE_KEY);
-    return data ? JSON.parse(data) : null;
-  } catch (error) {
-    console.warn("Failed to retrieve schedule from localStorage:", error);
-    return null;
-  }
-}
-
-/**
- * Save the schedule (replaces any existing one)
- */
-export function saveSchedule(schedule: StoredSchedule): void {
-  if (typeof window === "undefined") return;
-  localStorage.setItem(SCHEDULE_KEY, JSON.stringify(schedule));
-}
-
-/**
- * Delete the stored schedule
- */
-export function deleteSchedule(): void {
-  if (typeof window === "undefined") return;
-  localStorage.removeItem(SCHEDULE_KEY);
-}
-
-/**
- * Generate a UUID for new schedules
- */
-export function generateId(): string {
-  return crypto.randomUUID();
-}
 
 /**
  * Get saved form state
