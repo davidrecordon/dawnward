@@ -24,6 +24,7 @@ from .circadian_math import (
     calculate_actual_prep_days,
     calculate_daily_shift_targets,
     shift_time,
+    get_current_datetime_in_tz,
 )
 from .light_prc import generate_shifted_light_windows
 from .melatonin_prc import generate_shifted_melatonin_timing
@@ -57,8 +58,11 @@ class ScheduleGenerator:
         Returns:
             ScheduleResponse with daily intervention schedules
         """
+        # Use origin timezone for "now" since user is there during prep days.
+        # This is critical for Vercel where datetime.now() returns UTC.
         if current_datetime is None:
-            current_datetime = datetime.now()
+            origin_tz = request.legs[0].origin_tz
+            current_datetime = get_current_datetime_in_tz(origin_tz)
 
         # Calculate total timezone shift across all legs
         total_shift, direction = self._calculate_total_shift(request.legs)

@@ -43,6 +43,27 @@ def format_time_12h(t: time) -> str:
     return f"{hour}:{t.minute:02d} {period}"
 
 
+def get_current_datetime_in_tz(tz_name: str) -> datetime:
+    """
+    Get current datetime in the specified timezone.
+
+    This is critical for Vercel deployment where datetime.now() returns UTC.
+    We need to know "now" in the origin timezone since that's where the user
+    is located during prep days.
+
+    Args:
+        tz_name: IANA timezone name (e.g., "America/Los_Angeles")
+
+    Returns:
+        Current datetime in the specified timezone (naive, for local comparisons)
+    """
+    tz = pytz.timezone(tz_name)
+    now_utc = datetime.now(pytz.UTC)
+    now_local = now_utc.astimezone(tz)
+    # Return naive datetime for consistent comparisons with departure times
+    return now_local.replace(tzinfo=None)
+
+
 def estimate_cbtmin_from_wake(wake_time: str) -> time:
     """
     Estimate Core Body Temperature minimum (CBTmin) from habitual wake time.
