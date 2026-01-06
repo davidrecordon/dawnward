@@ -64,7 +64,7 @@ def generate_melatonin_timing(
             type="melatonin",
             title="Take melatonin",
             description=f"Take {dose_mg}mg fast-release melatonin. "
-                       "This helps advance your circadian clock for eastward travel. "
+                       "This helps advance your circadian clock for your eastward (advance) travel. "
                        "Take with a small snack if needed.",
             duration_min=None  # Point-in-time intervention
         )
@@ -79,10 +79,10 @@ def generate_melatonin_timing(
         return Intervention(
             time=format_time(melatonin_time),
             type="melatonin",
-            title="Take melatonin (optional)",
-            description=f"Take {dose_mg}mg fast-release melatonin if desired. "
+            title="Take melatonin",
+            description=f"Take {dose_mg}mg fast-release melatonin. "
                        "Morning melatonin can help delay your clock, but may cause drowsiness. "
-                       "Westward adaptation often works well without melatonin.",
+                       "You may not need melatonin for your westward (delay) travel as your body already tends to drift toward a later schedule.",
             duration_min=None
         )
 
