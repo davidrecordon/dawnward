@@ -19,9 +19,21 @@ interface GenerateRequest {
 }
 
 // Validation patterns
-const TIMEZONE_PATTERN = /^[A-Za-z_]+\/[A-Za-z_]+$/;
 const DATETIME_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/;
 const TIME_PATTERN = /^\d{2}:\d{2}$/;
+
+/**
+ * Validate that a timezone string is a valid IANA timezone.
+ * Uses Intl.DateTimeFormat which throws for invalid timezones.
+ */
+function isValidTimezone(tz: string): boolean {
+  try {
+    Intl.DateTimeFormat(undefined, { timeZone: tz });
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 function validateRequest(body: GenerateRequest): string | null {
   // Required fields
@@ -41,12 +53,12 @@ function validateRequest(body: GenerateRequest): string | null {
     }
   }
 
-  // Timezone validation
-  if (!TIMEZONE_PATTERN.test(body.origin_tz)) {
-    return `Invalid origin timezone format: ${body.origin_tz}`;
+  // Timezone validation - check against IANA timezone database
+  if (!isValidTimezone(body.origin_tz)) {
+    return `Invalid origin timezone: ${body.origin_tz}`;
   }
-  if (!TIMEZONE_PATTERN.test(body.dest_tz)) {
-    return `Invalid destination timezone format: ${body.dest_tz}`;
+  if (!isValidTimezone(body.dest_tz)) {
+    return `Invalid destination timezone: ${body.dest_tz}`;
   }
 
   // Datetime validation
@@ -216,8 +228,10 @@ print(json.dumps(to_dict(response)))
     if (tempFilePath) {
       try {
         await unlink(tempFilePath);
-      } catch {
-        // Ignore cleanup errors
+      } catch (unlinkError) {
+        // Log cleanup failures for monitoring - could indicate permission issues
+        // or accumulating files in /tmp
+        console.error(`Failed to cleanup temp file ${tempFilePath}:`, unlinkError);
       }
     }
   }

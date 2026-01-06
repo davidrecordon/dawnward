@@ -74,8 +74,41 @@ export function formatTimeShift(hours: number): string {
 }
 
 /**
+ * Parse datetime-local string and get UTC milliseconds for a given timezone.
+ * The datetime-local format is "YYYY-MM-DDTHH:MM" and represents local time
+ * in the specified timezone, NOT the browser's timezone.
+ */
+function getUtcMillisForLocalTime(
+  datetimeLocal: string,
+  timezone: string
+): number {
+  // Parse components from datetime-local string (e.g., "2026-01-28T08:30")
+  const [datePart, timePart] = datetimeLocal.split("T");
+  const [year, month, day] = datePart.split("-").map(Number);
+  const [hour, minute] = timePart.split(":").map(Number);
+
+  // Create a UTC date with the same calendar values
+  // This gives us a reference point without browser timezone interference
+  const utcDate = Date.UTC(year, month - 1, day, hour, minute, 0, 0);
+
+  // Get the offset for this timezone at this approximate time
+  // We use the UTC date as reference since we need to know the offset
+  const offset = getTimezoneOffsetHours(timezone, new Date(utcDate));
+
+  // The datetime-local value represents local time in the target timezone.
+  // To get UTC: if local time is 08:30 and offset is -8 (Pacific),
+  // then UTC = 08:30 - (-8) = 16:30 UTC
+  // So we subtract the offset (in ms) from our reference
+  return utcDate - offset * 60 * 60 * 1000;
+}
+
+/**
  * Calculate flight duration from departure and arrival times
- * accounting for timezone differences
+ * accounting for timezone differences.
+ *
+ * IMPORTANT: datetime-local values are interpreted as local time in their
+ * respective timezones (departure in originTz, arrival in destTz), regardless
+ * of the browser's timezone.
  */
 export function calculateFlightDuration(
   departureDateTime: string,
@@ -88,19 +121,9 @@ export function calculateFlightDuration(
   }
 
   try {
-    // Parse the datetime-local values
-    // These are in the format "2026-01-28T08:30"
-    const depDate = new Date(departureDateTime);
-    const arrDate = new Date(arrivalDateTime);
-
-    // Get offsets for the respective timezones at the departure/arrival times
-    const depOffset = getTimezoneOffsetHours(originTz, depDate);
-    const arrOffset = getTimezoneOffsetHours(destTz, arrDate);
-
-    // Convert both to UTC milliseconds
-    // The datetime-local is interpreted as local time, so we need to adjust
-    const depUTC = depDate.getTime() - depOffset * 60 * 60 * 1000;
-    const arrUTC = arrDate.getTime() - arrOffset * 60 * 60 * 1000;
+    // Convert both times to UTC milliseconds, interpreting each in its timezone
+    const depUTC = getUtcMillisForLocalTime(departureDateTime, originTz);
+    const arrUTC = getUtcMillisForLocalTime(arrivalDateTime, destTz);
 
     // Calculate duration in milliseconds
     const durationMs = arrUTC - depUTC;

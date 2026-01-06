@@ -15,7 +15,7 @@ export function getCurrentTime(): string {
 }
 
 /**
- * Get current date in YYYY-MM-DD format
+ * Get current date in YYYY-MM-DD format (browser's local timezone)
  */
 export function getCurrentDate(): string {
   const now = new Date();
@@ -23,6 +23,28 @@ export function getCurrentDate(): string {
   const month = (now.getMonth() + 1).toString().padStart(2, "0");
   const day = now.getDate().toString().padStart(2, "0");
   return `${year}-${month}-${day}`;
+}
+
+/**
+ * Get current date in YYYY-MM-DD format for a specific timezone.
+ * Uses Intl.DateTimeFormat with 'en-CA' locale for ISO format (YYYY-MM-DD).
+ */
+export function getCurrentDateInTimezone(tz: string): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: tz,
+  }).format(new Date());
+}
+
+/**
+ * Format a Date object as datetime-local string (YYYY-MM-DDTHH:MM)
+ */
+export function formatDateTimeLocal(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  const hours = String(date.getHours()).padStart(2, "0");
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
 }
 
 /**
@@ -38,30 +60,36 @@ export function formatLongDate(dateStr: string): string {
 }
 
 /**
- * Check if current date is before schedule starts
+ * Check if current date is before schedule starts.
+ * Uses the origin timezone from the schedule to determine "today".
  */
 export function isBeforeSchedule(schedule: StoredSchedule): boolean {
-  const today = getCurrentDate();
+  const originTz = schedule.request.origin.tz;
+  const today = getCurrentDateInTimezone(originTz);
   const firstDay = schedule.schedule.interventions[0]?.date;
   return firstDay ? today < firstDay : false;
 }
 
 /**
- * Check if current date is after schedule ends
+ * Check if current date is after schedule ends.
+ * Uses the origin timezone from the schedule to determine "today".
  */
 export function isAfterSchedule(schedule: StoredSchedule): boolean {
-  const today = getCurrentDate();
+  const originTz = schedule.request.origin.tz;
+  const today = getCurrentDateInTimezone(originTz);
   const interventions = schedule.schedule.interventions;
   const lastDay = interventions[interventions.length - 1]?.date;
   return lastDay ? today > lastDay : false;
 }
 
 /**
- * Find the day number for the current date in the schedule
- * Returns null if today is not a schedule day
+ * Find the day number for the current date in the schedule.
+ * Uses the origin timezone from the schedule to determine "today".
+ * Returns null if today is not a schedule day.
  */
 export function getCurrentDayNumber(schedule: StoredSchedule): number | null {
-  const today = getCurrentDate();
+  const originTz = schedule.request.origin.tz;
+  const today = getCurrentDateInTimezone(originTz);
   const daySchedule = schedule.schedule.interventions.find(
     (d) => d.date === today
   );

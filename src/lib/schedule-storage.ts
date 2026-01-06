@@ -18,7 +18,8 @@ export function getSchedule(): StoredSchedule | null {
   try {
     const data = localStorage.getItem(SCHEDULE_KEY);
     return data ? JSON.parse(data) : null;
-  } catch {
+  } catch (error) {
+    console.warn("Failed to retrieve schedule from localStorage:", error);
     return null;
   }
 }
@@ -54,7 +55,8 @@ export function getFormState(): TripFormState | null {
   try {
     const data = localStorage.getItem(FORM_STATE_KEY);
     return data ? JSON.parse(data) : null;
-  } catch {
+  } catch (error) {
+    console.warn("Failed to retrieve form state from localStorage:", error);
     return null;
   }
 }

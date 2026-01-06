@@ -4,6 +4,8 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { Activity, Calendar, ChevronRight, Coffee, Loader2, MapPin, Pill } from "lucide-react";
 import { saveSchedule, getSchedule } from "@/lib/schedule-storage";
+import { formatDateTimeLocal } from "@/lib/time-utils";
+import { getErrorMessage } from "@/lib/error-utils";
 import type { ScheduleResponse, StoredSchedule } from "@/types/schedule";
 import type { Airport } from "@/types/airport";
 
@@ -48,6 +50,9 @@ export function TripForm({ formState, onFormChange }: TripFormProps) {
 
   // Handle "Show me" example demo
   const handleShowExample = async () => {
+    // Prevent duplicate submissions if already loading
+    if (isLoading) return;
+
     // Example airports
     const sfo: Airport = {
       code: "SFO",
@@ -68,39 +73,35 @@ export function TripForm({ formState, onFormChange }: TripFormProps) {
     // Calculate tomorrow at 8:45pm and day after at 3:15pm
     // (times must be on 15-minute increments for TimeSelect)
     const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setDate(tomorrow.getDate() + 2);
     tomorrow.setHours(20, 45, 0, 0);
 
     const dayAfter = new Date();
-    dayAfter.setDate(dayAfter.getDate() + 2);
+    dayAfter.setDate(dayAfter.getDate() + 3);
     dayAfter.setHours(15, 15, 0, 0);
-
-    // Format as ISO datetime-local (YYYY-MM-DDTHH:MM)
-    const formatDateTime = (d: Date) => {
-      const year = d.getFullYear();
-      const month = String(d.getMonth() + 1).padStart(2, "0");
-      const day = String(d.getDate()).padStart(2, "0");
-      const hours = String(d.getHours()).padStart(2, "0");
-      const minutes = String(d.getMinutes()).padStart(2, "0");
-      return `${year}-${month}-${day}T${hours}:${minutes}`;
-    };
 
     // Update form state with example values
     onFormChange({
       ...formState,
       origin: sfo,
       destination: lhr,
-      departureDateTime: formatDateTime(tomorrow),
-      arrivalDateTime: formatDateTime(dayAfter),
+      departureDateTime: formatDateTimeLocal(tomorrow),
+      arrivalDateTime: formatDateTimeLocal(dayAfter),
     });
 
     // Wait for visual effect - let user see the form fill in
     await new Promise((resolve) => setTimeout(resolve, 500));
 
+    // Guard against unmount before clicking
+    if (!submitButtonRef.current) return;
+
     // Scroll to and click generate button
-    submitButtonRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    submitButtonRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
     await new Promise((resolve) => setTimeout(resolve, 300));
-    submitButtonRef.current?.click();
+
+    // Guard again before final click
+    if (!submitButtonRef.current) return;
+    submitButtonRef.current.click();
   };
 
   const updateField = <K extends keyof TripFormState>(
@@ -250,9 +251,7 @@ export function TripForm({ formState, onFormChange }: TripFormProps) {
       router.push(`/trip/${data.id}`);
     } catch (error) {
       console.error("Schedule generation error:", error);
-      setErrors({
-        form: error instanceof Error ? error.message : "Failed to generate schedule",
-      });
+      setErrors({ form: getErrorMessage(error) });
       setIsLoading(false);
     }
   };

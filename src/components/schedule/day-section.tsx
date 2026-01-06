@@ -1,6 +1,6 @@
 "use client";
 
-import { getDayLabel, formatShortDate } from "@/lib/intervention-utils";
+import { getDayLabel } from "@/lib/intervention-utils";
 import { formatLongDate, getCurrentTime } from "@/lib/time-utils";
 import { InterventionCard } from "./intervention-card";
 import { FlightCard } from "./flight-card";
@@ -103,7 +103,7 @@ export function DaySection({
 
         {/* Items */}
         <div className="space-y-3">
-          {items.map((item, idx) => {
+          {items.map((item) => {
             // Determine dot color based on item type
             const getDotStyle = () => {
               if (item.kind === "now") {

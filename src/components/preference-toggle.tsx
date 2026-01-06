@@ -67,7 +67,11 @@ export function PreferenceToggle({
           <p className="text-xs text-slate-500">{description}</p>
         </div>
       </div>
-      <Switch checked={checked} onCheckedChange={onCheckedChange} />
+      <Switch
+        checked={checked}
+        onCheckedChange={onCheckedChange}
+        aria-label={title}
+      />
     </div>
   );
 }

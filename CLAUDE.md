@@ -15,6 +15,11 @@ bun run build        # Production build
 bun start            # Start production server
 bun run lint         # Run ESLint
 
+# Testing
+bun test             # Run Vitest in watch mode
+bun test:run         # Run all TypeScript tests once
+bun test:python      # Run all Python pytest tests
+
 # Database (Prisma)
 bun prisma generate     # Generate Prisma client to src/generated/prisma
 bun prisma migrate dev  # Run migrations in development
@@ -28,6 +33,7 @@ bun prisma studio       # Open Prisma Studio GUI
 - **Database**: PostgreSQL via Prisma (Vercel Postgres in prod)
 - **Styling**: Tailwind CSS v4 with shadcn/ui components
 - **Python Runtime**: Vercel Python Functions for circadian model (Arcascope library)
+- **Testing**: Vitest for TypeScript, pytest for Python
 
 ## Architecture
 
@@ -38,7 +44,13 @@ src/
 ├── app/              # Next.js App Router pages and API routes
 ├── components/ui/    # shadcn/ui components (Button, Card, Input, etc.)
 ├── lib/              # Shared utilities (cn() for Tailwind class merging)
+│   └── __tests__/    # Vitest unit tests for utilities
+├── test/             # Test setup and configuration
 └── generated/prisma/ # Prisma client (generated, do not edit)
+
+api/_python/
+├── scheduler.py      # Circadian schedule generation
+└── tests/            # Python pytest tests
 
 prisma/
 ├── schema.prisma     # Database schema
@@ -121,6 +133,25 @@ This project uses two Claude Code plugins that should be invoked for significant
 - Building new components or pages → `/frontend-design`
 - Implementing backend features, APIs, or complex logic → `/feature-dev`
 - Small fixes, typos, or simple changes → No skill needed
+
+## Testing
+
+**TypeScript (Vitest)**: 120 tests covering utility functions
+- `src/lib/__tests__/time-utils.test.ts` - Date/time formatting, timezone-aware operations
+- `src/lib/__tests__/timezone-utils.test.ts` - Flight duration calculation, timezone shifts
+- `src/lib/__tests__/airport-search.test.ts` - Search scoring, matching, filtering
+- `src/lib/__tests__/intervention-utils.test.ts` - Intervention styling, time formatting
+- `src/lib/__tests__/schedule-storage.test.ts` - localStorage persistence
+- `src/lib/__tests__/error-utils.test.ts` - Error message extraction
+
+**Python (pytest)**: 43 tests covering schedule generation
+- `api/_python/tests/test_scheduler.py` - Timezone shifts, intervention generation, sleep filtering, light timing
+
+**Running tests:**
+```bash
+bun test:run         # Run all TypeScript tests
+bun test:python      # Run all Python tests
+```
 
 ## Design Documents
 
