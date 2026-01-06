@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Activity, Calendar, ChevronRight, Coffee, Loader2, MapPin, Pill } from "lucide-react";
 import { saveSchedule, getSchedule } from "@/lib/schedule-storage";
 import type { ScheduleResponse, StoredSchedule } from "@/types/schedule";
+import type { Airport } from "@/types/airport";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -43,6 +44,64 @@ export function TripForm({ formState, onFormChange }: TripFormProps) {
   const router = useRouter();
   const [errors, setErrors] = React.useState<FormErrors>({});
   const [isLoading, setIsLoading] = React.useState(false);
+  const submitButtonRef = React.useRef<HTMLButtonElement>(null);
+
+  // Handle "Show me" example demo
+  const handleShowExample = async () => {
+    // Example airports
+    const sfo: Airport = {
+      code: "SFO",
+      name: "San Francisco International",
+      city: "San Francisco",
+      country: "US",
+      tz: "America/Los_Angeles",
+    };
+
+    const lhr: Airport = {
+      code: "LHR",
+      name: "London Heathrow",
+      city: "London",
+      country: "GB",
+      tz: "Europe/London",
+    };
+
+    // Calculate tomorrow at 8:45pm and day after at 3:15pm
+    // (times must be on 15-minute increments for TimeSelect)
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setHours(20, 45, 0, 0);
+
+    const dayAfter = new Date();
+    dayAfter.setDate(dayAfter.getDate() + 2);
+    dayAfter.setHours(15, 15, 0, 0);
+
+    // Format as ISO datetime-local (YYYY-MM-DDTHH:MM)
+    const formatDateTime = (d: Date) => {
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, "0");
+      const day = String(d.getDate()).padStart(2, "0");
+      const hours = String(d.getHours()).padStart(2, "0");
+      const minutes = String(d.getMinutes()).padStart(2, "0");
+      return `${year}-${month}-${day}T${hours}:${minutes}`;
+    };
+
+    // Update form state with example values
+    onFormChange({
+      ...formState,
+      origin: sfo,
+      destination: lhr,
+      departureDateTime: formatDateTime(tomorrow),
+      arrivalDateTime: formatDateTime(dayAfter),
+    });
+
+    // Wait for visual effect - let user see the form fill in
+    await new Promise((resolve) => setTimeout(resolve, 500));
+
+    // Scroll to and click generate button
+    submitButtonRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    submitButtonRef.current?.click();
+  };
 
   const updateField = <K extends keyof TripFormState>(
     field: K,
@@ -199,7 +258,26 @@ export function TripForm({ formState, onFormChange }: TripFormProps) {
   };
 
   return (
-    <Card className="bg-white/90 backdrop-blur-sm border border-slate-200/50">
+    <Card className="relative overflow-hidden bg-white/90 backdrop-blur-sm border border-slate-200/50">
+      {/* "Show me" ribbon - top right corner */}
+      <button
+        onClick={handleShowExample}
+        className="absolute -right-[1px] -top-[1px] z-10"
+        aria-label="Show me an example"
+        disabled={isLoading}
+      >
+        <div className="w-28 h-28 pointer-events-none">
+          <div
+            className="absolute top-[18px] -right-[32px] w-36 bg-gradient-to-r from-amber-400 to-orange-400
+                       text-white text-xs font-semibold py-1.5 text-center rotate-45
+                       shadow-md hover:from-amber-500 hover:to-orange-500 transition-colors
+                       pointer-events-auto cursor-pointer"
+          >
+            Show me
+          </div>
+        </div>
+      </button>
+
       <CardHeader className="pb-4">
         <CardTitle className="flex items-center gap-2 text-xl">
           <MapPin className="h-5 w-5 text-sky-500" />
@@ -349,6 +427,7 @@ export function TripForm({ formState, onFormChange }: TripFormProps) {
         </div>
 
         <Button
+          ref={submitButtonRef}
           onClick={handleSubmit}
           disabled={isLoading}
           className="w-full bg-sky-500 hover:bg-sky-600 text-white disabled:opacity-70"

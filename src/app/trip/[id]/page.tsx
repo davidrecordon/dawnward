@@ -36,6 +36,26 @@ export default function TripDetailPage({
     setIsLoading(false);
   }, [id]);
 
+  // Auto-scroll to "now" marker if we're in the middle of the trip
+  useEffect(() => {
+    if (!schedule || isLoading) return;
+
+    const preTrip = isBeforeSchedule(schedule);
+    const postTrip = isAfterSchedule(schedule);
+
+    // Only scroll if we're currently in the trip (not before or after)
+    if (!preTrip && !postTrip) {
+      // Small delay to ensure DOM is ready
+      const timer = setTimeout(() => {
+        const nowMarker = document.getElementById("now-marker");
+        if (nowMarker) {
+          nowMarker.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [schedule, isLoading]);
+
   if (isLoading) {
     return (
       <div className="mx-auto max-w-3xl px-4 py-8">

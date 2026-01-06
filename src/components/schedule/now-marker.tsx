@@ -11,7 +11,10 @@ interface NowMarkerProps {
 
 export function NowMarker({ time }: NowMarkerProps) {
   return (
-    <Card className="relative overflow-hidden bg-gradient-to-r from-amber-50 via-orange-50 to-rose-50 border-amber-200/50 shadow-lg">
+    <Card
+      id="now-marker"
+      className="relative overflow-hidden bg-gradient-to-r from-amber-50 via-orange-50 to-rose-50 border-amber-200/50 shadow-lg scroll-mt-10"
+    >
       {/* Animated glow effect */}
       <div className="absolute inset-0 bg-gradient-to-r from-amber-200/20 via-orange-200/30 to-rose-200/20 animate-pulse" />
 

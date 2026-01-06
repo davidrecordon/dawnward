@@ -19,11 +19,8 @@ export function DateTimeSelect({
   hasError,
 }: DateTimeSelectProps) {
   // Parse the ISO datetime string into date and time parts
-  const [datePart, timePart] = React.useMemo(() => {
-    if (!value) return ["", ""];
-    const parts = value.split("T");
-    return [parts[0] || "", parts[1] || ""];
-  }, [value]);
+  const datePart = value ? value.split("T")[0] || "" : "";
+  const timePart = value ? value.split("T")[1] || "" : "";
 
   const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newDate = e.target.value;
