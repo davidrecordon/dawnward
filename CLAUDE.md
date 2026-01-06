@@ -33,6 +33,7 @@ bun prisma studio       # Open Prisma Studio GUI
 - **Database**: PostgreSQL via Prisma (Vercel Postgres in prod)
 - **Styling**: Tailwind CSS v4 with shadcn/ui components
 - **Python Runtime**: Vercel Python Functions for circadian model (Arcascope library)
+- **Analytics**: Vercel Analytics (respects GPC and DNT privacy signals)
 - **Testing**: Vitest for TypeScript, pytest for Python
 
 ## Architecture
@@ -136,16 +137,18 @@ This project uses two Claude Code plugins that should be invoked for significant
 
 ## Testing
 
-**TypeScript (Vitest)**: 120 tests covering utility functions
+**TypeScript (Vitest)**: ~120 tests covering utility functions
 - `src/lib/__tests__/time-utils.test.ts` - Date/time formatting, timezone-aware operations
 - `src/lib/__tests__/timezone-utils.test.ts` - Flight duration calculation, timezone shifts
 - `src/lib/__tests__/airport-search.test.ts` - Search scoring, matching, filtering
 - `src/lib/__tests__/intervention-utils.test.ts` - Intervention styling, time formatting
-- `src/lib/__tests__/schedule-storage.test.ts` - localStorage persistence
+- `src/lib/__tests__/schedule-storage.test.ts` - Form state localStorage persistence
 - `src/lib/__tests__/error-utils.test.ts` - Error message extraction
+- `src/app/api/schedule/generate/__tests__/route.test.ts` - API route data construction
 
-**Python (pytest)**: 43 tests covering schedule generation
-- `api/_python/tests/test_scheduler.py` - Timezone shifts, intervention generation, sleep filtering, light timing
+**Python (pytest)**: ~70 tests covering schedule generation
+- `api/_python/tests/test_scheduler.py` - Timezone shifts, intervention generation, sleep filtering, nap timing
+- `api/_python/tests/test_nap.py` - Nap window generation and timing
 
 **Running tests:**
 ```bash
