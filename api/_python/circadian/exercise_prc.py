@@ -24,6 +24,7 @@ from .circadian_math import (
     minutes_to_time,
     format_time,
     shift_time,
+    calculate_intervention_time,
 )
 
 
@@ -96,24 +97,43 @@ def generate_shifted_exercise_windows(
     base_sleep: time,
     cumulative_shift: float,
     direction: str,
+    total_shift: float = 0.0,
+    day: int = 0,
     duration_min: int = 30
 ) -> List[Intervention]:
     """
     Generate exercise windows accounting for phase shift progress.
+
+    Uses timezone-aware calculation:
+    - Pre-departure (day <= 0): Times shifted from base in origin timezone
+    - Post-arrival (day >= 1): Times offset from ideal in destination timezone
 
     Args:
         base_wake: Original wake time before shifting
         base_sleep: Original sleep time before shifting
         cumulative_shift: Hours already shifted
         direction: "advance" or "delay"
+        total_shift: Total shift needed (absolute value)
+        day: Day relative to departure (negative = prep, 0 = flight, positive = arrival)
         duration_min: Exercise duration
 
     Returns:
         List of Intervention objects
     """
-    # Shift wake/sleep times based on progress
-    shift_hours = cumulative_shift if direction == "advance" else -cumulative_shift
-    current_wake = shift_time(base_wake, shift_hours)
-    current_sleep = shift_time(base_sleep, shift_hours)
+    # Shift wake/sleep times based on progress using timezone-aware helper
+    current_wake = calculate_intervention_time(
+        base_time=base_wake,
+        cumulative_shift=cumulative_shift,
+        total_shift=total_shift,
+        direction=direction,
+        day=day
+    )
+    current_sleep = calculate_intervention_time(
+        base_time=base_sleep,
+        cumulative_shift=cumulative_shift,
+        total_shift=total_shift,
+        direction=direction,
+        day=day
+    )
 
     return generate_exercise_windows(current_wake, current_sleep, direction, duration_min)

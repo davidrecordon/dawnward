@@ -26,6 +26,7 @@ from .circadian_math import (
     format_time,
     format_time_12h,
     shift_time,
+    calculate_intervention_time,
 )
 
 
@@ -82,24 +83,43 @@ def generate_shifted_caffeine_strategy(
     base_wake: time,
     cumulative_shift: float,
     direction: str,
+    total_shift: float = 0.0,
+    day: int = 0,
     cutoff_hours: int = 6
 ) -> List[Intervention]:
     """
     Generate caffeine strategy accounting for phase shift progress.
+
+    Uses timezone-aware calculation:
+    - Pre-departure (day <= 0): Times shifted from base in origin timezone
+    - Post-arrival (day >= 1): Times offset from ideal in destination timezone
 
     Args:
         base_sleep: Original sleep time
         base_wake: Original wake time
         cumulative_shift: Hours already shifted
         direction: "advance" or "delay"
+        total_shift: Total shift needed (absolute value)
+        day: Day relative to departure (negative = prep, 0 = flight, positive = arrival)
         cutoff_hours: Hours before sleep to stop caffeine
 
     Returns:
         List of Intervention objects
     """
-    # Shift sleep/wake times based on progress
-    shift_hours = cumulative_shift if direction == "advance" else -cumulative_shift
-    current_sleep = shift_time(base_sleep, shift_hours)
-    current_wake = shift_time(base_wake, shift_hours)
+    # Shift sleep/wake times based on progress using timezone-aware helper
+    current_sleep = calculate_intervention_time(
+        base_time=base_sleep,
+        cumulative_shift=cumulative_shift,
+        total_shift=total_shift,
+        direction=direction,
+        day=day
+    )
+    current_wake = calculate_intervention_time(
+        base_time=base_wake,
+        cumulative_shift=cumulative_shift,
+        total_shift=total_shift,
+        direction=direction,
+        day=day
+    )
 
     return generate_caffeine_strategy(current_sleep, current_wake, cutoff_hours)

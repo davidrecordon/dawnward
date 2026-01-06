@@ -26,6 +26,7 @@ from .circadian_math import (
     minutes_to_time,
     format_time,
     shift_time,
+    calculate_intervention_time,
 )
 
 
@@ -91,22 +92,35 @@ def generate_shifted_melatonin_timing(
     base_dlmo: time,
     cumulative_shift: float,
     direction: str,
+    total_shift: float = 0.0,
+    day: int = 0,
     dose_mg: float = 0.5
 ) -> Optional[Intervention]:
     """
     Generate melatonin timing accounting for phase shift progress.
 
+    Uses timezone-aware calculation:
+    - Pre-departure (day <= 0): Times shifted from base in origin timezone
+    - Post-arrival (day >= 1): Times offset from ideal in destination timezone
+
     Args:
         base_dlmo: Original DLMO before any shifting
         cumulative_shift: Hours already shifted
         direction: "advance" or "delay"
+        total_shift: Total shift needed (absolute value)
+        day: Day relative to departure (negative = prep, 0 = flight, positive = arrival)
         dose_mg: Melatonin dose in mg
 
     Returns:
         Intervention object or None
     """
-    # Shift DLMO based on progress
-    shift_hours = cumulative_shift if direction == "advance" else -cumulative_shift
-    current_dlmo = shift_time(base_dlmo, shift_hours)
+    # Shift DLMO based on progress using timezone-aware helper
+    current_dlmo = calculate_intervention_time(
+        base_time=base_dlmo,
+        cumulative_shift=cumulative_shift,
+        total_shift=total_shift,
+        direction=direction,
+        day=day
+    )
 
     return generate_melatonin_timing(current_dlmo, direction, dose_mg)

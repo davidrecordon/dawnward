@@ -27,6 +27,7 @@ from .circadian_math import (
     format_time,
     format_time_12h,
     shift_time,
+    calculate_intervention_time,
 )
 
 
@@ -235,6 +236,8 @@ def generate_shifted_light_windows(
     base_cbtmin: time,
     cumulative_shift: float,
     direction: str,
+    total_shift: float = 0.0,
+    day: int = 0,
     duration_min: int = 60
 ) -> List[Intervention]:
     """
@@ -243,22 +246,45 @@ def generate_shifted_light_windows(
     As the circadian clock shifts, the optimal light timing shifts too.
     Wake, sleep, and CBTmin all shift together.
 
+    Uses timezone-aware calculation:
+    - Pre-departure (day <= 0): Times shifted from base in origin timezone
+    - Post-arrival (day >= 1): Times offset from ideal in destination timezone
+
     Args:
         base_wake: Original wake time before any shifting
         base_sleep: Original sleep time before any shifting
         base_cbtmin: Original CBTmin before any shifting
         cumulative_shift: Hours already shifted (positive = advanced)
         direction: "advance" or "delay"
+        total_shift: Total shift needed (absolute value)
+        day: Day relative to departure (negative = prep, 0 = flight, positive = arrival)
         duration_min: Duration of light exposure
 
     Returns:
         List of Intervention objects
     """
-    # Shift all times based on progress
-    shift_hours = cumulative_shift if direction == "advance" else -cumulative_shift
-    current_wake = shift_time(base_wake, shift_hours)
-    current_sleep = shift_time(base_sleep, shift_hours)
-    current_cbtmin = shift_time(base_cbtmin, shift_hours)
+    # Shift all times based on progress using timezone-aware helper
+    current_wake = calculate_intervention_time(
+        base_time=base_wake,
+        cumulative_shift=cumulative_shift,
+        total_shift=total_shift,
+        direction=direction,
+        day=day
+    )
+    current_sleep = calculate_intervention_time(
+        base_time=base_sleep,
+        cumulative_shift=cumulative_shift,
+        total_shift=total_shift,
+        direction=direction,
+        day=day
+    )
+    current_cbtmin = calculate_intervention_time(
+        base_time=base_cbtmin,
+        cumulative_shift=cumulative_shift,
+        total_shift=total_shift,
+        direction=direction,
+        day=day
+    )
 
     return generate_light_windows(
         current_wake, current_sleep, current_cbtmin,

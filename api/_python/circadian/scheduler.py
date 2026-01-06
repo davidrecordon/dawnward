@@ -24,6 +24,7 @@ from .circadian_math import (
     calculate_actual_prep_days,
     calculate_daily_shift_targets,
     shift_time,
+    calculate_intervention_time,
     get_current_datetime_in_tz,
 )
 from .light_prc import generate_shifted_light_windows
@@ -67,8 +68,11 @@ class ScheduleGenerator:
         # Calculate total timezone shift across all legs
         total_shift, direction = self._calculate_total_shift(request.legs)
 
-        # Get first leg for timing calculations
+        # Get first/last leg for timezone info
         first_leg = request.legs[0]
+        last_leg = request.legs[-1]
+        origin_tz = first_leg.origin_tz
+        dest_tz = last_leg.dest_tz
 
         # Auto-adjust prep days if departure is sooner than requested
         actual_prep_days = calculate_actual_prep_days(
@@ -103,6 +107,11 @@ class ScheduleGenerator:
                 day_num
             )
 
+            # Determine timezone for this day
+            # Pre-departure and flight day: origin timezone
+            # Post-arrival: destination timezone
+            day_timezone = origin_tz if day_num <= 0 else dest_tz
+
             # Generate all interventions for this day
             interventions = self._generate_day_interventions(
                 base_cbtmin=base_cbtmin,
@@ -110,7 +119,9 @@ class ScheduleGenerator:
                 base_sleep=base_sleep,
                 base_wake=base_wake,
                 cumulative_shift=cumulative_shift,
+                total_shift=abs(total_shift),
                 direction=direction,
+                day=day_num,
                 request=request
             )
 
@@ -126,6 +137,7 @@ class ScheduleGenerator:
             day_schedules.append(DaySchedule(
                 day=day_num,
                 date=day_date,
+                timezone=day_timezone,
                 items=interventions
             ))
 
@@ -136,6 +148,8 @@ class ScheduleGenerator:
             total_shift_hours=abs(total_shift),
             direction=direction,
             estimated_adaptation_days=estimated_days,
+            origin_tz=origin_tz,
+            dest_tz=dest_tz,
             interventions=day_schedules
         )
 
@@ -201,7 +215,9 @@ class ScheduleGenerator:
         base_sleep: time,
         base_wake: time,
         cumulative_shift: float,
+        total_shift: float,
         direction: str,
+        day: int,
         request: ScheduleRequest
     ) -> List[Intervention]:
         """
@@ -213,7 +229,9 @@ class ScheduleGenerator:
             base_sleep: Original sleep time
             base_wake: Original wake time
             cumulative_shift: Hours shifted so far
+            total_shift: Total shift needed (absolute value)
             direction: "advance" or "delay"
+            day: Day relative to departure (negative = prep, 0 = flight, positive = arrival)
             request: Original schedule request with preferences
 
         Returns:
@@ -227,7 +245,9 @@ class ScheduleGenerator:
             base_sleep=base_sleep,
             base_cbtmin=base_cbtmin,
             cumulative_shift=cumulative_shift,
-            direction=direction
+            direction=direction,
+            total_shift=total_shift,
+            day=day
         )
         interventions.extend(light_interventions)
 
@@ -236,7 +256,9 @@ class ScheduleGenerator:
             melatonin = generate_shifted_melatonin_timing(
                 base_dlmo=base_dlmo,
                 cumulative_shift=cumulative_shift,
-                direction=direction
+                direction=direction,
+                total_shift=total_shift,
+                day=day
             )
             if melatonin:
                 interventions.append(melatonin)
@@ -247,7 +269,9 @@ class ScheduleGenerator:
                 base_wake=base_wake,
                 base_sleep=base_sleep,
                 cumulative_shift=cumulative_shift,
-                direction=direction
+                direction=direction,
+                total_shift=total_shift,
+                day=day
             )
             interventions.extend(exercise_interventions)
 
@@ -257,7 +281,9 @@ class ScheduleGenerator:
                 base_sleep=base_sleep,
                 base_wake=base_wake,
                 cumulative_shift=cumulative_shift,
-                direction=direction
+                direction=direction,
+                total_shift=total_shift,
+                day=day
             )
             interventions.extend(caffeine_interventions)
 
@@ -266,7 +292,9 @@ class ScheduleGenerator:
             base_sleep=base_sleep,
             base_wake=base_wake,
             cumulative_shift=cumulative_shift,
-            direction=direction
+            total_shift=total_shift,
+            direction=direction,
+            day=day
         )
         interventions.extend(sleep_wake)
 
@@ -475,26 +503,45 @@ class ScheduleGenerator:
         base_sleep: time,
         base_wake: time,
         cumulative_shift: float,
-        direction: str
+        total_shift: float,
+        direction: str,
+        day: int
     ) -> List[Intervention]:
         """
         Generate sleep and wake target interventions.
+
+        Uses timezone-aware calculation:
+        - Pre-departure (day <= 0): Times shifted from base in origin timezone
+        - Post-arrival (day >= 1): Times offset from ideal in destination timezone
 
         Args:
             base_sleep: Original sleep time
             base_wake: Original wake time
             cumulative_shift: Hours shifted so far
+            total_shift: Total shift needed (absolute value)
             direction: "advance" or "delay"
+            day: Day relative to departure (negative = prep, 0 = flight, positive = arrival)
 
         Returns:
             List of sleep_target and wake_target interventions
         """
         interventions = []
 
-        # Calculate shifted times
-        shift_hours = cumulative_shift if direction == "advance" else -cumulative_shift
-        target_sleep = shift_time(base_sleep, shift_hours)
-        target_wake = shift_time(base_wake, shift_hours)
+        # Calculate shifted times using timezone-aware helper
+        target_sleep = calculate_intervention_time(
+            base_time=base_sleep,
+            cumulative_shift=cumulative_shift,
+            total_shift=total_shift,
+            direction=direction,
+            day=day
+        )
+        target_wake = calculate_intervention_time(
+            base_time=base_wake,
+            cumulative_shift=cumulative_shift,
+            total_shift=total_shift,
+            direction=direction,
+            day=day
+        )
 
         interventions.append(Intervention(
             time=format_time(target_wake),

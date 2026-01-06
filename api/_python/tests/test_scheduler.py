@@ -636,3 +636,170 @@ class TestLateStartFiltering:
                 intervention_minutes = self._time_to_minutes(intervention.time)
                 assert intervention_minutes >= cutoff_minutes, \
                     f"Intervention at {intervention.time} should be included (cutoff 08:45)"
+
+
+class TestTimezoneAwareOutput:
+    """Tests for timezone-aware schedule generation.
+
+    Verifies that:
+    - Pre-departure days use origin timezone
+    - Post-arrival days use destination timezone
+    - Sleep/wake targets are reasonable (not 7am sleep times)
+    - Fully adapted day matches user's base schedule
+    """
+
+    def _time_to_minutes(self, time_str: str) -> int:
+        """Convert HH:MM to minutes since midnight."""
+        parts = time_str.split(":")
+        return int(parts[0]) * 60 + int(parts[1])
+
+    def _is_reasonable_sleep_time(self, time_str: str) -> bool:
+        """Check if sleep time is in reasonable range (8pm-4am)."""
+        minutes = self._time_to_minutes(time_str)
+        # 8pm (20:00) = 1200 min, 4am = 240 min
+        # Reasonable: 20:00-23:59 (1200-1439) OR 00:00-04:00 (0-240)
+        return minutes >= 1200 or minutes <= 240
+
+    def _is_reasonable_wake_time(self, time_str: str) -> bool:
+        """Check if wake time is in reasonable range (4am-12pm)."""
+        minutes = self._time_to_minutes(time_str)
+        # 4am = 240 min, 12pm = 720 min
+        return 240 <= minutes <= 720
+
+    def test_pre_departure_uses_origin_timezone(self, generator, eastward_request):
+        """Days before departure should have timezone = origin_tz."""
+        response = generator.generate_schedule(eastward_request)
+
+        origin_tz = response.origin_tz
+        for day in response.interventions:
+            if day.day < 0:  # Pre-departure
+                assert day.timezone == origin_tz, \
+                    f"Day {day.day} should use origin timezone {origin_tz}, got {day.timezone}"
+
+    def test_post_arrival_uses_destination_timezone(self, generator, eastward_request):
+        """Days after arrival should have timezone = dest_tz."""
+        response = generator.generate_schedule(eastward_request)
+
+        dest_tz = response.dest_tz
+        for day in response.interventions:
+            if day.day > 0:  # Post-arrival
+                assert day.timezone == dest_tz, \
+                    f"Day {day.day} should use destination timezone {dest_tz}, got {day.timezone}"
+
+    def test_flight_day_uses_origin_timezone(self, generator, eastward_request):
+        """Flight day (day 0) should use origin timezone."""
+        response = generator.generate_schedule(eastward_request)
+
+        day_zero = next((d for d in response.interventions if d.day == 0), None)
+        if day_zero:
+            assert day_zero.timezone == response.origin_tz, \
+                f"Flight day should use origin timezone {response.origin_tz}, got {day_zero.timezone}"
+
+    def test_post_arrival_sleep_targets_reasonable(self, generator, eastward_request):
+        """Sleep targets after arrival should be in reasonable hours (not 7am)."""
+        response = generator.generate_schedule(eastward_request)
+
+        for day in response.interventions:
+            if day.day > 0:  # Post-arrival
+                sleep_target = next(
+                    (item for item in day.items if item.type == "sleep_target"),
+                    None
+                )
+                if sleep_target:
+                    assert self._is_reasonable_sleep_time(sleep_target.time), \
+                        f"Day {day.day} sleep target {sleep_target.time} is unreasonable (should be 8pm-4am)"
+
+    def test_post_arrival_wake_targets_reasonable(self, generator, eastward_request):
+        """Wake targets after arrival should be in reasonable hours."""
+        response = generator.generate_schedule(eastward_request)
+
+        for day in response.interventions:
+            if day.day > 0:  # Post-arrival
+                wake_target = next(
+                    (item for item in day.items if item.type == "wake_target"),
+                    None
+                )
+                if wake_target:
+                    assert self._is_reasonable_wake_time(wake_target.time), \
+                        f"Day {day.day} wake target {wake_target.time} is unreasonable (should be 4am-12pm)"
+
+    def test_fully_adapted_matches_base_schedule(self, generator):
+        """Final adaptation day should show times near user's base schedule."""
+        from datetime import datetime, timedelta
+        from circadian.types import TripLeg, ScheduleRequest
+
+        # Create a request with enough days to fully adapt
+        future = datetime.now() + timedelta(days=10)
+        arrival = future + timedelta(hours=7)
+
+        request = ScheduleRequest(
+            legs=[
+                TripLeg(
+                    origin_tz="America/New_York",
+                    dest_tz="Europe/London",  # 5h advance
+                    departure_datetime=future.strftime("%Y-%m-%dT19:00"),
+                    arrival_datetime=arrival.strftime("%Y-%m-%dT07:00")
+                )
+            ],
+            prep_days=5,
+            wake_time="07:00",
+            sleep_time="23:00",
+            uses_melatonin=True,
+            uses_caffeine=True,
+            uses_exercise=False
+        )
+
+        response = generator.generate_schedule(request)
+
+        # Find the last day (should be fully adapted)
+        last_day = max(response.interventions, key=lambda d: d.day)
+
+        sleep_target = next(
+            (item for item in last_day.items if item.type == "sleep_target"),
+            None
+        )
+        wake_target = next(
+            (item for item in last_day.items if item.type == "wake_target"),
+            None
+        )
+
+        if sleep_target and wake_target:
+            # Should be close to 23:00 and 07:00 (within ~1.5h)
+            sleep_minutes = self._time_to_minutes(sleep_target.time)
+            wake_minutes = self._time_to_minutes(wake_target.time)
+
+            # 23:00 = 1380 min, allow range 21:30-00:30 (1290-30 with midnight wrap)
+            sleep_diff = min(abs(sleep_minutes - 1380), abs(sleep_minutes - 1380 + 1440))
+            assert sleep_diff <= 90, \
+                f"Final day sleep {sleep_target.time} should be close to 23:00"
+
+            # 07:00 = 420 min, allow range 05:30-08:30 (330-510)
+            wake_diff = abs(wake_minutes - 420)
+            assert wake_diff <= 90, \
+                f"Final day wake {wake_target.time} should be close to 07:00"
+
+    def test_response_includes_timezone_info(self, generator, eastward_request):
+        """ScheduleResponse should include origin_tz and dest_tz."""
+        response = generator.generate_schedule(eastward_request)
+
+        assert hasattr(response, 'origin_tz'), "Response should have origin_tz"
+        assert hasattr(response, 'dest_tz'), "Response should have dest_tz"
+        assert response.origin_tz == "America/New_York"
+        assert response.dest_tz == "Europe/London"
+
+    def test_delay_schedule_reasonable_times(self, generator, westward_request):
+        """Delay (westward) schedules should also have reasonable times."""
+        response = generator.generate_schedule(westward_request)
+
+        for day in response.interventions:
+            sleep_target = next(
+                (item for item in day.items if item.type == "sleep_target"),
+                None
+            )
+            if sleep_target:
+                # For delays, sleep might drift late but should still be evening/night
+                minutes = self._time_to_minutes(sleep_target.time)
+                # Allow 8pm to 6am (later for delay)
+                is_reasonable = minutes >= 1200 or minutes <= 360
+                assert is_reasonable, \
+                    f"Day {day.day} sleep target {sleep_target.time} is unreasonable for delay"

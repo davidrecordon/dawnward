@@ -54,6 +54,7 @@ class DaySchedule:
     """Interventions for one day."""
     day: int                    # Relative to departure (-3, -2, -1, 0, 1, 2...)
     date: str                   # "2025-01-12" ISO date
+    timezone: str               # IANA timezone for this day's times
     items: List[Intervention] = field(default_factory=list)
 
 
@@ -63,4 +64,6 @@ class ScheduleResponse:
     total_shift_hours: float
     direction: Literal["advance", "delay"]
     estimated_adaptation_days: int
+    origin_tz: str              # Origin IANA timezone
+    dest_tz: str                # Destination IANA timezone
     interventions: List[DaySchedule]

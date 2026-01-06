@@ -289,3 +289,49 @@ def shift_time(base_time: time, hours: float) -> time:
     shift_minutes = int(hours * 60)
     new_minutes = base_minutes + shift_minutes
     return minutes_to_time(new_minutes)
+
+
+def calculate_intervention_time(
+    base_time: time,
+    cumulative_shift: float,
+    total_shift: float,
+    direction: str,
+    day: int,
+) -> time:
+    """
+    Calculate local time for an intervention with timezone-aware logic.
+
+    Pre-departure (day <= 0): Times are in origin timezone, shifted by
+    cumulative progress toward destination.
+    - ADVANCE (eastward): Sleep/wake EARLIER each day (subtract from base)
+    - DELAY (westward): Sleep/wake LATER each day (add to base)
+
+    Post-arrival (day >= 1): Times are in destination timezone, offset by
+    remaining adaptation needed. This shows realistic targets that gradually
+    approach the user's preferred times as they adapt.
+    - ADVANCE: Body still wants to sleep LATER than ideal (add remaining to base)
+    - DELAY: Body still wants to sleep EARLIER than ideal (subtract remaining)
+
+    Args:
+        base_time: User's preferred time (e.g., 23:00 for sleep)
+        cumulative_shift: Hours shifted so far (always positive)
+        total_shift: Total shift needed (absolute value)
+        direction: "advance" (eastward) or "delay" (westward)
+        day: Day relative to departure (negative = prep, 0 = flight, positive = arrival)
+
+    Returns:
+        Local time for the intervention in the appropriate timezone context
+    """
+    if day <= 0:
+        # Pre-departure or flight day: origin timezone
+        # ADVANCE = go earlier (subtract), DELAY = go later (add)
+        shift_hours = -cumulative_shift if direction == "advance" else cumulative_shift
+    else:
+        # Post-arrival: destination timezone
+        # Show times offset by remaining adaptation needed
+        # ADVANCE: still behind dest time, body wants to sleep later → add remaining
+        # DELAY: still ahead of dest time, body wants to sleep earlier → subtract remaining
+        remaining = abs(total_shift) - cumulative_shift
+        shift_hours = remaining if direction == "advance" else -remaining
+
+    return shift_time(base_time, shift_hours)
