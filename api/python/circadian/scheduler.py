@@ -42,16 +42,24 @@ class ScheduleGenerator:
     - Caffeine strategy (Burke 2015)
     """
 
-    def generate_schedule(self, request: ScheduleRequest) -> ScheduleResponse:
+    def generate_schedule(
+        self,
+        request: ScheduleRequest,
+        current_datetime: Optional[datetime] = None
+    ) -> ScheduleResponse:
         """
         Generate a complete adaptation schedule for the trip.
 
         Args:
             request: ScheduleRequest with trip legs and preferences
+            current_datetime: Current time for filtering (defaults to now)
 
         Returns:
             ScheduleResponse with daily intervention schedules
         """
+        if current_datetime is None:
+            current_datetime = datetime.now()
+
         # Calculate total timezone shift across all legs
         total_shift, direction = self._calculate_total_shift(request.legs)
 
@@ -61,7 +69,8 @@ class ScheduleGenerator:
         # Auto-adjust prep days if departure is sooner than requested
         actual_prep_days = calculate_actual_prep_days(
             first_leg.departure_datetime,
-            request.prep_days
+            request.prep_days,
+            current_datetime
         )
 
         # Calculate daily shift targets
@@ -104,6 +113,11 @@ class ScheduleGenerator:
             # Sort interventions by time, with secondary ordering for same-time items
             # Use sorted() to avoid issues with in-place sort referencing the list being sorted
             interventions = sorted(interventions, key=lambda x: self._intervention_sort_key(x, interventions))
+
+            # Filter out past interventions for today only
+            interventions = self._filter_past_interventions(
+                interventions, day_date, current_datetime
+            )
 
             day_schedules.append(DaySchedule(
                 day=day_num,
@@ -338,6 +352,57 @@ class ScheduleGenerator:
 
         return filtered
 
+    def _filter_past_interventions(
+        self,
+        interventions: List[Intervention],
+        day_date: str,
+        current_datetime: datetime,
+        buffer_minutes: int = 30
+    ) -> List[Intervention]:
+        """
+        Filter out interventions that are past the current time (for today only).
+
+        When generating a schedule "late" (e.g., at 10 AM for a flight tomorrow),
+        we don't want to show interventions that already passed (e.g., "wake at 7 AM").
+
+        Args:
+            interventions: List of interventions for the day
+            day_date: The date of this day schedule (YYYY-MM-DD)
+            current_datetime: Current datetime when generating
+            buffer_minutes: Include interventions within this buffer (default 30)
+
+        Returns:
+            Filtered list with past interventions removed (for today only)
+        """
+        from datetime import timedelta
+
+        # Only filter if this day is today
+        current_date = current_datetime.date().isoformat()
+        if day_date != current_date:
+            return interventions
+
+        # Calculate cutoff time (current time minus buffer)
+        cutoff_time = current_datetime - timedelta(minutes=buffer_minutes)
+        cutoff_minutes = cutoff_time.hour * 60 + cutoff_time.minute
+
+        # Always preserve these types (user needs to see targets even if past)
+        preserved_types = {"sleep_target", "wake_target"}
+
+        filtered = []
+        for intervention in interventions:
+            if intervention.type in preserved_types:
+                filtered.append(intervention)
+                continue
+
+            # Parse intervention time and compare
+            t = parse_time(intervention.time)
+            intervention_minutes = t.hour * 60 + t.minute
+
+            if intervention_minutes >= cutoff_minutes:
+                filtered.append(intervention)
+
+        return filtered
+
     def _intervention_sort_key(
         self,
         intervention: Intervention,
@@ -448,15 +513,19 @@ class ScheduleGenerator:
         return interventions
 
 
-def generate_schedule(request: ScheduleRequest) -> ScheduleResponse:
+def generate_schedule(
+    request: ScheduleRequest,
+    current_datetime: Optional[datetime] = None
+) -> ScheduleResponse:
     """
     Convenience function to generate a schedule.
 
     Args:
         request: ScheduleRequest with trip data and preferences
+        current_datetime: Current time for filtering (defaults to now)
 
     Returns:
         ScheduleResponse with complete schedule
     """
     generator = ScheduleGenerator()
-    return generator.generate_schedule(request)
+    return generator.generate_schedule(request, current_datetime)

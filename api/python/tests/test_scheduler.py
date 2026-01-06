@@ -505,3 +505,134 @@ class TestLightTimingLogic:
             # Duration should be less than original 240 min
             assert avoid.duration_min < 240, \
                 f"Duration should be truncated, got {avoid.duration_min}"
+
+
+class TestLateStartFiltering:
+    """Tests for filtering past interventions when generating late in the day."""
+
+    def _time_to_minutes(self, time_str: str) -> int:
+        """Convert HH:MM to minutes since midnight."""
+        parts = time_str.split(":")
+        return int(parts[0]) * 60 + int(parts[1])
+
+    def test_same_day_filters_past_interventions(self, generator, late_start_request):
+        """Interventions before current time should be filtered on today."""
+        from datetime import datetime, timedelta
+
+        # Simulate generating at 10:00 AM today
+        now = datetime.now().replace(hour=10, minute=0, second=0, microsecond=0)
+
+        response = generator.generate_schedule(late_start_request, current_datetime=now)
+
+        # Find today's schedule
+        today_date = now.date().isoformat()
+        today_schedule = next(
+            (d for d in response.interventions if d.date == today_date),
+            None
+        )
+
+        if today_schedule:
+            # With 30-min buffer, cutoff is 09:30
+            cutoff_minutes = 9 * 60 + 30
+
+            for intervention in today_schedule.items:
+                # Skip preserved types
+                if intervention.type in ("sleep_target", "wake_target"):
+                    continue
+
+                intervention_minutes = self._time_to_minutes(intervention.time)
+                assert intervention_minutes >= cutoff_minutes, \
+                    f"Intervention {intervention.type} at {intervention.time} should be filtered (cutoff 09:30)"
+
+    def test_sleep_wake_targets_always_preserved(self, generator, late_start_request):
+        """Sleep and wake targets should never be filtered even if past."""
+        from datetime import datetime
+
+        # Simulate generating at 2:00 PM (after morning wake_target)
+        now = datetime.now().replace(hour=14, minute=0, second=0, microsecond=0)
+
+        response = generator.generate_schedule(late_start_request, current_datetime=now)
+
+        # Find today's schedule
+        today_date = now.date().isoformat()
+        today_schedule = next(
+            (d for d in response.interventions if d.date == today_date),
+            None
+        )
+
+        if today_schedule:
+            types = [item.type for item in today_schedule.items]
+            assert "wake_target" in types, "wake_target should always be preserved"
+            assert "sleep_target" in types, "sleep_target should always be preserved"
+
+    def test_future_days_not_filtered(self, generator, late_start_request):
+        """Days in the future should not have any interventions filtered."""
+        from datetime import datetime
+
+        # Generate at 10 AM today
+        now = datetime.now().replace(hour=10, minute=0, second=0, microsecond=0)
+
+        response = generator.generate_schedule(late_start_request, current_datetime=now)
+
+        # Find tomorrow's schedule (flight day)
+        tomorrow_date = (now.date() + __import__('datetime').timedelta(days=1)).isoformat()
+        tomorrow_schedule = next(
+            (d for d in response.interventions if d.date == tomorrow_date),
+            None
+        )
+
+        if tomorrow_schedule:
+            # Future days should have morning interventions (if any exist)
+            # At minimum, wake_target should exist at whatever the shifted time is
+            types = [item.type for item in tomorrow_schedule.items]
+            assert "wake_target" in types, "Future days should have wake_target"
+
+    def test_30_minute_buffer_includes_near_future(self, generator):
+        """Interventions within 30 minutes of now should be included."""
+        from datetime import datetime, timedelta
+        from circadian.types import TripLeg, ScheduleRequest
+
+        # Create a request where we generate at exactly 09:15
+        # An intervention at 09:00 should be filtered (35 min ago)
+        # An intervention at 09:00 should be filtered (buffer is 30 min, so cutoff is 08:45)
+        now = datetime.now().replace(hour=9, minute=15, second=0, microsecond=0)
+        tomorrow = now + timedelta(days=1)
+
+        request = ScheduleRequest(
+            legs=[
+                TripLeg(
+                    origin_tz="America/Los_Angeles",
+                    dest_tz="Asia/Singapore",
+                    departure_datetime=tomorrow.strftime("%Y-%m-%dT09:00"),
+                    arrival_datetime=(tomorrow + timedelta(hours=18)).strftime("%Y-%m-%dT17:00")
+                )
+            ],
+            prep_days=3,
+            wake_time="06:00",
+            sleep_time="22:00",
+            uses_melatonin=True,
+            uses_caffeine=True,
+            uses_exercise=False
+        )
+
+        response = generator.generate_schedule(request, current_datetime=now)
+
+        # Find today's schedule
+        today_date = now.date().isoformat()
+        today_schedule = next(
+            (d for d in response.interventions if d.date == today_date),
+            None
+        )
+
+        if today_schedule:
+            # Cutoff should be 08:45 (09:15 - 30 min)
+            # Any intervention at 08:45 or later should be included
+            cutoff_minutes = 8 * 60 + 45
+
+            for intervention in today_schedule.items:
+                if intervention.type in ("sleep_target", "wake_target"):
+                    continue
+
+                intervention_minutes = self._time_to_minutes(intervention.time)
+                assert intervention_minutes >= cutoff_minutes, \
+                    f"Intervention at {intervention.time} should be included (cutoff 08:45)"

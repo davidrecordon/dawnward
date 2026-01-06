@@ -153,3 +153,31 @@ def no_supplements_request(future_date):
         uses_caffeine=False,
         uses_exercise=False
     )
+
+
+@pytest.fixture
+def late_start_request():
+    """Request generated mid-day today for flight tomorrow (tests same-day filtering).
+
+    Simulates generating a schedule at 10 AM when the user's wake time is 06:00,
+    meaning early morning interventions should be filtered out.
+    """
+    tomorrow = datetime.now() + timedelta(days=1)
+    arrival = tomorrow + timedelta(hours=18)
+
+    return ScheduleRequest(
+        legs=[
+            TripLeg(
+                origin_tz="America/Los_Angeles",
+                dest_tz="Asia/Singapore",
+                departure_datetime=tomorrow.strftime("%Y-%m-%dT09:45"),
+                arrival_datetime=arrival.strftime("%Y-%m-%dT17:45")
+            )
+        ],
+        prep_days=3,
+        wake_time="06:00",
+        sleep_time="22:00",
+        uses_melatonin=True,
+        uses_caffeine=True,
+        uses_exercise=False
+    )

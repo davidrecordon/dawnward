@@ -176,7 +176,9 @@ def calculate_actual_prep_days(
         departure = departure.replace(tzinfo=None)
         current_datetime = current_datetime.replace(tzinfo=None)
 
-    days_until_departure = (departure - current_datetime).days
+    # Compare dates (not datetimes) to count calendar days until departure
+    # This ensures "today" counts as a prep day if departure is tomorrow
+    days_until_departure = (departure.date() - current_datetime.date()).days
 
     # Can't have more prep days than days until departure
     actual_prep_days = min(requested_prep_days, max(0, days_until_departure))
