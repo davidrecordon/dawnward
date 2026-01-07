@@ -90,8 +90,12 @@ export function DaySection({
   // Sort items with timezone-aware logic
   // Flight events act as phase boundaries: departure ends pre-departure, arrival starts post-arrival
   items.sort((a, b) => {
-    const tzA = a.kind === "intervention" ? a.timezone : a.kind === "departure" ? origin.tz : a.kind === "arrival" ? destination.tz : daySchedule.timezone;
-    const tzB = b.kind === "intervention" ? b.timezone : b.kind === "departure" ? origin.tz : b.kind === "arrival" ? destination.tz : daySchedule.timezone;
+    // Get timezone for each item, defaulting to daySchedule.timezone if undefined
+    const rawTzA = a.kind === "intervention" ? a.timezone : a.kind === "departure" ? origin.tz : a.kind === "arrival" ? destination.tz : daySchedule.timezone;
+    const rawTzB = b.kind === "intervention" ? b.timezone : b.kind === "departure" ? origin.tz : b.kind === "arrival" ? destination.tz : daySchedule.timezone;
+    // Normalize undefined to daySchedule.timezone so "now" marker sorts correctly
+    const tzA = rawTzA ?? daySchedule.timezone;
+    const tzB = rawTzB ?? daySchedule.timezone;
 
     // Flight events: departure comes before in-transit items
     if (a.kind === "departure" && b.kind === "intervention" && tzB !== origin.tz) {
