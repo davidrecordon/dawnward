@@ -16,7 +16,7 @@ from uuid import uuid4
 sys.path.insert(0, str(Path(__file__).parent.parent / "_python"))
 
 from circadian.types import TripLeg, ScheduleRequest
-from circadian.scheduler import ScheduleGenerator
+from circadian.scheduler_v2 import ScheduleGeneratorV2
 
 
 # Validation patterns
@@ -152,7 +152,7 @@ class handler(BaseHTTPRequestHandler):
             )
 
             # Generate schedule
-            generator = ScheduleGenerator()
+            generator = ScheduleGeneratorV2()
             response = generator.generate_schedule(request)
 
             # Convert to JSON response

@@ -28,7 +28,7 @@ from helpers import (
     estimate_dlmo_time,
 )
 from circadian.types import TripLeg, ScheduleRequest
-from circadian.scheduler import ScheduleGenerator
+from circadian.scheduler_v2 import ScheduleGeneratorV2 as ScheduleGenerator
 
 
 class TestMaximumPhaseShiftRate:

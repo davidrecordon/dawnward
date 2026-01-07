@@ -13,7 +13,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from circadian.types import TripLeg, ScheduleRequest, ScheduleResponse, Intervention
-from circadian.scheduler import ScheduleGenerator
+from circadian.scheduler_v2 import ScheduleGeneratorV2
 from circadian.circadian_math import (
     estimate_cbtmin_from_wake,
     estimate_dlmo_from_sleep,
@@ -135,8 +135,8 @@ def estimate_dlmo_time(sleep_time: str) -> str:
 
 @pytest.fixture
 def generator():
-    """ScheduleGenerator instance."""
-    return ScheduleGenerator()
+    """ScheduleGeneratorV2 instance."""
+    return ScheduleGeneratorV2()
 
 
 @pytest.fixture

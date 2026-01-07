@@ -64,6 +64,9 @@ The following papers form the scientific basis for our validation criteria:
 ├─────────────────────────────────────────────────────────────────────┤
 │  Layer 5: Edge Case Tests                                           │
 │  → Do extreme scenarios fail gracefully?                            │
+├─────────────────────────────────────────────────────────────────────┤
+│  Layer 6: Realistic Flight Tests                                    │
+│  → Do schedules make sense for actual airline routes?               │
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -280,9 +283,161 @@ Verify PRC-relative recommendations still make sense.
 Input: NYC → London (2 days) → Dubai (3 days) → NYC  
 Expected: Either maintain NYC time throughout, or provide staged adaptation with warnings about insufficient time.
 
-**5.5 - Zero Timezone Change**  
-Input: NYC → Santiago (same timezone, different hemisphere)  
+**5.5 - Zero Timezone Change**
+Input: NYC → Santiago (same timezone, different hemisphere)
 Expected: No circadian intervention needed (though seasonal light differences may be noted)
+
+---
+
+## Layer 6: Realistic Flight Tests
+
+**Objective:** Validate that schedules work correctly for actual airline routes with real departure/arrival times.
+
+### Why Realistic Flight Tests?
+
+Theoretical tests (Layers 1-5) validate circadian science but can miss practical scheduling issues that only emerge with real-world flight times. We discovered several bugs that only appeared when testing against actual airline schedules:
+
+1. **Sleep targets before flights:** A schedule might be scientifically optimal but recommend sleep at 7 PM when the flight departs at 8:45 PM—obviously impractical.
+
+2. **Activities before landing:** Day-based scheduling logic can produce activities at 9 AM local time when the flight doesn't land until 3 PM—impossible to follow.
+
+3. **Timezone boundary confusion:** Flights that depart late evening and arrive mid-afternoon the next day create edge cases where "Day 0" and "Day 1" logic breaks down.
+
+4. **Ultra-long-haul complexity:** 15-17 hour flights cross multiple sleep cycles and require different handling than 10-hour overnight flights.
+
+These bugs only surface when you plug in actual departure/arrival times from airlines like Virgin Atlantic, Air France, Singapore Airlines, and Cathay Pacific.
+
+### Test Flight Matrix
+
+| Route | Airlines | Direction | Duration | Key Challenge |
+|-------|----------|-----------|----------|---------------|
+| SFO → LHR | VS, BA | Advance (8h) | ~10h | Evening departures, morning arrivals |
+| SFO → CDG | AF | Advance (9h) | ~10.5h | Afternoon vs evening departure variants |
+| SFO → SIN | SQ | Delay (8h equiv) | ~17h | Ultra-long-haul, multiple sleep cycles |
+| SFO → HKG | CX | Delay (8h equiv) | ~15.5h | Ultra-long-haul, evening arrival |
+| LHR → SFO | VS | Delay (8h) | ~11h | Same-day arrival (timezone gain) |
+| CDG → SFO | AF | Delay (9h) | ~11h | Morning departure, afternoon arrival |
+
+### Validation Rules
+
+Each realistic flight test runs the schedule through these validation checks:
+
+**6.1 - No Sleep Target Within 4 Hours of Departure**
+
+Sleep targets are informational, but showing "Target sleep time: 7:00 PM" when the flight leaves at 8:45 PM is confusing. The wake maintenance zone (1-3 hours before habitual bedtime) actively suppresses sleep anyway, making pre-departure sleep unrealistic.
+
+```python
+def validate_sleep_not_before_flight(schedule, flight, min_gap_hours=4.0):
+    """Ensure no sleep_target within min_gap_hours of departure."""
+    departure_minutes = flight.departure_datetime.hour * 60 + flight.departure_datetime.minute
+    cutoff_minutes = departure_minutes - (min_gap_hours * 60)
+
+    for day in schedule.interventions:
+        if day.day == 0:  # Flight day
+            for item in day.items:
+                if item.type == "sleep_target":
+                    item_minutes = parse_time(item.time)
+                    if cutoff_minutes <= item_minutes < departure_minutes:
+                        yield ValidationIssue(
+                            severity="error",
+                            message=f"sleep_target at {item.time} within {min_gap_hours}h of departure"
+                        )
+```
+
+**6.2 - No Activities Before Landing**
+
+For overnight flights, Day 1 activities should not start before the plane lands. This catches bugs where the scheduler calculates times in the wrong timezone or ignores flight duration.
+
+```python
+def validate_no_activities_before_landing(schedule, flight):
+    """Ensure Day 1 activities start after arrival time."""
+    arrival_minutes = flight.arrival_datetime.hour * 60 + flight.arrival_datetime.minute
+
+    # Types to check (informational targets like wake_target are OK)
+    actionable_types = {"light_seek", "light_avoid", "melatonin", "caffeine_ok", "caffeine_cutoff"}
+
+    for day in schedule.interventions:
+        if day.day == 1:  # Arrival day
+            for item in day.items:
+                if item.type in actionable_types:
+                    item_minutes = parse_time(item.time)
+                    if item_minutes < arrival_minutes:
+                        yield ValidationIssue(
+                            severity="error",
+                            message=f"{item.type} at {item.time} before landing at {arrival_time}"
+                        )
+```
+
+**6.3 - Sleep/Wake Target Ordering**
+
+Sleep targets should come after wake targets within the same day (accounting for late-night sleep targets that are logically "end of day").
+
+**6.4 - Direction Verification**
+
+For known routes, verify the algorithm chose the expected adaptation direction:
+- SFO → Europe: Advance (eastward)
+- SFO → Asia (>12h diff): Delay (westward-equivalent, shorter path)
+- Europe → SFO: Delay (westward)
+
+### Test Implementation
+
+```python
+class TestSFOToLondon:
+    """SFO -> LHR: 8h advance, overnight eastward flights."""
+
+    def test_virgin_vs20_evening_departure(self):
+        """
+        Virgin Atlantic VS20: Depart 16:30 PST, arrive 10:40 GMT +1 day.
+
+        Key checks:
+        - No sleep_target in the 4h before 16:30 departure
+        - Day 1 activities should be after 10:40 arrival
+        """
+        generator = ScheduleGenerator()
+        request = ScheduleRequest(
+            legs=[TripLeg(
+                origin_tz="America/Los_Angeles",
+                dest_tz="Europe/London",
+                departure_datetime="2026-01-15T16:30",
+                arrival_datetime="2026-01-16T10:40",
+            )],
+            prep_days=3,
+            wake_time="07:00",
+            sleep_time="22:00",
+        )
+
+        schedule = generator.generate_schedule(request)
+        flight = FlightInfo(departure, arrival, origin_tz, dest_tz)
+
+        issues = run_all_validations(schedule, flight)
+        errors = [i for i in issues if i.severity == "error"]
+        assert len(errors) == 0
+```
+
+### Parameterized Cross-Cutting Tests
+
+For efficiency, key validations run across all flight scenarios using pytest parameterization:
+
+```python
+@pytest.mark.parametrize("flight_name,origin_tz,dest_tz,depart_time,arrive_time,arrive_day", [
+    ("VS20 SFO-LHR", "America/Los_Angeles", "Europe/London", "16:30", "10:40", 1),
+    ("BA SFO-LHR late", "America/Los_Angeles", "Europe/London", "23:30", "17:58", 1),
+    ("AF SFO-CDG early", "America/Los_Angeles", "Europe/Paris", "13:50", "09:25", 1),
+    ("SQ31 SFO-SIN", "America/Los_Angeles", "Asia/Singapore", "09:40", "19:05", 1),
+    # ... more flights
+])
+def test_no_sleep_within_4h_of_departure(self, flight_name, ...):
+    """Validate across all flight scenarios."""
+```
+
+### Adding New Flight Scenarios
+
+When adding new test flights:
+
+1. **Source real schedules:** Use actual airline timetables (flightaware.com, airline websites)
+2. **Include edge cases:** Late-night departures, ultra-long-haul, same-day arrivals
+3. **Document the challenge:** Each test should note what makes this flight interesting
+4. **Run all validations:** Use `run_all_validations()` to check all rules
 
 ---
 
@@ -325,6 +480,7 @@ For ongoing validation beyond automated tests, use this manual spot-check protoc
 | 3 - PRC Consistency | Light timing vs CBT_min | Within ±1h of optimal |
 | 4 - Scenario Regression | Adaptation timeline | Within 1 day of literature |
 | 5 - Edge Cases | Graceful handling | No crashes, sensible fallbacks |
+| 6 - Realistic Flights | Practical scheduling | No activities before landing, no sleep within 4h of departure |
 
 ---
 

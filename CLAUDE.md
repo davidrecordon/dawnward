@@ -50,7 +50,8 @@ src/
 └── generated/prisma/ # Prisma client (generated, do not edit)
 
 api/_python/
-├── scheduler.py      # Circadian schedule generation
+├── circadian/        # Circadian schedule generation module
+│   └── scheduler_v2.py  # Phase-based scheduler
 └── tests/            # Python pytest tests
 
 prisma/
@@ -78,11 +79,19 @@ design_docs/          # Product specifications and design decisions
 
 ### Schedule Generation
 
-Schedules are computed by Python functions using the Arcascope `circadian` library (Forger99 model). Key intervention types:
+Schedules are computed by Python functions using the Arcascope `circadian` library (Forger99 model). The scheduler uses a **phase-based model** (not calendar days) to properly handle flight timing:
+- **Preparation** - Full days before departure
+- **Pre-Departure** - Departure day, before flight (ends 3h before departure)
+- **In-Transit** - On the plane (with sleep windows for 12+ hour flights)
+- **Post-Arrival** - Arrival day, after landing
+- **Adaptation** - Full days at destination
+
+Key intervention types:
 - `light_seek` / `light_avoid` - Light exposure windows
 - `melatonin` - Optimal melatonin timing
 - `caffeine_ok` / `caffeine_cutoff` / `caffeine_boost` - Caffeine strategy
 - `sleep_target` / `wake_target` - Target sleep schedule
+- `sleep_window` - In-flight sleep opportunities (for ultra-long-haul flights)
 
 ### MCP Interface
 
@@ -144,11 +153,17 @@ This project uses two Claude Code plugins that should be invoked for significant
 - `src/lib/__tests__/intervention-utils.test.ts` - Intervention styling, time formatting
 - `src/lib/__tests__/schedule-storage.test.ts` - Form state localStorage persistence
 - `src/lib/__tests__/error-utils.test.ts` - Error message extraction
+- `src/lib/schedule-utils.test.ts` - Schedule merging and sorting logic
 - `src/app/api/schedule/generate/__tests__/route.test.ts` - API route data construction
 
-**Python (pytest)**: ~70 tests covering schedule generation
-- `api/_python/tests/test_scheduler.py` - Timezone shifts, intervention generation, sleep filtering, nap timing
-- `api/_python/tests/test_nap.py` - Nap window generation and timing
+**Python (pytest)**: ~90 tests covering schedule generation (6-layer validation strategy)
+- `test_model_parity.py` - CBTmin trajectory, phase shift magnitude, daily shift targets
+- `test_physiological_bounds.py` - Max shift rates, antidromic risk, sleep duration, melatonin timing
+- `test_prc_consistency.py` - Light/melatonin PRC alignment, avoidance zones
+- `test_scenario_regression.py` - Canonical routes (Eastman/Burgess, Dean), adaptation timelines
+- `test_edge_cases.py` - 12h shifts, extreme chronotypes, multi-leg trips, zero timezone change
+- `test_realistic_flights.py` - Real airline routes (VS, BA, AF, SQ, CX) with actual departure/arrival times
+- `test_sorting.py` - Intervention sorting, late-night handling, sleep_target near departure filtering
 
 **Running tests:**
 ```bash
@@ -162,7 +177,8 @@ See `design_docs/` for detailed specifications:
 - `decisions-overview.md` - All key decisions in one place
 - `backend-design.md` - API routes, database schema, MCP tools
 - `auth-design.md` - NextAuth.js setup, progressive signup flow
-- `testing-design.md` - Validation strategy against Forger99 model
+- `testing-design.md` - 6-layer validation strategy (model parity, physiological bounds, PRC consistency, scenario regression, edge cases, realistic flights)
+- `science-methodology.md` - Circadian science foundation (PRCs, melatonin, caffeine, in-flight sleep, multi-leg trips)
 
 ## Visual and Branding Design Documents
 - `design_docs/brand.md` - All of Dawnward's color, tone and style

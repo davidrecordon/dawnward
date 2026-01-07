@@ -11,6 +11,7 @@ import {
   isAfterSchedule,
 } from "@/lib/time-utils";
 import { getDayLabel, formatShortDate } from "@/lib/intervention-utils";
+import { mergePhasesByDate } from "@/lib/schedule-utils";
 import { DaySection } from "@/components/schedule/day-section";
 import { ScheduleHeader } from "@/components/schedule/schedule-header";
 import {
@@ -147,6 +148,9 @@ export default function TripPage() {
   const isPostTrip = isAfterSchedule(data);
   const firstDayDate = sched.interventions[0]?.date;
 
+  // Merge phases that share the same date (V2 scheduler can have multiple phases per day)
+  const mergedDays = mergePhasesByDate(sched.interventions);
+
   // Parse departure and arrival times
   const departureDate = request.departureDateTime.split("T")[0];
   const departureTime = request.departureDateTime.split("T")[1];
@@ -197,7 +201,7 @@ export default function TripPage() {
 
         {/* Day navigation buttons */}
         <div className="flex flex-wrap justify-center gap-2 pb-2 -mb-4">
-          {sched.interventions.map((daySchedule) => {
+          {mergedDays.map((daySchedule) => {
             const isCurrentDay = daySchedule.day === currentDayNumber;
             return (
               <button
@@ -238,7 +242,7 @@ export default function TripPage() {
 
         {/* Journey timeline - all days */}
         <div role="region" aria-label="Schedule timeline" className="space-y-2">
-          {sched.interventions.map((daySchedule) => (
+          {mergedDays.map((daySchedule) => (
             <DaySection
               key={daySchedule.day}
               daySchedule={daySchedule}

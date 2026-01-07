@@ -37,10 +37,25 @@ export interface Intervention {
   window_end?: string;
   /** Ideal time within nap window in HH:MM format */
   ideal_time?: string;
+  /** IANA timezone for this intervention's time (added during merge for display) */
+  timezone?: string;
+  /** Hours into flight for in-transit sleep opportunities (e.g., 4.5 = ~4.5h into flight) */
+  flight_offset_hours?: number;
 }
 
 /**
- * Interventions for one day
+ * Phase types from the V2 scheduler
+ */
+export type PhaseType =
+  | "preparation"
+  | "pre_departure"
+  | "in_transit"
+  | "in_transit_ulr"
+  | "post_arrival"
+  | "adaptation";
+
+/**
+ * Interventions for one day/phase
  */
 export interface DaySchedule {
   /** Day relative to departure (-3, -2, -1, 0, 1, 2...) */
@@ -49,6 +64,10 @@ export interface DaySchedule {
   date: string;
   /** Interventions for this day, sorted by time */
   items: Intervention[];
+  /** Phase type from V2 scheduler (multiple phases can share the same day) */
+  phase_type?: PhaseType;
+  /** IANA timezone for this day's times (e.g., "America/Los_Angeles" or "In transit") */
+  timezone?: string;
 }
 
 /**

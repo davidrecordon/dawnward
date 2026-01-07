@@ -28,7 +28,7 @@ from helpers import (
     estimate_cbtmin_time,
 )
 from circadian.types import TripLeg, ScheduleRequest
-from circadian.scheduler import ScheduleGenerator
+from circadian.scheduler_v2 import ScheduleGeneratorV2 as ScheduleGenerator
 from circadian.circadian_math import (
     estimate_cbtmin_from_wake,
     calculate_timezone_shift,
@@ -461,7 +461,11 @@ class TestRegressionFromModel:
             )
 
     def test_schedule_days_are_contiguous(self):
-        """Schedule days should be contiguous without gaps."""
+        """Schedule days should be contiguous without gaps.
+
+        Note: V2 can have multiple entries per day (different phases),
+        so we check unique day numbers for contiguity.
+        """
         generator = ScheduleGenerator()
         future_date = datetime.now() + timedelta(days=5)
 
@@ -483,7 +487,8 @@ class TestRegressionFromModel:
 
         schedule = generator.generate_schedule(request)
 
-        days = sorted([d.day for d in schedule.interventions])
+        # V2 scheduler can have multiple phases per day, so use unique day numbers
+        days = sorted(set(d.day for d in schedule.interventions))
 
         # Check for gaps
         for i in range(1, len(days)):

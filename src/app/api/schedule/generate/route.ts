@@ -134,7 +134,7 @@ from dataclasses import asdict
 sys.path.insert(0, sys.argv[1])
 
 from circadian.types import TripLeg, ScheduleRequest
-from circadian.scheduler import ScheduleGenerator
+from circadian.scheduler_v2 import ScheduleGeneratorV2
 
 # Read request from JSON file
 with open(sys.argv[2], 'r') as f:
@@ -158,7 +158,7 @@ request = ScheduleRequest(
     nap_preference=data.get('nap_preference', 'flight_only'),
 )
 
-generator = ScheduleGenerator()
+generator = ScheduleGeneratorV2()
 response = generator.generate_schedule(request)
 
 # Convert dataclass to dict for JSON serialization

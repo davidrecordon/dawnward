@@ -374,6 +374,71 @@ A research-supported approach combining caffeine and napping:
 - **Technique:** Consume caffeine, immediately take a 20-minute nap, wake as caffeine activates
 - **Constraint:** Only appropriate if nap occurs 6+ hours before main sleep (to avoid caffeine interference)
 
+### In-Flight Sleep: Ultra-Long-Haul Research
+
+Aviation research on ultra-long-range (ULR) flights provides direct guidance for modeling sleep during travel:
+
+**Key findings (Roach et al., 2012; Gander et al., 2013):**
+- Flight crew on ULR operations average only **3.3 hours of actual sleep during 7-hour rest opportunities** (47% efficiency)
+- Airlines operating ULR routes advise crew to split available rest into two in-flight sleep periods
+- Sleep quality during flight is diminished—in-flight sleep is less restorative per hour than bedroom sleep
+- The timing of rest relative to home-base circadian position strongly predicts sleep quality
+- Pilots obtaining rest earlier in flight (before circadian nadir) sleep less than those with later rest periods
+
+**Implications for jet lag management:**
+- "Nap when tired" fails users because it ignores circadian position
+- Strategic sleep timing can use in-flight rest for adaptation
+
+**Dawnward implementation by flight duration:**
+
+| Flight Duration | Sleep Strategy |
+|-----------------|----------------|
+| < 8 hours | Single optional nap |
+| 8-12 hours | One structured sleep window |
+| 12+ hours (ULR) | Two sleep windows, timed to circadian position |
+
+For ultra-long-haul flights, optimal sleep windows:
+- Avoid the wake maintenance zone
+- Align with periods of low circadian alertness (near CBTmin)
+- Leave user awake for landing
+
+### Wake Maintenance Zone and Pre-Departure Naps
+
+The wake maintenance zone (1-3 hours before habitual bedtime) actively suppresses sleep through high circadian alertness. Even with moderate sleep pressure, users in this zone have difficulty initiating sleep.
+
+**Implication:** Pre-departure naps 2-4 hours before late-night flights are problematic:
+1. Users are unlikely to fall asleep (wake maintenance zone active)
+2. If they do sleep, reduced sleep pressure impairs subsequent in-flight sleep
+
+**Exception:** For ultra-long-haul flights where in-flight sleep will be fragmented regardless, an early nap (6+ hours before departure) may bank useful rest.
+
+### Arrival-Day Fatigue and Recovery Naps
+
+Red-eye passengers typically arrive with 2-5+ hours of sleep debt, creating a unique challenge: aggressive napping derails circadian adjustment, but no napping risks safety and function issues.
+
+**Recovery nap parameters (arrival day):**
+
+| Parameter | Standard Nap | Arrival Day Recovery |
+|-----------|--------------|---------------------|
+| Window start | 30% into wake period | As soon as practical post-arrival |
+| Window end | 50% into wake period | No later than 1pm local |
+| Max duration | 20-30 min | 90 min (one full cycle) |
+| Buffer before target sleep | 4 hours | 6-8 hours (more conservative) |
+
+**Late arrivals:** For arrivals after ~4pm local, recommend pushing through to target bedtime. A nap ending at 6:30pm leaves insufficient time to rebuild sleep pressure for nighttime sleep.
+
+### Sleep vs. Nap Classification
+
+Duration thresholds based on sleep architecture:
+
+| Duration | Category | Sleep Pressure Reset | Rationale |
+|----------|----------|---------------------|-----------|
+| < 90 min | Nap | Minimal | Incomplete cycle |
+| 90 min – 4h | Short sleep | Partial (~50%) | 1-2 complete cycles |
+| 4h+ | Sleep | Meaningful (with deficit) | 2.5-3 cycles minimum |
+
+**Implementation note:** Sub-4h sleep windows may indicate the schedule needs adjustment (gentler daily shift, more preparation days).
+
 ### Direction Asymmetry
 
 The human circadian period averages ~24.2 hours (slightly longer than 24 hours), making:
@@ -382,7 +447,54 @@ The human circadian period averages ~24.2 hours (slightly longer than 24 hours),
 
 ---
 
-## Part VII: Individual Variation and Chronotype
+## Part VII: Multi-Leg Trips and Partial Days
+
+### Multi-Leg Trip Strategies
+
+Circadian literature explicitly addresses layover handling (Lowden & Åkerstedt, 1998):
+- For short stays (2-3 days), retaining home-base sleep hours **reduces jet lag symptoms** during the stopover
+- Meaningful adaptation requires 3+ days (at 1-1.5 hours shift per day)
+- **Antidromic re-entrainment** (shifting the wrong direction) becomes more likely when already jet-lagged
+
+**Strategy by layover duration:**
+
+| Layover Duration | Strategy | Rationale |
+|------------------|----------|-----------|
+| < 48 hours | Aim through to final destination | Insufficient time to adapt; partial shift creates compounded misalignment |
+| 48-96 hours (2-4 days) | Partial adaptation to layover timezone | Some benefit from local alignment, maintain trajectory toward final |
+| > 96 hours (4+ days) | Restart as two separate trips | Sufficient time for meaningful adaptation |
+
+**Special cases:**
+- **Same-direction multi-leg** (NYC→London→Dubai): Both legs eastward—can aim through even with 3-day layover
+- **Opposite-direction legs** (NYC→London→LA): Must restart regardless of duration; cannot aim through when directions conflict
+
+### Partial Pre-Departure Days
+
+Pre-flight phase shifting achieves ~1 hour advance per day with optimal light intervention. The limiting factor is circadian biology, not waking hours—the clock shifts during the full 24-hour cycle including sleep. However, intervention windows (light exposure, melatonin timing) require the user to be awake.
+
+**Pro-rated shift targets:**
+
+| Available Hours | Target Phase Shift | Approach |
+|-----------------|-------------------|----------|
+| 16+ hours | Full daily target (1h advance / 1.5h delay) | Complete intervention schedule |
+| 8-16 hours | 50-100% of daily target (scaled linearly) | Reduced but meaningful interventions |
+| < 8 hours | Skip formal intervention | Single high-impact recommendation only |
+
+**Rationale:** Cramming aggressive interventions into limited time creates stress without proportional benefit. One high-quality intervention (e.g., "Get bright light at 7am") beats multiple rushed ones.
+
+### CBTmin Tracking During Adaptation
+
+The circadian phase markers (CBTmin, DLMO) are not static—they shift during adaptation. Accurate scheduling requires tracking this drift:
+
+- CBTmin shifts ~1-2 hours per day with optimal light exposure
+- DLMO follows CBTmin with approximately 14-hour offset
+- Intervention windows must be recalculated daily based on the shifted phase position
+
+This is why simple rules like "get morning sunlight" can be counterproductive: the optimal light window shifts each day as adaptation progresses. Light at the wrong time risks antidromic shifts.
+
+---
+
+## Part VIII: Individual Variation and Chronotype
 
 ### Chronotype Effects
 
@@ -413,7 +525,7 @@ Polymorphisms in clock genes and adenosine receptors contribute to:
 
 ---
 
-## Part VIII: Scientific Disputes and Uncertainties
+## Part IX: Scientific Disputes and Uncertainties
 
 ### Areas of Active Debate
 
@@ -455,7 +567,25 @@ While meal timing powerfully entrains peripheral clocks in animal models, human 
 
 ---
 
-## Part IX: Application to Dawnward
+## Part X: Application to Dawnward
+
+### Architectural Approach: Phase-Based Scheduling
+
+Rather than treating schedules as calendar days, Dawnward uses a **phase-based model** that separates circadian science from practical constraints:
+
+**Phase types:**
+- **Preparation:** Full days before departure
+- **Pre-Departure:** Departure day, before flight (ends 3h before departure)
+- **In-Transit:** On the plane (standard flights < 12h)
+- **In-Transit ULR:** Ultra-long-range flights (12+ hours, two sleep windows)
+- **Post-Arrival:** Arrival day, after landing (recovery mode)
+- **Adaptation:** Full days at destination
+
+This architecture:
+1. Prevents scheduling interventions before landing or after departure
+2. Enables proper modeling of arrival-day fatigue and in-flight sleep
+3. Supports multi-leg trips with layover-dependent strategies
+4. Cleanly separates pure circadian calculations from travel constraints
 
 ### Core Algorithm Principles
 
@@ -463,30 +593,43 @@ Based on this scientific foundation, Dawnward implements:
 
 1. **Phase estimation:** Use habitual sleep schedule to estimate initial circadian phase (DLMO ~2h before bedtime, CBTmin ~3h before wake)
 
-2. **Direction selection:** For shifts >8 timezones, evaluate whether advancing or delaying is faster
+2. **CBTmin tracking:** Recalculate phase markers daily as they shift during adaptation (~1-2h/day with optimal intervention)
 
-3. **Light scheduling:** Generate light-seeking and light-avoidance windows aligned with the PRC
+3. **Direction selection:** For shifts >8 timezones, evaluate whether advancing or delaying is faster
+
+4. **Light scheduling:** Generate light-seeking and light-avoidance windows aligned with the PRC
    - Seek light in advance zone for eastward travel
    - Seek light in delay zone for westward travel
    - Avoid light in the opposite zone to prevent antidromic shifts
 
-4. **Optional melatonin timing:** Provide melatonin windows that complement light advice
+5. **Optional melatonin timing:** Provide melatonin windows that complement light advice
    - Evening melatonin for phase advances
    - Morning melatonin for phase delays (rare use case)
 
-5. **Caffeine strategy:** Calculate cutoff times relative to destination sleep and provide alertness guidance
+6. **Caffeine strategy:** Calculate cutoff times relative to destination sleep and provide alertness guidance
 
-6. **Optional exercise timing:** Recommend exercise windows aligned with the exercise PRC
+7. **Optional exercise timing:** Recommend exercise windows aligned with the exercise PRC
    - Morning exercise for phase advances (eastward travel)
    - Evening exercise for phase delays (westward travel)
    - Additive benefit when combined with properly timed light exposure
 
-7. **Strategic napping:** Calculate optimal nap windows based on the two-process model
+8. **Strategic napping:** Calculate optimal nap windows based on the two-process model
    - Default: Recommend naps during flights (when schedules are most disrupted)
    - Optional: Naps on any day where the scheduler recommends them
    - Window calculation: 30-50% into the wake period
    - Duration: Default 20 minutes to avoid sleep inertia
    - Constraint: End at least 4 hours before main sleep
+   - In-flight (ULR): Two strategic sleep windows timed to circadian position
+
+9. **Multi-leg handling:** Apply layover-dependent strategy
+   - < 48 hours: Aim through to final destination
+   - 48-96 hours: Partial adaptation
+   - > 96 hours: Restart as separate trips
+   - Opposite directions: Always restart
+
+10. **Partial day pro-rating:** Scale shift targets for truncated days
+    - 8-16 hours: Linear scaling of daily target
+    - < 8 hours: Single high-impact recommendation only
 
 ### Validation Strategy
 
@@ -543,6 +686,13 @@ See the Testing Design Document for our five-layer validation approach:
 - Monk TH. (2005). The post-lunch dip in performance. *Clin Sports Med*, 24(2), e15-e23.
 - Lovato N, Lack L. (2010). The effects of napping on cognitive functioning. *Prog Brain Res*, 185, 155-166.
 - Milner CE, Cote KA. (2009). Benefits of napping in healthy adults: impact of nap length, time of day, age, and experience with napping. *J Sleep Res*, 18(2), 272-281.
+- Strogatz SH, Kronauer RE, Czeisler CA. (1987). Circadian pacemaker interferes with sleep onset at specific times each day. *Am J Physiol*, 253(1), R172-R178.
+
+**Aviation and In-Flight Sleep:**
+- Gander PH, Signal TL, van den Berg MJ, et al. (2013). Circadian adaptation of airline pilots during extended duration operations. *Chronobiol Int*, 30(8), 963-972.
+- Roach GD, Sargent C, Darwent D, Dawson D. (2012). In-flight sleep of flight crew during a 7-hour rest break. *J Clin Sleep Med*, 8(5), 461-467.
+- Lowden A, Åkerstedt T. (1998). Retaining home-base sleep hours to prevent jet lag. *Aviat Space Environ Med*, 69(12), 1193-1198.
+- Waterhouse J, Reilly T, Atkinson G, Edwards B. (2007). Jet lag: trends and coping strategies. *Lancet*, 369(9567), 1117-1129.
 
 ### Software and Data Sources
 
@@ -551,4 +701,4 @@ See the Testing Design Document for our five-layer validation approach:
 
 ---
 
-*This document is maintained as part of the Dawnward project. For testing protocols, see the Testing Design Document. For nap timing implementation details, see the Nap Timing Design Document. For backend architecture, see the Backend Design Document.*
+*This document is maintained as part of the Dawnward project. Related documents: Testing Design Document (validation protocols), Nap Timing Design Document (nap algorithms), Phase-Based Scheduler Plan (architecture), Flight Timing Edge Cases (product decisions), Sleep & Nap Edge Cases (product decisions), Backend Design Document (implementation).*

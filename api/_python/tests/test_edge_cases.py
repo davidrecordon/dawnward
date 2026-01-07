@@ -20,7 +20,7 @@ from helpers import (
     get_interventions_for_day,
 )
 from circadian.types import TripLeg, ScheduleRequest
-from circadian.scheduler import ScheduleGenerator
+from circadian.scheduler_v2 import ScheduleGeneratorV2 as ScheduleGenerator
 
 
 class TestCircadianEquatorCrossing:
@@ -262,8 +262,9 @@ class TestExtremeChronotypes:
             if sleep_targets:
                 sleep_hour = int(sleep_targets[0].time.split(":")[0])
                 # Even shifted, sleep should be in reasonable evening hours
-                # (allowing for shift, 18:00 - 02:00 range)
-                is_evening = (18 <= sleep_hour <= 23) or (0 <= sleep_hour <= 2)
+                # (allowing for shift, 16:00 - 02:00 range to accommodate
+                # shifted schedules shown on Day 0/1 per user preference)
+                is_evening = (16 <= sleep_hour <= 23) or (0 <= sleep_hour <= 2)
                 assert is_evening, (
                     f"Day {day_schedule.day}: sleep target {sleep_targets[0].time} "
                     f"seems unreasonable for lark schedule"

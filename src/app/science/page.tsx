@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Sun, Moon, Coffee, Pill, Activity } from "lucide-react";
+import { ArrowLeft, Sun, Moon, Coffee, Pill, Activity, Plane, MapPin } from "lucide-react";
 
 export const metadata = {
   title: "The Science - Dawnward",
@@ -224,6 +224,101 @@ export default function SciencePage() {
                 interferes with your main sleep
               </li>
             </ul>
+            <p className="pt-2">
+              <strong>The wake maintenance zone:</strong> The 1-3 hours before
+              your habitual bedtime actively suppresses sleep through high
+              circadian alertness. This is why naps 2-4 hours before late-night
+              flights rarely work—and if you do sleep, reduced sleep pressure
+              impairs your ability to sleep on the plane.
+            </p>
+          </CardContent>
+        </Card>
+
+        {/* In-Flight Sleep */}
+        <Card className="bg-white/90 backdrop-blur-sm border border-slate-200/50">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Plane className="h-5 w-5 text-sky-500" />
+              In-Flight Sleep
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4 text-muted-foreground">
+            <p>
+              Aviation research on ultra-long-range flights provides direct
+              guidance for sleep during travel. Studies of flight crew on these
+              operations found they average only about 3 hours of actual sleep
+              during 7-hour rest opportunities—roughly 47% efficiency.
+            </p>
+            <p>
+              Sleep quality during flight is diminished compared to bedroom
+              sleep. The timing of rest relative to your circadian position
+              strongly predicts how well you&apos;ll sleep—this is why
+              &quot;nap when tired&quot; fails users who ignore their body
+              clock&apos;s position.
+            </p>
+            <p>Dawnward tailors advice based on flight duration:</p>
+            <ul className="list-disc space-y-2 pl-5">
+              <li>
+                <strong>Under 8 hours:</strong> Single optional nap
+              </li>
+              <li>
+                <strong>8-12 hours:</strong> One structured sleep window
+              </li>
+              <li>
+                <strong>12+ hours (ultra-long-haul):</strong> Two sleep windows
+                timed to your circadian position, avoiding the wake maintenance
+                zone and leaving you awake for landing
+              </li>
+            </ul>
+            <p>
+              <strong>Arrival-day recovery:</strong> Red-eye passengers typically
+              arrive with 2-5+ hours of sleep debt. Aggressive napping derails
+              circadian adjustment, but no napping risks safety issues. We recommend
+              a single recovery nap of up to 90 minutes (one sleep cycle), ending
+              by 1 PM local time with a 6-8 hour buffer before target bedtime.
+            </p>
+          </CardContent>
+        </Card>
+
+        {/* Multi-Leg Trips */}
+        <Card className="bg-white/90 backdrop-blur-sm border border-slate-200/50">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <MapPin className="h-5 w-5 text-sky-500" />
+              Multi-Leg Trips (coming soon)
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4 text-muted-foreground">
+            <p>
+              Research shows that for short layovers, retaining home-base sleep
+              hours actually reduces jet lag symptoms during the stopover.
+              Meaningful adaptation requires 3+ days at roughly 1-1.5 hours
+              shift per day—attempting partial shifts in shorter periods risks
+              &quot;antidromic re-entrainment&quot; (shifting the wrong direction).
+            </p>
+            <p>Dawnward uses layover duration to determine strategy:</p>
+            <ul className="list-disc space-y-2 pl-5">
+              <li>
+                <strong>Under 48 hours:</strong> Aim through to your final
+                destination. There&apos;s not enough time to adapt, and partial
+                shifts create compounded misalignment.
+              </li>
+              <li>
+                <strong>2-4 days (48-96 hours):</strong> Partial adaptation to
+                the layover timezone while maintaining your trajectory toward
+                the final destination.
+              </li>
+              <li>
+                <strong>4+ days:</strong> Treat as two separate trips with full
+                adaptation at each location.
+              </li>
+            </ul>
+            <p>
+              <strong>Special case:</strong> If your legs go opposite directions
+              (e.g., NYC→London→LA), we always treat them as separate trips
+              regardless of layover duration—you can&apos;t aim through when
+              the second leg reverses your progress.
+            </p>
           </CardContent>
         </Card>
 
@@ -336,6 +431,25 @@ export default function SciencePage() {
               <strong>Napping Benefits:</strong> Lovato & Lack (2010).{" "}
               <em>Prog Brain Res</em>. Effects of napping on cognitive
               functioning.
+            </p>
+            <p>
+              <strong>In-Flight Sleep:</strong> Roach et al. (2012).{" "}
+              <em>J Clin Sleep Med</em>. Sleep of flight crew during 7-hour
+              rest breaks.
+            </p>
+            <p>
+              <strong>Ultra-Long-Range Operations:</strong> Gander et al. (2013).{" "}
+              <em>Chronobiol Int</em>. Circadian adaptation during extended
+              duration operations.
+            </p>
+            <p>
+              <strong>Layover Strategies:</strong> Lowden & Åkerstedt (1998).{" "}
+              <em>Aviat Space Environ Med</em>. Retaining home-base sleep hours.
+            </p>
+            <p>
+              <strong>Wake Maintenance Zone:</strong> Strogatz et al. (1987).{" "}
+              <em>Am J Physiol</em>. Circadian pacemaker interferes with sleep
+              onset.
             </p>
             <p>
               <strong>Clinical Guidelines:</strong> Eastman & Burgess (2009).{" "}
