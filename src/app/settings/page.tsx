@@ -36,7 +36,7 @@ export default function SettingsPage() {
                 <Input
                   id="sleep-time"
                   type="time"
-                  defaultValue="23:00"
+                  defaultValue="22:00"
                   className="bg-white"
                 />
               </div>

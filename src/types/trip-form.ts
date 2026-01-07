@@ -46,6 +46,6 @@ export const defaultFormState: TripFormState = {
   useExercise: false,
   napPreference: "flight_only",
   wakeTime: "07:00",
-  sleepTime: "23:00",
+  sleepTime: "22:00",
   prepDays: 3,
 };
