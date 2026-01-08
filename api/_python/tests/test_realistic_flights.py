@@ -4,11 +4,22 @@ Realistic Flight Scenario Tests
 Test the scheduler against real-world flight schedules to catch practical issues
 that theoretical tests miss. Uses actual departure/arrival times from major airlines.
 
-Flight schedules sourced from:
-- British Airways, Virgin Atlantic (SFO-LHR)
+Flight schedules sourced from verified airline data (January 2026):
+- Hawaiian Airlines (SFO-HNL)
+- American Airlines (SFO-JFK)
+- Virgin Atlantic (SFO-LHR)
 - Air France (SFO-CDG)
+- Lufthansa (SFO-FRA)
+- Emirates (SFO-DXB)
 - Singapore Airlines (SFO-SIN)
 - Cathay Pacific (SFO-HKG)
+- Japan Airlines (SFO-HND)
+- Qantas (SFO-SYD)
+
+Organized by jet lag severity:
+- Minimal (3h shift): Hawaii, New York
+- Moderate (8-9h shift): London, Paris, Frankfurt
+- Severe (12-17h shift): Dubai, Singapore, Hong Kong, Tokyo, Sydney
 """
 
 import pytest
@@ -44,22 +55,243 @@ def make_flight_datetime(base_date: datetime, time_str: str, day_offset: int = 0
     )
 
 
-class TestSFOToLondon:
-    """SFO -> LHR: 8h advance, overnight eastward flights."""
+# =============================================================================
+# MINIMAL JET LAG (3h shift)
+# =============================================================================
 
-    def test_virgin_vs20_evening_departure(self):
+class TestMinimalJetLag:
+    """
+    Flights with minimal jet lag (~3 hours).
+
+    These routes have shorter timezone shifts but are useful for testing:
+    - Schedule generation for small shifts
+    - Domestic transcontinental handling (SFO-JFK)
+    - Pacific island routes (SFO-HNL)
+    """
+
+    def test_hawaiian_ha11_sfo_to_honolulu(self):
         """
-        Virgin Atlantic VS20: Depart 16:30 PST, arrive 10:40 GMT +1 day (~10h10m).
+        Hawaiian Airlines HA11: SFO 07:00 → HNL 09:35 same day (~5h35m).
 
-        This is a typical evening departure that arrives mid-morning in London.
-        Key checks:
-        - No sleep_target in the 4h before 16:30 departure
-        - Day 1 activities should be after 10:40 arrival
+        Minimal jet lag (3h west). Tests early morning departure handling.
         """
         generator = ScheduleGenerator()
         base_date = datetime(2026, 1, 15)
 
-        # VS20: SFO 16:30 -> LHR 10:40+1
+        # HA11: SFO 07:00 → HNL 09:35 same day
+        departure = make_flight_datetime(base_date, "07:00")
+        arrival = make_flight_datetime(base_date, "09:35")
+
+        request = ScheduleRequest(
+            legs=[
+                TripLeg(
+                    origin_tz="America/Los_Angeles",
+                    dest_tz="Pacific/Honolulu",
+                    departure_datetime=departure.strftime("%Y-%m-%dT%H:%M"),
+                    arrival_datetime=arrival.strftime("%Y-%m-%dT%H:%M"),
+                )
+            ],
+            prep_days=1,
+            wake_time="07:00",
+            sleep_time="22:00",
+            uses_melatonin=False,
+            uses_caffeine=True,
+        )
+
+        schedule = generator.generate_schedule(request)
+
+        flight = FlightInfo(
+            departure_datetime=departure,
+            arrival_datetime=arrival,
+            origin_tz="America/Los_Angeles",
+            dest_tz="Pacific/Honolulu",
+        )
+
+        # 2h west = delay direction (LA is UTC-8, Honolulu is UTC-10)
+        assert schedule.direction == "delay", f"Expected delay direction, got {schedule.direction}"
+        assert schedule.total_shift_hours == 2, f"Expected 2h shift, got {schedule.total_shift_hours}"
+
+        issues = run_all_validations(schedule, flight)
+        errors = [i for i in issues if i.severity == "error"]
+
+        assert len(errors) == 0, f"Found {len(errors)} errors:\n" + "\n".join(
+            f"  - {e.category}: {e.message}" for e in errors
+        )
+
+    def test_hawaiian_ha12_honolulu_to_sfo(self):
+        """
+        Hawaiian Airlines HA12: HNL 12:30 → SFO 20:30 same day (~5h).
+
+        Return flight, minimal jet lag (3h east). Same-day arrival.
+        """
+        generator = ScheduleGenerator()
+        base_date = datetime(2026, 1, 20)
+
+        # HA12: HNL 12:30 → SFO 20:30 same day
+        departure = make_flight_datetime(base_date, "12:30")
+        arrival = make_flight_datetime(base_date, "20:30")
+
+        request = ScheduleRequest(
+            legs=[
+                TripLeg(
+                    origin_tz="Pacific/Honolulu",
+                    dest_tz="America/Los_Angeles",
+                    departure_datetime=departure.strftime("%Y-%m-%dT%H:%M"),
+                    arrival_datetime=arrival.strftime("%Y-%m-%dT%H:%M"),
+                )
+            ],
+            prep_days=1,
+            wake_time="07:00",
+            sleep_time="22:00",
+            uses_melatonin=False,
+            uses_caffeine=True,
+        )
+
+        schedule = generator.generate_schedule(request)
+
+        flight = FlightInfo(
+            departure_datetime=departure,
+            arrival_datetime=arrival,
+            origin_tz="Pacific/Honolulu",
+            dest_tz="America/Los_Angeles",
+        )
+
+        # 3h east = advance direction
+        assert schedule.direction == "advance", f"Expected advance direction, got {schedule.direction}"
+
+        issues = run_all_validations(schedule, flight)
+        errors = [i for i in issues if i.severity == "error"]
+
+        assert len(errors) == 0, f"Found {len(errors)} errors:\n" + "\n".join(
+            f"  - {e.category}: {e.message}" for e in errors
+        )
+
+    def test_american_aa16_sfo_to_jfk(self):
+        """
+        American Airlines AA16: SFO 11:00 → JFK 19:35 same day (~5.5h).
+
+        Domestic transcontinental (3h east). Tests advance direction for US routes.
+        """
+        generator = ScheduleGenerator()
+        base_date = datetime(2026, 1, 15)
+
+        # AA16: SFO 11:00 → JFK 19:35 same day
+        departure = make_flight_datetime(base_date, "11:00")
+        arrival = make_flight_datetime(base_date, "19:35")
+
+        request = ScheduleRequest(
+            legs=[
+                TripLeg(
+                    origin_tz="America/Los_Angeles",
+                    dest_tz="America/New_York",
+                    departure_datetime=departure.strftime("%Y-%m-%dT%H:%M"),
+                    arrival_datetime=arrival.strftime("%Y-%m-%dT%H:%M"),
+                )
+            ],
+            prep_days=1,
+            wake_time="07:00",
+            sleep_time="22:00",
+            uses_melatonin=False,
+            uses_caffeine=True,
+        )
+
+        schedule = generator.generate_schedule(request)
+
+        flight = FlightInfo(
+            departure_datetime=departure,
+            arrival_datetime=arrival,
+            origin_tz="America/Los_Angeles",
+            dest_tz="America/New_York",
+        )
+
+        # 3h east = advance direction
+        assert schedule.direction == "advance", f"Expected advance direction, got {schedule.direction}"
+
+        issues = run_all_validations(schedule, flight)
+        errors = [i for i in issues if i.severity == "error"]
+
+        assert len(errors) == 0, f"Found {len(errors)} errors:\n" + "\n".join(
+            f"  - {e.category}: {e.message}" for e in errors
+        )
+
+    def test_american_aa177_jfk_to_sfo(self):
+        """
+        American Airlines AA177: JFK 19:35 → SFO 23:21 same day (~6h).
+
+        Return flight, evening departure (3h west). Tests evening departure handling.
+        """
+        generator = ScheduleGenerator()
+        base_date = datetime(2026, 1, 20)
+
+        # AA177: JFK 19:35 → SFO 23:21 same day
+        departure = make_flight_datetime(base_date, "19:35")
+        arrival = make_flight_datetime(base_date, "23:21")
+
+        request = ScheduleRequest(
+            legs=[
+                TripLeg(
+                    origin_tz="America/New_York",
+                    dest_tz="America/Los_Angeles",
+                    departure_datetime=departure.strftime("%Y-%m-%dT%H:%M"),
+                    arrival_datetime=arrival.strftime("%Y-%m-%dT%H:%M"),
+                )
+            ],
+            prep_days=1,
+            wake_time="07:00",
+            sleep_time="22:00",
+            uses_melatonin=False,
+            uses_caffeine=True,
+        )
+
+        schedule = generator.generate_schedule(request)
+
+        flight = FlightInfo(
+            departure_datetime=departure,
+            arrival_datetime=arrival,
+            origin_tz="America/New_York",
+            dest_tz="America/Los_Angeles",
+        )
+
+        # 3h west = delay direction
+        assert schedule.direction == "delay", f"Expected delay direction, got {schedule.direction}"
+
+        issues = run_all_validations(schedule, flight)
+        errors = [i for i in issues if i.severity == "error"]
+
+        assert len(errors) == 0, f"Found {len(errors)} errors:\n" + "\n".join(
+            f"  - {e.category}: {e.message}" for e in errors
+        )
+
+
+# =============================================================================
+# MODERATE JET LAG (8-9h shift)
+# =============================================================================
+
+class TestModerateJetLag:
+    """
+    Flights with moderate jet lag (8-9 hours).
+
+    These are typical transatlantic routes:
+    - SFO-LHR (8h advance)
+    - SFO-CDG (9h advance)
+    - SFO-FRA (9h advance)
+
+    Key challenges:
+    - Overnight eastward flights
+    - Next-day arrivals
+    - Pre-departure sleep timing
+    """
+
+    def test_virgin_vs20_sfo_to_london(self):
+        """
+        Virgin Atlantic VS20: SFO 16:30 → LHR 10:40+1 (~10h10m).
+
+        Afternoon departure, next-day morning arrival. Classic transatlantic pattern.
+        """
+        generator = ScheduleGenerator()
+        base_date = datetime(2026, 1, 15)
+
+        # VS20: SFO 16:30 → LHR 10:40+1
         departure = make_flight_datetime(base_date, "16:30")
         arrival = make_flight_datetime(base_date, "10:40", day_offset=1)
 
@@ -88,6 +320,9 @@ class TestSFOToLondon:
             dest_tz="Europe/London",
         )
 
+        # 8h east = advance direction
+        assert schedule.direction == "advance", f"Expected advance direction, got {schedule.direction}"
+
         issues = run_all_validations(schedule, flight)
         errors = [i for i in issues if i.severity == "error"]
 
@@ -95,26 +330,24 @@ class TestSFOToLondon:
             f"  - {e.category}: {e.message}" for e in errors
         )
 
-    def test_british_airways_late_night_departure(self):
+    def test_virgin_vs19_london_to_sfo(self):
         """
-        British Airways: Depart 23:30 PST, arrive ~17:58 GMT +1 day (~10h28m).
+        Virgin Atlantic VS19: LHR 11:40 → SFO 14:40 same day (~11h).
 
-        Late-night departure, afternoon arrival. This is tricky because:
-        - Sleep before a 23:30 flight could be reasonable (short nap)
-        - But full sleep_target implies going to bed, which conflicts with flight
+        Westward return - same calendar day arrival due to timezone gain.
         """
         generator = ScheduleGenerator()
-        base_date = datetime(2026, 1, 15)
+        base_date = datetime(2026, 1, 20)
 
-        # BA: SFO 23:30 -> LHR 17:58+1
-        departure = make_flight_datetime(base_date, "23:30")
-        arrival = make_flight_datetime(base_date, "17:58", day_offset=1)
+        # VS19: LHR 11:40 → SFO 14:40 same day
+        departure = make_flight_datetime(base_date, "11:40")
+        arrival = make_flight_datetime(base_date, "14:40")
 
         request = ScheduleRequest(
             legs=[
                 TripLeg(
-                    origin_tz="America/Los_Angeles",
-                    dest_tz="Europe/London",
+                    origin_tz="Europe/London",
+                    dest_tz="America/Los_Angeles",
                     departure_datetime=departure.strftime("%Y-%m-%dT%H:%M"),
                     arrival_datetime=arrival.strftime("%Y-%m-%dT%H:%M"),
                 )
@@ -131,9 +364,12 @@ class TestSFOToLondon:
         flight = FlightInfo(
             departure_datetime=departure,
             arrival_datetime=arrival,
-            origin_tz="America/Los_Angeles",
-            dest_tz="Europe/London",
+            origin_tz="Europe/London",
+            dest_tz="America/Los_Angeles",
         )
+
+        # 8h west = delay direction
+        assert schedule.direction == "delay", f"Expected delay direction, got {schedule.direction}"
 
         issues = run_all_validations(schedule, flight)
         errors = [i for i in issues if i.severity == "error"]
@@ -142,68 +378,18 @@ class TestSFOToLondon:
             f"  - {e.category}: {e.message}" for e in errors
         )
 
-
-class TestSFOToParis:
-    """SFO -> CDG: 9h advance, overnight eastward flights."""
-
-    def test_air_france_afternoon_departure(self):
+    def test_air_france_af83_sfo_to_paris(self):
         """
-        Air France: Depart 13:50 PST, arrive ~09:25 CET +1 day (~10h35m).
+        Air France AF83: SFO 15:40 → CDG 11:35+1 (~10h55m).
 
-        Early afternoon departure, morning arrival in Paris.
-        User has a full day ahead after arrival.
+        Afternoon departure to Paris, next-day late morning arrival.
         """
         generator = ScheduleGenerator()
         base_date = datetime(2026, 1, 15)
 
-        # AF: SFO 13:50 -> CDG 09:25+1
-        departure = make_flight_datetime(base_date, "13:50")
-        arrival = make_flight_datetime(base_date, "09:25", day_offset=1)
-
-        request = ScheduleRequest(
-            legs=[
-                TripLeg(
-                    origin_tz="America/Los_Angeles",
-                    dest_tz="Europe/Paris",
-                    departure_datetime=departure.strftime("%Y-%m-%dT%H:%M"),
-                    arrival_datetime=arrival.strftime("%Y-%m-%dT%H:%M"),
-                )
-            ],
-            prep_days=3,
-            wake_time="07:00",
-            sleep_time="22:00",
-            uses_melatonin=True,
-            uses_caffeine=True,
-        )
-
-        schedule = generator.generate_schedule(request)
-
-        flight = FlightInfo(
-            departure_datetime=departure,
-            arrival_datetime=arrival,
-            origin_tz="America/Los_Angeles",
-            dest_tz="Europe/Paris",
-        )
-
-        issues = run_all_validations(schedule, flight)
-        errors = [i for i in issues if i.severity == "error"]
-
-        assert len(errors) == 0, f"Found {len(errors)} errors:\n" + "\n".join(
-            f"  - {e.category}: {e.message}" for e in errors
-        )
-
-    def test_air_france_evening_departure(self):
-        """
-        Air France: Depart 20:25 PST, arrive ~15:00 CET +1 day (~10h35m).
-
-        Evening departure, afternoon arrival. Different scheduling challenge.
-        """
-        generator = ScheduleGenerator()
-        base_date = datetime(2026, 1, 15)
-
-        # AF: SFO 20:25 -> CDG 15:00+1
-        departure = make_flight_datetime(base_date, "20:25")
-        arrival = make_flight_datetime(base_date, "15:00", day_offset=1)
+        # AF83: SFO 15:40 → CDG 11:35+1
+        departure = make_flight_datetime(base_date, "15:40")
+        arrival = make_flight_datetime(base_date, "11:35", day_offset=1)
 
         request = ScheduleRequest(
             legs=[
@@ -230,6 +416,153 @@ class TestSFOToParis:
             dest_tz="Europe/Paris",
         )
 
+        # 9h east = advance direction
+        assert schedule.direction == "advance", f"Expected advance direction, got {schedule.direction}"
+
+        issues = run_all_validations(schedule, flight)
+        errors = [i for i in issues if i.severity == "error"]
+
+        assert len(errors) == 0, f"Found {len(errors)} errors:\n" + "\n".join(
+            f"  - {e.category}: {e.message}" for e in errors
+        )
+
+    def test_air_france_af84_paris_to_sfo(self):
+        """
+        Air France AF84: CDG 13:25 → SFO 15:55 same day (~11h30m).
+
+        Early afternoon departure, same-day arrival due to westward travel.
+        """
+        generator = ScheduleGenerator()
+        base_date = datetime(2026, 1, 20)
+
+        # AF84: CDG 13:25 → SFO 15:55 same day
+        departure = make_flight_datetime(base_date, "13:25")
+        arrival = make_flight_datetime(base_date, "15:55")
+
+        request = ScheduleRequest(
+            legs=[
+                TripLeg(
+                    origin_tz="Europe/Paris",
+                    dest_tz="America/Los_Angeles",
+                    departure_datetime=departure.strftime("%Y-%m-%dT%H:%M"),
+                    arrival_datetime=arrival.strftime("%Y-%m-%dT%H:%M"),
+                )
+            ],
+            prep_days=3,
+            wake_time="07:00",
+            sleep_time="22:00",
+            uses_melatonin=True,
+            uses_caffeine=True,
+        )
+
+        schedule = generator.generate_schedule(request)
+
+        flight = FlightInfo(
+            departure_datetime=departure,
+            arrival_datetime=arrival,
+            origin_tz="Europe/Paris",
+            dest_tz="America/Los_Angeles",
+        )
+
+        # 9h west = delay direction
+        assert schedule.direction == "delay", f"Expected delay direction, got {schedule.direction}"
+
+        issues = run_all_validations(schedule, flight)
+        errors = [i for i in issues if i.severity == "error"]
+
+        assert len(errors) == 0, f"Found {len(errors)} errors:\n" + "\n".join(
+            f"  - {e.category}: {e.message}" for e in errors
+        )
+
+    def test_lufthansa_lh455_sfo_to_frankfurt(self):
+        """
+        Lufthansa LH455: SFO 14:40 → FRA 10:30+1 (~10h50m).
+
+        Boeing 747-8 route to Frankfurt, next-day morning arrival.
+        """
+        generator = ScheduleGenerator()
+        base_date = datetime(2026, 1, 15)
+
+        # LH455: SFO 14:40 → FRA 10:30+1
+        departure = make_flight_datetime(base_date, "14:40")
+        arrival = make_flight_datetime(base_date, "10:30", day_offset=1)
+
+        request = ScheduleRequest(
+            legs=[
+                TripLeg(
+                    origin_tz="America/Los_Angeles",
+                    dest_tz="Europe/Berlin",  # Frankfurt uses Europe/Berlin
+                    departure_datetime=departure.strftime("%Y-%m-%dT%H:%M"),
+                    arrival_datetime=arrival.strftime("%Y-%m-%dT%H:%M"),
+                )
+            ],
+            prep_days=3,
+            wake_time="07:00",
+            sleep_time="22:00",
+            uses_melatonin=True,
+            uses_caffeine=True,
+        )
+
+        schedule = generator.generate_schedule(request)
+
+        flight = FlightInfo(
+            departure_datetime=departure,
+            arrival_datetime=arrival,
+            origin_tz="America/Los_Angeles",
+            dest_tz="Europe/Berlin",
+        )
+
+        # 9h east = advance direction
+        assert schedule.direction == "advance", f"Expected advance direction, got {schedule.direction}"
+
+        issues = run_all_validations(schedule, flight)
+        errors = [i for i in issues if i.severity == "error"]
+
+        assert len(errors) == 0, f"Found {len(errors)} errors:\n" + "\n".join(
+            f"  - {e.category}: {e.message}" for e in errors
+        )
+
+    def test_lufthansa_lh454_frankfurt_to_sfo(self):
+        """
+        Lufthansa LH454: FRA 13:20 → SFO 15:55 same day (~11h35m).
+
+        Return flight from Frankfurt, same-day arrival.
+        """
+        generator = ScheduleGenerator()
+        base_date = datetime(2026, 1, 20)
+
+        # LH454: FRA 13:20 → SFO 15:55 same day
+        departure = make_flight_datetime(base_date, "13:20")
+        arrival = make_flight_datetime(base_date, "15:55")
+
+        request = ScheduleRequest(
+            legs=[
+                TripLeg(
+                    origin_tz="Europe/Berlin",
+                    dest_tz="America/Los_Angeles",
+                    departure_datetime=departure.strftime("%Y-%m-%dT%H:%M"),
+                    arrival_datetime=arrival.strftime("%Y-%m-%dT%H:%M"),
+                )
+            ],
+            prep_days=3,
+            wake_time="07:00",
+            sleep_time="22:00",
+            uses_melatonin=True,
+            uses_caffeine=True,
+        )
+
+        schedule = generator.generate_schedule(request)
+
+        flight = FlightInfo(
+            departure_datetime=departure,
+            arrival_datetime=arrival,
+            origin_tz="Europe/Berlin",
+            dest_tz="America/Los_Angeles",
+        )
+
+        # 9h west = delay direction
+        assert schedule.direction == "delay", f"Expected delay direction, got {schedule.direction}"
+
         issues = run_all_validations(schedule, flight)
         errors = [i for i in issues if i.severity == "error"]
 
@@ -238,20 +571,134 @@ class TestSFOToParis:
         )
 
 
-class TestSFOToAsia:
-    """Long-haul flights to Asia (delay direction due to >12h timezone diff)."""
+# =============================================================================
+# SEVERE JET LAG (12-17h shift)
+# =============================================================================
 
-    def test_singapore_sq31(self):
+class TestSevereJetLag:
+    """
+    Flights with severe jet lag (12-17 hours).
+
+    Ultra-long-haul routes with complex timezone math:
+    - SFO-DXB (12h shift → 12h either direction)
+    - SFO-SIN (16h shift → 8h delay, crosses date line)
+    - SFO-HKG (16h shift → 8h delay)
+    - SFO-HND (17h shift → 7h delay)
+    - SFO-SYD (18h shift → 6h advance)
+
+    Special challenges:
+    - Date line crossings
+    - +2 day arrivals (QF74)
+    - -1 day arrivals (CX872)
+    - Multiple sleep cycles in flight
+    """
+
+    def test_emirates_ek226_sfo_to_dubai(self):
         """
-        Singapore Airlines SQ31: Depart 09:40 PST, arrive 19:05 SGT +1 day (~17h25m).
+        Emirates EK226: SFO 15:40 → DXB 19:25+1 (~15h45m).
 
-        Ultra-long haul flight. 16h timezone difference = 8h delay (westward equivalent).
-        Flight is so long it crosses multiple sleep cycles.
+        Ultra-long-haul to Dubai. 12h timezone difference.
         """
         generator = ScheduleGenerator()
         base_date = datetime(2026, 1, 15)
 
-        # SQ31: SFO 09:40 -> SIN 19:05+1
+        # EK226: SFO 15:40 → DXB 19:25+1
+        departure = make_flight_datetime(base_date, "15:40")
+        arrival = make_flight_datetime(base_date, "19:25", day_offset=1)
+
+        request = ScheduleRequest(
+            legs=[
+                TripLeg(
+                    origin_tz="America/Los_Angeles",
+                    dest_tz="Asia/Dubai",
+                    departure_datetime=departure.strftime("%Y-%m-%dT%H:%M"),
+                    arrival_datetime=arrival.strftime("%Y-%m-%dT%H:%M"),
+                )
+            ],
+            prep_days=3,
+            wake_time="07:00",
+            sleep_time="22:00",
+            uses_melatonin=True,
+            uses_caffeine=True,
+        )
+
+        schedule = generator.generate_schedule(request)
+
+        flight = FlightInfo(
+            departure_datetime=departure,
+            arrival_datetime=arrival,
+            origin_tz="America/Los_Angeles",
+            dest_tz="Asia/Dubai",
+        )
+
+        # 12h shift - could be either direction, typically advance
+        assert schedule.total_shift_hours == 12, f"Expected 12h shift, got {schedule.total_shift_hours}"
+
+        issues = run_all_validations(schedule, flight)
+        errors = [i for i in issues if i.severity == "error"]
+
+        assert len(errors) == 0, f"Found {len(errors)} errors:\n" + "\n".join(
+            f"  - {e.category}: {e.message}" for e in errors
+        )
+
+    def test_emirates_ek225_dubai_to_sfo(self):
+        """
+        Emirates EK225: DXB 08:50 → SFO 12:50 same day (~16h).
+
+        Return from Dubai, same-day arrival due to westward travel + long flight.
+        """
+        generator = ScheduleGenerator()
+        base_date = datetime(2026, 1, 20)
+
+        # EK225: DXB 08:50 → SFO 12:50 same day
+        departure = make_flight_datetime(base_date, "08:50")
+        arrival = make_flight_datetime(base_date, "12:50")
+
+        request = ScheduleRequest(
+            legs=[
+                TripLeg(
+                    origin_tz="Asia/Dubai",
+                    dest_tz="America/Los_Angeles",
+                    departure_datetime=departure.strftime("%Y-%m-%dT%H:%M"),
+                    arrival_datetime=arrival.strftime("%Y-%m-%dT%H:%M"),
+                )
+            ],
+            prep_days=3,
+            wake_time="07:00",
+            sleep_time="22:00",
+            uses_melatonin=True,
+            uses_caffeine=True,
+        )
+
+        schedule = generator.generate_schedule(request)
+
+        flight = FlightInfo(
+            departure_datetime=departure,
+            arrival_datetime=arrival,
+            origin_tz="Asia/Dubai",
+            dest_tz="America/Los_Angeles",
+        )
+
+        # 12h shift - could be either direction, typically delay for westward
+        assert schedule.total_shift_hours == 12, f"Expected 12h shift, got {schedule.total_shift_hours}"
+
+        issues = run_all_validations(schedule, flight)
+        errors = [i for i in issues if i.severity == "error"]
+
+        assert len(errors) == 0, f"Found {len(errors)} errors:\n" + "\n".join(
+            f"  - {e.category}: {e.message}" for e in errors
+        )
+
+    def test_singapore_sq31_sfo_to_singapore(self):
+        """
+        Singapore Airlines SQ31: SFO 09:40 → SIN 19:05+1 (~17h25m).
+
+        Ultra-long-haul, 16h timezone difference → 8h delay (shorter path).
+        """
+        generator = ScheduleGenerator()
+        base_date = datetime(2026, 1, 15)
+
+        # SQ31: SFO 09:40 → SIN 19:05+1
         departure = make_flight_datetime(base_date, "09:40")
         arrival = make_flight_datetime(base_date, "19:05", day_offset=1)
 
@@ -280,8 +727,9 @@ class TestSFOToAsia:
             dest_tz="Asia/Singapore",
         )
 
-        # For this long flight, we expect delay direction
+        # 16h shift → 8h delay (shorter path)
         assert schedule.direction == "delay", f"Expected delay direction, got {schedule.direction}"
+        assert schedule.total_shift_hours == 8, f"Expected 8h shift (via delay), got {schedule.total_shift_hours}"
 
         issues = run_all_validations(schedule, flight)
         errors = [i for i in issues if i.severity == "error"]
@@ -290,16 +738,64 @@ class TestSFOToAsia:
             f"  - {e.category}: {e.message}" for e in errors
         )
 
-    def test_cathay_cx879_to_hong_kong(self):
+    def test_singapore_sq32_singapore_to_sfo(self):
         """
-        Cathay Pacific CX879: Depart 11:25 PST, arrive 19:00 HKT +1 day (~15h35m).
+        Singapore Airlines SQ32: SIN 09:15 → SFO 07:50 same day (~15h35m).
 
-        Another ultra-long haul. Similar to Singapore but different time window.
+        Date line crossing - arrives same calendar day but earlier local time.
+        """
+        generator = ScheduleGenerator()
+        base_date = datetime(2026, 1, 20)
+
+        # SQ32: SIN 09:15 → SFO 07:50 same day (date line crossing)
+        departure = make_flight_datetime(base_date, "09:15")
+        arrival = make_flight_datetime(base_date, "07:50")  # Same day!
+
+        request = ScheduleRequest(
+            legs=[
+                TripLeg(
+                    origin_tz="Asia/Singapore",
+                    dest_tz="America/Los_Angeles",
+                    departure_datetime=departure.strftime("%Y-%m-%dT%H:%M"),
+                    arrival_datetime=arrival.strftime("%Y-%m-%dT%H:%M"),
+                )
+            ],
+            prep_days=3,
+            wake_time="07:00",
+            sleep_time="22:00",
+            uses_melatonin=True,
+            uses_caffeine=True,
+        )
+
+        schedule = generator.generate_schedule(request)
+
+        flight = FlightInfo(
+            departure_datetime=departure,
+            arrival_datetime=arrival,
+            origin_tz="Asia/Singapore",
+            dest_tz="America/Los_Angeles",
+        )
+
+        # 16h shift → 8h advance (shorter path for return)
+        assert schedule.direction == "advance", f"Expected advance direction, got {schedule.direction}"
+
+        issues = run_all_validations(schedule, flight)
+        errors = [i for i in issues if i.severity == "error"]
+
+        assert len(errors) == 0, f"Found {len(errors)} errors:\n" + "\n".join(
+            f"  - {e.category}: {e.message}" for e in errors
+        )
+
+    def test_cathay_cx879_sfo_to_hong_kong(self):
+        """
+        Cathay Pacific CX879: SFO 11:25 → HKG 19:00+1 (~15h35m).
+
+        Ultra-long-haul to Hong Kong, next-day evening arrival.
         """
         generator = ScheduleGenerator()
         base_date = datetime(2026, 1, 15)
 
-        # CX879: SFO 11:25 -> HKG 19:00+1
+        # CX879: SFO 11:25 → HKG 19:00+1
         departure = make_flight_datetime(base_date, "11:25")
         arrival = make_flight_datetime(base_date, "19:00", day_offset=1)
 
@@ -328,7 +824,7 @@ class TestSFOToAsia:
             dest_tz="Asia/Hong_Kong",
         )
 
-        # For this long flight, we expect delay direction
+        # 16h shift → 8h delay
         assert schedule.direction == "delay", f"Expected delay direction, got {schedule.direction}"
 
         issues = run_all_validations(schedule, flight)
@@ -338,28 +834,24 @@ class TestSFOToAsia:
             f"  - {e.category}: {e.message}" for e in errors
         )
 
-
-class TestReturnFlights:
-    """Westward return flights (delay direction, easier adaptation)."""
-
-    def test_virgin_vs19_lhr_to_sfo(self):
+    def test_cathay_cx872_hong_kong_to_sfo(self):
         """
-        Virgin Atlantic VS19: Depart 11:00 GMT, arrive 14:00 PST same day (~11h).
+        Cathay Pacific CX872: HKG 01:00 → SFO 21:15-1 (~13h15m).
 
-        Westward return - arrive same calendar day due to timezone gain.
-        User has a long afternoon/evening ahead at destination.
+        SPECIAL CASE: Arrives previous calendar day due to date line crossing!
+        Early morning departure, previous evening arrival.
         """
         generator = ScheduleGenerator()
         base_date = datetime(2026, 1, 20)
 
-        # VS19: LHR 11:00 -> SFO 14:00 same day
-        departure = make_flight_datetime(base_date, "11:00")
-        arrival = make_flight_datetime(base_date, "14:00")  # Same day!
+        # CX872: HKG 01:00 → SFO 21:15-1 (arrives previous day!)
+        departure = make_flight_datetime(base_date, "01:00")
+        arrival = make_flight_datetime(base_date, "21:15", day_offset=-1)
 
         request = ScheduleRequest(
             legs=[
                 TripLeg(
-                    origin_tz="Europe/London",
+                    origin_tz="Asia/Hong_Kong",
                     dest_tz="America/Los_Angeles",
                     departure_datetime=departure.strftime("%Y-%m-%dT%H:%M"),
                     arrival_datetime=arrival.strftime("%Y-%m-%dT%H:%M"),
@@ -377,12 +869,12 @@ class TestReturnFlights:
         flight = FlightInfo(
             departure_datetime=departure,
             arrival_datetime=arrival,
-            origin_tz="Europe/London",
+            origin_tz="Asia/Hong_Kong",
             dest_tz="America/Los_Angeles",
         )
 
-        # Westward = delay direction
-        assert schedule.direction == "delay", f"Expected delay direction, got {schedule.direction}"
+        # 16h shift → 8h advance
+        assert schedule.direction == "advance", f"Expected advance direction, got {schedule.direction}"
 
         issues = run_all_validations(schedule, flight)
         errors = [i for i in issues if i.severity == "error"]
@@ -391,23 +883,72 @@ class TestReturnFlights:
             f"  - {e.category}: {e.message}" for e in errors
         )
 
-    def test_air_france_cdg_to_sfo(self):
+    def test_jal_jl1_sfo_to_tokyo(self):
         """
-        Air France: Depart 10:30 CET, arrive 12:30 PST same day (~11h).
+        Japan Airlines JL1: SFO 12:55 → HND 17:20+1 (~11h25m).
 
-        Paris to SF return. 9h delay direction.
+        Tokyo Haneda, next-day late afternoon arrival.
         """
         generator = ScheduleGenerator()
-        base_date = datetime(2026, 1, 20)
+        base_date = datetime(2026, 1, 15)
 
-        # AF: CDG 10:30 -> SFO 12:30 same day
-        departure = make_flight_datetime(base_date, "10:30")
-        arrival = make_flight_datetime(base_date, "12:30")  # Same day
+        # JL1: SFO 12:55 → HND 17:20+1
+        departure = make_flight_datetime(base_date, "12:55")
+        arrival = make_flight_datetime(base_date, "17:20", day_offset=1)
 
         request = ScheduleRequest(
             legs=[
                 TripLeg(
-                    origin_tz="Europe/Paris",
+                    origin_tz="America/Los_Angeles",
+                    dest_tz="Asia/Tokyo",
+                    departure_datetime=departure.strftime("%Y-%m-%dT%H:%M"),
+                    arrival_datetime=arrival.strftime("%Y-%m-%dT%H:%M"),
+                )
+            ],
+            prep_days=3,
+            wake_time="07:00",
+            sleep_time="22:00",
+            uses_melatonin=True,
+            uses_caffeine=True,
+        )
+
+        schedule = generator.generate_schedule(request)
+
+        flight = FlightInfo(
+            departure_datetime=departure,
+            arrival_datetime=arrival,
+            origin_tz="America/Los_Angeles",
+            dest_tz="Asia/Tokyo",
+        )
+
+        # 17h shift → 7h delay (shorter path)
+        assert schedule.direction == "delay", f"Expected delay direction, got {schedule.direction}"
+        assert schedule.total_shift_hours == 7, f"Expected 7h shift, got {schedule.total_shift_hours}"
+
+        issues = run_all_validations(schedule, flight)
+        errors = [i for i in issues if i.severity == "error"]
+
+        assert len(errors) == 0, f"Found {len(errors)} errors:\n" + "\n".join(
+            f"  - {e.category}: {e.message}" for e in errors
+        )
+
+    def test_jal_jl2_tokyo_to_sfo(self):
+        """
+        Japan Airlines JL2: HND 18:05 → SFO 10:15 same day (~9h10m).
+
+        Date line crossing - arrives earlier on same calendar day.
+        """
+        generator = ScheduleGenerator()
+        base_date = datetime(2026, 1, 20)
+
+        # JL2: HND 18:05 → SFO 10:15 same day
+        departure = make_flight_datetime(base_date, "18:05")
+        arrival = make_flight_datetime(base_date, "10:15")  # Same day!
+
+        request = ScheduleRequest(
+            legs=[
+                TripLeg(
+                    origin_tz="Asia/Tokyo",
                     dest_tz="America/Los_Angeles",
                     departure_datetime=departure.strftime("%Y-%m-%dT%H:%M"),
                     arrival_datetime=arrival.strftime("%Y-%m-%dT%H:%M"),
@@ -425,12 +966,12 @@ class TestReturnFlights:
         flight = FlightInfo(
             departure_datetime=departure,
             arrival_datetime=arrival,
-            origin_tz="Europe/Paris",
+            origin_tz="Asia/Tokyo",
             dest_tz="America/Los_Angeles",
         )
 
-        # Westward = delay direction
-        assert schedule.direction == "delay", f"Expected delay direction, got {schedule.direction}"
+        # 17h shift → 7h advance
+        assert schedule.direction == "advance", f"Expected advance direction, got {schedule.direction}"
 
         issues = run_all_validations(schedule, flight)
         errors = [i for i in issues if i.severity == "error"]
@@ -439,22 +980,162 @@ class TestReturnFlights:
             f"  - {e.category}: {e.message}" for e in errors
         )
 
+    def test_qantas_qf74_sfo_to_sydney(self):
+        """
+        Qantas QF74: SFO 20:15 → SYD 06:10+2 (~15h55m).
+
+        SPECIAL CASE: Evening departure, arrives TWO days later!
+        This is a key regression test for evening departure handling.
+
+        Originally the scheduler had bugs with evening departures:
+        - Scheduling sleep_target before the flight
+        - Activities before landing on arrival day
+
+        This test validates both issues are resolved.
+        """
+        generator = ScheduleGenerator()
+        base_date = datetime(2026, 1, 15)
+
+        # QF74: SFO 20:15 → SYD 06:10+2 (arrives 2 days later!)
+        departure = make_flight_datetime(base_date, "20:15")
+        arrival = make_flight_datetime(base_date, "06:10", day_offset=2)
+
+        request = ScheduleRequest(
+            legs=[
+                TripLeg(
+                    origin_tz="America/Los_Angeles",
+                    dest_tz="Australia/Sydney",
+                    departure_datetime=departure.strftime("%Y-%m-%dT%H:%M"),
+                    arrival_datetime=arrival.strftime("%Y-%m-%dT%H:%M"),
+                )
+            ],
+            prep_days=3,
+            wake_time="07:00",
+            sleep_time="22:00",
+            uses_melatonin=True,
+            uses_caffeine=True,
+        )
+
+        schedule = generator.generate_schedule(request)
+
+        flight = FlightInfo(
+            departure_datetime=departure,
+            arrival_datetime=arrival,
+            origin_tz="America/Los_Angeles",
+            dest_tz="Australia/Sydney",
+        )
+
+        # 19h shift → 5h delay (shorter path going west)
+        # LA (UTC-8) to Sydney (UTC+11 AEDT in Jan) = 19h east, or 5h west
+        assert schedule.direction == "delay", f"Expected delay direction, got {schedule.direction}"
+        assert schedule.total_shift_hours == 5, f"Expected 5h shift, got {schedule.total_shift_hours}"
+
+        # Run full validations
+        issues = run_all_validations(schedule, flight)
+        errors = [i for i in issues if i.severity == "error"]
+
+        # Print schedule for debugging if there are issues
+        if issues:
+            print("\n=== QF74 SCHEDULE DEBUG (Evening Departure Regression) ===")
+            print(f"Direction: {schedule.direction}")
+            for day_schedule in schedule.interventions:
+                print(f"\n--- Day {day_schedule.day} ({day_schedule.timezone}) ---")
+                for item in day_schedule.items:
+                    print(f"  {item.time} - {item.type}: {item.title}")
+
+        assert len(errors) == 0, f"Found {len(errors)} errors:\n" + "\n".join(
+            f"  - {e.category}: {e.message}" for e in errors
+        )
+
+        # Additional regression check: verify no sleep_target within 4h of 20:15 departure
+        sleep_issues = validate_sleep_not_before_flight(schedule, flight, min_gap_hours=4.0)
+        sleep_errors = [i for i in sleep_issues if i.severity == "error"]
+        assert len(sleep_errors) == 0, f"Sleep before departure regression:\n" + "\n".join(
+            f"  - {i.message}" for i in sleep_errors
+        )
+
+    def test_qantas_qf73_sydney_to_sfo(self):
+        """
+        Qantas QF73: SYD 21:25 → SFO 15:55 same day (~13h30m).
+
+        Date line crossing - arrives same calendar day despite long flight.
+        Evening departure, afternoon arrival.
+        """
+        generator = ScheduleGenerator()
+        base_date = datetime(2026, 1, 20)
+
+        # QF73: SYD 21:25 → SFO 15:55 same day
+        departure = make_flight_datetime(base_date, "21:25")
+        arrival = make_flight_datetime(base_date, "15:55")  # Same day!
+
+        request = ScheduleRequest(
+            legs=[
+                TripLeg(
+                    origin_tz="Australia/Sydney",
+                    dest_tz="America/Los_Angeles",
+                    departure_datetime=departure.strftime("%Y-%m-%dT%H:%M"),
+                    arrival_datetime=arrival.strftime("%Y-%m-%dT%H:%M"),
+                )
+            ],
+            prep_days=3,
+            wake_time="07:00",
+            sleep_time="22:00",
+            uses_melatonin=True,
+            uses_caffeine=True,
+        )
+
+        schedule = generator.generate_schedule(request)
+
+        flight = FlightInfo(
+            departure_datetime=departure,
+            arrival_datetime=arrival,
+            origin_tz="Australia/Sydney",
+            dest_tz="America/Los_Angeles",
+        )
+
+        # 19h shift → 5h advance (shorter path going east)
+        # Sydney (UTC+11) to LA (UTC-8) = 19h west, or 5h east
+        assert schedule.direction == "advance", f"Expected advance direction, got {schedule.direction}"
+
+        issues = run_all_validations(schedule, flight)
+        errors = [i for i in issues if i.severity == "error"]
+
+        assert len(errors) == 0, f"Found {len(errors)} errors:\n" + "\n".join(
+            f"  - {e.category}: {e.message}" for e in errors
+        )
+
+
+# =============================================================================
+# PARAMETERIZED VALIDATION TESTS
+# =============================================================================
 
 class TestPracticalValidation:
     """Cross-cutting validation tests using parameterized flight configs."""
 
     @pytest.mark.parametrize("flight_name,origin_tz,dest_tz,depart_time,arrive_time,arrive_day", [
-        # Eastward (advance) flights
+        # Minimal jet lag (3h)
+        ("HA11 SFO-HNL", "America/Los_Angeles", "Pacific/Honolulu", "07:00", "09:35", 0),
+        ("HA12 HNL-SFO", "Pacific/Honolulu", "America/Los_Angeles", "12:30", "20:30", 0),
+        ("AA16 SFO-JFK", "America/Los_Angeles", "America/New_York", "11:00", "19:35", 0),
+        ("AA177 JFK-SFO", "America/New_York", "America/Los_Angeles", "19:35", "23:21", 0),
+        # Moderate jet lag (8-9h)
         ("VS20 SFO-LHR", "America/Los_Angeles", "Europe/London", "16:30", "10:40", 1),
-        ("BA SFO-LHR late", "America/Los_Angeles", "Europe/London", "23:30", "17:58", 1),
-        ("AF SFO-CDG early", "America/Los_Angeles", "Europe/Paris", "13:50", "09:25", 1),
-        ("AF SFO-CDG late", "America/Los_Angeles", "Europe/Paris", "20:25", "15:00", 1),
-        # Westward (delay) flights
-        ("VS19 LHR-SFO", "Europe/London", "America/Los_Angeles", "11:00", "14:00", 0),
-        ("AF CDG-SFO", "Europe/Paris", "America/Los_Angeles", "10:30", "12:30", 0),
-        # Ultra long-haul (delay direction)
+        ("VS19 LHR-SFO", "Europe/London", "America/Los_Angeles", "11:40", "14:40", 0),
+        ("AF83 SFO-CDG", "America/Los_Angeles", "Europe/Paris", "15:40", "11:35", 1),
+        ("AF84 CDG-SFO", "Europe/Paris", "America/Los_Angeles", "13:25", "15:55", 0),
+        ("LH455 SFO-FRA", "America/Los_Angeles", "Europe/Berlin", "14:40", "10:30", 1),
+        ("LH454 FRA-SFO", "Europe/Berlin", "America/Los_Angeles", "13:20", "15:55", 0),
+        # Severe jet lag (12-17h)
+        ("EK226 SFO-DXB", "America/Los_Angeles", "Asia/Dubai", "15:40", "19:25", 1),
+        ("EK225 DXB-SFO", "Asia/Dubai", "America/Los_Angeles", "08:50", "12:50", 0),
         ("SQ31 SFO-SIN", "America/Los_Angeles", "Asia/Singapore", "09:40", "19:05", 1),
+        ("SQ32 SIN-SFO", "Asia/Singapore", "America/Los_Angeles", "09:15", "07:50", 0),
         ("CX879 SFO-HKG", "America/Los_Angeles", "Asia/Hong_Kong", "11:25", "19:00", 1),
+        ("CX872 HKG-SFO", "Asia/Hong_Kong", "America/Los_Angeles", "01:00", "21:15", -1),
+        ("JL1 SFO-HND", "America/Los_Angeles", "Asia/Tokyo", "12:55", "17:20", 1),
+        ("JL2 HND-SFO", "Asia/Tokyo", "America/Los_Angeles", "18:05", "10:15", 0),
+        ("QF74 SFO-SYD", "America/Los_Angeles", "Australia/Sydney", "20:15", "06:10", 2),
+        ("QF73 SYD-SFO", "Australia/Sydney", "America/Los_Angeles", "21:25", "15:55", 0),
     ])
     def test_no_sleep_within_4h_of_departure(
         self, flight_name, origin_tz, dest_tz, depart_time, arrive_time, arrive_day
@@ -462,7 +1143,7 @@ class TestPracticalValidation:
         """
         Validate that no sleep_target is scheduled within 4 hours of departure.
 
-        This is a cross-cutting test that checks all flight scenarios.
+        This is a cross-cutting test that checks all 20 flight scenarios.
         """
         generator = ScheduleGenerator()
         base_date = datetime(2026, 1, 15)
@@ -504,12 +1185,18 @@ class TestPracticalValidation:
         )
 
     @pytest.mark.parametrize("flight_name,origin_tz,dest_tz,depart_time,arrive_time,arrive_day", [
-        # Eastward arrivals (check day 1 activities)
+        # Next-day arrivals (overnight flights)
         ("VS20 SFO-LHR", "America/Los_Angeles", "Europe/London", "16:30", "10:40", 1),
-        ("AF SFO-CDG early", "America/Los_Angeles", "Europe/Paris", "13:50", "09:25", 1),
-        ("AF SFO-CDG late", "America/Los_Angeles", "Europe/Paris", "20:25", "15:00", 1),
+        ("AF83 SFO-CDG", "America/Los_Angeles", "Europe/Paris", "15:40", "11:35", 1),
+        ("LH455 SFO-FRA", "America/Los_Angeles", "Europe/Berlin", "14:40", "10:30", 1),
+        ("EK226 SFO-DXB", "America/Los_Angeles", "Asia/Dubai", "15:40", "19:25", 1),
         ("SQ31 SFO-SIN", "America/Los_Angeles", "Asia/Singapore", "09:40", "19:05", 1),
         ("CX879 SFO-HKG", "America/Los_Angeles", "Asia/Hong_Kong", "11:25", "19:00", 1),
+        ("JL1 SFO-HND", "America/Los_Angeles", "Asia/Tokyo", "12:55", "17:20", 1),
+        # Special: +2 day arrival
+        ("QF74 SFO-SYD", "America/Los_Angeles", "Australia/Sydney", "20:15", "06:10", 2),
+        # Special: -1 day arrival (date line crossing)
+        ("CX872 HKG-SFO", "Asia/Hong_Kong", "America/Los_Angeles", "01:00", "21:15", -1),
     ])
     def test_no_activities_before_landing(
         self, flight_name, origin_tz, dest_tz, depart_time, arrive_time, arrive_day
@@ -517,8 +1204,8 @@ class TestPracticalValidation:
         """
         Validate that no activities are scheduled before the flight lands.
 
-        For overnight flights arriving the next day, activities on day 1 should
-        not be scheduled before the arrival time.
+        For overnight flights arriving the next day (or +2 days), activities
+        on the arrival day should not be scheduled before the arrival time.
         """
         generator = ScheduleGenerator()
         base_date = datetime(2026, 1, 15)
@@ -555,67 +1242,4 @@ class TestPracticalValidation:
 
         assert len(issues) == 0, f"{flight_name}: Found activities before landing:\n" + "\n".join(
             f"  - {i.message}" for i in issues
-        )
-
-
-class TestUserProvidedScenario:
-    """Test the specific scenario from the user's initial request."""
-
-    def test_sfo_lhr_evening_departure_user_scenario(self):
-        """
-        User-provided scenario: SFO to LHR
-        - Departure: 8:45pm PST (20:45)
-        - Arrival: 3:15pm GMT +1 day (15:15)
-
-        This was the original test case that revealed issues:
-        - Day 0: sleep_target at 17:30 but flight departs at 20:45
-        - Day 1: sleep_target at 00:00 GMT but flight lands at 15:15 GMT
-        """
-        generator = ScheduleGenerator()
-        base_date = datetime(2026, 1, 10)
-
-        # User scenario: SFO 20:45 -> LHR 15:15+1
-        departure = make_flight_datetime(base_date, "20:45")
-        arrival = make_flight_datetime(base_date, "15:15", day_offset=1)
-
-        request = ScheduleRequest(
-            legs=[
-                TripLeg(
-                    origin_tz="America/Los_Angeles",
-                    dest_tz="Europe/London",
-                    departure_datetime=departure.strftime("%Y-%m-%dT%H:%M"),
-                    arrival_datetime=arrival.strftime("%Y-%m-%dT%H:%M"),
-                )
-            ],
-            prep_days=2,  # User specified 2 prep days
-            wake_time="07:00",
-            sleep_time="22:00",
-            uses_melatonin=True,
-            uses_caffeine=True,
-        )
-
-        schedule = generator.generate_schedule(request)
-
-        flight = FlightInfo(
-            departure_datetime=departure,
-            arrival_datetime=arrival,
-            origin_tz="America/Los_Angeles",
-            dest_tz="Europe/London",
-        )
-
-        issues = run_all_validations(schedule, flight)
-        errors = [i for i in issues if i.severity == "error"]
-        warnings = [i for i in issues if i.severity == "warning"]
-
-        # Print schedule for debugging if there are issues
-        if issues:
-            print("\n=== SCHEDULE DEBUG ===")
-            print(f"Direction: {schedule.direction}")
-            for day_schedule in schedule.interventions:
-                print(f"\n--- Day {day_schedule.day} ({day_schedule.timezone}) ---")
-                for item in day_schedule.items:
-                    print(f"  {item.time} - {item.type}: {item.title}")
-
-        assert len(errors) == 0, f"Found {len(errors)} errors:\n" + "\n".join(
-            f"  - {e.category}: {e.message}" for e in errors
         )

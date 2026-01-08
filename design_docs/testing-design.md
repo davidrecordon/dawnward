@@ -309,14 +309,38 @@ These bugs only surface when you plug in actual departure/arrival times from air
 
 ### Test Flight Matrix
 
-| Route | Airlines | Direction | Duration | Key Challenge |
-|-------|----------|-----------|----------|---------------|
-| SFO → LHR | VS, BA | Advance (8h) | ~10h | Evening departures, morning arrivals |
-| SFO → CDG | AF | Advance (9h) | ~10.5h | Afternoon vs evening departure variants |
-| SFO → SIN | SQ | Delay (8h equiv) | ~17h | Ultra-long-haul, multiple sleep cycles |
-| SFO → HKG | CX | Delay (8h equiv) | ~15.5h | Ultra-long-haul, evening arrival |
-| LHR → SFO | VS | Delay (8h) | ~11h | Same-day arrival (timezone gain) |
-| CDG → SFO | AF | Delay (9h) | ~11h | Morning departure, afternoon arrival |
+All 20 flights are verified from actual airline schedules (January 2026):
+
+| Route | Flight | Shift | Duration | Key Challenge |
+|-------|--------|-------|----------|---------------|
+| SFO ↔ HNL | HA11/HA12 | 2h | ~5h | Minimal jet lag baseline |
+| SFO ↔ JFK | AA16/AA177 | 3h | ~5.5h | Domestic transcontinental |
+| SFO ↔ LHR | VS19/VS20 | 8h | ~10-11h | Classic transatlantic pattern |
+| SFO ↔ CDG | AF83/AF84 | 9h | ~11h | Afternoon departures |
+| SFO ↔ FRA | LH455/LH454 | 9h | ~11h | Boeing 747-8 routes |
+| SFO ↔ DXB | EK225/EK226 | 12h | ~15-16h | Ultra-long-haul, 12h ambiguous |
+| SFO ↔ SIN | SQ31/SQ32 | 16h→8h | ~16-17h | Date line crossing, delay via shorter path |
+| SFO ↔ HKG | CX879/CX872 | 16h→8h | ~13-15h | **-1 day arrival** (CX872) |
+| SFO ↔ HND | JL1/JL2 | 17h→7h | ~9-11h | Tokyo Haneda, date line crossing |
+| SFO ↔ SYD | QF74/QF73 | 19h→5h | ~14-15h | **+2 day arrival**, evening departure regression |
+
+### Jet Lag Severity Groupings
+
+Tests are organized by jet lag severity for clarity:
+
+**Minimal (2-3h shift):** Hawaii (HA11/HA12, 2h), New York (AA16/AA177, 3h)
+- Useful for baseline validation
+- Minimal circadian disruption expected
+
+**Moderate (8-9h shift):** London (VS19/VS20), Paris (AF83/AF84), Frankfurt (LH455/LH454)
+- Classic transatlantic patterns
+- Overnight eastward flights with next-day arrivals
+
+**Severe (12-17h shift):** Dubai (EK225/EK226), Singapore (SQ31/SQ32), Hong Kong (CX879/CX872), Tokyo (JL1/JL2), Sydney (QF74/QF73)
+- Ultra-long-haul with complex timezone math
+- Date line crossings (arrive same day or -1 day)
+- +2 day arrivals (QF74)
+- Multiple sleep cycles in flight
 
 ### Validation Rules
 
@@ -416,18 +440,26 @@ class TestSFOToLondon:
 
 ### Parameterized Cross-Cutting Tests
 
-For efficiency, key validations run across all flight scenarios using pytest parameterization:
+For efficiency, key validations run across all 20 flight scenarios using pytest parameterization:
 
 ```python
 @pytest.mark.parametrize("flight_name,origin_tz,dest_tz,depart_time,arrive_time,arrive_day", [
+    # Minimal jet lag (3h)
+    ("HA11 SFO-HNL", "America/Los_Angeles", "Pacific/Honolulu", "07:00", "09:35", 0),
+    ("HA12 HNL-SFO", "Pacific/Honolulu", "America/Los_Angeles", "12:30", "20:30", 0),
+    ("AA16 SFO-JFK", "America/Los_Angeles", "America/New_York", "11:00", "19:35", 0),
+    ("AA177 JFK-SFO", "America/New_York", "America/Los_Angeles", "19:35", "23:21", 0),
+    # Moderate jet lag (8-9h)
     ("VS20 SFO-LHR", "America/Los_Angeles", "Europe/London", "16:30", "10:40", 1),
-    ("BA SFO-LHR late", "America/Los_Angeles", "Europe/London", "23:30", "17:58", 1),
-    ("AF SFO-CDG early", "America/Los_Angeles", "Europe/Paris", "13:50", "09:25", 1),
-    ("SQ31 SFO-SIN", "America/Los_Angeles", "Asia/Singapore", "09:40", "19:05", 1),
-    # ... more flights
+    ("VS19 LHR-SFO", "Europe/London", "America/Los_Angeles", "11:40", "14:40", 0),
+    # ... 6 more moderate flights ...
+    # Severe jet lag (12-17h)
+    ("QF74 SFO-SYD", "America/Los_Angeles", "Australia/Sydney", "20:15", "06:10", 2),  # +2 days!
+    ("CX872 HKG-SFO", "Asia/Hong_Kong", "America/Los_Angeles", "01:00", "21:15", -1),  # -1 day!
+    # ... 8 more severe flights ...
 ])
 def test_no_sleep_within_4h_of_departure(self, flight_name, ...):
-    """Validate across all flight scenarios."""
+    """Validate across all 20 flight scenarios."""
 ```
 
 ### Adding New Flight Scenarios

@@ -135,6 +135,9 @@ class ScheduleGeneratorV2:
                 continue
 
             # Build day schedule with phase metadata
+            # Detect if phase spans midnight (ends on a different day)
+            spans_midnight = phase.end_datetime.date() > phase.start_datetime.date()
+
             day_schedules.append(DaySchedule(
                 day=phase.day_number,
                 date=day_date,
@@ -142,7 +145,8 @@ class ScheduleGeneratorV2:
                 items=interventions,
                 phase_type=phase.phase_type,
                 phase_start=format_time(phase.start_datetime.time()),
-                phase_end=format_time(phase.end_datetime.time())
+                phase_end=format_time(phase.end_datetime.time()),
+                phase_spans_midnight=spans_midnight if spans_midnight else None
             ))
 
         # 4. Build response

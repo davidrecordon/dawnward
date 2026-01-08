@@ -133,6 +133,7 @@ class DaySchedule:
     phase_type: Optional[PhaseType] = None
     phase_start: Optional[str] = None    # "HH:MM" when phase starts
     phase_end: Optional[str] = None      # "HH:MM" when phase ends
+    phase_spans_midnight: Optional[bool] = None  # True if phase ends the next day
 
 
 @dataclass
