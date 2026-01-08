@@ -150,11 +150,20 @@ export function formatShortDate(dateStr: string): string {
 
 /**
  * Get timezone abbreviation from IANA timezone string.
- * Uses Intl.DateTimeFormat to get the proper abbreviation accounting for DST.
+ * Uses Intl.DateTimeFormat with timeZoneName: "short" to get abbreviations.
+ *
+ * Output varies by timezone and browser/runtime:
+ * - US timezones: "PST", "PDT", "EST", "EDT" (friendly abbreviations)
+ * - UK: "GMT", "BST" (British Summer Time)
+ * - Europe: "GMT+1", "GMT+2" (offset format, CET/CEST on some browsers)
+ * - Asia: "GMT+9", "GMT+8" (offset format, JST/CST on some browsers)
+ *
+ * The offset format (GMT+X) appears for timezones without universally
+ * recognized abbreviations. This is browser-dependent behavior.
  *
  * @param tz - IANA timezone (e.g., "America/Los_Angeles")
  * @param date - Optional date to determine DST status (defaults to now)
- * @returns Abbreviation like "PST", "PDT", "GMT", etc.
+ * @returns Abbreviation like "PST", "PDT", "GMT+1", etc.
  */
 export function getTimezoneAbbr(tz: string, date?: Date): string {
   try {

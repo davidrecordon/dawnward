@@ -94,6 +94,19 @@ Public, read-only circadian tools for Claude to answer jet lag questions in othe
 - **Screens:** New trip, schedule view, history, settings
 - **Artifact:** `dawnward-ui-v2.html`
 
+### Timezone Display
+
+Uses `Intl.DateTimeFormat` with `timeZoneName: "short"` for abbreviations. Output varies by timezone:
+
+| Region | Example Output     | Notes                                     |
+| ------ | ------------------ | ----------------------------------------- |
+| US     | PST, PDT, EST, EDT | Friendly abbreviations                    |
+| UK     | GMT, BST           | British Summer Time                       |
+| Europe | GMT+1, GMT+2       | Offset format (CET/CEST on some browsers) |
+| Asia   | GMT+9, GMT+8       | Offset format (JST/CST on some browsers)  |
+
+The offset format (GMT+X) appears for timezones without universally recognized abbreviations. This is browser-dependent behavior from the Intl API.
+
 ---
 
 ## Database Schema
