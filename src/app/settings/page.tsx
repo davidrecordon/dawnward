@@ -64,7 +64,7 @@ export default function SettingsPage() {
               <div className="space-y-0.5">
                 <Label htmlFor="caffeine">Include caffeine timing</Label>
                 <p className="text-sm text-muted-foreground">
-                  Strategic coffee windows and cutoffs
+                  Strategic coffee or tea windows and cutoffs
                 </p>
               </div>
               <Switch id="caffeine" defaultChecked />
