@@ -163,7 +163,9 @@ async function main() {
     });
   }
 
-  console.log(`Skipped ${skippedNoTz} airports without valid coordinates/timezone`);
+  console.log(
+    `Skipped ${skippedNoTz} airports without valid coordinates/timezone`
+  );
 
   // Sort by code
   airports.sort((a, b) => a.code.localeCompare(b.code));
@@ -184,11 +186,17 @@ async function main() {
   console.log(`\nCoverage: ${countries.size} countries`);
 
   const countryCounts = [...countries]
-    .map((c) => ({ country: c, count: airports.filter((a) => a.country === c).length }))
+    .map((c) => ({
+      country: c,
+      count: airports.filter((a) => a.country === c).length,
+    }))
     .sort((a, b) => b.count - a.count)
     .slice(0, 10);
 
-  console.log("Top countries:", countryCounts.map((c) => `${c.country}: ${c.count}`).join(", "));
+  console.log(
+    "Top countries:",
+    countryCounts.map((c) => `${c.country}: ${c.count}`).join(", ")
+  );
 }
 
 main().catch(console.error);

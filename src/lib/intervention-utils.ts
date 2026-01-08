@@ -24,7 +24,9 @@ interface InterventionStyle {
 /**
  * Get styling for an intervention type
  */
-export function getInterventionStyle(type: InterventionType): InterventionStyle {
+export function getInterventionStyle(
+  type: InterventionType
+): InterventionStyle {
   switch (type) {
     case "light_seek":
       return {

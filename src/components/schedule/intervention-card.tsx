@@ -43,10 +43,12 @@ export function InterventionCard({
     : formatTime(intervention.time);
 
   // Check if this is an in-flight item with offset info
-  const hasFlightOffset = intervention.flight_offset_hours !== undefined && intervention.flight_offset_hours !== null;
+  const hasFlightOffset =
+    intervention.flight_offset_hours !== undefined &&
+    intervention.flight_offset_hours !== null;
 
   return (
-    <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-sm hover:shadow-md transition-all duration-300 hover:translate-x-1">
+    <Card className="border-white/50 bg-white/80 shadow-sm backdrop-blur-sm transition-all duration-300 hover:translate-x-1 hover:shadow-md">
       <CardContent className="flex items-center gap-4 py-4">
         <div
           className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${style.bgColor} ring-2 ring-white/50`}
@@ -55,19 +57,19 @@ export function InterventionCard({
         </div>
         <div className="min-w-0 flex-1">
           <p className="font-medium text-slate-800">{intervention.title}</p>
-          <p className="text-sm text-slate-500 leading-relaxed">
+          <p className="text-sm leading-relaxed text-slate-500">
             {intervention.description}
           </p>
           {/* Show flight offset for in-transit items */}
           {hasFlightOffset && (
-            <p className="text-xs text-sky-500 mt-1 font-medium">
+            <p className="mt-1 text-xs font-medium text-sky-500">
               {formatFlightOffset(intervention.flight_offset_hours!)}
             </p>
           )}
         </div>
         <Badge
           variant="secondary"
-          className="shrink-0 bg-white/70 text-slate-600 font-medium"
+          className="shrink-0 bg-white/70 font-medium text-slate-600"
         >
           {timeDisplay}
         </Badge>

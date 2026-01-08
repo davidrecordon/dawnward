@@ -13,7 +13,9 @@ describe("getErrorMessage", () => {
   });
 
   it("returns string errors as-is", () => {
-    expect(getErrorMessage("Direct error message")).toBe("Direct error message");
+    expect(getErrorMessage("Direct error message")).toBe(
+      "Direct error message"
+    );
   });
 
   it("returns default message for null", () => {
@@ -29,11 +31,15 @@ describe("getErrorMessage", () => {
   });
 
   it("returns default message for object without message", () => {
-    expect(getErrorMessage({ code: "ERR_001" })).toBe("An unexpected error occurred");
+    expect(getErrorMessage({ code: "ERR_001" })).toBe(
+      "An unexpected error occurred"
+    );
   });
 
   it("returns default message for array", () => {
-    expect(getErrorMessage(["error1", "error2"])).toBe("An unexpected error occurred");
+    expect(getErrorMessage(["error1", "error2"])).toBe(
+      "An unexpected error occurred"
+    );
   });
 
   it("handles empty string", () => {

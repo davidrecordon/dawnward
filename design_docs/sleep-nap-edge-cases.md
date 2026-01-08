@@ -30,7 +30,7 @@ Users attempting to nap 2-4 hours before a late flight face two problems: they'r
 
 ### Exception
 
-For ultra-long-haul flights (12+ hours) where in-flight sleep will be fragmented regardless, an *early* nap (6+ hours before departure) could bank rest. This is rare enough to handle as an advanced option rather than default behavior.
+For ultra-long-haul flights (12+ hours) where in-flight sleep will be fragmented regardless, an _early_ nap (6+ hours before departure) could bank rest. This is rare enough to handle as an advanced option rather than default behavior.
 
 ---
 
@@ -49,12 +49,12 @@ For ultra-long-haul flights (12+ hours) where in-flight sleep will be fragmented
 
 **Offer a structured "arrival recovery nap" with conservative guardrails.**
 
-| Parameter | Standard Nap | Arrival Day Recovery |
-|-----------|--------------|---------------------|
-| Window start | 30% into wake period | As soon as practical post-arrival |
-| Window end | 50% into wake period | No later than 1pm local |
-| Max duration | 20-30 min | 90 min (one full cycle) |
-| Buffer before target sleep | 4 hours | 6-8 hours (more conservative) |
+| Parameter                  | Standard Nap         | Arrival Day Recovery              |
+| -------------------------- | -------------------- | --------------------------------- |
+| Window start               | 30% into wake period | As soon as practical post-arrival |
+| Window end                 | 50% into wake period | No later than 1pm local           |
+| Max duration               | 20-30 min            | 90 min (one full cycle)           |
+| Buffer before target sleep | 4 hours              | 6-8 hours (more conservative)     |
 
 ### UI Approach
 
@@ -87,11 +87,11 @@ For arrivals after ~4pm local, recommend pushing through to target bedtime rathe
 
 **Use a three-tier classification with 4 hours as the nap/sleep threshold.**
 
-| Duration | Category | Sleep Pressure Reset | UI Label |
-|----------|----------|---------------------|----------|
-| < 90 min | Nap | Minimal | "Nap" |
-| 90 min – 4h | Short sleep | Partial (~50%) | "Rest period" |
-| 4h+ | Sleep | Meaningful (with deficit) | "Sleep" |
+| Duration    | Category    | Sleep Pressure Reset      | UI Label      |
+| ----------- | ----------- | ------------------------- | ------------- |
+| < 90 min    | Nap         | Minimal                   | "Nap"         |
+| 90 min – 4h | Short sleep | Partial (~50%)            | "Rest period" |
+| 4h+         | Sleep       | Meaningful (with deficit) | "Sleep"       |
 
 ### Implementation Notes
 
@@ -103,17 +103,17 @@ For arrivals after ~4pm local, recommend pushing through to target bedtime rathe
 
 ## Summary
 
-| Edge Case | Default Behavior | Rationale |
-|-----------|------------------|-----------|
-| Pre-departure nap (2-4h before flight) | **No** | Wake maintenance zone + reduces in-flight sleep pressure |
-| Arrival-day fatigue | **Recovery nap with guardrails** | Balance function vs. circadian adjustment |
-| Sleep classification threshold | **4 hours** | Aligns with sleep architecture (2.5-3 cycles minimum) |
+| Edge Case                              | Default Behavior                 | Rationale                                                |
+| -------------------------------------- | -------------------------------- | -------------------------------------------------------- |
+| Pre-departure nap (2-4h before flight) | **No**                           | Wake maintenance zone + reduces in-flight sleep pressure |
+| Arrival-day fatigue                    | **Recovery nap with guardrails** | Balance function vs. circadian adjustment                |
+| Sleep classification threshold         | **4 hours**                      | Aligns with sleep architecture (2.5-3 cycles minimum)    |
 
 ---
 
 ## References
 
-- Borbély AA. (1982). A two process model of sleep regulation. *Human Neurobiology*, 1(3), 195-204.
-- Lovato N, Lack L. (2010). The effects of napping on cognitive functioning. *Progress in Brain Research*, 185, 155-166.
-- Milner CE, Cote KA. (2009). Benefits of napping in healthy adults. *Journal of Sleep Research*, 18(2), 272-281.
-- Strogatz SH, Kronauer RE, Czeisler CA. (1987). Circadian pacemaker interferes with sleep onset at specific times each day. *American Journal of Physiology*, 253(1), R172-R178.
+- Borbély AA. (1982). A two process model of sleep regulation. _Human Neurobiology_, 1(3), 195-204.
+- Lovato N, Lack L. (2010). The effects of napping on cognitive functioning. _Progress in Brain Research_, 185, 155-166.
+- Milner CE, Cote KA. (2009). Benefits of napping in healthy adults. _Journal of Sleep Research_, 18(2), 272-281.
+- Strogatz SH, Kronauer RE, Czeisler CA. (1987). Circadian pacemaker interferes with sleep onset at specific times each day. _American Journal of Physiology_, 253(1), R172-R178.

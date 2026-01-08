@@ -7,7 +7,7 @@ import Link from "next/link";
 
 export function PostTripCard() {
   return (
-    <Card className="relative overflow-hidden bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50 border-emerald-200/50">
+    <Card className="relative overflow-hidden border-emerald-200/50 bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50">
       {/* Decorative sparkles */}
       <div className="absolute top-3 right-6 opacity-20">
         <Sparkles className="h-12 w-12 text-emerald-500" />
@@ -21,16 +21,16 @@ export function PostTripCard() {
           <PartyPopper className="h-8 w-8 text-white" />
         </div>
 
-        <h3 className="text-xl font-semibold text-slate-800 mb-2">
+        <h3 className="mb-2 text-xl font-semibold text-slate-800">
           Journey complete!
         </h3>
 
-        <p className="text-slate-600 max-w-sm mx-auto mb-4">
+        <p className="mx-auto mb-4 max-w-sm text-slate-600">
           You&apos;ve finished your jet lag adaptation schedule. Your body
           should now be adjusted to the new timezone.
         </p>
 
-        <p className="text-sm text-emerald-700 font-medium">
+        <p className="text-sm font-medium text-emerald-700">
           Welcome to your new rhythm.
         </p>
       </CardContent>
@@ -42,7 +42,9 @@ interface ScheduleNotFoundCardProps {
   message?: string | null;
 }
 
-export function ScheduleNotFoundCard({ message }: ScheduleNotFoundCardProps = {}) {
+export function ScheduleNotFoundCard({
+  message,
+}: ScheduleNotFoundCardProps = {}) {
   return (
     <Card className="bg-white/90 backdrop-blur-sm">
       <CardContent className="py-12 text-center">
@@ -50,12 +52,13 @@ export function ScheduleNotFoundCard({ message }: ScheduleNotFoundCardProps = {}
           <Compass className="h-7 w-7 text-slate-400" />
         </div>
 
-        <h2 className="text-lg font-semibold text-slate-800 mb-2">
+        <h2 className="mb-2 text-lg font-semibold text-slate-800">
           {message ? "Something went wrong" : "Schedule Not Found"}
         </h2>
 
-        <p className="text-sm text-slate-500 mb-4">
-          {message || "This schedule may have been deleted or the link is invalid."}
+        <p className="mb-4 text-sm text-slate-500">
+          {message ||
+            "This schedule may have been deleted or the link is invalid."}
         </p>
 
         <Button asChild>

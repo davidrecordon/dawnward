@@ -2,7 +2,15 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { Activity, Calendar, ChevronRight, Coffee, MapPin, Moon, Pill } from "lucide-react";
+import {
+  Activity,
+  Calendar,
+  ChevronRight,
+  Coffee,
+  MapPin,
+  Moon,
+  Pill,
+} from "lucide-react";
 import { formatDateTimeLocal } from "@/lib/time-utils";
 import type { Airport } from "@/types/airport";
 
@@ -34,7 +42,7 @@ interface FormErrors {
 function FieldError({ message }: { message?: string }) {
   if (!message) return null;
   return (
-    <p className="mt-1.5 text-sm text-[#F4A574] animate-in fade-in slide-in-from-top-1 duration-200">
+    <p className="animate-in fade-in slide-in-from-top-1 mt-1.5 text-sm text-[#F4A574] duration-200">
       {message}
     </p>
   );
@@ -90,7 +98,10 @@ export function TripForm({ formState, onFormChange }: TripFormProps) {
     if (!submitButtonRef.current) return;
 
     // Scroll to and click generate button
-    submitButtonRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+    submitButtonRef.current.scrollIntoView({
+      behavior: "smooth",
+      block: "center",
+    });
     await new Promise((resolve) => setTimeout(resolve, 500));
 
     // Guard again before final click
@@ -111,9 +122,12 @@ export function TripForm({ formState, onFormChange }: TripFormProps) {
     // Clear form-level errors too when related fields change
     if (
       errors.form &&
-      ["origin", "destination", "departureDateTime", "arrivalDateTime"].includes(
-        field
-      )
+      [
+        "origin",
+        "destination",
+        "departureDateTime",
+        "arrivalDateTime",
+      ].includes(field)
     ) {
       setErrors((prev) => ({ ...prev, form: undefined }));
     }
@@ -172,20 +186,15 @@ export function TripForm({ formState, onFormChange }: TripFormProps) {
   };
 
   return (
-    <Card className="relative overflow-hidden bg-white/90 backdrop-blur-sm border border-slate-200/50">
+    <Card className="relative overflow-hidden border border-slate-200/50 bg-white/90 backdrop-blur-sm">
       {/* "Show me" ribbon - top right corner */}
       <button
         onClick={handleShowExample}
-        className="absolute -right-[1px] -top-[1px] z-10"
+        className="absolute -top-[1px] -right-[1px] z-10"
         aria-label="Show me an example"
       >
-        <div className="w-28 h-28 pointer-events-none">
-          <div
-            className="absolute top-[18px] -right-[32px] w-36 bg-gradient-to-r from-amber-400 to-orange-400
-                       text-white text-xs font-semibold py-1.5 text-center rotate-45
-                       shadow-md hover:from-amber-500 hover:to-orange-500 transition-colors
-                       pointer-events-auto cursor-pointer"
-          >
+        <div className="pointer-events-none h-28 w-28">
+          <div className="pointer-events-auto absolute top-[18px] -right-[32px] w-36 rotate-45 cursor-pointer bg-gradient-to-r from-amber-400 to-orange-400 py-1.5 text-center text-xs font-semibold text-white shadow-md transition-colors hover:from-amber-500 hover:to-orange-500">
             Show me
           </div>
         </div>
@@ -196,7 +205,7 @@ export function TripForm({ formState, onFormChange }: TripFormProps) {
           <MapPin className="h-5 w-5 text-sky-500" />
           Plan Your Trip
         </CardTitle>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-muted-foreground text-sm">
           Enter your flight details to generate a personalized schedule
         </p>
       </CardHeader>
@@ -205,7 +214,9 @@ export function TripForm({ formState, onFormChange }: TripFormProps) {
         {errors.form && (
           <FormError
             message={errors.form}
-            onDismiss={() => setErrors((prev) => ({ ...prev, form: undefined }))}
+            onDismiss={() =>
+              setErrors((prev) => ({ ...prev, form: undefined }))
+            }
           />
         )}
 
@@ -259,7 +270,7 @@ export function TripForm({ formState, onFormChange }: TripFormProps) {
 
         {/* Preferences */}
         <div className="space-y-4">
-          <h3 className="font-medium text-sm flex items-center gap-2 text-muted-foreground">
+          <h3 className="text-muted-foreground flex items-center gap-2 text-sm font-medium">
             Your Preferences
           </h3>
 
@@ -269,7 +280,9 @@ export function TripForm({ formState, onFormChange }: TripFormProps) {
               title="Use melatonin"
               description="Low-dose timed supplements"
               checked={formState.useMelatonin}
-              onCheckedChange={(checked) => updateField("useMelatonin", checked)}
+              onCheckedChange={(checked) =>
+                updateField("useMelatonin", checked)
+              }
               colorScheme="emerald"
             />
 
@@ -310,10 +323,13 @@ export function TripForm({ formState, onFormChange }: TripFormProps) {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Calendar className="h-4 w-4 text-sky-500" />
-                  <Label className="text-sm font-medium">Days before departure</Label>
+                  <Label className="text-sm font-medium">
+                    Days before departure
+                  </Label>
                 </div>
                 <span className="text-sm font-semibold text-sky-600">
-                  {formState.prepDays} {formState.prepDays === 1 ? "day" : "days"}
+                  {formState.prepDays}{" "}
+                  {formState.prepDays === 1 ? "day" : "days"}
                 </span>
               </div>
               <Slider
@@ -322,10 +338,11 @@ export function TripForm({ formState, onFormChange }: TripFormProps) {
                 min={1}
                 max={7}
                 step={1}
-                className="[&_[data-slot=slider-track]]:bg-slate-200 [&_[data-slot=slider-range]]:bg-sky-500 [&_[data-slot=slider-thumb]]:border-sky-500"
+                className="[&_[data-slot=slider-range]]:bg-sky-500 [&_[data-slot=slider-thumb]]:border-sky-500 [&_[data-slot=slider-track]]:bg-slate-200"
               />
-              <p className="text-xs text-muted-foreground">
-                Start adapting earlier for a gentler transition (auto-adjusts if trip is sooner)
+              <p className="text-muted-foreground text-xs">
+                Start adapting earlier for a gentler transition (auto-adjusts if
+                trip is sooner)
               </p>
             </div>
           </div>
@@ -356,7 +373,7 @@ export function TripForm({ formState, onFormChange }: TripFormProps) {
         <Button
           ref={submitButtonRef}
           onClick={handleSubmit}
-          className="w-full bg-sky-500 hover:bg-sky-600 text-white"
+          className="w-full bg-sky-500 text-white hover:bg-sky-600"
           size="lg"
         >
           Generate My Schedule

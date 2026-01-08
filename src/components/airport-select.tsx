@@ -61,9 +61,18 @@ export function AirportSelect({
     } else {
       // Show popular airports when no search query
       const popular = airports.filter((a) =>
-        ["JFK", "LAX", "SFO", "LHR", "CDG", "NRT", "SIN", "DXB", "HKG", "SYD"].includes(
-          a.code
-        )
+        [
+          "JFK",
+          "LAX",
+          "SFO",
+          "LHR",
+          "CDG",
+          "NRT",
+          "SIN",
+          "DXB",
+          "HKG",
+          "SYD",
+        ].includes(a.code)
       );
       setFilteredAirports(popular);
     }
@@ -84,13 +93,15 @@ export function AirportSelect({
           aria-expanded={open}
           className={cn(
             "w-full justify-between bg-white font-normal",
-            hasError && "border-[#F4A574] ring-[#F4A574]/20 ring-[3px]"
+            hasError && "border-[#F4A574] ring-[3px] ring-[#F4A574]/20"
           )}
         >
           {value ? (
             <span className="flex items-center gap-2 truncate">
               <span className="font-medium">{value.code}</span>
-              <span className="text-muted-foreground truncate">{value.city}</span>
+              <span className="text-muted-foreground truncate">
+                {value.city}
+              </span>
             </span>
           ) : (
             <span className="text-muted-foreground">{placeholder}</span>
@@ -107,7 +118,7 @@ export function AirportSelect({
           />
           <CommandList>
             {isLoading ? (
-              <div className="py-6 text-center text-sm text-muted-foreground">
+              <div className="text-muted-foreground py-6 text-center text-sm">
                 Loading airports...
               </div>
             ) : filteredAirports.length === 0 ? (
@@ -125,8 +136,8 @@ export function AirportSelect({
                     onSelect={() => handleSelect(airport)}
                     className="cursor-pointer"
                   >
-                    <div className="flex items-center gap-2 flex-1 min-w-0">
-                      <Plane className="h-4 w-4 shrink-0 text-sky-500 -rotate-45" />
+                    <div className="flex min-w-0 flex-1 items-center gap-2">
+                      <Plane className="h-4 w-4 shrink-0 -rotate-45 text-sky-500" />
                       <span className="font-medium">{airport.code}</span>
                       <span className="text-muted-foreground truncate">
                         {airport.city}, {airport.country}

@@ -5,6 +5,7 @@
 Dawnward is a free, open-source web app for jet lag optimization. It uses the Arcascope circadian library (Forger99 model) to generate personalized schedules for adapting to new timezones via light exposure, melatonin timing, and caffeine strategy.
 
 **Key features:**
+
 - Multi-leg trip support
 - Google Calendar sync (one-way push)
 - Adaptive prep days (1-7 days, gentler shifts with more time)
@@ -14,14 +15,14 @@ Dawnward is a free, open-source web app for jet lag optimization. It uses the Ar
 
 ## Stack
 
-| Layer | Technology | Notes |
-|-------|------------|-------|
-| Framework | Next.js 14+ (App Router) | Vercel-native, React Server Components |
-| Auth | NextAuth.js v5 | Google provider with Calendar scope |
-| Database | Vercel Postgres | Free tier (256MB) |
-| Python Runtime | Vercel Python Functions | For Arcascope circadian library |
-| Analytics | Vercel Analytics | Free tier |
-| Repo | GitHub | Vercel auto-deploys from main |
+| Layer          | Technology               | Notes                                  |
+| -------------- | ------------------------ | -------------------------------------- |
+| Framework      | Next.js 14+ (App Router) | Vercel-native, React Server Components |
+| Auth           | NextAuth.js v5           | Google provider with Calendar scope    |
+| Database       | Vercel Postgres          | Free tier (256MB)                      |
+| Python Runtime | Vercel Python Functions  | For Arcascope circadian library        |
+| Analytics      | Vercel Analytics         | Free tier                              |
+| Repo           | GitHub                   | Vercel auto-deploys from main          |
 
 ---
 
@@ -36,7 +37,7 @@ CREATE TABLE users (
   google_id VARCHAR(255) UNIQUE NOT NULL,
   email VARCHAR(255) NOT NULL,
   name VARCHAR(255),
-  
+
   -- Defaults (user can override per-trip)
   default_prep_days INTEGER DEFAULT 3 CHECK (default_prep_days BETWEEN 1 AND 7),
   default_wake_time TIME DEFAULT '07:00',
@@ -44,7 +45,7 @@ CREATE TABLE users (
   uses_melatonin BOOLEAN DEFAULT false,
   uses_caffeine BOOLEAN DEFAULT true,
   caffeine_cutoff_hours INTEGER DEFAULT 6,
-  
+
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -56,7 +57,7 @@ CREATE TABLE trips (
   name VARCHAR(255), -- Optional friendly name like "Tokyo trip"
   status VARCHAR(20) DEFAULT 'planned' CHECK (status IN ('planned', 'active', 'completed')),
   prep_days INTEGER NOT NULL CHECK (prep_days BETWEEN 1 AND 7),
-  
+
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -66,22 +67,22 @@ CREATE TABLE legs (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   trip_id UUID NOT NULL REFERENCES trips(id) ON DELETE CASCADE,
   sequence INTEGER NOT NULL, -- 1, 2, 3...
-  
+
   -- Origin
   origin_airport VARCHAR(10),      -- IATA code: 'SFO'
   origin_city VARCHAR(255),        -- Fallback if no airport
   origin_tz VARCHAR(100) NOT NULL, -- IANA: 'America/Los_Angeles'
-  
+
   -- Destination
   dest_airport VARCHAR(10),
   dest_city VARCHAR(255),
   dest_tz VARCHAR(100) NOT NULL,
-  
+
   departure_datetime TIMESTAMPTZ NOT NULL,
   arrival_datetime TIMESTAMPTZ NOT NULL,
-  
+
   created_at TIMESTAMPTZ DEFAULT NOW(),
-  
+
   UNIQUE(trip_id, sequence)
 );
 
@@ -103,7 +104,7 @@ CREATE TABLE calendar_syncs (
   google_calendar_id VARCHAR(255) NOT NULL, -- Which calendar events are in
   google_event_ids JSONB NOT NULL,          -- Array of event IDs we created
   last_synced_at TIMESTAMPTZ DEFAULT NOW(),
-  
+
   UNIQUE(trip_id, user_id)
 );
 
@@ -132,20 +133,34 @@ The `schedule_data` JSONB column stores the model output:
   "total_shift_hours": -8,
   "direction": "advance",
   "daily_targets": [
-    {"day": -3, "cumulative_shift": -1.5},
-    {"day": -2, "cumulative_shift": -3.0},
-    {"day": -1, "cumulative_shift": -4.5},
-    {"day": 0, "cumulative_shift": -6.0},
-    {"day": 1, "cumulative_shift": -7.5},
-    {"day": 2, "cumulative_shift": -8.0}
+    { "day": -3, "cumulative_shift": -1.5 },
+    { "day": -2, "cumulative_shift": -3.0 },
+    { "day": -1, "cumulative_shift": -4.5 },
+    { "day": 0, "cumulative_shift": -6.0 },
+    { "day": 1, "cumulative_shift": -7.5 },
+    { "day": 2, "cumulative_shift": -8.0 }
   ],
   "interventions": [
     {
       "day": -3,
       "items": [
-        {"time": "06:00", "type": "light_seek", "duration_min": 30, "description": "Get bright light exposure"},
-        {"time": "21:30", "type": "melatonin", "dose_mg": 0.5, "description": "Take melatonin"},
-        {"time": "22:00", "type": "sleep_target", "description": "Target bedtime"}
+        {
+          "time": "06:00",
+          "type": "light_seek",
+          "duration_min": 30,
+          "description": "Get bright light exposure"
+        },
+        {
+          "time": "21:30",
+          "type": "melatonin",
+          "dose_mg": 0.5,
+          "description": "Take melatonin"
+        },
+        {
+          "time": "22:00",
+          "type": "sleep_target",
+          "description": "Target bedtime"
+        }
       ]
     }
   ]
@@ -153,6 +168,7 @@ The `schedule_data` JSONB column stores the model output:
 ```
 
 Intervention types:
+
 - `light_seek` — Get bright light (outdoor or lightbox)
 - `light_avoid` — Wear sunglasses, dim screens
 - `melatonin` — Take melatonin dose
@@ -173,6 +189,7 @@ GET/POST /api/auth/[...nextauth]
 ```
 
 NextAuth.js v5 handler. Configure with:
+
 - Google provider
 - Scopes: `openid`, `email`, `profile`, `https://www.googleapis.com/auth/calendar.events`
 - Callbacks to create/update user in database
@@ -186,6 +203,7 @@ PATCH /api/user         → Update preferences
 ```
 
 Request (PATCH):
+
 ```json
 {
   "default_prep_days": 5,
@@ -205,6 +223,7 @@ DELETE /api/trips/[id]         → Delete trip (cascades to legs, schedule, sync
 ```
 
 Request (POST /api/trips):
+
 ```json
 {
   "name": "Tokyo business trip",
@@ -232,6 +251,7 @@ POST /api/trips/[id]/schedule      → Force regenerate schedule
 ```
 
 Schedule generation logic:
+
 1. Compute `inputs_hash` = SHA-256 of (legs data + user prefs + prep_days)
 2. If existing schedule has same hash, return cached
 3. Otherwise, call Python function to generate new schedule
@@ -245,11 +265,13 @@ DELETE /api/trips/[id]/calendar    → Remove events from Google Calendar
 ```
 
 Sync logic (POST):
+
 1. If existing sync, delete all events by stored IDs
 2. Create events for each intervention
 3. Store new event IDs in `calendar_syncs`
 
 Event creation guidelines:
+
 - Use 15-minute calendar events for point-in-time interventions (melatonin, caffeine)
 - Use actual duration for light exposure windows
 - Set reminders: 15 min before for actions, none for info-only
@@ -277,6 +299,7 @@ POST /api/mcp/invoke    → Execute a tool
 ```
 
 Request (POST /api/mcp/invoke):
+
 ```json
 {
   "tool": "get_adaptation_plan",
@@ -293,6 +316,7 @@ Request (POST /api/mcp/invoke):
 ```
 
 Response:
+
 ```json
 {
   "result": {
@@ -334,6 +358,7 @@ Calculate hours of circadian shift needed between timezones.
 ```
 
 Output:
+
 ```json
 {
   "shift_hours": -8,
@@ -355,17 +380,17 @@ Full adaptation strategy for a trip.
   "inputSchema": {
     "type": "object",
     "properties": {
-      "origin_timezone": {"type": "string"},
-      "destination_timezone": {"type": "string"},
-      "departure_datetime": {"type": "string", "format": "date-time"},
+      "origin_timezone": { "type": "string" },
+      "destination_timezone": { "type": "string" },
+      "departure_datetime": { "type": "string", "format": "date-time" },
       "prep_days_available": {
         "type": "integer",
         "minimum": 1,
         "maximum": 7,
         "default": 3
       },
-      "uses_melatonin": {"type": "boolean", "default": false},
-      "uses_caffeine": {"type": "boolean", "default": true},
+      "uses_melatonin": { "type": "boolean", "default": false },
+      "uses_caffeine": { "type": "boolean", "default": true },
       "usual_wake_time": {
         "type": "string",
         "pattern": "^[0-2][0-9]:[0-5][0-9]$",
@@ -377,7 +402,11 @@ Full adaptation strategy for a trip.
         "default": "23:00"
       }
     },
-    "required": ["origin_timezone", "destination_timezone", "departure_datetime"]
+    "required": [
+      "origin_timezone",
+      "destination_timezone",
+      "departure_datetime"
+    ]
   }
 }
 ```
@@ -401,7 +430,7 @@ Optimal light exposure/avoidance for a specific day in adaptation.
         "type": "number",
         "description": "Hours to shift today (positive=delay, negative=advance)"
       },
-      "usual_wake_time": {"type": "string", "default": "07:00"}
+      "usual_wake_time": { "type": "string", "default": "07:00" }
     },
     "required": ["current_phase_offset", "target_shift_today"]
   }
@@ -419,9 +448,9 @@ When to take melatonin for circadian shifting.
   "inputSchema": {
     "type": "object",
     "properties": {
-      "current_phase_offset": {"type": "number"},
-      "target_shift_today": {"type": "number"},
-      "usual_sleep_time": {"type": "string", "default": "23:00"}
+      "current_phase_offset": { "type": "number" },
+      "target_shift_today": { "type": "number" },
+      "usual_sleep_time": { "type": "string", "default": "23:00" }
     },
     "required": ["current_phase_offset", "target_shift_today"]
   }
@@ -439,9 +468,9 @@ Caffeine timing for alertness without disrupting adaptation.
   "inputSchema": {
     "type": "object",
     "properties": {
-      "target_sleep_time": {"type": "string"},
-      "cutoff_hours_before_sleep": {"type": "integer", "default": 6},
-      "current_local_time": {"type": "string"},
+      "target_sleep_time": { "type": "string" },
+      "cutoff_hours_before_sleep": { "type": "integer", "default": 6 },
+      "current_local_time": { "type": "string" },
       "alertness_needed": {
         "type": "string",
         "enum": ["normal", "high"],
@@ -464,8 +493,8 @@ How long until fully adapted to new timezone.
   "inputSchema": {
     "type": "object",
     "properties": {
-      "shift_hours": {"type": "number"},
-      "uses_interventions": {"type": "boolean", "default": true}
+      "shift_hours": { "type": "number" },
+      "uses_interventions": { "type": "boolean", "default": true }
     },
     "required": ["shift_hours"]
   }
@@ -507,7 +536,7 @@ The prep_days parameter controls shift intensity:
 def calculate_daily_shift_target(total_shift: float, prep_days: int) -> float:
     """
     More prep days = gentler daily shifts.
-    
+
     Research supports ~1-2 hours/day as safe shifting range.
     Faster risks overshooting or hitting the "dead zone" where
     light exposure backfires.
@@ -518,11 +547,11 @@ def calculate_daily_shift_target(total_shift: float, prep_days: int) -> float:
         max_daily = 1.5   # Moderate
     else:
         max_daily = 2.0   # Aggressive but safe
-    
+
     # Total days = prep + flight + 2 arrival days buffer
     total_days = prep_days + 3
     ideal_daily = abs(total_shift) / total_days
-    
+
     return min(ideal_daily, max_daily)
 ```
 
@@ -554,6 +583,7 @@ prc = model.phase_response_curve(
 ```
 
 Use the PRC (phase response curve) to determine:
+
 - Light before CBTmin (core body temp minimum) → delays clock
 - Light after CBTmin → advances clock
 - CBTmin is typically ~2-3 hours before habitual wake time
@@ -606,6 +636,7 @@ Source: Geonames cities with population > 100,000.
 ### Typeahead Behavior
 
 Client-side search:
+
 1. Search airports by code (exact prefix) and city name (fuzzy)
 2. Search cities by name (fuzzy)
 3. Display airports first, then cities
@@ -618,9 +649,10 @@ Client-side search:
 ### Auth Scopes
 
 Request these scopes in NextAuth:
+
 ```
 openid
-email  
+email
 profile
 https://www.googleapis.com/auth/calendar.events
 ```
@@ -633,26 +665,25 @@ For each intervention, create a Google Calendar event:
 
 ```javascript
 const event = {
-  summary: getEventTitle(intervention.type),  // "🌅 Light exposure"
+  summary: getEventTitle(intervention.type), // "🌅 Light exposure"
   description: intervention.description,
   start: {
     dateTime: intervention.datetime,
-    timeZone: intervention.timezone
+    timeZone: intervention.timezone,
   },
   end: {
     dateTime: addMinutes(intervention.datetime, intervention.duration || 15),
-    timeZone: intervention.timezone
+    timeZone: intervention.timezone,
   },
   reminders: {
     useDefault: false,
-    overrides: [
-      { method: 'popup', minutes: 15 }
-    ]
-  }
+    overrides: [{ method: "popup", minutes: 15 }],
+  },
 };
 ```
 
 Event titles by type:
+
 - `light_seek` → "🌅 Seek bright light"
 - `light_avoid` → "🕶️ Avoid bright light"
 - `melatonin` → "💊 Take melatonin"
@@ -669,39 +700,44 @@ One-way push with delete-and-replace:
 async function syncToCalendar(tripId, userId) {
   // 1. Check for existing sync
   const existingSync = await db.calendarSyncs.findUnique({
-    where: { tripId_userId: { tripId, userId } }
+    where: { tripId_userId: { tripId, userId } },
   });
-  
+
   // 2. Delete old events if they exist
   if (existingSync) {
     for (const eventId of existingSync.googleEventIds) {
       await calendar.events.delete({
-        calendarId: 'primary',
-        eventId
+        calendarId: "primary",
+        eventId,
       });
     }
   }
-  
+
   // 3. Get schedule
   const schedule = await db.schedules.findUnique({ where: { tripId } });
-  
+
   // 4. Create new events
   const newEventIds = [];
   for (const day of schedule.scheduleData.interventions) {
     for (const item of day.items) {
       const event = await calendar.events.insert({
-        calendarId: 'primary',
-        requestBody: buildCalendarEvent(item, day.date)
+        calendarId: "primary",
+        requestBody: buildCalendarEvent(item, day.date),
       });
       newEventIds.push(event.data.id);
     }
   }
-  
+
   // 5. Store sync record
   await db.calendarSyncs.upsert({
     where: { tripId_userId: { tripId, userId } },
-    create: { tripId, userId, googleCalendarId: 'primary', googleEventIds: newEventIds },
-    update: { googleEventIds: newEventIds, lastSyncedAt: new Date() }
+    create: {
+      tripId,
+      userId,
+      googleCalendarId: "primary",
+      googleEventIds: newEventIds,
+    },
+    update: { googleEventIds: newEventIds, lastSyncedAt: new Date() },
   });
 }
 ```
@@ -746,6 +782,7 @@ Return consistent error format:
 ```
 
 Error codes:
+
 - `UNAUTHORIZED` — Not logged in (401)
 - `FORBIDDEN` — Logged in but not owner (403)
 - `NOT_FOUND` — Resource doesn't exist (404)
@@ -756,6 +793,7 @@ Error codes:
 ### Calendar Sync Failures
 
 If Google Calendar API fails:
+
 1. Log error with details
 2. Return error to client with reason
 3. Do NOT update `calendar_syncs` record
@@ -764,6 +802,7 @@ If Google Calendar API fails:
 ### Schedule Generation Failures
 
 If Python function fails:
+
 1. Log error
 2. Return 500 with `SCHEDULE_GENERATION_FAILED`
 3. Do NOT cache failed result
@@ -786,6 +825,7 @@ If Python function fails:
 ### MCP Testing
 
 Test each tool independently:
+
 ```bash
 curl -X POST https://dawnward.app/api/mcp/invoke \
   -H "Content-Type: application/json" \

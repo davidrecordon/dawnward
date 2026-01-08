@@ -7,8 +7,20 @@ import {
 import type { TripFormState } from "@/types/trip-form";
 
 const mockFormState: TripFormState = {
-  origin: { code: "SFO", name: "San Francisco International", city: "San Francisco", country: "US", tz: "America/Los_Angeles" },
-  destination: { code: "LHR", name: "London Heathrow", city: "London", country: "GB", tz: "Europe/London" },
+  origin: {
+    code: "SFO",
+    name: "San Francisco International",
+    city: "San Francisco",
+    country: "US",
+    tz: "America/Los_Angeles",
+  },
+  destination: {
+    code: "LHR",
+    name: "London Heathrow",
+    city: "London",
+    country: "GB",
+    tz: "Europe/London",
+  },
   departureDateTime: "2026-01-20T20:00",
   arrivalDateTime: "2026-01-21T14:00",
   prepDays: 3,

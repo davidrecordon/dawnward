@@ -28,6 +28,7 @@ Aviation research on ultra-long-range (ULR) flights provides direct guidance:
 ### The Tension
 
 Modeling multiple sleep windows adds complexity. But "nap when tired" fails users because:
+
 1. It doesn't account for circadian position (you may feel tired at the wrong time)
 2. It doesn't help users sleep enough to function at arrival
 3. It misses the opportunity to use in-flight sleep strategically for adaptation
@@ -36,11 +37,11 @@ Modeling multiple sleep windows adds complexity. But "nap when tired" fails user
 
 **Model in-flight sleep strategically for flights ≥12 hours.**
 
-| Flight Duration | Approach |
-|-----------------|----------|
-| < 8 hours | Single nap opportunity, optional |
-| 8-12 hours | One structured sleep window |
-| 12+ hours | Two sleep windows, timed to circadian position |
+| Flight Duration | Approach                                       |
+| --------------- | ---------------------------------------------- |
+| < 8 hours       | Single nap opportunity, optional               |
+| 8-12 hours      | One structured sleep window                    |
+| 12+ hours       | Two sleep windows, timed to circadian position |
 
 ### Implementation
 
@@ -82,11 +83,11 @@ There's a legitimate use case: users comparing two flight options might benefit 
 
 **Do not show science_impact by default. Offer it only at decision points.**
 
-| Context | Show Impact? | Framing |
-|---------|--------------|---------|
-| Comparing flight options (pre-booking) | Yes | "Flight A allows ~2 days faster adaptation" |
-| After booking (schedule generation) | No | Just provide the optimized plan |
-| User explicitly asks | Yes | "Given your flight timing, full adaptation takes ~X days" |
+| Context                                | Show Impact? | Framing                                                   |
+| -------------------------------------- | ------------ | --------------------------------------------------------- |
+| Comparing flight options (pre-booking) | Yes          | "Flight A allows ~2 days faster adaptation"               |
+| After booking (schedule generation)    | No           | Just provide the optimized plan                           |
+| User explicitly asks                   | Yes          | "Given your flight timing, full adaptation takes ~X days" |
 
 ### Implementation
 
@@ -121,11 +122,11 @@ This is explicitly addressed in circadian literature:
 
 **Layover duration determines strategy:**
 
-| Layover Duration | Strategy | Rationale |
-|------------------|----------|-----------|
-| < 48 hours | Aim through to final destination | Insufficient time to adapt; partial shift creates compounded misalignment |
+| Layover Duration       | Strategy                               | Rationale                                                                           |
+| ---------------------- | -------------------------------------- | ----------------------------------------------------------------------------------- |
+| < 48 hours             | Aim through to final destination       | Insufficient time to adapt; partial shift creates compounded misalignment           |
 | 48-96 hours (2-4 days) | Partial adaptation to layover timezone | Some benefit from local alignment, but maintain trajectory toward final destination |
-| > 96 hours (4+ days) | Restart: treat as two separate trips | Sufficient time for meaningful adaptation; user likely wants to function locally |
+| > 96 hours (4+ days)   | Restart: treat as two separate trips   | Sufficient time for meaningful adaptation; user likely wants to function locally    |
 
 ### Implementation
 
@@ -145,11 +146,13 @@ else:
 ### Edge Cases
 
 **Same-direction multi-leg (NYC→London→Dubai):**
+
 - London is +5h from NYC, Dubai is +4h from London
 - Both legs are eastward—can potentially "aim through" even with 3-day London layover
 - Show user: "Your London layover continues your eastward shift toward Dubai"
 
 **Opposite-direction legs (NYC→London, then London→LA):**
+
 - Must restart at London; you can't aim through when directions conflict
 - Treat as two independent trips regardless of layover duration
 
@@ -175,6 +178,7 @@ else:
 ### The Tension
 
 Two reasonable interpretations:
+
 1. **Pro-rate:** With half the intervention opportunities, expect half the shift
 2. **Fixed target:** The clock shifts over 24h; a partial waking day still contributes
 
@@ -182,11 +186,11 @@ Two reasonable interpretations:
 
 **Pro-rate the shift target for partial days, with a floor.**
 
-| Available Hours | Target Phase Shift |
-|-----------------|-------------------|
-| 16+ hours | Full daily target (1h advance / 1.5h delay) |
-| 8-16 hours | 50-100% of daily target (scaled linearly) |
-| < 8 hours | Skip formal intervention; provide single reminder |
+| Available Hours | Target Phase Shift                                |
+| --------------- | ------------------------------------------------- |
+| 16+ hours       | Full daily target (1h advance / 1.5h delay)       |
+| 8-16 hours      | 50-100% of daily target (scaled linearly)         |
+| < 8 hours       | Skip formal intervention; provide single reminder |
 
 ### Rationale
 
@@ -210,6 +214,7 @@ def calculate_shift_target(available_hours: float, base_target: float) -> float:
 ### UI Approach
 
 For partial pre-departure days:
+
 - Don't show a full schedule grid
 - Show single high-impact recommendation: "Get bright light at 7am" or "Take melatonin at 9pm"
 - Acknowledge the constraint: "Your departure day is short—focus on this one thing"
@@ -222,19 +227,19 @@ If this is day 3 of a 3-day prep period and the user has been following the plan
 
 ## Summary
 
-| Edge Case | Decision | Key Principle |
-|-----------|----------|---------------|
-| Ultra-long-haul in-transit | Model 2 sleep windows for flights ≥12h | Circadian position determines sleep quality |
-| Science impact feedback | Hide by default; show only at decision points | Actionable > punitive |
-| Multi-leg trips | Layover < 48h: aim through; > 96h: restart | Adaptation requires 3+ days to be meaningful |
-| Partial pre-departure day | Pro-rate targets; < 8h gets single recommendation | One good intervention beats rushed multiples |
+| Edge Case                  | Decision                                          | Key Principle                                |
+| -------------------------- | ------------------------------------------------- | -------------------------------------------- |
+| Ultra-long-haul in-transit | Model 2 sleep windows for flights ≥12h            | Circadian position determines sleep quality  |
+| Science impact feedback    | Hide by default; show only at decision points     | Actionable > punitive                        |
+| Multi-leg trips            | Layover < 48h: aim through; > 96h: restart        | Adaptation requires 3+ days to be meaningful |
+| Partial pre-departure day  | Pro-rate targets; < 8h gets single recommendation | One good intervention beats rushed multiples |
 
 ---
 
 ## References
 
-- Eastman CI, Burgess HJ. (2009). How to travel the world without jet lag. *Sleep Medicine Clinics*, 4(2), 241-255.
-- Gander PH et al. (2013). Circadian adaptation of airline pilots during extended duration operations. *Chronobiology International*, 30(8), 963-972.
-- Lowden A, Åkerstedt T. (1998). Retaining home-base sleep hours to prevent jet lag. *Aviation, Space, and Environmental Medicine*, 69(12), 1193-1198.
-- Roach GD et al. (2012). In-flight sleep of flight crew during a 7-hour rest break. *Journal of Clinical Sleep Medicine*, 8(5), 461-467.
-- Waterhouse J et al. (2007). Jet lag: trends and coping strategies. *The Lancet*, 369(9567), 1117-1129.
+- Eastman CI, Burgess HJ. (2009). How to travel the world without jet lag. _Sleep Medicine Clinics_, 4(2), 241-255.
+- Gander PH et al. (2013). Circadian adaptation of airline pilots during extended duration operations. _Chronobiology International_, 30(8), 963-972.
+- Lowden A, Åkerstedt T. (1998). Retaining home-base sleep hours to prevent jet lag. _Aviation, Space, and Environmental Medicine_, 69(12), 1193-1198.
+- Roach GD et al. (2012). In-flight sleep of flight crew during a 7-hour rest break. _Journal of Clinical Sleep Medicine_, 8(5), 461-467.
+- Waterhouse J et al. (2007). Jet lag: trends and coping strategies. _The Lancet_, 369(9567), 1117-1129.

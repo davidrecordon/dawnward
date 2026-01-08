@@ -9,7 +9,8 @@ import { defaultFormState, type TripFormState } from "@/types/trip-form";
 import { getFormState, saveFormState } from "@/lib/schedule-storage";
 
 export function TripPlanner() {
-  const [formState, setFormState] = React.useState<TripFormState>(defaultFormState);
+  const [formState, setFormState] =
+    React.useState<TripFormState>(defaultFormState);
   const [isHydrated, setIsHydrated] = React.useState(false);
 
   // Load saved form state on mount, merging with defaults for any missing fields
@@ -46,23 +47,25 @@ export function TripPlanner() {
         />
 
         {/* Calendar Sync */}
-        <div className="bg-white/50 rounded-xl border-2 border-dashed border-slate-200 p-6 text-center">
+        <div className="rounded-xl border-2 border-dashed border-slate-200 bg-white/50 p-6 text-center">
           <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-orange-100">
             <Calendar className="h-6 w-6 text-orange-500" />
           </div>
           <p className="font-medium">Sync to Google Calendar</p>
-          <p className="text-sm text-slate-500 mb-3">
+          <p className="mb-3 text-sm text-slate-500">
             Get reminders pushed directly to your calendar
           </p>
-          <button className="px-4 py-1.5 text-sm border border-slate-300 rounded-lg hover:bg-slate-50">
+          <button className="rounded-lg border border-slate-300 px-4 py-1.5 text-sm hover:bg-slate-50">
             Connect Calendar
           </button>
         </div>
 
         {/* How it works */}
-        <div className="p-4 rounded-xl bg-white/60 border border-purple-100">
-          <p className="text-sm font-medium text-purple-700 mb-1">How it works</p>
-          <p className="text-xs text-slate-500 leading-relaxed">
+        <div className="rounded-xl border border-purple-100 bg-white/60 p-4">
+          <p className="mb-1 text-sm font-medium text-purple-700">
+            How it works
+          </p>
+          <p className="text-xs leading-relaxed text-slate-500">
             Dawnward uses the Forger-Jewett-Kronauer circadian model to
             calculate optimal light exposure, melatonin timing, and caffeine
             windows based on your specific flight and sleep patterns.

@@ -10,6 +10,7 @@
 ## Executive Summary
 
 Redesign the scheduler around **travel phases** instead of calendar days. This:
+
 1. Fixes the "activities before landing" and "sleep before departure" bugs
 2. Creates clean separation between circadian science and practical constraints
 3. Enables better modeling of arrival-day fatigue and in-flight sleep
@@ -29,6 +30,7 @@ Day -2 ──► Day -1 ──► Day 0 ──► Day 1 ──► Day 2
 ```
 
 **Problems:**
+
 - Day 0 generates full schedule, but user leaves mid-day
 - Day 1 generates full schedule, but user arrives mid-day
 - No awareness of actual flight times
@@ -76,38 +78,39 @@ class PhaseType(Enum):
 
 Per `flight-timing-edge-cases.md`, in-transit handling varies by flight length:
 
-| Flight Duration | Phase Type | Sleep Strategy |
-|-----------------|------------|----------------|
-| < 8 hours | `IN_TRANSIT` | Single optional nap |
-| 8-12 hours | `IN_TRANSIT` | One structured sleep window |
-| **12+ hours** | `IN_TRANSIT_ULR` | **Two sleep windows, timed to circadian position** |
+| Flight Duration | Phase Type       | Sleep Strategy                                     |
+| --------------- | ---------------- | -------------------------------------------------- |
+| < 8 hours       | `IN_TRANSIT`     | Single optional nap                                |
+| 8-12 hours      | `IN_TRANSIT`     | One structured sleep window                        |
+| **12+ hours**   | `IN_TRANSIT_ULR` | **Two sleep windows, timed to circadian position** |
 
 For ultra-long-range flights, we model sleep strategically based on:
+
 - User's CBTmin position throughout the flight
 - Avoiding the wake maintenance zone
 - Ensuring user is awake for landing
 
 ### Example: SFO→LHR (Depart 20:45, Arrive 15:15+1) — 10.5h flight
 
-| Phase | Date | Start | End | Timezone | Interventions |
-|-------|------|-------|-----|----------|---------------|
-| PREPARATION | Jan 13 | 07:00 | 22:00 | PST | Full schedule |
-| PREPARATION | Jan 14 | 06:00 | 21:00 | PST | Full schedule |
-| PRE_DEPARTURE | Jan 15 | 05:00 | 17:45 | PST | Limited (stop 3h before flight) |
-| IN_TRANSIT | Jan 15-16 | 20:45 | 15:15 | — | One sleep window (~4h) |
-| POST_ARRIVAL | Jan 16 | 15:15 | 22:00 | GMT | Recovery mode |
-| ADAPTATION | Jan 17 | 07:30 | 22:30 | GMT | Full schedule |
-| ADAPTATION | Jan 18 | 07:00 | 22:00 | GMT | Full schedule |
+| Phase         | Date      | Start | End   | Timezone | Interventions                   |
+| ------------- | --------- | ----- | ----- | -------- | ------------------------------- |
+| PREPARATION   | Jan 13    | 07:00 | 22:00 | PST      | Full schedule                   |
+| PREPARATION   | Jan 14    | 06:00 | 21:00 | PST      | Full schedule                   |
+| PRE_DEPARTURE | Jan 15    | 05:00 | 17:45 | PST      | Limited (stop 3h before flight) |
+| IN_TRANSIT    | Jan 15-16 | 20:45 | 15:15 | —        | One sleep window (~4h)          |
+| POST_ARRIVAL  | Jan 16    | 15:15 | 22:00 | GMT      | Recovery mode                   |
+| ADAPTATION    | Jan 17    | 07:30 | 22:30 | GMT      | Full schedule                   |
+| ADAPTATION    | Jan 18    | 07:00 | 22:00 | GMT      | Full schedule                   |
 
 ### Example: SFO→SIN (Depart 09:40, Arrive 19:05+1) — 17.4h ULR flight
 
-| Phase | Date | Start | End | Timezone | Interventions |
-|-------|------|-------|-----|----------|---------------|
-| PREPARATION | Jan 13 | 07:00 | 23:00 | PST | Full schedule |
-| PRE_DEPARTURE | Jan 14 | 07:00 | 06:40 | PST | Limited (stop 3h before flight) |
-| IN_TRANSIT_ULR | Jan 14-15 | 09:40 | 19:05 | — | **Two sleep windows** (~4h each) |
-| POST_ARRIVAL | Jan 15 | 19:05 | 23:00 | SGT | Recovery mode (evening arrival) |
-| ADAPTATION | Jan 16+ | ... | ... | SGT | Full schedule |
+| Phase          | Date      | Start | End   | Timezone | Interventions                    |
+| -------------- | --------- | ----- | ----- | -------- | -------------------------------- |
+| PREPARATION    | Jan 13    | 07:00 | 23:00 | PST      | Full schedule                    |
+| PRE_DEPARTURE  | Jan 14    | 07:00 | 06:40 | PST      | Limited (stop 3h before flight)  |
+| IN_TRANSIT_ULR | Jan 14-15 | 09:40 | 19:05 | —        | **Two sleep windows** (~4h each) |
+| POST_ARRIVAL   | Jan 15    | 19:05 | 23:00 | SGT      | Recovery mode (evening arrival)  |
+| ADAPTATION     | Jan 16+   | ...   | ...   | SGT      | Full schedule                    |
 
 ---
 
@@ -1136,24 +1139,28 @@ class TestConstraintFilter:
 ## Migration Path
 
 ### Week 1: Foundation
+
 1. Create `science/` module structure
 2. Extract PRC logic (light, melatonin)
 3. Add CBTmin tracker
 4. Write tests for science layer
 
 ### Week 2: Phase System
+
 1. Define Phase types
 2. Implement PhaseGenerator
 3. Implement InterventionPlanner
 4. Write integration tests
 
 ### Week 3: Integration
+
 1. Refactor main scheduler to use phases
 2. Implement ConstraintFilter
 3. Update API response types
 4. Run realistic flight tests - all should pass
 
 ### Week 4: Polish
+
 1. Add science_impact feedback to responses
 2. Update frontend to show phase info (optional)
 3. Performance testing
@@ -1179,10 +1186,10 @@ The following questions have been resolved per `design_docs/flight-timing-edge-c
 
 **Decision:** Model in-flight sleep strategically based on flight duration.
 
-| Flight Duration | Approach |
-|-----------------|----------|
-| < 8 hours | Single optional nap |
-| 8-12 hours | One structured sleep window |
+| Flight Duration     | Approach                                       |
+| ------------------- | ---------------------------------------------- |
+| < 8 hours           | Single optional nap                            |
+| 8-12 hours          | One structured sleep window                    |
 | **12+ hours (ULR)** | Two sleep windows, timed to circadian position |
 
 **Rationale:** Aviation research shows pilots on ULR flights average only 3.3h of actual sleep during 7h rest opportunities. Strategic timing based on CBTmin position improves both sleep quality and adaptation trajectory.
@@ -1195,11 +1202,11 @@ The following questions have been resolved per `design_docs/flight-timing-edge-c
 
 **Decision:** Do not show `science_impact` by default. Only surface at decision points.
 
-| Context | Show Impact? | Framing |
-|---------|--------------|---------|
-| Comparing flight options (pre-booking) | Yes | "Flight A allows ~2 days faster adaptation" |
-| After booking (schedule generation) | **No** | Just provide the optimized plan |
-| User explicitly asks | Yes | "Given your flight timing, full adaptation takes ~X days" |
+| Context                                | Show Impact? | Framing                                                   |
+| -------------------------------------- | ------------ | --------------------------------------------------------- |
+| Comparing flight options (pre-booking) | Yes          | "Flight A allows ~2 days faster adaptation"               |
+| After booking (schedule generation)    | **No**       | Just provide the optimized plan                           |
+| User explicitly asks                   | Yes          | "Given your flight timing, full adaptation takes ~X days" |
 
 **Rationale:** Post-booking, quantifying suboptimality for unchangeable decisions creates frustration. Actionable information is more useful than metrics users can't change.
 
@@ -1213,12 +1220,12 @@ The following questions have been resolved per `design_docs/flight-timing-edge-c
 
 **Decision:** Strategy depends on layover duration and direction consistency.
 
-| Layover Duration | Strategy | Rationale |
-|------------------|----------|-----------|
-| < 48 hours | Aim through to final destination | Insufficient time to adapt; partial shift creates compounded misalignment |
-| 48-96 hours | Partial adaptation to layover timezone | Some benefit from local alignment, maintain trajectory |
-| > 96 hours (4+ days) | Restart (two separate trips) | Sufficient time for meaningful adaptation |
-| **Opposite directions** | Always restart | Can't aim through when directions conflict |
+| Layover Duration        | Strategy                               | Rationale                                                                 |
+| ----------------------- | -------------------------------------- | ------------------------------------------------------------------------- |
+| < 48 hours              | Aim through to final destination       | Insufficient time to adapt; partial shift creates compounded misalignment |
+| 48-96 hours             | Partial adaptation to layover timezone | Some benefit from local alignment, maintain trajectory                    |
+| > 96 hours (4+ days)    | Restart (two separate trips)           | Sufficient time for meaningful adaptation                                 |
+| **Opposite directions** | Always restart                         | Can't aim through when directions conflict                                |
 
 **Rationale:** The circadian clock shifts 1-1.5h per day—meaningful adaptation requires 3+ days. For short layovers, aiming through reduces cumulative misalignment.
 
@@ -1230,11 +1237,11 @@ The following questions have been resolved per `design_docs/flight-timing-edge-c
 
 **Decision:** Pro-rate shift targets for partial days, with an 8-hour floor.
 
-| Available Hours | Target Phase Shift |
-|-----------------|-------------------|
-| 16+ hours | Full daily target (1h advance / 1.5h delay) |
-| 8-16 hours | 50-100% of daily target (scaled linearly) |
-| **< 8 hours** | Skip formal intervention; provide single recommendation |
+| Available Hours | Target Phase Shift                                      |
+| --------------- | ------------------------------------------------------- |
+| 16+ hours       | Full daily target (1h advance / 1.5h delay)             |
+| 8-16 hours      | 50-100% of daily target (scaled linearly)               |
+| **< 8 hours**   | Skip formal intervention; provide single recommendation |
 
 **Rationale:** Cramming aggressive interventions into limited time creates stress without proportional benefit. One high-quality intervention beats multiple rushed ones.
 
@@ -1244,7 +1251,7 @@ The following questions have been resolved per `design_docs/flight-timing-edge-c
 
 ## References
 
-- Eastman CI, Burgess HJ. (2009). How to travel the world without jet lag. *Sleep Medicine Clinics*, 4(2), 241-255.
-- Gander PH et al. (2013). Circadian adaptation of airline pilots during extended duration operations. *Chronobiology International*, 30(8), 963-972.
-- Lowden A, Åkerstedt T. (1998). Retaining home-base sleep hours to prevent jet lag. *Aviation, Space, and Environmental Medicine*, 69(12), 1193-1198.
-- Roach GD et al. (2012). In-flight sleep of flight crew during a 7-hour rest break. *Journal of Clinical Sleep Medicine*, 8(5), 461-467.
+- Eastman CI, Burgess HJ. (2009). How to travel the world without jet lag. _Sleep Medicine Clinics_, 4(2), 241-255.
+- Gander PH et al. (2013). Circadian adaptation of airline pilots during extended duration operations. _Chronobiology International_, 30(8), 963-972.
+- Lowden A, Åkerstedt T. (1998). Retaining home-base sleep hours to prevent jet lag. _Aviation, Space, and Environmental Medicine_, 69(12), 1193-1198.
+- Roach GD et al. (2012). In-flight sleep of flight crew during a 7-hour rest break. _Journal of Clinical Sleep Medicine_, 8(5), 461-467.

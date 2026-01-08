@@ -1,0 +1,10 @@
+node_modules
+.next
+src/generated
+public/data
+bun.lock
+.claude
+api/_python/.mypy_cache
+api/_python/.pytest_cache
+api/_python/__pycache__
+*.py

@@ -128,7 +128,9 @@ export function mergePhasesByDate(interventions: DaySchedule[]): DaySchedule[] {
         return a.flight_offset_hours - b.flight_offset_hours;
       }
       // Regular items: chronological with late-night awareness
-      return toSortableMinutes(a.time, a.type) - toSortableMinutes(b.time, b.type);
+      return (
+        toSortableMinutes(a.time, a.type) - toSortableMinutes(b.time, b.type)
+      );
     });
   }
 
@@ -147,7 +149,9 @@ export function mergePhasesByDate(interventions: DaySchedule[]): DaySchedule[] {
  * @param interventions - Array of interventions for a single day
  * @returns true if interventions have 2+ distinct timezones
  */
-export function dayHasMultipleTimezones(interventions: Intervention[]): boolean {
+export function dayHasMultipleTimezones(
+  interventions: Intervention[]
+): boolean {
   const timezones = new Set<string>();
 
   for (const item of interventions) {

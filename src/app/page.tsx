@@ -9,7 +9,7 @@ export default function NewTripPage() {
       {/* Hero */}
       <div className="mb-8 text-center">
         <Link href="/science">
-          <Badge className="transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent hover:bg-orange-100 mb-4 bg-white/80 text-orange-600 border-0 font-medium shadow-sm cursor-pointer">
+          <Badge className="focus:ring-ring mb-4 cursor-pointer border-0 border-transparent bg-white/80 font-medium text-orange-600 shadow-sm transition-colors hover:bg-orange-100 focus:ring-2 focus:ring-offset-2 focus:outline-none">
             <Sparkles className="mr-1 h-3 w-3" />
             Science-backed jet lag optimization
           </Badge>
@@ -17,7 +17,7 @@ export default function NewTripPage() {
         <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
           Arrive ready, not wrecked
         </h1>
-        <p className="mx-auto mt-3 max-w-xl text-lg text-muted-foreground">
+        <p className="text-muted-foreground mx-auto mt-3 max-w-xl text-lg">
           Personalized light, sleep, and caffeine schedules to shift your
           circadian rhythm before you land.
         </p>

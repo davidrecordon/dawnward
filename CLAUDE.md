@@ -19,8 +19,11 @@ bun run test         # Run Vitest in watch mode
 bun run test:run     # Run all TypeScript tests once
 bun run test:python  # Run all Python pytest tests
 
-# Linting
+# Linting & Formatting
 bun run lint         # Run ESLint (TypeScript)
+bun run format       # Format with Prettier (auto-fix)
+bun run format:check # Check formatting without fixing
+bun run typecheck    # Run TypeScript type checking
 bun run lint:python  # Check Python with ruff (lint + format)
 bun run lint:python:fix  # Auto-fix Python issues
 bun run typecheck:python # Run mypy type checking
@@ -38,6 +41,8 @@ bun prisma studio       # Open Prisma Studio GUI
 ```bash
 # TypeScript changes
 bun run lint         # ESLint
+bun run format:check # Prettier
+bun run typecheck    # TypeScript
 bun run test:run     # Vitest
 
 # Python changes
@@ -48,12 +53,14 @@ bun run test:python  # pytest
 
 ## Linting & Type Checking
 
-| Language   | Linter | Type Checker | Config |
-|------------|--------|--------------|--------|
-| TypeScript | ESLint 9 | tsc (via Next.js) | `eslint.config.mjs` |
-| Python     | ruff | mypy | `api/_python/pyproject.toml` |
+| Language   | Linter   | Formatter   | Type Checker | Config                             |
+| ---------- | -------- | ----------- | ------------ | ---------------------------------- |
+| TypeScript | ESLint 9 | Prettier    | tsc          | `eslint.config.mjs`, `.prettierrc` |
+| Python     | ruff     | ruff format | mypy         | `api/_python/pyproject.toml`       |
 
 **ESLint** - Configured via `eslint-config-next` for Next.js best practices.
+
+**Prettier** - Code formatter for JS/TS/CSS with Tailwind CSS plugin for class sorting.
 
 **ruff** - Fast Python linter that replaces pylint, flake8, isort, and black. Runs both linting and formatting.
 
@@ -68,7 +75,7 @@ bun run test:python  # pytest
 - **Python Runtime**: Vercel Python Functions for circadian model (Arcascope library)
 - **Analytics**: Vercel Analytics (respects GPC and DNT privacy signals)
 - **Testing**: Vitest for TypeScript, pytest for Python
-- **Linting**: ESLint for TypeScript, ruff + mypy for Python
+- **Linting**: ESLint + Prettier for TypeScript, ruff + mypy for Python
 
 ## Architecture
 
@@ -118,6 +125,7 @@ design_docs/          # Product specifications and design decisions
 ### Schedule Generation
 
 Schedules are computed by Python functions using the Arcascope `circadian` library (Forger99 model). The scheduler uses a **phase-based model** (not calendar days) to properly handle flight timing:
+
 - **Preparation** - Full days before departure
 - **Pre-Departure** - Departure day, before flight (ends 3h before departure)
 - **In-Transit** - On the plane (with sleep windows for 12+ hour flights)
@@ -125,6 +133,7 @@ Schedules are computed by Python functions using the Arcascope `circadian` libra
 - **Adaptation** - Full days at destination
 
 Key intervention types:
+
 - `light_seek` / `light_avoid` - Light exposure windows
 - `melatonin` - Optimal melatonin timing
 - `caffeine_ok` / `caffeine_cutoff` / `caffeine_boost` - Caffeine strategy
@@ -138,6 +147,7 @@ Public read-only endpoint at `/api/mcp` for Claude to answer jet lag questions. 
 ## Environment Variables
 
 Required:
+
 - `DATABASE_URL` - PostgreSQL connection string
 - `NEXTAUTH_URL` - App URL (https://dawnward.app)
 - `NEXTAUTH_SECRET` - Session encryption key
@@ -150,6 +160,7 @@ Required:
 **Microcopy**: "Generate My Schedule" not "Submit", "Add to Calendar" not "Sync", "Sign in with Google" not "Login"
 
 **Semantic Colors** (for intervention styling):
+
 - Light interventions → Sunrise/amber `#F4A574`
 - Caffeine → Sunset/orange `#E8B456`
 - Melatonin → Sage/green `#7DBB9C`
@@ -167,17 +178,20 @@ Required:
 This project uses two Claude Code plugins that should be invoked for significant work:
 
 **`/frontend-design`** - Use when building or modifying UI components
+
 - Designs distinctive, production-grade interfaces
 - Ensures brand consistency (colors, typography, spacing)
 - Avoids generic "AI slop" aesthetics
 
 **`/feature-dev`** - Use when implementing new features
+
 - Guided feature development with codebase understanding
 - Explores existing patterns before writing code
 - Asks clarifying questions, designs architecture, then implements
 - Includes code review phase
 
 **When to use them:**
+
 - Building new components or pages → `/frontend-design`
 - Implementing backend features, APIs, or complex logic → `/feature-dev`
 - Small fixes, typos, or simple changes → No skill needed
@@ -185,6 +199,7 @@ This project uses two Claude Code plugins that should be invoked for significant
 ## Testing
 
 **TypeScript (Vitest)**: ~170 tests covering utility functions
+
 - `src/lib/__tests__/time-utils.test.ts` - Date/time formatting, timezone-aware operations
 - `src/lib/__tests__/timezone-utils.test.ts` - Flight duration calculation, timezone shifts
 - `src/lib/__tests__/airport-search.test.ts` - Search scoring, matching, filtering
@@ -195,6 +210,7 @@ This project uses two Claude Code plugins that should be invoked for significant
 - `src/app/api/schedule/generate/__tests__/route.test.ts` - API route data construction
 
 **Python (pytest)**: ~135 tests covering schedule generation (6-layer validation strategy)
+
 - `test_model_parity.py` - CBTmin trajectory, phase shift magnitude, daily shift targets
 - `test_physiological_bounds.py` - Max shift rates, antidromic risk, sleep duration, melatonin timing
 - `test_prc_consistency.py` - Light/melatonin PRC alignment, avoidance zones
@@ -207,6 +223,7 @@ This project uses two Claude Code plugins that should be invoked for significant
 ## Design Documents
 
 See `design_docs/` for detailed specifications:
+
 - `decisions-overview.md` - All key decisions in one place
 - `backend-design.md` - API routes, database schema, MCP tools
 - `auth-design.md` - NextAuth.js setup, progressive signup flow
@@ -214,6 +231,7 @@ See `design_docs/` for detailed specifications:
 - `science-methodology.md` - Circadian science foundation (PRCs, melatonin, caffeine, in-flight sleep, multi-leg trips)
 
 ## Visual and Branding Design Documents
+
 - `design_docs/brand.md` - All of Dawnward's color, tone and style
 - `design_docs/frontend-design.md` - Screen structure, components, user flows, and responsive behavior
 - `design_docs/ui-v2-homepage-only.html` - An initial static mockup of the homepage which is small enough to fit into your context window

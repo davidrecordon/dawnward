@@ -57,7 +57,7 @@ export function ScheduleHeader({
     : "";
 
   return (
-    <Card className="bg-white/90 backdrop-blur-sm border-white/50 shadow-sm overflow-hidden">
+    <Card className="overflow-hidden border-white/50 bg-white/90 shadow-sm backdrop-blur-sm">
       {/* Decorative top gradient */}
       <div className="h-1 bg-gradient-to-r from-sky-400 via-indigo-400 to-violet-400" />
 
@@ -66,15 +66,15 @@ export function ScheduleHeader({
           {/* Left column - trip info */}
           <div className="space-y-1.5">
             <div className="flex items-center gap-3">
-              <span className="text-2xl font-bold text-slate-800 tracking-tight">
+              <span className="text-2xl font-bold tracking-tight text-slate-800">
                 {request.origin.code}
               </span>
               <div className="flex items-center gap-1.5 text-slate-400">
-                <div className="w-8 h-px bg-slate-300" />
+                <div className="h-px w-8 bg-slate-300" />
                 <Plane className="h-4 w-4" />
-                <div className="w-8 h-px bg-slate-300" />
+                <div className="h-px w-8 bg-slate-300" />
               </div>
-              <span className="text-2xl font-bold text-slate-800 tracking-tight">
+              <span className="text-2xl font-bold tracking-tight text-slate-800">
                 {request.destination.code}
               </span>
               <Badge className={badgeClass}>{shiftBadgeText}</Badge>
@@ -89,7 +89,7 @@ export function ScheduleHeader({
 
           {/* Right column - contextual message */}
           {isPreTrip && scheduleStartDate && (
-            <div className="flex items-center gap-3 pl-6 border-l border-slate-200">
+            <div className="flex items-center gap-3 border-l border-slate-200 pl-6">
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-sky-400 to-indigo-500 shadow-md shadow-sky-500/20">
                 <Compass className="h-5 w-5 text-white" />
               </div>

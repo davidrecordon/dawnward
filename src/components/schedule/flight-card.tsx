@@ -37,7 +37,7 @@ export function FlightCard({
     : formatTime(time);
 
   return (
-    <Card className="bg-gradient-to-r from-sky-50 to-sky-100/80 border-sky-200/50 shadow-sm hover:shadow-md transition-all duration-300 hover:translate-x-1">
+    <Card className="border-sky-200/50 bg-gradient-to-r from-sky-50 to-sky-100/80 shadow-sm transition-all duration-300 hover:translate-x-1 hover:shadow-md">
       <CardContent className="flex items-center gap-4 py-4">
         <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-sky-500 ring-2 ring-sky-300/50">
           <Icon className="h-5 w-5 text-white" />
@@ -49,7 +49,7 @@ export function FlightCard({
           </div>
           <p className="text-sm text-sky-600">{subtitle}</p>
         </div>
-        <Badge className="shrink-0 bg-sky-500 hover:bg-sky-500 text-white font-medium">
+        <Badge className="shrink-0 bg-sky-500 font-medium text-white hover:bg-sky-500">
           {timeDisplay}
         </Badge>
       </CardContent>

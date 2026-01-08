@@ -18,7 +18,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className="min-h-screen bg-dawnward-gradient text-slate-800 antialiased"
+        className="bg-dawnward-gradient min-h-screen text-slate-800 antialiased"
         style={{ fontFamily: "system-ui, -apple-system, sans-serif" }}
       >
         <div className="flex min-h-screen flex-col">

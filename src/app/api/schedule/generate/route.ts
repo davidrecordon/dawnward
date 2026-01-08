@@ -79,7 +79,11 @@ function validateRequest(body: GenerateRequest): string | null {
   }
 
   // Prep days validation
-  if (typeof body.prep_days !== "number" || body.prep_days < 1 || body.prep_days > 7) {
+  if (
+    typeof body.prep_days !== "number" ||
+    body.prep_days < 1 ||
+    body.prep_days > 7
+  ) {
     return `prep_days must be a number between 1 and 7`;
   }
 
@@ -175,9 +179,13 @@ print(json.dumps(to_dict(response)))
 
     // Execute Python with arguments (not shell interpolation)
     const schedule = await new Promise<string>((resolve, reject) => {
-      const python = spawn("python3", ["-c", pythonScript, pythonPath, tempFilePath!], {
-        timeout: 30000,
-      });
+      const python = spawn(
+        "python3",
+        ["-c", pythonScript, pythonPath, tempFilePath!],
+        {
+          timeout: 30000,
+        }
+      );
 
       let stdout = "";
       let stderr = "";
@@ -193,7 +201,9 @@ print(json.dumps(to_dict(response)))
       python.on("close", (code) => {
         if (code !== 0) {
           console.error("Python stderr:", stderr);
-          reject(new Error(`Python process exited with code ${code}: ${stderr}`));
+          reject(
+            new Error(`Python process exited with code ${code}: ${stderr}`)
+          );
         } else {
           resolve(stdout.trim());
         }
@@ -234,7 +244,10 @@ print(json.dumps(to_dict(response)))
       } catch (unlinkError) {
         // Log cleanup failures for monitoring - could indicate permission issues
         // or accumulating files in /tmp
-        console.error(`Failed to cleanup temp file ${tempFilePath}:`, unlinkError);
+        console.error(
+          `Failed to cleanup temp file ${tempFilePath}:`,
+          unlinkError
+        );
       }
     }
   }

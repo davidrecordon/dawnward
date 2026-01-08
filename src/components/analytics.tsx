@@ -8,12 +8,17 @@ import { Analytics as VercelAnalytics } from "@vercel/analytics/react";
 function hasOptedOut(): boolean {
   if (typeof window === "undefined") return false;
 
-  if ((navigator as unknown as { globalPrivacyControl?: boolean }).globalPrivacyControl === true) {
+  if (
+    (navigator as unknown as { globalPrivacyControl?: boolean })
+      .globalPrivacyControl === true
+  ) {
     return true;
   }
 
   // DNT is the legacy signal (less standardized but still respected)
-  const dnt = navigator.doNotTrack || (window as unknown as { doNotTrack?: string }).doNotTrack;
+  const dnt =
+    navigator.doNotTrack ||
+    (window as unknown as { doNotTrack?: string }).doNotTrack;
   if (dnt === "1" || dnt === "yes") {
     return true;
   }

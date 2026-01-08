@@ -1,7 +1,10 @@
 "use client";
 
 import { getDayLabel } from "@/lib/intervention-utils";
-import { dayHasMultipleTimezones, toSortableMinutes } from "@/lib/schedule-utils";
+import {
+  dayHasMultipleTimezones,
+  toSortableMinutes,
+} from "@/lib/schedule-utils";
 import {
   formatLongDate,
   getCurrentTimeInTimezone,
@@ -27,7 +30,13 @@ interface DaySectionProps {
 
 // Items with time (used during sorting)
 type TimedItem =
-  | { kind: "intervention"; time: string; data: Intervention; index: number; timezone?: string }
+  | {
+      kind: "intervention";
+      time: string;
+      data: Intervention;
+      index: number;
+      timezone?: string;
+    }
   | { kind: "departure"; time: string; timezone: string }
   | { kind: "arrival"; time: string; timezone: string }
   | { kind: "now"; time: string; timezone: string };
@@ -75,7 +84,11 @@ export function DaySection({
     items.push({ kind: "departure", time: departureTime, timezone: origin.tz });
   }
   if (daySchedule.date === arrivalDate) {
-    items.push({ kind: "arrival", time: arrivalTime, timezone: destination.tz });
+    items.push({
+      kind: "arrival",
+      time: arrivalTime,
+      timezone: destination.tz,
+    });
   }
 
   // Add "now" marker if this is today, with phase-aware timezone
@@ -94,17 +107,43 @@ export function DaySection({
   // Flight events act as phase boundaries: departure ends pre-departure, arrival starts post-arrival
   items.sort((a, b) => {
     // Get timezone for each item
-    const rawTzA = a.kind === "intervention" ? a.timezone : a.kind === "departure" ? origin.tz : a.kind === "arrival" ? destination.tz : a.kind === "now" ? a.timezone : daySchedule.timezone;
-    const rawTzB = b.kind === "intervention" ? b.timezone : b.kind === "departure" ? origin.tz : b.kind === "arrival" ? destination.tz : b.kind === "now" ? b.timezone : daySchedule.timezone;
+    const rawTzA =
+      a.kind === "intervention"
+        ? a.timezone
+        : a.kind === "departure"
+          ? origin.tz
+          : a.kind === "arrival"
+            ? destination.tz
+            : a.kind === "now"
+              ? a.timezone
+              : daySchedule.timezone;
+    const rawTzB =
+      b.kind === "intervention"
+        ? b.timezone
+        : b.kind === "departure"
+          ? origin.tz
+          : b.kind === "arrival"
+            ? destination.tz
+            : b.kind === "now"
+              ? b.timezone
+              : daySchedule.timezone;
     // Normalize undefined to daySchedule.timezone for interventions without timezone
     const tzA = rawTzA ?? daySchedule.timezone;
     const tzB = rawTzB ?? daySchedule.timezone;
 
     // Flight events: departure comes before in-transit items
-    if (a.kind === "departure" && b.kind === "intervention" && tzB !== origin.tz) {
+    if (
+      a.kind === "departure" &&
+      b.kind === "intervention" &&
+      tzB !== origin.tz
+    ) {
       return -1; // Departure before in-transit interventions
     }
-    if (b.kind === "departure" && a.kind === "intervention" && tzA !== origin.tz) {
+    if (
+      b.kind === "departure" &&
+      a.kind === "intervention" &&
+      tzA !== origin.tz
+    ) {
       return 1; // Departure before in-transit interventions
     }
 
@@ -126,7 +165,8 @@ export function DaySection({
     // Same timezone: sort by time with late-night awareness
     const aType = a.kind === "intervention" ? a.data.type : undefined;
     const bType = b.kind === "intervention" ? b.data.type : undefined;
-    const timeCompare = toSortableMinutes(a.time, aType) - toSortableMinutes(b.time, bType);
+    const timeCompare =
+      toSortableMinutes(a.time, aType) - toSortableMinutes(b.time, bType);
     if (timeCompare !== 0) {
       return timeCompare;
     }
@@ -140,7 +180,9 @@ export function DaySection({
   // Check interventions plus flight events
   const hasMultipleTimezones =
     dayHasMultipleTimezones(daySchedule.items) ||
-    (daySchedule.date === departureDate && daySchedule.date === arrivalDate && origin.tz !== destination.tz);
+    (daySchedule.date === departureDate &&
+      daySchedule.date === arrivalDate &&
+      origin.tz !== destination.tz);
 
   // Insert timezone transitions when timezone changes between consecutive items
   const itemsWithTransitions: ScheduleItem[] = [];
@@ -188,7 +230,7 @@ export function DaySection({
     <section id={`day-${daySchedule.day}`} className="relative scroll-mt-15">
       {/* Sticky day header */}
       <div className="sticky top-0 z-20 pt-4 pb-3">
-        <div className="overflow-hidden rounded-lg bg-white/90 backdrop-blur-sm border border-white/50 shadow-sm">
+        <div className="overflow-hidden rounded-lg border border-white/50 bg-white/90 shadow-sm backdrop-blur-sm">
           {/* Decorative top gradient */}
           <div className="h-0.5 bg-gradient-to-r from-sky-400 via-indigo-400 to-violet-400" />
 
@@ -200,7 +242,7 @@ export function DaySection({
               {getDayLabel(daySchedule.day, daySchedule.hasSameDayArrival)}
             </span>
             <span className="text-slate-400">•</span>
-            <span className="text-slate-600 font-medium">
+            <span className="font-medium text-slate-600">
               {formatLongDate(daySchedule.date)}
             </span>
           </div>
@@ -208,9 +250,9 @@ export function DaySection({
       </div>
 
       {/* Timeline container */}
-      <div className="relative pl-8 pb-8">
+      <div className="relative pb-8 pl-8">
         {/* Vertical timeline line - gradient from amber to purple */}
-        <div className="absolute left-[11px] top-0 bottom-0 w-0.5 bg-gradient-to-b from-amber-300 via-sky-300 to-violet-300 rounded-full" />
+        <div className="absolute top-0 bottom-0 left-[11px] w-0.5 rounded-full bg-gradient-to-b from-amber-300 via-sky-300 to-violet-300" />
 
         {/* Items */}
         <div className="space-y-3">
@@ -246,7 +288,7 @@ export function DaySection({
               <div key={itemKey} className="relative">
                 {/* Timeline dot */}
                 <div
-                  className={`absolute -left-8 top-5 h-3 w-3 rounded-full transition-all duration-300 ${getDotStyle()}`}
+                  className={`absolute top-5 -left-8 h-3 w-3 rounded-full transition-all duration-300 ${getDotStyle()}`}
                   style={{ transform: "translateX(5.5px)" }}
                 />
 
@@ -288,7 +330,7 @@ export function DaySection({
 
         {/* Empty day message */}
         {itemsWithTransitions.length === 0 && (
-          <div className="relative py-6 text-center text-slate-400 text-sm">
+          <div className="relative py-6 text-center text-sm text-slate-400">
             No scheduled interventions for this day
           </div>
         )}

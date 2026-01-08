@@ -23,15 +23,15 @@ export function TimezoneTransition({
     <div className="relative py-4">
       <div className="flex items-center gap-3">
         {/* Left line */}
-        <div className="flex-1 h-px bg-slate-200" />
+        <div className="h-px flex-1 bg-slate-200" />
 
         {/* Timezone transition text */}
-        <span className="text-xs text-slate-400 font-medium tracking-wide">
+        <span className="text-xs font-medium tracking-wide text-slate-400">
           {fromAbbr} → {toAbbr}
         </span>
 
         {/* Right line */}
-        <div className="flex-1 h-px bg-slate-200" />
+        <div className="h-px flex-1 bg-slate-200" />
       </div>
     </div>
   );

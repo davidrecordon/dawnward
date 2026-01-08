@@ -9,6 +9,7 @@ Dawnward uses a progressive sign-up model: users can generate jet lag plans with
 **Google only** via NextAuth.js v5.
 
 Rationale:
+
 - Target users likely have Google accounts
 - Enables Calendar integration with single OAuth flow
 - Simplifies implementation (no password management, email verification, etc.)
@@ -22,11 +23,11 @@ profile
 https://www.googleapis.com/auth/calendar.events
 ```
 
-| Scope | Purpose |
-|-------|---------|
-| `openid` | Required for OIDC |
-| `email` | User identification, display |
-| `profile` | Display name, avatar |
+| Scope             | Purpose                                        |
+| ----------------- | ---------------------------------------------- |
+| `openid`          | Required for OIDC                              |
+| `email`           | User identification, display                   |
+| `profile`         | Display name, avatar                           |
 | `calendar.events` | Create/update/delete events on user's calendar |
 
 **Note:** `calendar.events` is write-only. We push intervention reminders to the calendar but never read calendar data. This is intentional — users don't need to trust us with their schedule; we only add our events.
@@ -79,8 +80,8 @@ While anonymous, trip data lives in `localStorage`:
 
 ```typescript
 interface LocalTrip {
-  id: string;              // Client-generated UUID
-  createdAt: string;       // ISO timestamp
+  id: string; // Client-generated UUID
+  createdAt: string; // ISO timestamp
   legs: LocalLeg[];
   prepDays: number;
   schedule?: ScheduleData; // Generated plan
@@ -97,7 +98,7 @@ interface LocalLeg {
 }
 
 // localStorage key
-const STORAGE_KEY = 'dawnward_trips';
+const STORAGE_KEY = "dawnward_trips";
 ```
 
 ### Migration on Sign-In
@@ -107,17 +108,17 @@ When a user signs in for the first time:
 ```typescript
 async function migrateLocalTrips(userId: string) {
   const localTrips = getLocalTrips();
-  
+
   for (const localTrip of localTrips) {
     // Create trip in database
     const dbTrip = await db.trips.create({
       data: {
         userId,
         prepDays: localTrip.prepDays,
-        status: 'planned',
-      }
+        status: "planned",
+      },
     });
-    
+
     // Create legs
     for (const leg of localTrip.legs) {
       await db.legs.create({
@@ -130,10 +131,10 @@ async function migrateLocalTrips(userId: string) {
           destAirport: leg.destAirport,
           departureDatetime: leg.departureDatetime,
           arrivalDatetime: leg.arrivalDatetime,
-        }
+        },
       });
     }
-    
+
     // Migrate schedule if exists
     if (localTrip.schedule) {
       await db.schedules.create({
@@ -142,11 +143,11 @@ async function migrateLocalTrips(userId: string) {
           modelVersion: localTrip.schedule.modelVersion,
           inputsHash: computeInputsHash(localTrip),
           scheduleData: localTrip.schedule,
-        }
+        },
       });
     }
   }
-  
+
   // Clear localStorage after successful migration
   clearLocalTrips();
 }
@@ -176,8 +177,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             "profile",
             "https://www.googleapis.com/auth/calendar.events",
           ].join(" "),
-          access_type: "offline",  // Get refresh token
-          prompt: "consent",       // Always show consent screen
+          access_type: "offline", // Get refresh token
+          prompt: "consent", // Always show consent screen
         },
       },
     }),
@@ -292,17 +293,17 @@ export async function GET() {
 export async function POST(req: Request) {
   const user = await getOptionalUser();
   const body = await req.json();
-  
+
   if (user) {
     // Save to database
     const trip = await db.trips.create({ ... });
     return Response.json(trip);
   } else {
     // Return data for client to store in localStorage
-    return Response.json({ 
+    return Response.json({
       id: crypto.randomUUID(),
       ...body,
-      _storage: 'local' 
+      _storage: 'local'
     });
   }
 }
@@ -322,17 +323,17 @@ export async function getCalendarClient() {
   if (!session?.accessToken) {
     throw new Error("No access token");
   }
-  
+
   const oauth2Client = new google.auth.OAuth2(
     process.env.GOOGLE_CLIENT_ID,
     process.env.GOOGLE_CLIENT_SECRET
   );
-  
+
   oauth2Client.setCredentials({
     access_token: session.accessToken,
     refresh_token: session.refreshToken,
   });
-  
+
   // googleapis handles refresh automatically
   return google.calendar({ version: "v3", auth: oauth2Client });
 }
@@ -347,12 +348,10 @@ export async function getCalendarClient() {
 export function SignInPrompt() {
   return (
     <div className="rounded-lg bg-gradient-to-r from-sky-50 to-amber-50 p-6">
-      <h3 className="font-semibold text-gray-900">
-        Save your plan
-      </h3>
+      <h3 className="font-semibold text-gray-900">Save your plan</h3>
       <p className="mt-1 text-sm text-gray-600">
-        Sign in to save this trip, sync to Google Calendar, 
-        and access from any device.
+        Sign in to save this trip, sync to Google Calendar, and access from any
+        device.
       </p>
       <SignInButton className="mt-4" />
     </div>
@@ -374,7 +373,7 @@ export function SignInButton({ className }: { className?: string }) {
       className={cn(
         "inline-flex items-center gap-2 rounded-md bg-white px-4 py-2",
         "border border-gray-200 shadow-sm",
-        "hover:bg-gray-50 transition-colors",
+        "transition-colors hover:bg-gray-50",
         className
       )}
     >
@@ -393,11 +392,11 @@ import { auth } from "@/auth";
 
 export async function Nav() {
   const session = await auth();
-  
+
   return (
     <nav>
       <Link href="/">New Trip</Link>
-      
+
       {session ? (
         <>
           <Link href="/trips">My Trips</Link>
@@ -414,18 +413,18 @@ export async function Nav() {
 
 ## Protected Routes
 
-| Route | Auth Required | Notes |
-|-------|---------------|-------|
-| `/` | No | Landing / new trip form |
-| `/plan` | No | Schedule view (works with localStorage) |
-| `/trips` | Yes | Trip history |
-| `/trips/[id]` | Yes | Specific trip (must own) |
-| `/settings` | Yes | User preferences |
-| `/api/trips` GET | Yes | List user's trips |
-| `/api/trips` POST | No | Create trip (saves to DB if auth'd) |
-| `/api/trips/[id]/schedule` | No | Generate schedule (stateless) |
-| `/api/trips/[id]/calendar` | Yes | Push to Google Calendar |
-| `/api/mcp/*` | No | Public MCP interface |
+| Route                      | Auth Required | Notes                                   |
+| -------------------------- | ------------- | --------------------------------------- |
+| `/`                        | No            | Landing / new trip form                 |
+| `/plan`                    | No            | Schedule view (works with localStorage) |
+| `/trips`                   | Yes           | Trip history                            |
+| `/trips/[id]`              | Yes           | Specific trip (must own)                |
+| `/settings`                | Yes           | User preferences                        |
+| `/api/trips` GET           | Yes           | List user's trips                       |
+| `/api/trips` POST          | No            | Create trip (saves to DB if auth'd)     |
+| `/api/trips/[id]/schedule` | No            | Generate schedule (stateless)           |
+| `/api/trips/[id]/calendar` | Yes           | Push to Google Calendar                 |
+| `/api/mcp/*`               | No            | Public MCP interface                    |
 
 ## Error Handling
 
@@ -433,10 +432,10 @@ export async function Nav() {
 
 ```typescript
 // app/auth/error/page.tsx
-export default function AuthError({ 
-  searchParams 
-}: { 
-  searchParams: { error?: string } 
+export default function AuthError({
+  searchParams
+}: {
+  searchParams: { error?: string }
 }) {
   const messages: Record<string, string> = {
     OAuthSignin: "Error starting sign-in. Please try again.",
@@ -444,7 +443,7 @@ export default function AuthError({
     OAuthAccountNotLinked: "This email is already linked to another account.",
     default: "An error occurred. Please try again.",
   };
-  
+
   return (
     <div className="text-center">
       <h1>Sign-in Error</h1>

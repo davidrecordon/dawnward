@@ -4,16 +4,76 @@ import type { Airport } from "@/types/airport";
 
 // Sample airports for testing
 const mockAirports: Airport[] = [
-  { code: "SFO", name: "San Francisco International", city: "San Francisco", country: "US", tz: "America/Los_Angeles" },
-  { code: "LAX", name: "Los Angeles International", city: "Los Angeles", country: "US", tz: "America/Los_Angeles" },
-  { code: "LHR", name: "London Heathrow", city: "London", country: "GB", tz: "Europe/London" },
-  { code: "LGW", name: "London Gatwick", city: "London", country: "GB", tz: "Europe/London" },
-  { code: "JFK", name: "John F Kennedy International", city: "New York", country: "US", tz: "America/New_York" },
-  { code: "NRT", name: "Narita International", city: "Tokyo", country: "JP", tz: "Asia/Tokyo" },
-  { code: "HND", name: "Haneda Airport", city: "Tokyo", country: "JP", tz: "Asia/Tokyo" },
-  { code: "CDG", name: "Charles de Gaulle", city: "Paris", country: "FR", tz: "Europe/Paris" },
-  { code: "SAN", name: "San Diego International", city: "San Diego", country: "US", tz: "America/Los_Angeles" },
-  { code: "SJC", name: "San Jose International", city: "San Jose", country: "US", tz: "America/Los_Angeles" },
+  {
+    code: "SFO",
+    name: "San Francisco International",
+    city: "San Francisco",
+    country: "US",
+    tz: "America/Los_Angeles",
+  },
+  {
+    code: "LAX",
+    name: "Los Angeles International",
+    city: "Los Angeles",
+    country: "US",
+    tz: "America/Los_Angeles",
+  },
+  {
+    code: "LHR",
+    name: "London Heathrow",
+    city: "London",
+    country: "GB",
+    tz: "Europe/London",
+  },
+  {
+    code: "LGW",
+    name: "London Gatwick",
+    city: "London",
+    country: "GB",
+    tz: "Europe/London",
+  },
+  {
+    code: "JFK",
+    name: "John F Kennedy International",
+    city: "New York",
+    country: "US",
+    tz: "America/New_York",
+  },
+  {
+    code: "NRT",
+    name: "Narita International",
+    city: "Tokyo",
+    country: "JP",
+    tz: "Asia/Tokyo",
+  },
+  {
+    code: "HND",
+    name: "Haneda Airport",
+    city: "Tokyo",
+    country: "JP",
+    tz: "Asia/Tokyo",
+  },
+  {
+    code: "CDG",
+    name: "Charles de Gaulle",
+    city: "Paris",
+    country: "FR",
+    tz: "Europe/Paris",
+  },
+  {
+    code: "SAN",
+    name: "San Diego International",
+    city: "San Diego",
+    country: "US",
+    tz: "America/Los_Angeles",
+  },
+  {
+    code: "SJC",
+    name: "San Jose International",
+    city: "San Jose",
+    country: "US",
+    tz: "America/Los_Angeles",
+  },
 ];
 
 describe("searchAirports", () => {
@@ -63,8 +123,8 @@ describe("searchAirports", () => {
     it("finds airports by city name", () => {
       const results = searchAirports("London", mockAirports);
       expect(results.length).toBe(2);
-      expect(results.map(a => a.code)).toContain("LHR");
-      expect(results.map(a => a.code)).toContain("LGW");
+      expect(results.map((a) => a.code)).toContain("LHR");
+      expect(results.map((a) => a.code)).toContain("LGW");
     });
 
     it("city start match ranks higher than city contains", () => {
@@ -72,7 +132,7 @@ describe("searchAirports", () => {
       const results = searchAirports("San", mockAirports);
       expect(results.length).toBe(3);
       // All should be San* cities
-      expect(results.every(a => a.city.startsWith("San"))).toBe(true);
+      expect(results.every((a) => a.city.startsWith("San"))).toBe(true);
     });
 
     it("finds airports with partial city match", () => {
@@ -97,9 +157,27 @@ describe("searchAirports", () => {
     it("exact code match gets highest priority", () => {
       // Create test data that exercises scoring paths
       const testAirports: Airport[] = [
-        { code: "XYZ", name: "Some Airport", city: "Abcville", country: "US", tz: "UTC" },
-        { code: "ABC", name: "Test Airport", city: "Somewhere", country: "US", tz: "UTC" },
-        { code: "DEF", name: "Airport ABC", city: "Other", country: "US", tz: "UTC" },
+        {
+          code: "XYZ",
+          name: "Some Airport",
+          city: "Abcville",
+          country: "US",
+          tz: "UTC",
+        },
+        {
+          code: "ABC",
+          name: "Test Airport",
+          city: "Somewhere",
+          country: "US",
+          tz: "UTC",
+        },
+        {
+          code: "DEF",
+          name: "Airport ABC",
+          city: "Other",
+          country: "US",
+          tz: "UTC",
+        },
       ];
 
       const results = searchAirports("ABC", testAirports);
@@ -110,8 +188,20 @@ describe("searchAirports", () => {
 
     it("code prefix ranks higher than city contains", () => {
       const testAirports: Airport[] = [
-        { code: "XYZ", name: "Some Airport", city: "Abctown", country: "US", tz: "UTC" },
-        { code: "ABD", name: "Another Airport", city: "Place", country: "US", tz: "UTC" },
+        {
+          code: "XYZ",
+          name: "Some Airport",
+          city: "Abctown",
+          country: "US",
+          tz: "UTC",
+        },
+        {
+          code: "ABD",
+          name: "Another Airport",
+          city: "Place",
+          country: "US",
+          tz: "UTC",
+        },
       ];
 
       const results = searchAirports("AB", testAirports);

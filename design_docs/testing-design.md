@@ -20,27 +20,27 @@ The following papers form the scientific basis for our validation criteria:
 
 **Mathematical Model (What We're Testing Against)**
 
-| Paper | Key Contribution |
-|-------|------------------|
-| Forger et al. (1999), "A simpler model of the human circadian pacemaker," *J Biol Rhythms* | Defines the Forger99 model equations we use via Arcascope |
-| Kronauer et al. (1999), "Quantifying human circadian pacemaker response to brief, extended, and repeated light stimuli," *J Biol Rhythms* | Establishes light input parameters and response characteristics |
-| Jewett et al. (1999), "Revised limit cycle oscillator model," *J Biol Rhythms* | Provides baseline oscillator dynamics |
+| Paper                                                                                                                                     | Key Contribution                                                |
+| ----------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
+| Forger et al. (1999), "A simpler model of the human circadian pacemaker," _J Biol Rhythms_                                                | Defines the Forger99 model equations we use via Arcascope       |
+| Kronauer et al. (1999), "Quantifying human circadian pacemaker response to brief, extended, and repeated light stimuli," _J Biol Rhythms_ | Establishes light input parameters and response characteristics |
+| Jewett et al. (1999), "Revised limit cycle oscillator model," _J Biol Rhythms_                                                            | Provides baseline oscillator dynamics                           |
 
 **Phase Response Curves (Validation Benchmarks)**
 
-| Paper | Key Contribution |
-|-------|------------------|
-| Khalsa et al. (2003), "A phase response curve to single bright light pulses," *J Physiol* | Gold-standard human PRC for bright light; ~3 hour maximum phase shift |
-| Revell et al. (2012), "Human phase response curve to intermittent blue light," *J Physiol* | Validates response to shorter-wavelength light |
-| Burgess et al. (2010), "Human phase response curves to three days of melatonin: 0.5 mg vs 3.0 mg," *JCEM* | Melatonin PRC; timing relative to DLMO |
+| Paper                                                                                                     | Key Contribution                                                      |
+| --------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| Khalsa et al. (2003), "A phase response curve to single bright light pulses," _J Physiol_                 | Gold-standard human PRC for bright light; ~3 hour maximum phase shift |
+| Revell et al. (2012), "Human phase response curve to intermittent blue light," _J Physiol_                | Validates response to shorter-wavelength light                        |
+| Burgess et al. (2010), "Human phase response curves to three days of melatonin: 0.5 mg vs 3.0 mg," _JCEM_ | Melatonin PRC; timing relative to DLMO                                |
 
 **Real-World Jet Lag Applications (Expected Outcomes)**
 
-| Paper | Key Contribution |
-|-------|------------------|
-| Dean et al. (2009), "Taking the Lag out of Jet Lag through Model-Based Schedule Design," *PLOS Comp Biol* | Demonstrates model-based schedule optimization; provides validation scenarios |
-| Serkh & Forger (2020), "Optimal adjustment of the human circadian clock in the real world," *PLOS Comp Biol* | Updates optimal control approach; real-world constraints |
-| Eastman & Burgess (2009), "How to Travel the World Without Jet Lag," *Sleep Med Clin* | Practical guidelines we can use as sanity checks |
+| Paper                                                                                                        | Key Contribution                                                              |
+| ------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------- |
+| Dean et al. (2009), "Taking the Lag out of Jet Lag through Model-Based Schedule Design," _PLOS Comp Biol_    | Demonstrates model-based schedule optimization; provides validation scenarios |
+| Serkh & Forger (2020), "Optimal adjustment of the human circadian clock in the real world," _PLOS Comp Biol_ | Updates optimal control approach; real-world constraints                      |
+| Eastman & Burgess (2009), "How to Travel the World Without Jet Lag," _Sleep Med Clin_                        | Practical guidelines we can use as sanity checks                              |
 
 ---
 
@@ -79,6 +79,7 @@ The following papers form the scientific basis for our validation criteria:
 ### Test Methodology
 
 For each test case, we run the same light schedule through both:
+
 1. Dawnward's recommendation engine
 2. Direct Arcascope `circadian` library calls
 
@@ -86,11 +87,11 @@ We then compare the resulting CBT_min (core body temperature minimum) trajectory
 
 ### Acceptance Criteria
 
-| Metric | Threshold | Rationale |
-|--------|-----------|-----------|
-| Phase difference at each hour | ≤ 5 minutes | Accounts for numerical precision |
-| Final phase difference | ≤ 10 minutes | Allows minor rounding in schedule presentation |
-| Trajectory correlation (r²) | ≥ 0.999 | Ensures shape matches |
+| Metric                        | Threshold    | Rationale                                      |
+| ----------------------------- | ------------ | ---------------------------------------------- |
+| Phase difference at each hour | ≤ 5 minutes  | Accounts for numerical precision               |
+| Final phase difference        | ≤ 10 minutes | Allows minor rounding in schedule presentation |
+| Trajectory correlation (r²)   | ≥ 0.999      | Ensures shape matches                          |
 
 ### Test Cases
 
@@ -117,7 +118,7 @@ Expected: ~2 hours of phase advance over 3 days with morning bright light (Burge
 def test_model_parity(trip_params):
     dawnward_trajectory = dawnward.generate_schedule(trip_params).phase_trajectory
     arcascope_trajectory = circadian.simulate(trip_params.to_light_schedule())
-    
+
     for hour in range(len(dawnward_trajectory)):
         phase_diff = abs(dawnward_trajectory[hour] - arcascope_trajectory[hour])
         assert phase_diff.total_seconds() / 60 <= 5, f"Hour {hour}: {phase_diff} exceeds 5 min"
@@ -131,18 +132,19 @@ def test_model_parity(trip_params):
 
 ### Bounds Derived from Literature
 
-| Parameter | Lower Bound | Upper Bound | Source |
-|-----------|-------------|-------------|--------|
-| Maximum daily phase advance | — | 1.5 hours | Khalsa et al. (2003): PRC shows ~3h max shift with optimal timing; Eastman notes 57 min/day from field data |
-| Maximum daily phase delay | — | 2.0 hours | Khalsa et al. (2003): delays proceed faster; Eastman notes 92 min/day from field data |
-| Melatonin dose | 0.5 mg | 5.0 mg | Burgess et al. (2010): 0.5mg effective; higher doses not more effective |
-| Light avoidance window | 2h before CBT_min | 2h after CBT_min | Dean et al. (2009): critical window for avoiding antidromic shifts |
-| Minimum sleep duration | 6 hours | — | Serkh & Forger (2020): constraint in optimal control |
+| Parameter                   | Lower Bound       | Upper Bound      | Source                                                                                                      |
+| --------------------------- | ----------------- | ---------------- | ----------------------------------------------------------------------------------------------------------- |
+| Maximum daily phase advance | —                 | 1.5 hours        | Khalsa et al. (2003): PRC shows ~3h max shift with optimal timing; Eastman notes 57 min/day from field data |
+| Maximum daily phase delay   | —                 | 2.0 hours        | Khalsa et al. (2003): delays proceed faster; Eastman notes 92 min/day from field data                       |
+| Melatonin dose              | 0.5 mg            | 5.0 mg           | Burgess et al. (2010): 0.5mg effective; higher doses not more effective                                     |
+| Light avoidance window      | 2h before CBT_min | 2h after CBT_min | Dean et al. (2009): critical window for avoiding antidromic shifts                                          |
+| Minimum sleep duration      | 6 hours           | —                | Serkh & Forger (2020): constraint in optimal control                                                        |
 
 ### Test Cases
 
 **2.1 - Maximum Phase Shift Rate**  
 For any generated schedule, compute daily phase shift. Assert:
+
 - Advances ≤ 1.5 h/day (with intervention)
 - Delays ≤ 2.0 h/day (with intervention)
 
@@ -150,6 +152,7 @@ For any generated schedule, compute daily phase shift. Assert:
 Verify light exposure recommendations never occur during the "wrong" half of the PRC that would cause opposite-direction shifts.
 
 Per Khalsa et al. (2003):
+
 - Light before CBT_min → phase delays
 - Light after CBT_min → phase advances
 
@@ -160,6 +163,7 @@ No schedule should require less than 6 hours of sleep opportunity per 24-hour pe
 
 **2.4 - Melatonin Timing Validation**  
 Per Burgess et al. (2010):
+
 - For phase advances: melatonin ~5 hours before DLMO (afternoon/early evening)
 - For phase delays: melatonin upon waking (morning)
 
@@ -174,6 +178,7 @@ Verify Dawnward's melatonin recommendations fall within ±1 hour of these window
 ### Light PRC Validation (Khalsa et al., 2003)
 
 The human light PRC has a characteristic shape:
+
 - Maximum delays: ~2.5 hours before CBT_min
 - Crossover (no shift): at CBT_min
 - Maximum advances: ~2.5 hours after CBT_min
@@ -183,22 +188,25 @@ The human light PRC has a characteristic shape:
 
 **3.1 - Light Recommendation Timing Audit**  
 For a sample of generated schedules:
+
 1. Extract all "seek bright light" recommendations
 2. Calculate timing relative to predicted CBT_min
 3. Verify alignment with desired shift direction
 
-| Desired Shift | Expected Light Timing | Tolerance |
-|---------------|----------------------|-----------|
-| Advance | 0 to +4h after CBT_min | ±1 hour |
-| Delay | -4 to 0h before CBT_min | ±1 hour |
+| Desired Shift | Expected Light Timing   | Tolerance |
+| ------------- | ----------------------- | --------- |
+| Advance       | 0 to +4h after CBT_min  | ±1 hour   |
+| Delay         | -4 to 0h before CBT_min | ±1 hour   |
 
 **3.2 - Light Avoidance Timing Audit**  
 For "avoid light" recommendations:
+
 1. Verify avoidance windows cover the PRC region that would cause undesired shifts
 2. Particularly critical: avoiding light during the crossover point and wrong-direction region
 
 **3.3 - Melatonin PRC Validation (Burgess et al., 2010)**  
 Melatonin PRC is approximately opposite to light:
+
 - Advances: afternoon melatonin (before DLMO)
 - Delays: morning melatonin (after CBT_min)
 
@@ -215,24 +223,25 @@ Verify melatonin timing aligns with this.
 **4.1 - Eastman & Burgess "World Tour" Scenarios**  
 From "How to Travel the World Without Jet Lag" (2009):
 
-| Route | Zones | Direction | Expected Adaptation |
-|-------|-------|-----------|---------------------|
-| Chicago → London | 6 | East (Advance) | ~4-5 days post-arrival |
-| Chicago → Tokyo | 14→ treat as 10W | West (Delay) | ~5-6 days post-arrival |
-| NYC → Sydney | 15→ treat as 9W | West (Delay) | ~4-5 days post-arrival |
+| Route            | Zones            | Direction      | Expected Adaptation    |
+| ---------------- | ---------------- | -------------- | ---------------------- |
+| Chicago → London | 6                | East (Advance) | ~4-5 days post-arrival |
+| Chicago → Tokyo  | 14→ treat as 10W | West (Delay)   | ~5-6 days post-arrival |
+| NYC → Sydney     | 15→ treat as 9W  | West (Delay)   | ~4-5 days post-arrival |
 
 **4.2 - Dean et al. (2009) Optimal Schedules**  
 The PLOS Comp Biol paper provides specific optimized schedules:
 
-| Scenario | Pre-flight days | Post-flight days | Total adaptation |
-|----------|-----------------|------------------|------------------|
-| 9h eastward | 3 | 1 | Full entrainment |
-| 12h shift | 4 | 2 | Full entrainment |
+| Scenario    | Pre-flight days | Post-flight days | Total adaptation |
+| ----------- | --------------- | ---------------- | ---------------- |
+| 9h eastward | 3               | 1                | Full entrainment |
+| 12h shift   | 4               | 2                | Full entrainment |
 
 Compare Dawnward output to these benchmarks.
 
 **4.3 - Serkh & Forger (2020) Real-World Constraints**  
 This paper introduces realistic constraints (can't always get bright light, can't always avoid light). Verify Dawnward handles:
+
 - Cloudy/indoor days (reduced lux)
 - Social obligations during recommended sleep
 - Partial compliance scenarios
@@ -274,6 +283,7 @@ Rationale: Insufficient time for meaningful adaptation; shifting would cause dou
 
 **5.3 - Extreme Chronotypes**  
 Test with CBT_min at unusual times:
+
 - Extreme owl: CBT_min at 8 AM
 - Extreme lark: CBT_min at 3 AM
 
@@ -311,32 +321,35 @@ These bugs only surface when you plug in actual departure/arrival times from air
 
 All 20 flights are verified from actual airline schedules (January 2026):
 
-| Route | Flight | Shift | Duration | Key Challenge |
-|-------|--------|-------|----------|---------------|
-| SFO ↔ HNL | HA11/HA12 | 2h | ~5h | Minimal jet lag baseline |
-| SFO ↔ JFK | AA16/AA177 | 3h | ~5.5h | Domestic transcontinental |
-| SFO ↔ LHR | VS19/VS20 | 8h | ~10-11h | Classic transatlantic pattern |
-| SFO ↔ CDG | AF83/AF84 | 9h | ~11h | Afternoon departures |
-| SFO ↔ FRA | LH455/LH454 | 9h | ~11h | Boeing 747-8 routes |
-| SFO ↔ DXB | EK225/EK226 | 12h | ~15-16h | Ultra-long-haul, 12h ambiguous |
-| SFO ↔ SIN | SQ31/SQ32 | 16h→8h | ~16-17h | Date line crossing, delay via shorter path |
-| SFO ↔ HKG | CX879/CX872 | 16h→8h | ~13-15h | **-1 day arrival** (CX872) |
-| SFO ↔ HND | JL1/JL2 | 17h→7h | ~9-11h | Tokyo Haneda, date line crossing |
-| SFO ↔ SYD | QF74/QF73 | 19h→5h | ~14-15h | **+2 day arrival**, evening departure regression |
+| Route     | Flight      | Shift  | Duration | Key Challenge                                    |
+| --------- | ----------- | ------ | -------- | ------------------------------------------------ |
+| SFO ↔ HNL | HA11/HA12   | 2h     | ~5h      | Minimal jet lag baseline                         |
+| SFO ↔ JFK | AA16/AA177  | 3h     | ~5.5h    | Domestic transcontinental                        |
+| SFO ↔ LHR | VS19/VS20   | 8h     | ~10-11h  | Classic transatlantic pattern                    |
+| SFO ↔ CDG | AF83/AF84   | 9h     | ~11h     | Afternoon departures                             |
+| SFO ↔ FRA | LH455/LH454 | 9h     | ~11h     | Boeing 747-8 routes                              |
+| SFO ↔ DXB | EK225/EK226 | 12h    | ~15-16h  | Ultra-long-haul, 12h ambiguous                   |
+| SFO ↔ SIN | SQ31/SQ32   | 16h→8h | ~16-17h  | Date line crossing, delay via shorter path       |
+| SFO ↔ HKG | CX879/CX872 | 16h→8h | ~13-15h  | **-1 day arrival** (CX872)                       |
+| SFO ↔ HND | JL1/JL2     | 17h→7h | ~9-11h   | Tokyo Haneda, date line crossing                 |
+| SFO ↔ SYD | QF74/QF73   | 19h→5h | ~14-15h  | **+2 day arrival**, evening departure regression |
 
 ### Jet Lag Severity Groupings
 
 Tests are organized by jet lag severity for clarity:
 
 **Minimal (2-3h shift):** Hawaii (HA11/HA12, 2h), New York (AA16/AA177, 3h)
+
 - Useful for baseline validation
 - Minimal circadian disruption expected
 
 **Moderate (8-9h shift):** London (VS19/VS20), Paris (AF83/AF84), Frankfurt (LH455/LH454)
+
 - Classic transatlantic patterns
 - Overnight eastward flights with next-day arrivals
 
 **Severe (12-17h shift):** Dubai (EK225/EK226), Singapore (SQ31/SQ32), Hong Kong (CX879/CX872), Tokyo (JL1/JL2), Sydney (QF74/QF73)
+
 - Ultra-long-haul with complex timezone math
 - Date line crossings (arrive same day or -1 day)
 - +2 day arrivals (QF74)
@@ -399,6 +412,7 @@ Sleep targets should come after wake targets within the same day (accounting for
 **6.4 - Direction Verification**
 
 For known routes, verify the algorithm chose the expected adaptation direction:
+
 - SFO → Europe: Advance (eastward)
 - SFO → Asia (>12h diff): Delay (westward-equivalent, shorter path)
 - Europe → SFO: Delay (westward)
@@ -505,14 +519,14 @@ For ongoing validation beyond automated tests, use this manual spot-check protoc
 
 ## Success Criteria Summary
 
-| Layer | Metric | Pass Threshold |
-|-------|--------|----------------|
-| 1 - Model Parity | Phase difference vs Arcascope | ≤ 10 min final |
-| 2 - Physiological Bounds | Daily shift rate | ≤ 1.5h (advance) / 2.0h (delay) |
-| 3 - PRC Consistency | Light timing vs CBT_min | Within ±1h of optimal |
-| 4 - Scenario Regression | Adaptation timeline | Within 1 day of literature |
-| 5 - Edge Cases | Graceful handling | No crashes, sensible fallbacks |
-| 6 - Realistic Flights | Practical scheduling | No activities before landing, no sleep within 4h of departure |
+| Layer                    | Metric                        | Pass Threshold                                                |
+| ------------------------ | ----------------------------- | ------------------------------------------------------------- |
+| 1 - Model Parity         | Phase difference vs Arcascope | ≤ 10 min final                                                |
+| 2 - Physiological Bounds | Daily shift rate              | ≤ 1.5h (advance) / 2.0h (delay)                               |
+| 3 - PRC Consistency      | Light timing vs CBT_min       | Within ±1h of optimal                                         |
+| 4 - Scenario Regression  | Adaptation timeline           | Within 1 day of literature                                    |
+| 5 - Edge Cases           | Graceful handling             | No crashes, sensible fallbacks                                |
+| 6 - Realistic Flights    | Practical scheduling          | No activities before landing, no sleep within 4h of departure |
 
 ---
 
@@ -542,8 +556,9 @@ Phase Shift (hours)
 ```
 
 **Key timing windows:**
+
 - **Delay zone:** Light 4-0 hours before CBT_min
-- **Advance zone:** Light 0-4 hours after CBT_min  
+- **Advance zone:** Light 0-4 hours after CBT_min
 - **Dead zone:** Light 6-12 hours from CBT_min (minimal effect)
 - **Danger zone:** Light at crossover risks antidromic shift
 
@@ -569,7 +584,7 @@ AIRPORTS = {
 def generate_test_trip():
     origin, dest = random.sample(list(AIRPORTS.keys()), 2)
     tz_diff = AIRPORTS[dest]['tz'] - AIRPORTS[origin]['tz']
-    
+
     return {
         'origin': origin,
         'destination': dest,
@@ -589,17 +604,21 @@ for i in range(5):
 ## Appendix C: Literature Quick Reference
 
 **For phase shift magnitude validation:**
+
 > "The largest phase shifts that we have found in our studies are about 12 hours in 1 week (92 min/day) for delaying the circadian system and about 8 hours in 1 week (69 min/day) for advancing the circadian system."  
 > — Eastman & Burgess (2009)
 
 **For melatonin timing:**
+
 > "Melatonin taken in the afternoon/early evening shifts circadian rhythms earlier (phase advance), while melatonin taken in the morning shifts rhythms later (phase delay)."  
 > — Burgess et al. (2010)
 
 **For pre-flight adaptation:**
+
 > "A 2-h phase advance may seem small compared to a 6- to 9-h time zone change... However, a small phase advance will not only reduce the degree of re-entrainment required after arrival, but may also increase postflight exposure to phase-advancing light."  
 > — Burgess & Eastman, pre-flight adaptation study
 
 **For optimal control approach:**
+
 > "We have developed schedules that could take an individual from any initial phase to any final phase using an optimization technique called optimal control theory."  
 > — Dean et al. (2009)

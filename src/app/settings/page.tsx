@@ -53,7 +53,7 @@ export default function SettingsPage() {
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
                 <Label htmlFor="melatonin">Include melatonin</Label>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-muted-foreground text-sm">
                   Low-dose timed supplements (0.5mg)
                 </p>
               </div>
@@ -63,7 +63,7 @@ export default function SettingsPage() {
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
                 <Label htmlFor="caffeine">Include caffeine timing</Label>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-muted-foreground text-sm">
                   Strategic coffee or tea windows and cutoffs
                 </p>
               </div>
@@ -79,7 +79,7 @@ export default function SettingsPage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              <p className="text-sm text-muted-foreground">
+              <p className="text-muted-foreground text-sm">
                 Sign in to save your preferences and sync trips across devices.
               </p>
               <Button variant="outline" className="w-full sm:w-auto">

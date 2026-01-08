@@ -62,12 +62,12 @@ export default function HistoryPage() {
             <Link key={trip.id} href={`/trip/${trip.id}`}>
               <Card
                 className={`bg-white/90 backdrop-blur-sm transition-colors hover:bg-white ${
-                  trip.status === "active" ? "ring-2 ring-sage/50" : ""
+                  trip.status === "active" ? "ring-sage/50 ring-2" : ""
                 }`}
               >
                 <CardContent className="flex items-center gap-4 py-4">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-sky/10">
-                    <Plane className="h-5 w-5 text-sky" />
+                  <div className="bg-sky/10 flex h-10 w-10 items-center justify-center rounded-full">
+                    <Plane className="text-sky h-5 w-5" />
                   </div>
 
                   <div className="flex-1 space-y-1">
@@ -83,7 +83,7 @@ export default function HistoryPage() {
                           trip.status.slice(1)}
                       </Badge>
                     </div>
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <div className="text-muted-foreground flex items-center gap-2 text-sm">
                       <span>
                         {trip.originCity} → {trip.destinationCity}
                       </span>
@@ -98,7 +98,7 @@ export default function HistoryPage() {
                     </div>
                   </div>
 
-                  <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                  <ChevronRight className="text-muted-foreground h-5 w-5" />
                 </CardContent>
               </Card>
             </Link>

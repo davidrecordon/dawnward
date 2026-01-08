@@ -6,9 +6,9 @@
 
 ## Mockup Reference Files
 
-| File | Purpose |
-|------|---------|
-| `design_docs/ui-v2.html` | Full app mockup (multiple screens, minified/bundled) |
+| File                                   | Purpose                                                    |
+| -------------------------------------- | ---------------------------------------------------------- |
+| `design_docs/ui-v2.html`               | Full app mockup (multiple screens, minified/bundled)       |
 | `design_docs/ui-v2-homepage-only.html` | Homepage only (readable source, use for styling reference) |
 
 Use `ui-v2-homepage-only.html` when you need to inspect exact CSS values, Tailwind classes, or HTML structure.
@@ -17,12 +17,12 @@ Use `ui-v2-homepage-only.html` when you need to inspect exact CSS values, Tailwi
 
 ## Screens Overview
 
-| Screen | Route | Purpose |
-|--------|-------|---------|
-| New Trip | `/` | Landing page with trip input form |
-| Trip History | `/history` | List of past and upcoming trips |
-| Settings | `/settings` | User preferences and account |
-| Schedule Detail | `/trip/[id]` | Daily intervention schedule |
+| Screen          | Route        | Purpose                           |
+| --------------- | ------------ | --------------------------------- |
+| New Trip        | `/`          | Landing page with trip input form |
+| Trip History    | `/history`   | List of past and upcoming trips   |
+| Settings        | `/settings`  | User preferences and account      |
+| Schedule Detail | `/trip/[id]` | Daily intervention schedule       |
 
 ---
 
@@ -33,10 +33,12 @@ Use `ui-v2-homepage-only.html` when you need to inspect exact CSS values, Tailwi
 **URL:** `/`
 
 **Layout:** Two-column on desktop, stacked on mobile
+
 - Left: Trip input form
 - Right: Trip preview card + Calendar sync card
 
 **Components:**
+
 - **Header** — Logo, nav (New Trip, History, Settings), Sign in button
 - **Hero section** — Badge ("Science-backed jet lag optimization"), headline, subtitle
 - **Plan Your Trip form:**
@@ -63,9 +65,10 @@ Use `ui-v2-homepage-only.html` when you need to inspect exact CSS values, Tailwi
 
 ### Homepage Styling Reference
 
-*Source: `ui-v2-homepage-only.html`*
+_Source: `ui-v2-homepage-only.html`_
 
 **Typography:**
+
 - Font family: `system-ui, -apple-system, sans-serif` (set on body via inline style)
 - Body text: `text-slate-800 antialiased`
 - Logo: `font-semibold text-lg tracking-tight`
@@ -74,15 +77,16 @@ Use `ui-v2-homepage-only.html` when you need to inspect exact CSS values, Tailwi
 - Labels: `text-sm font-medium`
 
 **Page Background Gradient:**
+
 ```css
 background: linear-gradient(
   180deg,
-  hsl(199 80% 95%) 0%,    /* light blue */
-  hsl(199 70% 92%) 15%,
-  hsl(38 60% 96%) 35%,    /* cream */
-  hsl(16 70% 94%) 55%,    /* peach */
-  hsl(280 50% 92%) 75%,   /* lavender */
-  hsl(265 45% 88%) 100%   /* purple */
+  hsl(199 80% 95%) 0%,
+  /* light blue */ hsl(199 70% 92%) 15%,
+  hsl(38 60% 96%) 35%,
+  /* cream */ hsl(16 70% 94%) 55%,
+  /* peach */ hsl(280 50% 92%) 75%,
+  /* lavender */ hsl(265 45% 88%) 100% /* purple */
 );
 ```
 
@@ -96,10 +100,12 @@ background: linear-gradient(
 | Footer | `bg-white/30 backdrop-blur-sm` |
 
 **Hero Badge:**
+
 - Classes: `bg-white/80 text-orange-600 text-sm font-medium shadow-sm`
 - Sparkles icon before text
 
 **"How it works" Card:**
+
 - Title: `text-purple-700 font-medium text-sm`
 - Description: `text-xs text-slate-500 leading-relaxed`
 
@@ -126,6 +132,7 @@ background: linear-gradient(
 **Layout:** Single column, card list
 
 **Components:**
+
 - **Header** — Same as landing, "History" nav item highlighted
 - **Page title:** "Trip History" with subtitle
 - **Trip cards** (one per trip):
@@ -151,18 +158,22 @@ background: linear-gradient(
 **Layout:** Single column, card sections
 
 **Components:**
+
 - **Header** — "Settings" nav item highlighted
 - **Page title:** "Settings" with subtitle "Your default preferences for new trips"
 
 **Sleep Schedule card:**
+
 - Usual wake time (time input)
 - Usual bedtime (time input)
 
 **Intervention Preferences card:**
+
 - Toggle: Include melatonin — "Low-dose timed supplements (0.5mg)"
 - Toggle: Include caffeine timing — "Strategic coffee windows and cutoffs"
 
 **Account card:**
+
 - Signed out: "Sign in to save your preferences and sync trips" + Google sign-in button
 - Signed in: User email, "Sign out" link
 
@@ -175,6 +186,7 @@ background: linear-gradient(
 **Layout:** Single column with sticky footer
 
 **Components:**
+
 - **Back button** — Returns to History
 - **Save prompt** (anonymous users): "Save this schedule?" with Google sign-in button
 - **Trip header card:**
@@ -192,6 +204,7 @@ background: linear-gradient(
   - Green fill proportional to completion
 
 **Intervention cards** (one per intervention):
+
 - Circular checkbox (left)
 - Icon in colored circle (matches intervention type)
 - Title (e.g., "Seek bright light early")
@@ -211,6 +224,7 @@ background: linear-gradient(
 | Meal timing | Utensils | Rose/pink | "Light early dinner" |
 
 **Footer actions:**
+
 - "Add to Calendar" (outline button)
 - "Sign in to Save" (primary button) — or "Saved" when signed in
 
@@ -219,6 +233,7 @@ background: linear-gradient(
 ## User Flows
 
 ### Anonymous User Flow
+
 1. Land on New Trip page
 2. Fill in flight details and preferences
 3. Click "Generate My Schedule"
@@ -227,6 +242,7 @@ background: linear-gradient(
 6. If sign in: Trip saved to database, added to History
 
 ### Signed-In User Flow
+
 1. Land on New Trip page (or click "+ New Trip")
 2. Fill in flight details (preferences pre-filled from Settings)
 3. Click "Generate My Schedule"
@@ -235,6 +251,7 @@ background: linear-gradient(
 6. Option to "Add to Calendar"
 
 ### Returning User Flow
+
 1. Navigate to History
 2. Click on Active or Planned trip
 3. View Schedule Detail for that day
@@ -246,17 +263,20 @@ background: linear-gradient(
 ## Responsive Behavior
 
 ### Breakpoints
+
 - **Mobile:** < 768px — single column, stacked layout
 - **Desktop:** >= 768px — multi-column where applicable
 
 ### Mobile Adaptations
 
 **Header:**
+
 - Logo visible
 - Nav items show as icons only (clock for History, gear for Settings)
 - "Sign in" text visible
 
 **New Trip page:**
+
 - Form takes full width
 - Trip preview card and Calendar sync card stack below form
 - Airport selects stack (Departing from above Arriving at)
@@ -264,10 +284,12 @@ background: linear-gradient(
 - CTA button full width
 
 **History page:**
+
 - Trip cards full width
 - All card content fits in single column layout
 
 **Schedule Detail:**
+
 - Day tabs horizontally scrollable
 - Intervention cards full width
 - Footer buttons stack or side-by-side depending on width
@@ -277,17 +299,20 @@ background: linear-gradient(
 ## State Management Notes
 
 ### Form State
+
 - Airport selection: typeahead search, stores code + name
 - Datetime: native datetime-local or custom picker
 - Toggles: boolean state
 - Time inputs: stored as HH:MM
 
 ### Schedule State
+
 - Active day tab (index or date)
 - Completion checkboxes (intervention ID → boolean)
 - Progress derived from completion count
 
 ### Auth State
+
 - Anonymous: can generate 1 schedule, stored in localStorage
 - Signed in: schedules stored in database, preferences synced
 
@@ -297,18 +322,18 @@ background: linear-gradient(
 
 These components appear across multiple screens:
 
-| Component | Used in |
-|-----------|---------|
-| Header | All screens |
-| Footer | All screens |
-| Trip card | History, New Trip (preview) |
-| Toggle row | Settings, New Trip |
-| Time input | Settings, New Trip |
-| Primary button | All screens |
-| Badge | Trip cards, Schedule header |
-| Progress bar | Schedule Detail |
-| Intervention card | Schedule Detail |
+| Component         | Used in                     |
+| ----------------- | --------------------------- |
+| Header            | All screens                 |
+| Footer            | All screens                 |
+| Trip card         | History, New Trip (preview) |
+| Toggle row        | Settings, New Trip          |
+| Time input        | Settings, New Trip          |
+| Primary button    | All screens                 |
+| Badge             | Trip cards, Schedule header |
+| Progress bar      | Schedule Detail             |
+| Intervention card | Schedule Detail             |
 
 ---
 
-*Reference: `design_docs/ui-v2.html` for full app mockup, `design_docs/ui-v2-homepage-only.html` for readable homepage source, `design_docs/brand.md` for brand guidelines.*
+_Reference: `design_docs/ui-v2.html` for full app mockup, `design_docs/ui-v2-homepage-only.html` for readable homepage source, `design_docs/brand.md` for brand guidelines._

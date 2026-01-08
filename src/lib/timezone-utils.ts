@@ -26,10 +26,16 @@ function getTimezoneOffsetHours(timezone: string, date: Date): number {
   const utcParts = utcFormat.formatToParts(date);
   const tzParts = tzFormat.formatToParts(date);
 
-  const utcHour = parseInt(utcParts.find((p) => p.type === "hour")?.value || "0");
-  const utcMinute = parseInt(utcParts.find((p) => p.type === "minute")?.value || "0");
+  const utcHour = parseInt(
+    utcParts.find((p) => p.type === "hour")?.value || "0"
+  );
+  const utcMinute = parseInt(
+    utcParts.find((p) => p.type === "minute")?.value || "0"
+  );
   const tzHour = parseInt(tzParts.find((p) => p.type === "hour")?.value || "0");
-  const tzMinute = parseInt(tzParts.find((p) => p.type === "minute")?.value || "0");
+  const tzMinute = parseInt(
+    tzParts.find((p) => p.type === "minute")?.value || "0"
+  );
 
   // Calculate difference in hours
   let hourDiff = tzHour - utcHour;

@@ -167,9 +167,7 @@ export function getNowTimezone(
   const nowInOrigin = new Date(
     now.toLocaleString("en-US", { timeZone: originTz })
   );
-  const nowInDest = new Date(
-    now.toLocaleString("en-US", { timeZone: destTz })
-  );
+  const nowInDest = new Date(now.toLocaleString("en-US", { timeZone: destTz }));
 
   // Parse departure/arrival times
   const departure = new Date(departureDateTime);

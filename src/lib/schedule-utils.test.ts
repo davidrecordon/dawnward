@@ -8,8 +8,16 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { mergePhasesByDate, dayHasMultipleTimezones, toSortableMinutes } from "./schedule-utils";
-import type { DaySchedule, Intervention, InterventionType } from "@/types/schedule";
+import {
+  mergePhasesByDate,
+  dayHasMultipleTimezones,
+  toSortableMinutes,
+} from "./schedule-utils";
+import type {
+  DaySchedule,
+  Intervention,
+  InterventionType,
+} from "@/types/schedule";
 
 function makeIntervention(
   type: InterventionType,
@@ -456,9 +464,15 @@ describe("dayHasMultipleTimezones", () => {
 
   it("returns false when all interventions have the same timezone", () => {
     const interventions: Intervention[] = [
-      makeIntervention("wake_target", "07:00", { timezone: "America/Los_Angeles" }),
-      makeIntervention("light_seek", "08:00", { timezone: "America/Los_Angeles" }),
-      makeIntervention("sleep_target", "22:00", { timezone: "America/Los_Angeles" }),
+      makeIntervention("wake_target", "07:00", {
+        timezone: "America/Los_Angeles",
+      }),
+      makeIntervention("light_seek", "08:00", {
+        timezone: "America/Los_Angeles",
+      }),
+      makeIntervention("sleep_target", "22:00", {
+        timezone: "America/Los_Angeles",
+      }),
     ];
 
     expect(dayHasMultipleTimezones(interventions)).toBe(false);
@@ -477,7 +491,9 @@ describe("dayHasMultipleTimezones", () => {
     const interventions: Intervention[] = [
       makeIntervention("wake_target", "09:00", { timezone: "Europe/Paris" }),
       makeIntervention("melatonin", "08:00", { timezone: "Europe/Paris" }),
-      makeIntervention("sleep_target", "17:00", { timezone: "America/Los_Angeles" }),
+      makeIntervention("sleep_target", "17:00", {
+        timezone: "America/Los_Angeles",
+      }),
     ];
 
     expect(dayHasMultipleTimezones(interventions)).toBe(true);
@@ -488,8 +504,12 @@ describe("dayHasMultipleTimezones", () => {
     const interventions: Intervention[] = [
       makeIntervention("melatonin", "08:00", { timezone: "Europe/Paris" }),
       makeIntervention("wake_target", "09:00", { timezone: "Europe/Paris" }),
-      makeIntervention("wake_target", "02:00", { timezone: "America/Los_Angeles" }),
-      makeIntervention("sleep_target", "17:00", { timezone: "America/Los_Angeles" }),
+      makeIntervention("wake_target", "02:00", {
+        timezone: "America/Los_Angeles",
+      }),
+      makeIntervention("sleep_target", "17:00", {
+        timezone: "America/Los_Angeles",
+      }),
     ];
 
     expect(dayHasMultipleTimezones(interventions)).toBe(true);
@@ -498,10 +518,18 @@ describe("dayHasMultipleTimezones", () => {
   it("returns false for single-timezone adaptation day", () => {
     // Day +1 after arrival - all in destination timezone
     const interventions: Intervention[] = [
-      makeIntervention("wake_target", "04:00", { timezone: "America/Los_Angeles" }),
-      makeIntervention("light_avoid", "04:00", { timezone: "America/Los_Angeles" }),
-      makeIntervention("light_seek", "15:00", { timezone: "America/Los_Angeles" }),
-      makeIntervention("sleep_target", "19:00", { timezone: "America/Los_Angeles" }),
+      makeIntervention("wake_target", "04:00", {
+        timezone: "America/Los_Angeles",
+      }),
+      makeIntervention("light_avoid", "04:00", {
+        timezone: "America/Los_Angeles",
+      }),
+      makeIntervention("light_seek", "15:00", {
+        timezone: "America/Los_Angeles",
+      }),
+      makeIntervention("sleep_target", "19:00", {
+        timezone: "America/Los_Angeles",
+      }),
     ];
 
     expect(dayHasMultipleTimezones(interventions)).toBe(false);
@@ -509,9 +537,13 @@ describe("dayHasMultipleTimezones", () => {
 
   it("ignores undefined timezone when counting", () => {
     const interventions: Intervention[] = [
-      makeIntervention("wake_target", "07:00", { timezone: "America/Los_Angeles" }),
+      makeIntervention("wake_target", "07:00", {
+        timezone: "America/Los_Angeles",
+      }),
       makeIntervention("light_seek", "08:00"), // No timezone
-      makeIntervention("sleep_target", "22:00", { timezone: "America/Los_Angeles" }),
+      makeIntervention("sleep_target", "22:00", {
+        timezone: "America/Los_Angeles",
+      }),
     ];
 
     expect(dayHasMultipleTimezones(interventions)).toBe(false);

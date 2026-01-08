@@ -23,7 +23,10 @@ import type { TripFormState } from "@/types/trip-form";
 import type { Airport } from "@/types/airport";
 
 // The request with guaranteed non-null airports (validated before API call)
-interface ResolvedRequest extends Omit<TripFormState, "origin" | "destination"> {
+interface ResolvedRequest extends Omit<
+  TripFormState,
+  "origin" | "destination"
+> {
   origin: Airport;
   destination: Airport;
 }
@@ -43,7 +46,9 @@ export default function TripPage() {
       const formState = getFormState();
 
       if (!formState || !formState.origin || !formState.destination) {
-        setError("No trip details found. Please go back and fill out the form.");
+        setError(
+          "No trip details found. Please go back and fill out the form."
+        );
         setIsLoading(false);
         return;
       }
@@ -72,7 +77,8 @@ export default function TripPage() {
           throw new Error(errorData.error || "Failed to generate schedule");
         }
 
-        const result: { id: string; schedule: ScheduleResponse } = await response.json();
+        const result: { id: string; schedule: ScheduleResponse } =
+          await response.json();
 
         // At this point we know origin and destination are not null (checked above)
         setData({
@@ -85,7 +91,9 @@ export default function TripPage() {
         });
       } catch (err) {
         console.error("Schedule generation error:", err);
-        setError(err instanceof Error ? err.message : "Failed to generate schedule");
+        setError(
+          err instanceof Error ? err.message : "Failed to generate schedule"
+        );
       } finally {
         setIsLoading(false);
       }
@@ -117,7 +125,7 @@ export default function TripPage() {
   if (isLoading) {
     return (
       <div className="mx-auto max-w-3xl px-4 py-8">
-        <div className="flex flex-col items-center justify-center py-20 gap-4">
+        <div className="flex flex-col items-center justify-center gap-4 py-20">
           <Loader2 className="h-8 w-8 animate-spin text-sky-500" />
           <p className="text-slate-600">Generating your schedule...</p>
         </div>
@@ -131,7 +139,7 @@ export default function TripPage() {
         <div className="space-y-6">
           <Link
             href="/"
-            className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-700 transition-colors"
+            className="inline-flex items-center gap-1.5 text-sm text-slate-500 transition-colors hover:text-slate-700"
           >
             <ArrowLeft className="h-4 w-4" />
             Back Home
@@ -163,7 +171,7 @@ export default function TripPage() {
         {/* Back button */}
         <Link
           href="/"
-          className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-700 transition-colors"
+          className="inline-flex items-center gap-1.5 text-sm text-slate-500 transition-colors hover:text-slate-700"
         >
           <ArrowLeft className="h-4 w-4" />
           Back Home
@@ -172,8 +180,8 @@ export default function TripPage() {
         {/* Sign-in prompt banner */}
         <div className="relative overflow-hidden rounded-xl bg-gradient-to-r from-sky-500 via-indigo-500 to-violet-500 p-4 text-white shadow-lg shadow-indigo-500/20">
           {/* Decorative shapes */}
-          <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2" />
-          <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/2" />
+          <div className="absolute top-0 right-0 h-32 w-32 translate-x-1/2 -translate-y-1/2 rounded-full bg-white/10" />
+          <div className="absolute bottom-0 left-0 h-24 w-24 -translate-x-1/2 translate-y-1/2 rounded-full bg-white/5" />
 
           <div className="relative flex items-center justify-between">
             <div>
@@ -185,7 +193,7 @@ export default function TripPage() {
             <Button
               variant="secondary"
               size="sm"
-              className="bg-white/20 hover:bg-white/30 text-white border-0 backdrop-blur-sm"
+              className="border-0 bg-white/20 text-white backdrop-blur-sm hover:bg-white/30"
             >
               Sign in
             </Button>
@@ -200,7 +208,7 @@ export default function TripPage() {
         />
 
         {/* Day navigation buttons */}
-        <div className="flex flex-wrap justify-center gap-2 pb-2 -mb-4">
+        <div className="-mb-4 flex flex-wrap justify-center gap-2 pb-2">
           {mergedDays.map((daySchedule) => {
             const isCurrentDay = daySchedule.day === currentDayNumber;
             return (
@@ -211,10 +219,10 @@ export default function TripPage() {
                     .getElementById(`day-${daySchedule.day}`)
                     ?.scrollIntoView({ behavior: "smooth" });
                 }}
-                className={`group flex-shrink-0 rounded-lg px-4 py-2 text-center transition-all duration-200 cursor-pointer ${
+                className={`group flex-shrink-0 cursor-pointer rounded-lg px-4 py-2 text-center transition-all duration-200 ${
                   isCurrentDay
                     ? "bg-white shadow-md ring-2 ring-sky-500/40"
-                    : "bg-white/60 hover:bg-white hover:shadow-md hover:-translate-y-0.5 active:translate-y-0"
+                    : "bg-white/60 hover:-translate-y-0.5 hover:bg-white hover:shadow-md active:translate-y-0"
                 }`}
               >
                 <div
@@ -266,7 +274,7 @@ export default function TripPage() {
             <Calendar className="mr-2 h-4 w-4" />
             Add to Calendar
           </Button>
-          <Button className="flex-1 bg-sky-500 hover:bg-sky-600 shadow-lg shadow-sky-500/20">
+          <Button className="flex-1 bg-sky-500 shadow-lg shadow-sky-500/20 hover:bg-sky-600">
             Sign in to Save
           </Button>
         </div>

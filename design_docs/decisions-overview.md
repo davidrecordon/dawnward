@@ -8,16 +8,16 @@
 
 ## Stack
 
-| Layer | Choice |
-|-------|--------|
-| Framework | Next.js 16+ (App Router) |
-| Hosting | Vercel |
-| Auth | NextAuth.js v5, Google only |
-| Database | Vercel Postgres (free tier) |
-| Python Runtime | Vercel Python functions (accept cold starts) |
-| Circadian Model | Arcascope library, Forger99 model |
-| Analytics | Vercel Analytics |
-| Repo | GitHub, MIT license, private until MVP |
+| Layer           | Choice                                       |
+| --------------- | -------------------------------------------- |
+| Framework       | Next.js 16+ (App Router)                     |
+| Hosting         | Vercel                                       |
+| Auth            | NextAuth.js v5, Google only                  |
+| Database        | Vercel Postgres (free tier)                  |
+| Python Runtime  | Vercel Python functions (accept cold starts) |
+| Circadian Model | Arcascope library, Forger99 model            |
+| Analytics       | Vercel Analytics                             |
+| Repo            | GitHub, MIT license, private until MVP       |
 
 ---
 
@@ -31,30 +31,35 @@
 ## Core Features (v1)
 
 ### Trip Input
+
 - **Manual entry only** — no flight lookup API
 - **Timezone selection:** Airport code + city typeahead (search both datasets, airports first)
 - **Airport data:** Curated JSON file (~500-1000 major airports), bundled client-side
 - **Multi-leg trip support** — users can chain flights (SFO → NRT → SIN)
 
 ### Schedule Generation
+
 - **Prep days:** 1-7 days, default 3, user-configurable per trip
 - **Adaptive algorithm:** More prep days = gentler daily shifts
 - **Intervention types:** `light_seek`, `light_avoid`, `melatonin`, `exercise`, `caffeine_ok`, `caffeine_cutoff`, `sleep_target`, `wake_target`, `nap_window`
 - **Model version tracking** in schedules for future A/B testing
 
 ### Authentication
+
 - **Google only** via NextAuth.js v5
 - **Progressive signup:** Anonymous users can generate one schedule, then sign in to save
 - **localStorage:** Used only as OAuth bridge (holds one trip during redirect, clears after login or 24h)
 - **OAuth scopes:** `openid`, `email`, `profile`, `calendar.events`
 
 ### Calendar Integration
+
 - **Write-only** — push events, never read user's calendar
 - **Target calendar:** Primary calendar
 - **Sync strategy:** Delete-and-replace (not complex two-way sync)
 - **Event notifications:** Calendar event alerts at time of intervention
 
 ### User Preferences (stored in DB)
+
 - Default prep days
 - Default wake/sleep times
 - Uses melatonin (boolean)
@@ -72,6 +77,7 @@ Public, read-only circadian tools for Claude to answer jet lag questions in othe
 - **Rate limit:** By IP (100 requests/hour)
 
 ### Tools
+
 1. `calculate_phase_shift` — Hours of shift needed, direction, difficulty
 2. `get_adaptation_plan` — Full intervention strategy for a trip
 3. `get_light_windows` — Optimal light exposure/avoidance times
@@ -106,17 +112,20 @@ Key tables (full SQL in backend design doc):
 ## Future Features (Not v1)
 
 ### Daily Summary Email
+
 - Send at 7am user's local time
 - Summary of day's interventions
 - **Needs:** Email provider (Resend, Postmark, or SendGrid — TBD)
 
 ### Eight Sleep Integration
+
 - Pull actual sleep data to calibrate circadian phase
 - Background sync via cron job
 - Adaptive plans that update based on real sleep vs. predicted
 - Spec document exists: `eight-sleep-integration.md`
 
 ### Other Future Considerations
+
 - Flight lookup API (FlightAware, AeroDataBox)
 - Push notifications (PWA or native)
 - Trip sharing via public link
@@ -127,20 +136,20 @@ Key tables (full SQL in backend design doc):
 
 ## Open Items
 
-| Item | Status |
-|------|--------|
+| Item                | Status                                             |
+| ------------------- | -------------------------------------------------- |
 | Curate airport JSON | DONE — 7,168 airports in public/data/airports.json |
 
 ---
 
 ## Artifacts Reference
 
-| Artifact | Location |
-|----------|----------|
-| Science research | `science-methodology.md` |
-| Backend design doc | `backend-design.md` |
-| Auth design doc | `auth-design.md` |
-| UI mockup | `ui-v2.html` |
-| Eight Sleep spec | `eight-sleep-integration.md` |
-| Testing design doc | `testing-design.md` |
-| This decisions doc | `decisions-overview.md` |
+| Artifact           | Location                     |
+| ------------------ | ---------------------------- |
+| Science research   | `science-methodology.md`     |
+| Backend design doc | `backend-design.md`          |
+| Auth design doc    | `auth-design.md`             |
+| UI mockup          | `ui-v2.html`                 |
+| Eight Sleep spec   | `eight-sleep-integration.md` |
+| Testing design doc | `testing-design.md`          |
+| This decisions doc | `decisions-overview.md`      |
