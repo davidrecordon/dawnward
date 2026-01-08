@@ -50,9 +50,13 @@ src/
 └── generated/prisma/ # Prisma client (generated, do not edit)
 
 api/_python/
-├── circadian/        # Circadian schedule generation module
-│   └── scheduler_v2.py  # Phase-based scheduler
-└── tests/            # Python pytest tests
+├── circadian/              # Circadian schedule generation module
+│   ├── scheduler_v2.py     # Phase-based scheduler
+│   ├── types.py            # Data classes
+│   ├── circadian_math.py   # Core math utilities
+│   ├── science/            # Circadian science modules (PRC, markers, sleep pressure)
+│   └── scheduling/         # Intervention planning (constraint filter, phase generator)
+└── tests/                  # Python pytest tests
 
 prisma/
 ├── schema.prisma     # Database schema
@@ -146,7 +150,7 @@ This project uses two Claude Code plugins that should be invoked for significant
 
 ## Testing
 
-**TypeScript (Vitest)**: ~120 tests covering utility functions
+**TypeScript (Vitest)**: ~170 tests covering utility functions
 - `src/lib/__tests__/time-utils.test.ts` - Date/time formatting, timezone-aware operations
 - `src/lib/__tests__/timezone-utils.test.ts` - Flight duration calculation, timezone shifts
 - `src/lib/__tests__/airport-search.test.ts` - Search scoring, matching, filtering
@@ -156,7 +160,7 @@ This project uses two Claude Code plugins that should be invoked for significant
 - `src/lib/schedule-utils.test.ts` - Schedule merging and sorting logic
 - `src/app/api/schedule/generate/__tests__/route.test.ts` - API route data construction
 
-**Python (pytest)**: ~90 tests covering schedule generation (6-layer validation strategy)
+**Python (pytest)**: ~135 tests covering schedule generation (6-layer validation strategy)
 - `test_model_parity.py` - CBTmin trajectory, phase shift magnitude, daily shift targets
 - `test_physiological_bounds.py` - Max shift rates, antidromic risk, sleep duration, melatonin timing
 - `test_prc_consistency.py` - Light/melatonin PRC alignment, avoidance zones
@@ -164,6 +168,7 @@ This project uses two Claude Code plugins that should be invoked for significant
 - `test_edge_cases.py` - 12h shifts, extreme chronotypes, multi-leg trips, zero timezone change
 - `test_realistic_flights.py` - Real airline routes (VS, BA, AF, SQ, CX) with actual departure/arrival times
 - `test_sorting.py` - Intervention sorting, late-night handling, sleep_target near departure filtering
+- `test_timezone_handling.py` - Phase timezone handling, is_in_transit flag
 
 **Running tests:**
 ```bash

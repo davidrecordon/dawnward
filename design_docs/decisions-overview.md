@@ -10,7 +10,7 @@
 
 | Layer | Choice |
 |-------|--------|
-| Framework | Next.js 14+ (App Router) |
+| Framework | Next.js 16+ (App Router) |
 | Hosting | Vercel |
 | Auth | NextAuth.js v5, Google only |
 | Database | Vercel Postgres (free tier) |
@@ -39,7 +39,7 @@
 ### Schedule Generation
 - **Prep days:** 1-7 days, default 3, user-configurable per trip
 - **Adaptive algorithm:** More prep days = gentler daily shifts
-- **Intervention types:** `light_seek`, `light_avoid`, `melatonin`, `caffeine_ok`, `caffeine_cutoff`, `caffeine_boost`, `sleep_target`, `wake_target`
+- **Intervention types:** `light_seek`, `light_avoid`, `melatonin`, `exercise`, `caffeine_ok`, `caffeine_cutoff`, `sleep_target`, `wake_target`, `nap_window`
 - **Model version tracking** in schedules for future A/B testing
 
 ### Authentication
@@ -116,10 +116,6 @@ Key tables (full SQL in backend design doc):
 - Adaptive plans that update based on real sleep vs. predicted
 - Spec document exists: `eight-sleep-integration.md`
 
-### Exercise Interventions
-- User mentioned running could help with jet lag
-- Not in current intervention types — add later
-
 ### Other Future Considerations
 - Flight lookup API (FlightAware, AeroDataBox)
 - Push notifications (PWA or native)
@@ -133,7 +129,7 @@ Key tables (full SQL in backend design doc):
 
 | Item | Status |
 |------|--------|
-| Curate airport JSON | TODO — source from free datasets, filter to ~500-1000 |
+| Curate airport JSON | DONE — 7,168 airports in public/data/airports.json |
 
 ---
 
