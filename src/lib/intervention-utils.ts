@@ -150,16 +150,11 @@ export function formatShortDate(dateStr: string): string {
  * Get timezone abbreviation from IANA timezone string.
  * Uses Intl.DateTimeFormat to get the proper abbreviation accounting for DST.
  *
- * @param tz - IANA timezone (e.g., "America/Los_Angeles") or special value like "In transit"
+ * @param tz - IANA timezone (e.g., "America/Los_Angeles")
  * @param date - Optional date to determine DST status (defaults to now)
  * @returns Abbreviation like "PST", "PDT", "GMT", etc.
  */
 export function getTimezoneAbbr(tz: string, date?: Date): string {
-  // Handle special "In transit" timezone
-  if (tz === "In transit" || tz.toLowerCase().includes("transit")) {
-    return "In Flight";
-  }
-
   try {
     const formatter = new Intl.DateTimeFormat("en-US", {
       timeZone: tz,

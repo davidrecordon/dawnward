@@ -8,7 +8,7 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { mergePhasesByDate, dayHasMultipleTimezones } from "./schedule-utils";
+import { mergePhasesByDate, dayHasMultipleTimezones, toSortableMinutes } from "./schedule-utils";
 import type { DaySchedule, Intervention, InterventionType } from "@/types/schedule";
 
 function makeIntervention(
@@ -39,6 +39,91 @@ function makeDaySchedule(
     ...extras,
   };
 }
+
+describe("toSortableMinutes", () => {
+  describe("basic time conversion", () => {
+    it("should convert 00:00 to 0 minutes", () => {
+      expect(toSortableMinutes("00:00")).toBe(0);
+    });
+
+    it("should convert 12:00 to 720 minutes", () => {
+      expect(toSortableMinutes("12:00")).toBe(720);
+    });
+
+    it("should convert 23:59 to 1439 minutes", () => {
+      expect(toSortableMinutes("23:59")).toBe(1439);
+    });
+
+    it("should handle times with leading zeros", () => {
+      expect(toSortableMinutes("07:30")).toBe(450);
+    });
+  });
+
+  describe("late night sleep_target handling", () => {
+    it("should add 24h offset to sleep_target at 00:00", () => {
+      // 00:00 sleep_target should sort after 23:59
+      expect(toSortableMinutes("00:00", "sleep_target")).toBe(24 * 60);
+    });
+
+    it("should add 24h offset to sleep_target at 01:30", () => {
+      expect(toSortableMinutes("01:30", "sleep_target")).toBe(90 + 24 * 60);
+    });
+
+    it("should add 24h offset to sleep_target at 05:59", () => {
+      // 05:59 is still "late night"
+      expect(toSortableMinutes("05:59", "sleep_target")).toBe(359 + 24 * 60);
+    });
+
+    it("should NOT add offset to sleep_target at 06:00", () => {
+      // 06:00 is morning, not late night
+      expect(toSortableMinutes("06:00", "sleep_target")).toBe(360);
+    });
+
+    it("should NOT add offset to sleep_target at 22:00", () => {
+      // Regular evening sleep time
+      expect(toSortableMinutes("22:00", "sleep_target")).toBe(1320);
+    });
+  });
+
+  describe("other intervention types at early AM", () => {
+    it("should NOT add offset to wake_target at 04:00", () => {
+      // Wake times in early AM are still morning, not late night
+      expect(toSortableMinutes("04:00", "wake_target")).toBe(240);
+    });
+
+    it("should NOT add offset to light_seek at 05:00", () => {
+      expect(toSortableMinutes("05:00", "light_seek")).toBe(300);
+    });
+
+    it("should NOT add offset to melatonin at 02:00", () => {
+      expect(toSortableMinutes("02:00", "melatonin")).toBe(120);
+    });
+
+    it("should NOT add offset when type is undefined", () => {
+      expect(toSortableMinutes("03:00")).toBe(180);
+    });
+  });
+
+  describe("sorting comparison scenarios", () => {
+    it("should make 02:00 sleep_target sort after 23:00 melatonin", () => {
+      const sleepMinutes = toSortableMinutes("02:00", "sleep_target");
+      const melatoninMinutes = toSortableMinutes("23:00", "melatonin");
+      expect(sleepMinutes).toBeGreaterThan(melatoninMinutes);
+    });
+
+    it("should make 04:00 wake_target sort before 10:00 caffeine_cutoff", () => {
+      const wakeMinutes = toSortableMinutes("04:00", "wake_target");
+      const caffeineMinutes = toSortableMinutes("10:00", "caffeine_cutoff");
+      expect(wakeMinutes).toBeLessThan(caffeineMinutes);
+    });
+
+    it("should make 01:00 sleep_target sort after 22:00 sleep_target", () => {
+      const lateNightSleep = toSortableMinutes("01:00", "sleep_target");
+      const eveningSleep = toSortableMinutes("22:00", "sleep_target");
+      expect(lateNightSleep).toBeGreaterThan(eveningSleep);
+    });
+  });
+});
 
 describe("mergePhasesByDate", () => {
   describe("late night sorting", () => {
@@ -137,10 +222,10 @@ describe("mergePhasesByDate", () => {
           "2025-01-15",
           0,
           [
-            makeIntervention("sleep_window", "09:15", {
+            makeIntervention("nap_window", "09:15", {
               flight_offset_hours: 4.5,
             }),
-            makeIntervention("sleep_window", "22:45", {
+            makeIntervention("nap_window", "22:45", {
               flight_offset_hours: 0,
             }),
           ],
@@ -169,7 +254,7 @@ describe("mergePhasesByDate", () => {
         makeDaySchedule(
           "2025-01-15",
           0,
-          [makeIntervention("sleep_window", "22:00")],
+          [makeIntervention("nap_window", "22:00")],
           { phase_type: "in_transit", timezone: "in_transit" }
         ),
       ];

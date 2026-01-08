@@ -8,8 +8,12 @@ import type { DaySchedule, Intervention, PhaseType } from "@/types/schedule";
  * Convert time string to sortable minutes.
  * Only treats sleep_target at 00:00-05:59 as "late night" for sorting.
  * Wake times in early morning should still sort first.
+ *
+ * @param time - Time string in "HH:MM" format
+ * @param type - Optional intervention type (sleep_target gets special handling)
+ * @returns Minutes from midnight, with sleep_target at 00:00-05:59 offset by 24h
  */
-function toSortableMinutes(time: string, type?: string): number {
+export function toSortableMinutes(time: string, type?: string): number {
   const [hours, minutes] = time.split(":").map(Number);
   const totalMinutes = hours * 60 + minutes;
   // Only treat sleep_target at 00:00-05:59 as late night
@@ -70,10 +74,11 @@ export function mergePhasesByDate(interventions: DaySchedule[]): DaySchedule[] {
       phaseTypesByDate.get(phase.date)!.add(phase.phase_type);
     }
 
-    // Tag items with their source timezone
+    // Tag items with their source timezone and in-transit status
     const taggedItems: Intervention[] = phase.items.map((item) => ({
       ...item,
       timezone: phase.timezone,
+      is_in_transit: phase.is_in_transit,
     }));
 
     if (existing) {

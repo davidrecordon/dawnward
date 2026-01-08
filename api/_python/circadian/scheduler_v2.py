@@ -146,7 +146,8 @@ class ScheduleGeneratorV2:
                 phase_type=phase.phase_type,
                 phase_start=format_time(phase.start_datetime.time()),
                 phase_end=format_time(phase.end_datetime.time()),
-                phase_spans_midnight=spans_midnight if spans_midnight else None
+                phase_spans_midnight=spans_midnight if spans_midnight else None,
+                is_in_transit=phase.phase_type in ("in_transit", "in_transit_ulr")
             ))
 
         # 4. Build response

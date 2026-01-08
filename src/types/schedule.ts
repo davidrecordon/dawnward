@@ -41,6 +41,8 @@ export interface Intervention {
   timezone?: string;
   /** Hours into flight for in-transit sleep opportunities (e.g., 4.5 = ~4.5h into flight) */
   flight_offset_hours?: number;
+  /** True if this intervention is in-transit (on the plane). Added during merge for display. */
+  is_in_transit?: boolean;
 }
 
 /**
@@ -70,6 +72,8 @@ export interface DaySchedule {
   timezone?: string;
   /** True if both pre_departure and post_arrival phases exist on same date (westbound same-day arrival) */
   hasSameDayArrival?: boolean;
+  /** True if this phase is in-transit (on the plane). Replaces string matching on timezone. */
+  is_in_transit?: boolean;
 }
 
 /**

@@ -135,6 +135,9 @@ class DaySchedule:
     phase_end: Optional[str] = None      # "HH:MM" when phase ends
     phase_spans_midnight: Optional[bool] = None  # True if phase ends the next day
 
+    # Explicit in-transit flag (replaces string matching on timezone)
+    is_in_transit: bool = False
+
 
 @dataclass
 class ScheduleResponse:

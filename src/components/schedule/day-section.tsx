@@ -1,7 +1,7 @@
 "use client";
 
 import { getDayLabel } from "@/lib/intervention-utils";
-import { dayHasMultipleTimezones } from "@/lib/schedule-utils";
+import { dayHasMultipleTimezones, toSortableMinutes } from "@/lib/schedule-utils";
 import {
   formatLongDate,
   getCurrentTimeInTimezone,
@@ -37,21 +37,6 @@ type ScheduleItem =
   | TimedItem
   | { kind: "timezone_transition"; fromTz: string; toTz: string };
 
-/**
- * Convert time string to sortable minutes.
- * Only treats sleep_target at 00:00-05:59 as "late night" for sorting.
- * Wake times in early morning should still sort first.
- */
-function toSortableMinutes(time: string, type?: string): number {
-  const [hours, minutes] = time.split(":").map(Number);
-  const totalMinutes = hours * 60 + minutes;
-  // Only treat sleep_target at 00:00-05:59 as late night
-  if (type === "sleep_target" && hours < 6) {
-    return totalMinutes + 24 * 60;
-  }
-  return totalMinutes;
-}
-
 export function DaySection({
   daySchedule,
   origin,
@@ -72,7 +57,7 @@ export function DaySection({
   daySchedule.items.forEach((intervention, index) => {
     // For in-transit items, show destination timezone to help traveler adjust
     let itemTimezone = intervention.timezone;
-    if (itemTimezone?.toLowerCase().includes("transit")) {
+    if (intervention.is_in_transit) {
       itemTimezone = destination.tz;
     }
 

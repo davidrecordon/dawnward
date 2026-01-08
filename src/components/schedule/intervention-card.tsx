@@ -17,14 +17,17 @@ interface InterventionCardProps {
 
 /**
  * Format flight offset hours for display
- * e.g., 4.5 → "~4.5h into flight"
+ * e.g., 4.5 → "~4.5 hours into flight"
  */
 function formatFlightOffset(hours: number): string {
   if (hours < 1) {
     const minutes = Math.round(hours * 60);
-    return `~${minutes}min into flight`;
+    if (minutes == 0) {
+      return `As soon as you can`;
+    }
+    return `~${minutes} minutes into flight`;
   }
-  return `~${hours}h into flight`;
+  return `~${hours} hours into flight`;
 }
 
 export function InterventionCard({
