@@ -43,14 +43,10 @@ function FieldError({ message }: { message?: string }) {
 export function TripForm({ formState, onFormChange }: TripFormProps) {
   const router = useRouter();
   const [errors, setErrors] = React.useState<FormErrors>({});
-  const [isSubmitting, setIsSubmitting] = React.useState(false);
   const submitButtonRef = React.useRef<HTMLButtonElement>(null);
 
   // Handle "Show me" example demo
   const handleShowExample = async () => {
-    // Prevent duplicate submissions
-    if (isSubmitting) return;
-
     // Example airports
     const sfo: Airport = {
       code: "SFO",
@@ -95,7 +91,7 @@ export function TripForm({ formState, onFormChange }: TripFormProps) {
 
     // Scroll to and click generate button
     submitButtonRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
-    await new Promise((resolve) => setTimeout(resolve, 300));
+    await new Promise((resolve) => setTimeout(resolve, 500));
 
     // Guard again before final click
     if (!submitButtonRef.current) return;
@@ -182,7 +178,6 @@ export function TripForm({ formState, onFormChange }: TripFormProps) {
         onClick={handleShowExample}
         className="absolute -right-[1px] -top-[1px] z-10"
         aria-label="Show me an example"
-        disabled={isSubmitting}
       >
         <div className="w-28 h-28 pointer-events-none">
           <div
@@ -361,8 +356,7 @@ export function TripForm({ formState, onFormChange }: TripFormProps) {
         <Button
           ref={submitButtonRef}
           onClick={handleSubmit}
-          disabled={isSubmitting}
-          className="w-full bg-sky-500 hover:bg-sky-600 text-white disabled:opacity-70"
+          className="w-full bg-sky-500 hover:bg-sky-600 text-white"
           size="lg"
         >
           Generate My Schedule
