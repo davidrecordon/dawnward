@@ -5,8 +5,8 @@ Estimates circadian markers (CBTmin, DLMO) from habitual sleep schedule
 and calculates timezone shifts.
 """
 
-from datetime import datetime, time, timedelta
-from typing import Tuple
+from datetime import datetime, time
+
 import pytz
 
 
@@ -126,10 +126,8 @@ def get_timezone_offset_hours(tz_name: str, reference_date: datetime = None) -> 
 
 
 def calculate_timezone_shift(
-    origin_tz: str,
-    dest_tz: str,
-    reference_date: datetime = None
-) -> Tuple[float, str]:
+    origin_tz: str, dest_tz: str, reference_date: datetime = None
+) -> tuple[float, str]:
     """
     Calculate the timezone shift and optimal direction for adaptation.
 
@@ -174,9 +172,7 @@ def calculate_timezone_shift(
 
 
 def calculate_actual_prep_days(
-    departure_datetime: str,
-    requested_prep_days: int,
-    current_datetime: datetime = None
+    departure_datetime: str, requested_prep_days: int, current_datetime: datetime = None
 ) -> int:
     """
     Auto-adjust prep days if departure is sooner than requested.
@@ -208,10 +204,8 @@ def calculate_actual_prep_days(
 
 
 def calculate_daily_shift_targets(
-    total_shift: float,
-    direction: str,
-    prep_days: int
-) -> list[float]:
+    total_shift: float, direction: str, prep_days: int
+) -> list[dict[str, float]]:
     """
     Calculate target phase shift for each day using adaptive algorithm.
 
@@ -264,11 +258,7 @@ def calculate_daily_shift_targets(
         remaining = abs_shift - cumulative
         daily_shift = min(actual_daily, remaining)
         cumulative += daily_shift
-        targets.append({
-            "day": day,
-            "daily_shift": daily_shift,
-            "cumulative_shift": cumulative
-        })
+        targets.append({"day": day, "daily_shift": daily_shift, "cumulative_shift": cumulative})
         day += 1
 
     return targets
@@ -289,5 +279,3 @@ def shift_time(base_time: time, hours: float) -> time:
     shift_minutes = int(hours * 60)
     new_minutes = base_minutes + shift_minutes
     return minutes_to_time(new_minutes)
-
-

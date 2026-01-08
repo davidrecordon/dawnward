@@ -5,22 +5,20 @@ Unusual scenarios that should fail gracefully.
 These test the robustness of the scheduler.
 """
 
-import pytest
-from datetime import datetime, timedelta
-
 import sys
+from datetime import datetime, timedelta
 from pathlib import Path
+
 # Add both tests dir and parent dir to path
 sys.path.insert(0, str(Path(__file__).parent))
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from helpers import (
     time_diff_hours,
-    get_interventions_by_type,
-    get_interventions_for_day,
 )
-from circadian.types import TripLeg, ScheduleRequest
+
 from circadian.scheduler_v2 import ScheduleGeneratorV2 as ScheduleGenerator
+from circadian.types import ScheduleRequest, TripLeg
 
 
 class TestCircadianEquatorCrossing:
@@ -38,7 +36,7 @@ class TestCircadianEquatorCrossing:
                     origin_tz="America/New_York",
                     dest_tz="Asia/Bangkok",
                     departure_datetime=future_date.strftime("%Y-%m-%dT22:00"),
-                    arrival_datetime=(future_date + timedelta(hours=17)).strftime("%Y-%m-%dT08:00")
+                    arrival_datetime=(future_date + timedelta(hours=17)).strftime("%Y-%m-%dT08:00"),
                 )
             ],
             prep_days=5,
@@ -70,7 +68,7 @@ class TestCircadianEquatorCrossing:
                     origin_tz="America/New_York",
                     dest_tz="Asia/Singapore",  # UTC+8
                     departure_datetime=future_date.strftime("%Y-%m-%dT22:00"),
-                    arrival_datetime=(future_date + timedelta(hours=18)).strftime("%Y-%m-%dT10:00")
+                    arrival_datetime=(future_date + timedelta(hours=18)).strftime("%Y-%m-%dT10:00"),
                 )
             ],
             prep_days=5,
@@ -100,7 +98,7 @@ class TestCircadianEquatorCrossing:
                     origin_tz="America/Los_Angeles",
                     dest_tz="Australia/Sydney",
                     departure_datetime=future_date.strftime("%Y-%m-%dT22:00"),
-                    arrival_datetime=(future_date + timedelta(hours=15)).strftime("%Y-%m-%dT07:00")
+                    arrival_datetime=(future_date + timedelta(hours=15)).strftime("%Y-%m-%dT07:00"),
                 )
             ],
             prep_days=5,
@@ -131,7 +129,7 @@ class TestShortTrips:
                     origin_tz="America/New_York",
                     dest_tz="Europe/London",
                     departure_datetime=future_date.strftime("%Y-%m-%dT19:00"),
-                    arrival_datetime=(future_date + timedelta(hours=7)).strftime("%Y-%m-%dT07:00")
+                    arrival_datetime=(future_date + timedelta(hours=7)).strftime("%Y-%m-%dT07:00"),
                 )
             ],
             prep_days=1,  # Very short notice
@@ -161,7 +159,7 @@ class TestShortTrips:
                     origin_tz="America/New_York",
                     dest_tz="Europe/London",
                     departure_datetime=departure.strftime("%Y-%m-%dT%H:%M"),
-                    arrival_datetime=arrival.strftime("%Y-%m-%dT%H:%M")
+                    arrival_datetime=arrival.strftime("%Y-%m-%dT%H:%M"),
                 )
             ],
             prep_days=3,  # Will be auto-adjusted to 0 or 1
@@ -194,7 +192,7 @@ class TestExtremeChronotypes:
                     origin_tz="America/New_York",
                     dest_tz="Europe/London",
                     departure_datetime=future_date.strftime("%Y-%m-%dT19:00"),
-                    arrival_datetime=(future_date + timedelta(hours=7)).strftime("%Y-%m-%dT07:00")
+                    arrival_datetime=(future_date + timedelta(hours=7)).strftime("%Y-%m-%dT07:00"),
                 )
             ],
             prep_days=3,
@@ -241,7 +239,7 @@ class TestExtremeChronotypes:
                     origin_tz="America/New_York",
                     dest_tz="Europe/London",
                     departure_datetime=future_date.strftime("%Y-%m-%dT19:00"),
-                    arrival_datetime=(future_date + timedelta(hours=7)).strftime("%Y-%m-%dT07:00")
+                    arrival_datetime=(future_date + timedelta(hours=7)).strftime("%Y-%m-%dT07:00"),
                 )
             ],
             prep_days=3,
@@ -290,14 +288,14 @@ class TestMultiLegComplexity:
                     origin_tz="America/Los_Angeles",
                     dest_tz="America/New_York",
                     departure_datetime=leg1_departure.strftime("%Y-%m-%dT08:00"),
-                    arrival_datetime=leg1_arrival.strftime("%Y-%m-%dT16:00")
+                    arrival_datetime=leg1_arrival.strftime("%Y-%m-%dT16:00"),
                 ),
                 TripLeg(
                     origin_tz="America/New_York",
                     dest_tz="Europe/London",
                     departure_datetime=leg2_departure.strftime("%Y-%m-%dT20:00"),
-                    arrival_datetime=leg2_arrival.strftime("%Y-%m-%dT08:00")
-                )
+                    arrival_datetime=leg2_arrival.strftime("%Y-%m-%dT08:00"),
+                ),
             ],
             prep_days=3,
             wake_time="07:00",
@@ -326,14 +324,14 @@ class TestMultiLegComplexity:
                     origin_tz="America/Los_Angeles",
                     dest_tz="America/Chicago",
                     departure_datetime=future_date.strftime("%Y-%m-%dT06:00"),
-                    arrival_datetime=future_date.strftime("%Y-%m-%dT11:00")
+                    arrival_datetime=future_date.strftime("%Y-%m-%dT11:00"),
                 ),
                 TripLeg(
                     origin_tz="America/Chicago",
                     dest_tz="Europe/London",
                     departure_datetime=future_date.strftime("%Y-%m-%dT13:00"),
-                    arrival_datetime=(future_date + timedelta(hours=7)).strftime("%Y-%m-%dT02:00")
-                )
+                    arrival_datetime=(future_date + timedelta(hours=7)).strftime("%Y-%m-%dT02:00"),
+                ),
             ],
             prep_days=3,
             wake_time="07:00",
@@ -362,7 +360,7 @@ class TestZeroTimezoneChange:
                     origin_tz="America/New_York",
                     dest_tz="America/Toronto",  # Same timezone as NYC
                     departure_datetime=future_date.strftime("%Y-%m-%dT08:00"),
-                    arrival_datetime=future_date.strftime("%Y-%m-%dT09:30")
+                    arrival_datetime=future_date.strftime("%Y-%m-%dT09:30"),
                 )
             ],
             prep_days=1,
@@ -395,7 +393,7 @@ class TestBoundaryConditions:
                     origin_tz="America/New_York",
                     dest_tz="Asia/Tokyo",
                     departure_datetime=future_date.strftime("%Y-%m-%dT19:00"),
-                    arrival_datetime=(future_date + timedelta(hours=14)).strftime("%Y-%m-%dT14:00")
+                    arrival_datetime=(future_date + timedelta(hours=14)).strftime("%Y-%m-%dT14:00"),
                 )
             ],
             prep_days=7,  # Maximum
@@ -422,7 +420,7 @@ class TestBoundaryConditions:
                     origin_tz="America/New_York",
                     dest_tz="Europe/London",
                     departure_datetime=future_date.strftime("%Y-%m-%dT19:00"),
-                    arrival_datetime=(future_date + timedelta(hours=7)).strftime("%Y-%m-%dT07:00")
+                    arrival_datetime=(future_date + timedelta(hours=7)).strftime("%Y-%m-%dT07:00"),
                 )
             ],
             prep_days=1,  # Minimum
@@ -448,7 +446,7 @@ class TestBoundaryConditions:
                     origin_tz="America/New_York",
                     dest_tz="Europe/London",
                     departure_datetime=future_date.strftime("%Y-%m-%dT19:00"),
-                    arrival_datetime=(future_date + timedelta(hours=7)).strftime("%Y-%m-%dT07:00")
+                    arrival_datetime=(future_date + timedelta(hours=7)).strftime("%Y-%m-%dT07:00"),
                 )
             ],
             prep_days=3,
@@ -497,7 +495,7 @@ class TestMelatoninTimingConstraints:
                     origin_tz="Europe/Paris",
                     dest_tz="America/Los_Angeles",
                     departure_datetime=future_date.strftime("%Y-%m-%dT13:30"),
-                    arrival_datetime=future_date.strftime("%Y-%m-%dT15:15")
+                    arrival_datetime=future_date.strftime("%Y-%m-%dT15:15"),
                 )
             ],
             prep_days=3,
@@ -542,7 +540,7 @@ class TestMelatoninTimingConstraints:
                     origin_tz="Europe/Paris",
                     dest_tz="America/Los_Angeles",
                     departure_datetime=future_date.strftime("%Y-%m-%dT13:30"),
-                    arrival_datetime=future_date.strftime("%Y-%m-%dT15:15")
+                    arrival_datetime=future_date.strftime("%Y-%m-%dT15:15"),
                 )
             ],
             prep_days=3,

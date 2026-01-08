@@ -9,22 +9,18 @@ Scientific references:
 - Dean et al. (2009): PLOS Comp Biol optimal schedules
 """
 
-import pytest
-from datetime import datetime, timedelta
-
 import sys
+from datetime import datetime, timedelta
 from pathlib import Path
+
+import pytest
+
 # Add both tests dir and parent dir to path
 sys.path.insert(0, str(Path(__file__).parent))
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from helpers import (
-    time_diff_hours,
-    get_interventions_by_type,
-    get_interventions_for_day,
-)
-from circadian.types import TripLeg, ScheduleRequest
 from circadian.scheduler_v2 import ScheduleGeneratorV2 as ScheduleGenerator
+from circadian.types import ScheduleRequest, TripLeg
 
 
 class TestEastmanBurgessScenarios:
@@ -41,7 +37,7 @@ class TestEastmanBurgessScenarios:
                     origin_tz="America/Chicago",
                     dest_tz="Europe/London",
                     departure_datetime=future_date.strftime("%Y-%m-%dT17:00"),
-                    arrival_datetime=(future_date + timedelta(hours=8)).strftime("%Y-%m-%dT07:00")
+                    arrival_datetime=(future_date + timedelta(hours=8)).strftime("%Y-%m-%dT07:00"),
                 )
             ],
             prep_days=3,
@@ -78,7 +74,7 @@ class TestEastmanBurgessScenarios:
                     origin_tz="America/Chicago",
                     dest_tz="Asia/Tokyo",
                     departure_datetime=future_date.strftime("%Y-%m-%dT11:00"),
-                    arrival_datetime=(future_date + timedelta(hours=14)).strftime("%Y-%m-%dT15:00")
+                    arrival_datetime=(future_date + timedelta(hours=14)).strftime("%Y-%m-%dT15:00"),
                 )
             ],
             prep_days=5,
@@ -108,7 +104,7 @@ class TestEastmanBurgessScenarios:
                     origin_tz="America/New_York",
                     dest_tz="Australia/Sydney",
                     departure_datetime=future_date.strftime("%Y-%m-%dT21:00"),
-                    arrival_datetime=(future_date + timedelta(hours=22)).strftime("%Y-%m-%dT06:00")
+                    arrival_datetime=(future_date + timedelta(hours=22)).strftime("%Y-%m-%dT06:00"),
                 )
             ],
             prep_days=5,
@@ -144,7 +140,7 @@ class TestDeanOptimalSchedules:
                     origin_tz="America/Los_Angeles",
                     dest_tz="Asia/Dubai",
                     departure_datetime=future_date.strftime("%Y-%m-%dT16:00"),
-                    arrival_datetime=(future_date + timedelta(hours=16)).strftime("%Y-%m-%dT20:00")
+                    arrival_datetime=(future_date + timedelta(hours=16)).strftime("%Y-%m-%dT20:00"),
                 )
             ],
             prep_days=3,
@@ -166,11 +162,11 @@ class TestDeanOptimalSchedules:
         # Light interventions are in post_arrival/adaptation phases
         for day_schedule in pre_departure_days:
             types = [i.type for i in day_schedule.items]
-            assert len(types) > 0, (
-                f"Day {day_schedule.day} should have interventions"
-            )
+            assert len(types) > 0, f"Day {day_schedule.day} should have interventions"
             # Prep days should have at least sleep management interventions
-            has_sleep_management = any(t in types for t in ["sleep_target", "melatonin", "caffeine_cutoff"])
+            has_sleep_management = any(
+                t in types for t in ["sleep_target", "melatonin", "caffeine_cutoff"]
+            )
             assert has_sleep_management, (
                 f"Day {day_schedule.day} should have sleep management interventions"
             )
@@ -188,7 +184,7 @@ class TestDeanOptimalSchedules:
                     origin_tz="America/New_York",
                     dest_tz="Asia/Bangkok",  # UTC+7
                     departure_datetime=future_date.strftime("%Y-%m-%dT22:00"),
-                    arrival_datetime=(future_date + timedelta(hours=17)).strftime("%Y-%m-%dT08:00")
+                    arrival_datetime=(future_date + timedelta(hours=17)).strftime("%Y-%m-%dT08:00"),
                 )
             ],
             prep_days=5,
@@ -210,12 +206,15 @@ class TestDeanOptimalSchedules:
 class TestDirectionAndMagnitude:
     """Verify shift direction and total hours match expected values."""
 
-    @pytest.mark.parametrize("origin,dest,expected_direction,expected_hours_range", [
-        ("America/New_York", "Europe/London", "advance", (4, 6)),  # ~5h east
-        ("America/Los_Angeles", "Europe/Paris", "advance", (8, 10)),  # ~9h east
-        ("America/New_York", "America/Los_Angeles", "delay", (2, 4)),  # ~3h west
-        ("Europe/London", "Asia/Tokyo", "advance", (8, 10)),  # ~9h east
-    ])
+    @pytest.mark.parametrize(
+        "origin,dest,expected_direction,expected_hours_range",
+        [
+            ("America/New_York", "Europe/London", "advance", (4, 6)),  # ~5h east
+            ("America/Los_Angeles", "Europe/Paris", "advance", (8, 10)),  # ~9h east
+            ("America/New_York", "America/Los_Angeles", "delay", (2, 4)),  # ~3h west
+            ("Europe/London", "Asia/Tokyo", "advance", (8, 10)),  # ~9h east
+        ],
+    )
     def test_canonical_routes(self, origin, dest, expected_direction, expected_hours_range):
         """Verify common routes have expected direction and magnitude."""
         generator = ScheduleGenerator()
@@ -227,7 +226,7 @@ class TestDirectionAndMagnitude:
                     origin_tz=origin,
                     dest_tz=dest,
                     departure_datetime=future_date.strftime("%Y-%m-%dT12:00"),
-                    arrival_datetime=(future_date + timedelta(hours=10)).strftime("%Y-%m-%dT22:00")
+                    arrival_datetime=(future_date + timedelta(hours=10)).strftime("%Y-%m-%dT22:00"),
                 )
             ],
             prep_days=3,
@@ -265,7 +264,7 @@ class TestAdaptationTimelines:
                     origin_tz="America/New_York",
                     dest_tz="America/Chicago",
                     departure_datetime=future_date.strftime("%Y-%m-%dT08:00"),
-                    arrival_datetime=(future_date + timedelta(hours=2)).strftime("%Y-%m-%dT09:00")
+                    arrival_datetime=(future_date + timedelta(hours=2)).strftime("%Y-%m-%dT09:00"),
                 )
             ],
             prep_days=2,
@@ -295,7 +294,7 @@ class TestAdaptationTimelines:
                     origin_tz="America/New_York",
                     dest_tz="Europe/London",
                     departure_datetime=future_date.strftime("%Y-%m-%dT19:00"),
-                    arrival_datetime=(future_date + timedelta(hours=7)).strftime("%Y-%m-%dT07:00")
+                    arrival_datetime=(future_date + timedelta(hours=7)).strftime("%Y-%m-%dT07:00"),
                 )
             ],
             prep_days=3,
@@ -325,7 +324,7 @@ class TestAdaptationTimelines:
                     origin_tz="America/Los_Angeles",
                     dest_tz="Asia/Tokyo",
                     departure_datetime=future_date.strftime("%Y-%m-%dT10:00"),
-                    arrival_datetime=(future_date + timedelta(hours=12)).strftime("%Y-%m-%dT14:00")
+                    arrival_datetime=(future_date + timedelta(hours=12)).strftime("%Y-%m-%dT14:00"),
                 )
             ],
             prep_days=5,
@@ -358,7 +357,7 @@ class TestScheduleCompleteness:
                     origin_tz="America/New_York",
                     dest_tz="Europe/London",
                     departure_datetime=future_date.strftime("%Y-%m-%dT19:00"),
-                    arrival_datetime=(future_date + timedelta(hours=7)).strftime("%Y-%m-%dT07:00")
+                    arrival_datetime=(future_date + timedelta(hours=7)).strftime("%Y-%m-%dT07:00"),
                 )
             ],
             prep_days=3,
@@ -377,12 +376,10 @@ class TestScheduleCompleteness:
                 all_types.add(item.type)
 
         required_types = {"light_seek", "wake_target", "sleep_target"}
-        optional_types = {"light_avoid", "melatonin", "caffeine_ok", "caffeine_cutoff"}
+        # Optional types that may appear: light_avoid, melatonin, caffeine_ok, caffeine_cutoff
 
         for req_type in required_types:
-            assert req_type in all_types, (
-                f"Schedule missing required intervention type: {req_type}"
-            )
+            assert req_type in all_types, f"Schedule missing required intervention type: {req_type}"
 
     def test_delay_schedule_has_required_interventions(self):
         """Delay schedules should have light, sleep/wake targets."""
@@ -395,7 +392,7 @@ class TestScheduleCompleteness:
                     origin_tz="America/Los_Angeles",
                     dest_tz="Asia/Tokyo",
                     departure_datetime=future_date.strftime("%Y-%m-%dT10:00"),
-                    arrival_datetime=(future_date + timedelta(hours=12)).strftime("%Y-%m-%dT14:00")
+                    arrival_datetime=(future_date + timedelta(hours=12)).strftime("%Y-%m-%dT14:00"),
                 )
             ],
             prep_days=3,

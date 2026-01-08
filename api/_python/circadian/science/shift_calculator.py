@@ -12,16 +12,17 @@ Key principles:
 - Total adaptation time = total_shift / daily_rate
 """
 
-from typing import Literal, List, Dict
 from dataclasses import dataclass
+from typing import Literal
 
 
 @dataclass
 class DailyShiftTarget:
     """Target phase shift for a single day."""
-    day: int                    # Day number (negative = prep, 0 = flight, positive = arrival)
-    daily_shift: float          # Hours to shift this day
-    cumulative_shift: float     # Total hours shifted by end of this day
+
+    day: int  # Day number (negative = prep, 0 = flight, positive = arrival)
+    daily_shift: float  # Hours to shift this day
+    cumulative_shift: float  # Total hours shifted by end of this day
 
 
 class ShiftCalculator:
@@ -33,18 +34,13 @@ class ShiftCalculator:
     """
 
     # Physiological limits (hours per day)
-    MAX_ADVANCE_AGGRESSIVE = 1.5    # Hard limit for advances
-    MAX_ADVANCE_MODERATE = 1.0      # Comfortable for advances
-    MAX_DELAY_AGGRESSIVE = 2.0      # Safe limit for delays
-    MAX_DELAY_MODERATE = 1.5        # Comfortable for delays
-    MAX_GENTLE = 1.0                # Very gentle (5+ prep days)
+    MAX_ADVANCE_AGGRESSIVE = 1.5  # Hard limit for advances
+    MAX_ADVANCE_MODERATE = 1.0  # Comfortable for advances
+    MAX_DELAY_AGGRESSIVE = 2.0  # Safe limit for delays
+    MAX_DELAY_MODERATE = 1.5  # Comfortable for delays
+    MAX_GENTLE = 1.0  # Very gentle (5+ prep days)
 
-    def __init__(
-        self,
-        total_shift: float,
-        direction: Literal["advance", "delay"],
-        prep_days: int
-    ):
+    def __init__(self, total_shift: float, direction: Literal["advance", "delay"], prep_days: int):
         """
         Initialize calculator.
 
@@ -91,9 +87,10 @@ class ShiftCalculator:
     def estimated_days(self) -> int:
         """Estimate total days needed for full adaptation."""
         import math
+
         return math.ceil(self.total_shift / self._daily_rate)
 
-    def generate_shift_targets(self) -> List[DailyShiftTarget]:
+    def generate_shift_targets(self) -> list[DailyShiftTarget]:
         """
         Generate daily shift targets for the entire adaptation period.
 
@@ -112,11 +109,13 @@ class ShiftCalculator:
             daily_shift = min(self._daily_rate, remaining)
             cumulative += daily_shift
 
-            targets.append(DailyShiftTarget(
-                day=day,
-                daily_shift=round(daily_shift, 2),
-                cumulative_shift=round(cumulative, 2)
-            ))
+            targets.append(
+                DailyShiftTarget(
+                    day=day,
+                    daily_shift=round(daily_shift, 2),
+                    cumulative_shift=round(cumulative, 2),
+                )
+            )
             day += 1
 
         return targets

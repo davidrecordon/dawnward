@@ -11,24 +11,23 @@ Scientific references:
 - Burgess et al. (2010): Melatonin PRC timing
 """
 
-import pytest
-from datetime import datetime, timedelta
-
 import sys
+from datetime import datetime, timedelta
 from pathlib import Path
+
 # Add both tests dir and parent dir to path
 sys.path.insert(0, str(Path(__file__).parent))
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from helpers import (
-    time_diff_hours,
-    get_interventions_by_type,
-    get_interventions_for_day,
     estimate_cbtmin_time,
     estimate_dlmo_time,
+    get_interventions_by_type,
+    time_diff_hours,
 )
-from circadian.types import TripLeg, ScheduleRequest
+
 from circadian.scheduler_v2 import ScheduleGeneratorV2 as ScheduleGenerator
+from circadian.types import ScheduleRequest, TripLeg
 
 
 class TestMaximumPhaseShiftRate:
@@ -51,7 +50,7 @@ class TestMaximumPhaseShiftRate:
                     origin_tz="America/New_York",
                     dest_tz="Europe/London",
                     departure_datetime=future_date.strftime("%Y-%m-%dT19:00"),
-                    arrival_datetime=(future_date + timedelta(hours=7)).strftime("%Y-%m-%dT07:00")
+                    arrival_datetime=(future_date + timedelta(hours=7)).strftime("%Y-%m-%dT07:00"),
                 )
             ],
             prep_days=3,
@@ -104,7 +103,7 @@ class TestMaximumPhaseShiftRate:
                     origin_tz="America/Los_Angeles",
                     dest_tz="Asia/Tokyo",
                     departure_datetime=future_date.strftime("%Y-%m-%dT10:00"),
-                    arrival_datetime=(future_date + timedelta(hours=12)).strftime("%Y-%m-%dT14:00")
+                    arrival_datetime=(future_date + timedelta(hours=12)).strftime("%Y-%m-%dT14:00"),
                 )
             ],
             prep_days=3,
@@ -151,7 +150,7 @@ class TestMaximumPhaseShiftRate:
                     origin_tz="America/Los_Angeles",
                     dest_tz="Asia/Dubai",
                     departure_datetime=future_date.strftime("%Y-%m-%dT16:00"),
-                    arrival_datetime=(future_date + timedelta(hours=16)).strftime("%Y-%m-%dT08:00")
+                    arrival_datetime=(future_date + timedelta(hours=16)).strftime("%Y-%m-%dT08:00"),
                 )
             ],
             prep_days=5,
@@ -193,7 +192,7 @@ class TestAntidromicRiskPrevention:
                     origin_tz="America/New_York",
                     dest_tz="Europe/London",
                     departure_datetime=future_date.strftime("%Y-%m-%dT19:00"),
-                    arrival_datetime=(future_date + timedelta(hours=7)).strftime("%Y-%m-%dT07:00")
+                    arrival_datetime=(future_date + timedelta(hours=7)).strftime("%Y-%m-%dT07:00"),
                 )
             ],
             prep_days=3,
@@ -242,7 +241,7 @@ class TestAntidromicRiskPrevention:
                     origin_tz="America/Los_Angeles",
                     dest_tz="Asia/Tokyo",
                     departure_datetime=future_date.strftime("%Y-%m-%dT10:00"),
-                    arrival_datetime=(future_date + timedelta(hours=12)).strftime("%Y-%m-%dT14:00")
+                    arrival_datetime=(future_date + timedelta(hours=12)).strftime("%Y-%m-%dT14:00"),
                 )
             ],
             prep_days=3,
@@ -297,7 +296,7 @@ class TestSleepDurationConstraints:
                     origin_tz="America/New_York",
                     dest_tz="Europe/London",
                     departure_datetime=future_date.strftime("%Y-%m-%dT19:00"),
-                    arrival_datetime=(future_date + timedelta(hours=7)).strftime("%Y-%m-%dT07:00")
+                    arrival_datetime=(future_date + timedelta(hours=7)).strftime("%Y-%m-%dT07:00"),
                 )
             ],
             prep_days=3,
@@ -342,7 +341,7 @@ class TestSleepDurationConstraints:
                     origin_tz="America/Los_Angeles",
                     dest_tz="Asia/Tokyo",
                     departure_datetime=future_date.strftime("%Y-%m-%dT10:00"),
-                    arrival_datetime=(future_date + timedelta(hours=12)).strftime("%Y-%m-%dT14:00")
+                    arrival_datetime=(future_date + timedelta(hours=12)).strftime("%Y-%m-%dT14:00"),
                 )
             ],
             prep_days=5,
@@ -392,7 +391,7 @@ class TestMelatoninTimingValidation:
                     origin_tz="America/New_York",
                     dest_tz="Europe/London",
                     departure_datetime=future_date.strftime("%Y-%m-%dT19:00"),
-                    arrival_datetime=(future_date + timedelta(hours=7)).strftime("%Y-%m-%dT07:00")
+                    arrival_datetime=(future_date + timedelta(hours=7)).strftime("%Y-%m-%dT07:00"),
                 )
             ],
             prep_days=3,
@@ -433,7 +432,7 @@ class TestMelatoninTimingValidation:
                     origin_tz="America/New_York",
                     dest_tz="Europe/London",
                     departure_datetime=future_date.strftime("%Y-%m-%dT19:00"),
-                    arrival_datetime=(future_date + timedelta(hours=7)).strftime("%Y-%m-%dT07:00")
+                    arrival_datetime=(future_date + timedelta(hours=7)).strftime("%Y-%m-%dT07:00"),
                 )
             ],
             prep_days=3,
@@ -465,12 +464,14 @@ class TestMelatoninTimingValidation:
                 # If melatonin is 2+ hours after sleep and 2+ hours before wake,
                 # it's in the middle of the night (bad)
                 if hours_after_sleep > 0:
-                    hours_after_sleep = hours_after_sleep if hours_after_sleep < 12 else hours_after_sleep - 24
+                    hours_after_sleep = (
+                        hours_after_sleep if hours_after_sleep < 12 else hours_after_sleep - 24
+                    )
 
                 is_middle_of_night = (
-                    hours_after_sleep > 2 and
-                    hours_before_wake > 2 and
-                    hours_after_sleep < 6  # Actually after sleep, not before
+                    hours_after_sleep > 2
+                    and hours_before_wake > 2
+                    and hours_after_sleep < 6  # Actually after sleep, not before
                 )
 
                 assert not is_middle_of_night, (

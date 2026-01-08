@@ -1,0 +1,28 @@
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "B",   # flake8-bugbear
+    "UP",  # pyupgrade
+]
+ignore = [
+    "E501",  # line too long (handled by formatter)
+]
+
+[tool.mypy]
+python_version = "3.12"
+warn_return_any = false
+warn_unused_ignores = true
+# Start lenient, tighten over time
+disallow_untyped_defs = false
+ignore_missing_imports = true
+# Disable strict Optional for now (many functions need updating)
+strict_optional = false
+# Disable import-untyped errors for pytz
+disable_error_code = ["import-untyped"]

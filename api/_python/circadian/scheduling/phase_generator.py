@@ -16,17 +16,16 @@ Scientific basis for multi-leg strategy:
 """
 
 from datetime import datetime, timedelta
-from typing import List, Literal, Optional
+from typing import Literal
 
-from ..types import TripLeg, TravelPhase
 from ..circadian_math import (
+    calculate_timezone_shift,
+    minutes_to_time,
     parse_time,
     time_to_minutes,
-    minutes_to_time,
-    calculate_timezone_shift,
 )
 from ..science.shift_calculator import ShiftCalculator
-
+from ..types import PhaseType, TravelPhase, TripLeg
 
 # Constants
 PRE_DEPARTURE_BUFFER_HOURS = 3.0  # End interventions 3h before flight
@@ -45,12 +44,12 @@ class PhaseGenerator:
 
     def __init__(
         self,
-        legs: List[TripLeg],
+        legs: list[TripLeg],
         prep_days: int,
         wake_time: str,
         sleep_time: str,
         total_shift: float,
-        direction: Literal["advance", "delay"]
+        direction: Literal["advance", "delay"],
     ):
         """
         Initialize phase generator.
@@ -73,7 +72,7 @@ class PhaseGenerator:
         # Initialize shift calculator
         self.shift_calc = ShiftCalculator(total_shift, direction, prep_days)
 
-    def generate_phases(self) -> List[TravelPhase]:
+    def generate_phases(self) -> list[TravelPhase]:
         """
         Generate all phases for the trip.
 
@@ -85,7 +84,7 @@ class PhaseGenerator:
         else:
             return self._generate_multi_leg_phases()
 
-    def _generate_single_leg_phases(self) -> List[TravelPhase]:
+    def _generate_single_leg_phases(self) -> list[TravelPhase]:
         """Generate phases for a single-leg trip."""
         phases = []
 
@@ -106,7 +105,7 @@ class PhaseGenerator:
 
         return phases
 
-    def _generate_multi_leg_phases(self) -> List[TravelPhase]:
+    def _generate_multi_leg_phases(self) -> list[TravelPhase]:
         """
         Generate phases for multi-leg trips.
 
@@ -128,7 +127,9 @@ class PhaseGenerator:
             # Treat as two independent trips
             return self._generate_restart_phases()
 
-    def _calculate_multi_leg_strategy(self) -> Literal["aim_through", "partial_adaptation", "restart"]:
+    def _calculate_multi_leg_strategy(
+        self,
+    ) -> Literal["aim_through", "partial_adaptation", "restart"]:
         """
         Determine multi-leg strategy based on layover duration and directions.
 
@@ -154,9 +155,7 @@ class PhaseGenerator:
         directions = []
         for leg in self.legs:
             departure_dt = datetime.fromisoformat(leg.departure_datetime.replace("Z", "+00:00"))
-            _, direction = calculate_timezone_shift(
-                leg.origin_tz, leg.dest_tz, departure_dt
-            )
+            _, direction = calculate_timezone_shift(leg.origin_tz, leg.dest_tz, departure_dt)
             directions.append(direction)
         return len(set(directions)) == 1
 
@@ -166,10 +165,12 @@ class PhaseGenerator:
             return 0
 
         leg1_arrival = datetime.fromisoformat(self.legs[0].arrival_datetime.replace("Z", "+00:00"))
-        leg2_departure = datetime.fromisoformat(self.legs[1].departure_datetime.replace("Z", "+00:00"))
+        leg2_departure = datetime.fromisoformat(
+            self.legs[1].departure_datetime.replace("Z", "+00:00")
+        )
         return (leg2_departure - leg1_arrival).total_seconds() / 3600
 
-    def _generate_preparation_phases(self) -> List[TravelPhase]:
+    def _generate_preparation_phases(self) -> list[TravelPhase]:
         """Generate preparation phases (full days before departure)."""
         phases = []
         leg = self.legs[0]
@@ -199,16 +200,18 @@ class PhaseGenerator:
             if sleep_minutes < wake_minutes:
                 phase_end += timedelta(days=1)
 
-            phases.append(TravelPhase(
-                phase_type="preparation",
-                start_datetime=phase_start,
-                end_datetime=phase_end,
-                timezone=leg.origin_tz,
-                cumulative_shift=cumulative,
-                remaining_shift=self.total_shift - cumulative,
-                day_number=day_offset,
-                available_for_interventions=True
-            ))
+            phases.append(
+                TravelPhase(
+                    phase_type="preparation",
+                    start_datetime=phase_start,
+                    end_datetime=phase_end,
+                    timezone=leg.origin_tz,
+                    cumulative_shift=cumulative,
+                    remaining_shift=self.total_shift - cumulative,
+                    day_number=day_offset,
+                    available_for_interventions=True,
+                )
+            )
 
         return phases
 
@@ -243,10 +246,10 @@ class PhaseGenerator:
             cumulative_shift=cumulative,
             remaining_shift=self.total_shift - cumulative,
             day_number=0,
-            available_for_interventions=True
+            available_for_interventions=True,
         )
 
-    def _generate_in_transit_phases(self) -> List[TravelPhase]:
+    def _generate_in_transit_phases(self) -> list[TravelPhase]:
         """
         Generate in-transit phase(s) based on flight duration.
 
@@ -266,26 +269,24 @@ class PhaseGenerator:
             return self._generate_ulr_transit_phase(departure, arrival, cumulative, flight_hours)
         else:
             # Standard flight: single phase
-            return [TravelPhase(
-                phase_type="in_transit",
-                start_datetime=departure,
-                end_datetime=arrival,
-                timezone=None,
-                cumulative_shift=cumulative,
-                remaining_shift=self.total_shift - cumulative,
-                day_number=0,
-                available_for_interventions=False,
-                flight_duration_hours=flight_hours,
-                sleep_windows=[{"recommended": flight_hours >= 8}]
-            )]
+            return [
+                TravelPhase(
+                    phase_type="in_transit",
+                    start_datetime=departure,
+                    end_datetime=arrival,
+                    timezone=None,
+                    cumulative_shift=cumulative,
+                    remaining_shift=self.total_shift - cumulative,
+                    day_number=0,
+                    available_for_interventions=False,
+                    flight_duration_hours=flight_hours,
+                    sleep_windows=[{"recommended": flight_hours >= 8}],
+                )
+            ]
 
     def _generate_ulr_transit_phase(
-        self,
-        departure: datetime,
-        arrival: datetime,
-        cumulative_shift: float,
-        flight_hours: float
-    ) -> List[TravelPhase]:
+        self, departure: datetime, arrival: datetime, cumulative_shift: float, flight_hours: float
+    ) -> list[TravelPhase]:
         """
         Generate in-transit phase for ultra-long-range flights (12+ hours).
 
@@ -307,27 +308,29 @@ class PhaseGenerator:
             {
                 "start": window1_start.isoformat(),
                 "duration_hours": window1_duration,
-                "label": "Sleep opportunity"
+                "label": "Sleep opportunity",
             },
             {
                 "start": window2_start.isoformat(),
                 "duration_hours": window2_duration,
-                "label": "Sleep opportunity"
-            }
+                "label": "Sleep opportunity",
+            },
         ]
 
-        return [TravelPhase(
-            phase_type="in_transit_ulr",
-            start_datetime=departure,
-            end_datetime=arrival,
-            timezone=None,
-            cumulative_shift=cumulative_shift,
-            remaining_shift=self.total_shift - cumulative_shift,
-            day_number=0,
-            available_for_interventions=False,
-            flight_duration_hours=flight_hours,
-            sleep_windows=sleep_windows
-        )]
+        return [
+            TravelPhase(
+                phase_type="in_transit_ulr",
+                start_datetime=departure,
+                end_datetime=arrival,
+                timezone=None,
+                cumulative_shift=cumulative_shift,
+                remaining_shift=self.total_shift - cumulative_shift,
+                day_number=0,
+                available_for_interventions=False,
+                flight_duration_hours=flight_hours,
+                sleep_windows=sleep_windows,
+            )
+        ]
 
     def _generate_post_arrival_phase(self) -> TravelPhase:
         """
@@ -369,10 +372,10 @@ class PhaseGenerator:
             cumulative_shift=cumulative,
             remaining_shift=remaining,
             day_number=1,
-            available_for_interventions=True
+            available_for_interventions=True,
         )
 
-    def _generate_adaptation_phases(self) -> List[TravelPhase]:
+    def _generate_adaptation_phases(self) -> list[TravelPhase]:
         """Generate adaptation phases (full days at destination)."""
         phases = []
         leg = self.legs[-1]
@@ -414,23 +417,25 @@ class PhaseGenerator:
             if adjusted_sleep >= 24 * 60 or adjusted_sleep < adjusted_wake:
                 phase_end += timedelta(days=1)
 
-            phases.append(TravelPhase(
-                phase_type="adaptation",
-                start_datetime=phase_start,
-                end_datetime=phase_end,
-                timezone=leg.dest_tz,
-                cumulative_shift=cumulative,
-                remaining_shift=remaining,
-                day_number=target.day,
-                available_for_interventions=True
-            ))
+            phases.append(
+                TravelPhase(
+                    phase_type="adaptation",
+                    start_datetime=phase_start,
+                    end_datetime=phase_end,
+                    timezone=leg.dest_tz,
+                    cumulative_shift=cumulative,
+                    remaining_shift=remaining,
+                    day_number=target.day,
+                    available_for_interventions=True,
+                )
+            )
 
             current_date += timedelta(days=1)
             day_num += 1
 
         return phases
 
-    def _generate_aim_through_phases(self) -> List[TravelPhase]:
+    def _generate_aim_through_phases(self) -> list[TravelPhase]:
         """Generate phases for aim-through multi-leg strategy."""
         # For aim-through, treat as single trip to final destination
         # but with multiple in-transit phases
@@ -450,19 +455,23 @@ class PhaseGenerator:
             arrival = datetime.fromisoformat(leg.arrival_datetime.replace("Z", "+00:00"))
             flight_hours = (arrival - departure).total_seconds() / 3600
 
-            phase_type = "in_transit_ulr" if flight_hours >= ULR_FLIGHT_THRESHOLD_HOURS else "in_transit"
+            phase_type: PhaseType = (
+                "in_transit_ulr" if flight_hours >= ULR_FLIGHT_THRESHOLD_HOURS else "in_transit"
+            )
 
-            phases.append(TravelPhase(
-                phase_type=phase_type,
-                start_datetime=departure,
-                end_datetime=arrival,
-                timezone=None,
-                cumulative_shift=cumulative,
-                remaining_shift=self.total_shift - cumulative,
-                day_number=0 if i == 0 else 1,
-                available_for_interventions=False,
-                flight_duration_hours=flight_hours
-            ))
+            phases.append(
+                TravelPhase(
+                    phase_type=phase_type,
+                    start_datetime=departure,
+                    end_datetime=arrival,
+                    timezone=None,
+                    cumulative_shift=cumulative,
+                    remaining_shift=self.total_shift - cumulative,
+                    day_number=0 if i == 0 else 1,
+                    available_for_interventions=False,
+                    flight_duration_hours=flight_hours,
+                )
+            )
 
         # Post-arrival phase (after last leg)
         phases.append(self._generate_post_arrival_phase())
@@ -472,13 +481,13 @@ class PhaseGenerator:
 
         return phases
 
-    def _generate_partial_adaptation_phases(self) -> List[TravelPhase]:
+    def _generate_partial_adaptation_phases(self) -> list[TravelPhase]:
         """Generate phases for partial adaptation strategy (48-96h layover)."""
         # Similar to aim-through but with some local adaptation at layover
         # For now, implement same as aim-through (can be refined later)
         return self._generate_aim_through_phases()
 
-    def _generate_restart_phases(self) -> List[TravelPhase]:
+    def _generate_restart_phases(self) -> list[TravelPhase]:
         """Generate phases treating legs as separate trips (>96h layover or opposite directions)."""
         # For restart, generate phases for each leg independently
         # This is more complex - for now, use aim-through as fallback

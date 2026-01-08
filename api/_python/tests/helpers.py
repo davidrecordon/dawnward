@@ -4,22 +4,22 @@ Test helper functions for circadian schedule validation.
 These functions can be imported by test modules for schedule analysis.
 """
 
-from typing import List, Optional
-
 import sys
+from dataclasses import dataclass
+from datetime import datetime, timedelta
 from pathlib import Path
 
 # Add parent directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from circadian.types import ScheduleResponse, Intervention
 from circadian.circadian_math import (
     estimate_cbtmin_from_wake,
     estimate_dlmo_from_sleep,
+    format_time,
     parse_time,
     time_to_minutes,
-    format_time,
 )
+from circadian.types import Intervention, ScheduleResponse
 
 
 def time_diff_hours(time1: str, time2: str) -> float:
@@ -51,10 +51,8 @@ def time_diff_hours(time1: str, time2: str) -> float:
 
 
 def get_interventions_by_type(
-    schedule: ScheduleResponse,
-    intervention_type: str,
-    day: Optional[int] = None
-) -> List[Intervention]:
+    schedule: ScheduleResponse, intervention_type: str, day: int | None = None
+) -> list[Intervention]:
     """
     Extract all interventions of a specific type from a schedule.
 
@@ -76,10 +74,7 @@ def get_interventions_by_type(
     return results
 
 
-def get_interventions_for_day(
-    schedule: ScheduleResponse,
-    day: int
-) -> List[Intervention]:
+def get_interventions_for_day(schedule: ScheduleResponse, day: int) -> list[Intervention]:
     """
     Get all interventions for a specific day.
 
@@ -132,16 +127,13 @@ def estimate_dlmo_time(sleep_time: str) -> str:
 # Realistic Flight Validation Helpers
 # =============================================================================
 
-from datetime import datetime, timedelta
-from dataclasses import dataclass
-from typing import Tuple
-
 
 @dataclass
 class FlightInfo:
     """Flight departure/arrival information for validation."""
+
     departure_datetime: datetime  # In origin timezone
-    arrival_datetime: datetime    # In destination timezone
+    arrival_datetime: datetime  # In destination timezone
     origin_tz: str
     dest_tz: str
 
@@ -149,6 +141,7 @@ class FlightInfo:
 @dataclass
 class ValidationIssue:
     """An issue found during schedule validation."""
+
     severity: str  # "error" or "warning"
     category: str  # e.g., "sleep_timing", "flight_conflict"
     message: str
@@ -156,11 +149,7 @@ class ValidationIssue:
     time: str
 
 
-def datetime_from_schedule_day(
-    day_num: int,
-    time_str: str,
-    base_date: datetime
-) -> datetime:
+def datetime_from_schedule_day(day_num: int, time_str: str, base_date: datetime) -> datetime:
     """
     Convert a schedule day number and time to a datetime.
 
@@ -178,10 +167,8 @@ def datetime_from_schedule_day(
 
 
 def validate_sleep_not_before_flight(
-    schedule: ScheduleResponse,
-    flight: FlightInfo,
-    min_gap_hours: float = 4.0
-) -> List[ValidationIssue]:
+    schedule: ScheduleResponse, flight: FlightInfo, min_gap_hours: float = 4.0
+) -> list[ValidationIssue]:
     """
     Validate that sleep_target is not scheduled within min_gap_hours before departure.
 
@@ -220,14 +207,16 @@ def validate_sleep_not_before_flight(
             if 0 < hours_before_flight <= min_gap_hours:
                 # On Flight Day (day 0), sleep_target is informational, so downgrade to warning
                 severity = "warning" if day_schedule.day == 0 else "error"
-                issues.append(ValidationIssue(
-                    severity=severity,
-                    category="sleep_before_flight",
-                    message=f"sleep_target at {item.time} is {hours_before_flight:.1f}h before "
-                            f"flight departure at {flight.departure_datetime.strftime('%H:%M')}",
-                    day=day_schedule.day,
-                    time=item.time
-                ))
+                issues.append(
+                    ValidationIssue(
+                        severity=severity,
+                        category="sleep_before_flight",
+                        message=f"sleep_target at {item.time} is {hours_before_flight:.1f}h before "
+                        f"flight departure at {flight.departure_datetime.strftime('%H:%M')}",
+                        day=day_schedule.day,
+                        time=item.time,
+                    )
+                )
 
     return issues
 
@@ -235,7 +224,7 @@ def validate_sleep_not_before_flight(
 def validate_no_activities_before_landing(
     schedule: ScheduleResponse,
     flight: FlightInfo,
-) -> List[ValidationIssue]:
+) -> list[ValidationIssue]:
     """
     Validate that no activities are scheduled before the flight lands.
 
@@ -254,7 +243,6 @@ def validate_no_activities_before_landing(
         List of validation issues found
     """
     issues = []
-    arrival_date = flight.arrival_datetime.replace(hour=0, minute=0, second=0, microsecond=0)
     arrival_time = flight.arrival_datetime.strftime("%H:%M")
     arrival_minutes = time_to_minutes(parse_time(arrival_time))
 
@@ -277,21 +265,22 @@ def validate_no_activities_before_landing(
 
                 # Check if this activity is before the flight lands
                 if item_minutes < arrival_minutes:
-                    issues.append(ValidationIssue(
-                        severity="error",
-                        category="activity_before_landing",
-                        message=f"{item.type} at {item.time} is before flight lands at {arrival_time}",
-                        day=day_schedule.day,
-                        time=item.time
-                    ))
+                    issues.append(
+                        ValidationIssue(
+                            severity="error",
+                            category="activity_before_landing",
+                            message=f"{item.type} at {item.time} is before flight lands at {arrival_time}",
+                            day=day_schedule.day,
+                            time=item.time,
+                        )
+                    )
 
     return issues
 
 
 def validate_daily_sleep_opportunity(
-    schedule: ScheduleResponse,
-    max_gap_hours: float = 24.0
-) -> List[ValidationIssue]:
+    schedule: ScheduleResponse, max_gap_hours: float = 24.0
+) -> list[ValidationIssue]:
     """
     Validate that every 24-hour period has a sleep opportunity.
 
@@ -328,26 +317,26 @@ def validate_daily_sleep_opportunity(
 
         # Gap in hours = (day difference * 24) + (time difference)
         day_diff = day2 - day1
-        time_diff_h = (h2 + m2/60) - (h1 + m1/60)
+        time_diff_h = (h2 + m2 / 60) - (h1 + m1 / 60)
 
         gap_hours = day_diff * 24 + time_diff_h
 
         if gap_hours > max_gap_hours:
-            issues.append(ValidationIssue(
-                severity="warning",
-                category="sleep_gap",
-                message=f"{gap_hours:.1f}h gap between sleep opportunities "
-                        f"(day {day1} {time1} to day {day2} {time2})",
-                day=day1,
-                time=time1
-            ))
+            issues.append(
+                ValidationIssue(
+                    severity="warning",
+                    category="sleep_gap",
+                    message=f"{gap_hours:.1f}h gap between sleep opportunities "
+                    f"(day {day1} {time1} to day {day2} {time2})",
+                    day=day1,
+                    time=time1,
+                )
+            )
 
     return issues
 
 
-def validate_sleep_wake_order(
-    schedule: ScheduleResponse
-) -> List[ValidationIssue]:
+def validate_sleep_wake_order(schedule: ScheduleResponse) -> list[ValidationIssue]:
     """
     Validate that each day has coherent sleep→wake ordering.
 
@@ -387,21 +376,20 @@ def validate_sleep_wake_order(
 
                 # If sleep is before wake on same day (and both in normal hours)
                 if sleep_h < wake_h and wake_h < 12:
-                    issues.append(ValidationIssue(
-                        severity="warning",
-                        category="sleep_wake_order",
-                        message=f"sleep_target at {sleep_time} is before wake_target at {wake_time}",
-                        day=day_schedule.day,
-                        time=sleep_time
-                    ))
+                    issues.append(
+                        ValidationIssue(
+                            severity="warning",
+                            category="sleep_wake_order",
+                            message=f"sleep_target at {sleep_time} is before wake_target at {wake_time}",
+                            day=day_schedule.day,
+                            time=sleep_time,
+                        )
+                    )
 
     return issues
 
 
-def run_all_validations(
-    schedule: ScheduleResponse,
-    flight: FlightInfo
-) -> List[ValidationIssue]:
+def run_all_validations(schedule: ScheduleResponse, flight: FlightInfo) -> list[ValidationIssue]:
     """
     Run all validation checks on a schedule.
 

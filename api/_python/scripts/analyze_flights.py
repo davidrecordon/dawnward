@@ -5,14 +5,14 @@ Outputs full schedules for manual review and analysis.
 """
 
 import sys
-from pathlib import Path
 from datetime import datetime, timedelta
+from pathlib import Path
 
 # Add parent directory to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from circadian.types import TripLeg, ScheduleRequest
 from circadian.scheduler_v2 import ScheduleGeneratorV2
+from circadian.types import ScheduleRequest, TripLeg
 
 
 def make_flight_datetime(base_date: datetime, time_str: str, day_offset: int = 0) -> datetime:
@@ -26,50 +26,208 @@ def make_flight_datetime(base_date: datetime, time_str: str, day_offset: int = 0
 # All 20 flights organized by severity
 FLIGHTS = [
     # Minimal jet lag (2-3h)
-    {"name": "HA11", "route": "SFO→HNL", "origin_tz": "America/Los_Angeles", "dest_tz": "Pacific/Honolulu",
-     "depart": "07:00", "arrive": "09:35", "day_offset": 0, "category": "minimal"},
-    {"name": "HA12", "route": "HNL→SFO", "origin_tz": "Pacific/Honolulu", "dest_tz": "America/Los_Angeles",
-     "depart": "12:30", "arrive": "20:30", "day_offset": 0, "category": "minimal"},
-    {"name": "AA16", "route": "SFO→JFK", "origin_tz": "America/Los_Angeles", "dest_tz": "America/New_York",
-     "depart": "11:00", "arrive": "19:35", "day_offset": 0, "category": "minimal"},
-    {"name": "AA177", "route": "JFK→SFO", "origin_tz": "America/New_York", "dest_tz": "America/Los_Angeles",
-     "depart": "19:35", "arrive": "23:21", "day_offset": 0, "category": "minimal"},
-
+    {
+        "name": "HA11",
+        "route": "SFO→HNL",
+        "origin_tz": "America/Los_Angeles",
+        "dest_tz": "Pacific/Honolulu",
+        "depart": "07:00",
+        "arrive": "09:35",
+        "day_offset": 0,
+        "category": "minimal",
+    },
+    {
+        "name": "HA12",
+        "route": "HNL→SFO",
+        "origin_tz": "Pacific/Honolulu",
+        "dest_tz": "America/Los_Angeles",
+        "depart": "12:30",
+        "arrive": "20:30",
+        "day_offset": 0,
+        "category": "minimal",
+    },
+    {
+        "name": "AA16",
+        "route": "SFO→JFK",
+        "origin_tz": "America/Los_Angeles",
+        "dest_tz": "America/New_York",
+        "depart": "11:00",
+        "arrive": "19:35",
+        "day_offset": 0,
+        "category": "minimal",
+    },
+    {
+        "name": "AA177",
+        "route": "JFK→SFO",
+        "origin_tz": "America/New_York",
+        "dest_tz": "America/Los_Angeles",
+        "depart": "19:35",
+        "arrive": "23:21",
+        "day_offset": 0,
+        "category": "minimal",
+    },
     # Moderate jet lag (8-9h)
-    {"name": "VS20", "route": "SFO→LHR", "origin_tz": "America/Los_Angeles", "dest_tz": "Europe/London",
-     "depart": "16:30", "arrive": "10:40", "day_offset": 1, "category": "moderate"},
-    {"name": "VS19", "route": "LHR→SFO", "origin_tz": "Europe/London", "dest_tz": "America/Los_Angeles",
-     "depart": "11:40", "arrive": "14:40", "day_offset": 0, "category": "moderate"},
-    {"name": "AF83", "route": "SFO→CDG", "origin_tz": "America/Los_Angeles", "dest_tz": "Europe/Paris",
-     "depart": "15:40", "arrive": "11:35", "day_offset": 1, "category": "moderate"},
-    {"name": "AF84", "route": "CDG→SFO", "origin_tz": "Europe/Paris", "dest_tz": "America/Los_Angeles",
-     "depart": "13:25", "arrive": "15:55", "day_offset": 0, "category": "moderate"},
-    {"name": "LH455", "route": "SFO→FRA", "origin_tz": "America/Los_Angeles", "dest_tz": "Europe/Berlin",
-     "depart": "14:40", "arrive": "10:30", "day_offset": 1, "category": "moderate"},
-    {"name": "LH454", "route": "FRA→SFO", "origin_tz": "Europe/Berlin", "dest_tz": "America/Los_Angeles",
-     "depart": "13:20", "arrive": "15:55", "day_offset": 0, "category": "moderate"},
-
+    {
+        "name": "VS20",
+        "route": "SFO→LHR",
+        "origin_tz": "America/Los_Angeles",
+        "dest_tz": "Europe/London",
+        "depart": "16:30",
+        "arrive": "10:40",
+        "day_offset": 1,
+        "category": "moderate",
+    },
+    {
+        "name": "VS19",
+        "route": "LHR→SFO",
+        "origin_tz": "Europe/London",
+        "dest_tz": "America/Los_Angeles",
+        "depart": "11:40",
+        "arrive": "14:40",
+        "day_offset": 0,
+        "category": "moderate",
+    },
+    {
+        "name": "AF83",
+        "route": "SFO→CDG",
+        "origin_tz": "America/Los_Angeles",
+        "dest_tz": "Europe/Paris",
+        "depart": "15:40",
+        "arrive": "11:35",
+        "day_offset": 1,
+        "category": "moderate",
+    },
+    {
+        "name": "AF84",
+        "route": "CDG→SFO",
+        "origin_tz": "Europe/Paris",
+        "dest_tz": "America/Los_Angeles",
+        "depart": "13:25",
+        "arrive": "15:55",
+        "day_offset": 0,
+        "category": "moderate",
+    },
+    {
+        "name": "LH455",
+        "route": "SFO→FRA",
+        "origin_tz": "America/Los_Angeles",
+        "dest_tz": "Europe/Berlin",
+        "depart": "14:40",
+        "arrive": "10:30",
+        "day_offset": 1,
+        "category": "moderate",
+    },
+    {
+        "name": "LH454",
+        "route": "FRA→SFO",
+        "origin_tz": "Europe/Berlin",
+        "dest_tz": "America/Los_Angeles",
+        "depart": "13:20",
+        "arrive": "15:55",
+        "day_offset": 0,
+        "category": "moderate",
+    },
     # Severe jet lag (5-12h via shorter path)
-    {"name": "EK226", "route": "SFO→DXB", "origin_tz": "America/Los_Angeles", "dest_tz": "Asia/Dubai",
-     "depart": "15:40", "arrive": "19:25", "day_offset": 1, "category": "severe"},
-    {"name": "EK225", "route": "DXB→SFO", "origin_tz": "Asia/Dubai", "dest_tz": "America/Los_Angeles",
-     "depart": "08:50", "arrive": "12:50", "day_offset": 0, "category": "severe"},
-    {"name": "SQ31", "route": "SFO→SIN", "origin_tz": "America/Los_Angeles", "dest_tz": "Asia/Singapore",
-     "depart": "09:40", "arrive": "19:05", "day_offset": 1, "category": "severe"},
-    {"name": "SQ32", "route": "SIN→SFO", "origin_tz": "Asia/Singapore", "dest_tz": "America/Los_Angeles",
-     "depart": "09:15", "arrive": "07:50", "day_offset": 0, "category": "severe"},
-    {"name": "CX879", "route": "SFO→HKG", "origin_tz": "America/Los_Angeles", "dest_tz": "Asia/Hong_Kong",
-     "depart": "11:25", "arrive": "19:00", "day_offset": 1, "category": "severe"},
-    {"name": "CX872", "route": "HKG→SFO", "origin_tz": "Asia/Hong_Kong", "dest_tz": "America/Los_Angeles",
-     "depart": "01:00", "arrive": "21:15", "day_offset": -1, "category": "severe"},
-    {"name": "JL1", "route": "SFO→HND", "origin_tz": "America/Los_Angeles", "dest_tz": "Asia/Tokyo",
-     "depart": "12:55", "arrive": "17:20", "day_offset": 1, "category": "severe"},
-    {"name": "JL2", "route": "HND→SFO", "origin_tz": "Asia/Tokyo", "dest_tz": "America/Los_Angeles",
-     "depart": "18:05", "arrive": "10:15", "day_offset": 0, "category": "severe"},
-    {"name": "QF74", "route": "SFO→SYD", "origin_tz": "America/Los_Angeles", "dest_tz": "Australia/Sydney",
-     "depart": "20:15", "arrive": "06:10", "day_offset": 2, "category": "severe"},
-    {"name": "QF73", "route": "SYD→SFO", "origin_tz": "Australia/Sydney", "dest_tz": "America/Los_Angeles",
-     "depart": "21:25", "arrive": "15:55", "day_offset": 0, "category": "severe"},
+    {
+        "name": "EK226",
+        "route": "SFO→DXB",
+        "origin_tz": "America/Los_Angeles",
+        "dest_tz": "Asia/Dubai",
+        "depart": "15:40",
+        "arrive": "19:25",
+        "day_offset": 1,
+        "category": "severe",
+    },
+    {
+        "name": "EK225",
+        "route": "DXB→SFO",
+        "origin_tz": "Asia/Dubai",
+        "dest_tz": "America/Los_Angeles",
+        "depart": "08:50",
+        "arrive": "12:50",
+        "day_offset": 0,
+        "category": "severe",
+    },
+    {
+        "name": "SQ31",
+        "route": "SFO→SIN",
+        "origin_tz": "America/Los_Angeles",
+        "dest_tz": "Asia/Singapore",
+        "depart": "09:40",
+        "arrive": "19:05",
+        "day_offset": 1,
+        "category": "severe",
+    },
+    {
+        "name": "SQ32",
+        "route": "SIN→SFO",
+        "origin_tz": "Asia/Singapore",
+        "dest_tz": "America/Los_Angeles",
+        "depart": "09:15",
+        "arrive": "07:50",
+        "day_offset": 0,
+        "category": "severe",
+    },
+    {
+        "name": "CX879",
+        "route": "SFO→HKG",
+        "origin_tz": "America/Los_Angeles",
+        "dest_tz": "Asia/Hong_Kong",
+        "depart": "11:25",
+        "arrive": "19:00",
+        "day_offset": 1,
+        "category": "severe",
+    },
+    {
+        "name": "CX872",
+        "route": "HKG→SFO",
+        "origin_tz": "Asia/Hong_Kong",
+        "dest_tz": "America/Los_Angeles",
+        "depart": "01:00",
+        "arrive": "21:15",
+        "day_offset": -1,
+        "category": "severe",
+    },
+    {
+        "name": "JL1",
+        "route": "SFO→HND",
+        "origin_tz": "America/Los_Angeles",
+        "dest_tz": "Asia/Tokyo",
+        "depart": "12:55",
+        "arrive": "17:20",
+        "day_offset": 1,
+        "category": "severe",
+    },
+    {
+        "name": "JL2",
+        "route": "HND→SFO",
+        "origin_tz": "Asia/Tokyo",
+        "dest_tz": "America/Los_Angeles",
+        "depart": "18:05",
+        "arrive": "10:15",
+        "day_offset": 0,
+        "category": "severe",
+    },
+    {
+        "name": "QF74",
+        "route": "SFO→SYD",
+        "origin_tz": "America/Los_Angeles",
+        "dest_tz": "Australia/Sydney",
+        "depart": "20:15",
+        "arrive": "06:10",
+        "day_offset": 2,
+        "category": "severe",
+    },
+    {
+        "name": "QF73",
+        "route": "SYD→SFO",
+        "origin_tz": "Australia/Sydney",
+        "dest_tz": "America/Los_Angeles",
+        "depart": "21:25",
+        "arrive": "15:55",
+        "day_offset": 0,
+        "category": "severe",
+    },
 ]
 
 
@@ -127,7 +285,9 @@ def format_schedule(result: dict) -> str:
 
     for day_schedule in schedule.interventions:
         phase_info = f" [{day_schedule.phase_type}]" if day_schedule.phase_type else ""
-        lines.append(f"\nDay {day_schedule.day} ({day_schedule.date}, {day_schedule.timezone}){phase_info}")
+        lines.append(
+            f"\nDay {day_schedule.day} ({day_schedule.date}, {day_schedule.timezone}){phase_info}"
+        )
         if day_schedule.phase_start and day_schedule.phase_end:
             # Add (+1) indicator when phase spans midnight
             end_str = day_schedule.phase_end

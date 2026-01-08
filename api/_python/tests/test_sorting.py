@@ -7,15 +7,14 @@ Verifies that:
 3. Other interventions sort chronologically
 """
 
-import pytest
-from datetime import datetime, time, timedelta
-
 import sys
+from datetime import datetime
 from pathlib import Path
+
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from circadian.types import Intervention, TravelPhase
 from circadian.scheduling.constraint_filter import ConstraintFilter
+from circadian.types import Intervention, TravelPhase
 
 
 class TestLateNightSorting:
@@ -24,10 +23,7 @@ class TestLateNightSorting:
     def _make_intervention(self, itype: str, time_str: str) -> Intervention:
         """Helper to create test interventions."""
         return Intervention(
-            type=itype,
-            time=time_str,
-            title=f"Test {itype}",
-            description="Test description"
+            type=itype, time=time_str, title=f"Test {itype}", description="Test description"
         )
 
     def _make_phase(self, start_hour: int = 6, end_hour: int = 23) -> TravelPhase:
@@ -41,7 +37,7 @@ class TestLateNightSorting:
             cumulative_shift=5.0,
             remaining_shift=0.0,
             day_number=2,
-            available_for_interventions=True
+            available_for_interventions=True,
         )
 
     def test_sleep_target_at_2am_sorts_last(self):
@@ -49,51 +45,53 @@ class TestLateNightSorting:
         cf = ConstraintFilter()
 
         # Create phase that allows these times (crosses midnight)
-        phase = TravelPhase(
+        _phase = TravelPhase(
             phase_type="adaptation",
             start_datetime=datetime(2025, 1, 15, 10, 0),  # 10:00
-            end_datetime=datetime(2025, 1, 16, 3, 0),     # 03:00 next day
+            end_datetime=datetime(2025, 1, 16, 3, 0),  # 03:00 next day
             timezone="Europe/London",
             cumulative_shift=5.0,
             remaining_shift=0.0,
             day_number=2,
-            available_for_interventions=True
+            available_for_interventions=True,
         )
 
         interventions = [
             self._make_intervention("sleep_target", "02:00"),  # Should be LAST
             self._make_intervention("caffeine_cutoff", "16:00"),
-            self._make_intervention("wake_target", "10:00"),   # Should be FIRST
+            self._make_intervention("wake_target", "10:00"),  # Should be FIRST
             self._make_intervention("melatonin", "19:00"),
         ]
 
         sorted_interventions = cf._sort_interventions(interventions)
 
         # wake_target should be first, sleep_target should be last
-        assert sorted_interventions[0].type == "wake_target", \
+        assert sorted_interventions[0].type == "wake_target", (
             f"Expected wake_target first, got {sorted_interventions[0].type}"
-        assert sorted_interventions[-1].type == "sleep_target", \
+        )
+        assert sorted_interventions[-1].type == "sleep_target", (
             f"Expected sleep_target last, got {sorted_interventions[-1].type}"
+        )
 
     def test_wake_target_at_4am_sorts_first(self):
         """wake_target at 4:00 AM should sort FIRST, not as late night."""
         cf = ConstraintFilter()
 
         # Phase that includes early morning
-        phase = TravelPhase(
+        _phase = TravelPhase(
             phase_type="pre_departure",
-            start_datetime=datetime(2025, 1, 15, 4, 0),   # 04:00
-            end_datetime=datetime(2025, 1, 15, 22, 0),    # 22:00
+            start_datetime=datetime(2025, 1, 15, 4, 0),  # 04:00
+            end_datetime=datetime(2025, 1, 15, 22, 0),  # 22:00
             timezone="America/Los_Angeles",
             cumulative_shift=3.0,
             remaining_shift=5.0,
             day_number=-1,
-            available_for_interventions=True
+            available_for_interventions=True,
         )
 
         interventions = [
             self._make_intervention("caffeine_cutoff", "10:00"),
-            self._make_intervention("wake_target", "04:00"),   # Should be FIRST
+            self._make_intervention("wake_target", "04:00"),  # Should be FIRST
             self._make_intervention("melatonin", "14:00"),
             self._make_intervention("sleep_target", "20:00"),  # Should be LAST
         ]
@@ -101,8 +99,9 @@ class TestLateNightSorting:
         sorted_interventions = cf._sort_interventions(interventions)
 
         # wake_target at 4am should be first (not treated as late night)
-        assert sorted_interventions[0].type == "wake_target", \
+        assert sorted_interventions[0].type == "wake_target", (
             f"Expected wake_target at 4am to be first, got {sorted_interventions[0].type}"
+        )
         assert sorted_interventions[0].time == "04:00"
 
     def test_wake_target_at_5am_sorts_first(self):
@@ -111,15 +110,16 @@ class TestLateNightSorting:
 
         interventions = [
             self._make_intervention("melatonin", "13:00"),
-            self._make_intervention("wake_target", "05:00"),   # Should be FIRST
+            self._make_intervention("wake_target", "05:00"),  # Should be FIRST
             self._make_intervention("caffeine_cutoff", "11:00"),
             self._make_intervention("sleep_target", "21:00"),
         ]
 
         sorted_interventions = cf._sort_interventions(interventions)
 
-        assert sorted_interventions[0].type == "wake_target", \
+        assert sorted_interventions[0].type == "wake_target", (
             f"Expected wake_target at 5am first, got {sorted_interventions[0].type}"
+        )
 
     def test_light_seek_at_5am_sorts_early(self):
         """light_seek at 5:00 AM should sort as early morning, not late night."""
@@ -127,15 +127,16 @@ class TestLateNightSorting:
 
         interventions = [
             self._make_intervention("caffeine_cutoff", "14:00"),
-            self._make_intervention("light_seek", "05:30"),    # Should be early
+            self._make_intervention("light_seek", "05:30"),  # Should be early
             self._make_intervention("sleep_target", "22:00"),
         ]
 
         sorted_interventions = cf._sort_interventions(interventions)
 
         # light_seek at 5:30 should come before 14:00 caffeine_cutoff
-        assert sorted_interventions[0].type == "light_seek", \
+        assert sorted_interventions[0].type == "light_seek", (
             f"Expected light_seek at 5:30 to be first, got {sorted_interventions[0].type}"
+        )
 
     def test_sleep_target_at_1am_sorts_after_11pm(self):
         """sleep_target at 1:00 AM should sort after sleep_target at 11:00 PM."""
@@ -144,7 +145,7 @@ class TestLateNightSorting:
         interventions = [
             self._make_intervention("sleep_target", "01:00"),  # Late night - should be last
             self._make_intervention("wake_target", "10:00"),
-            self._make_intervention("melatonin", "23:00"),     # 11 PM
+            self._make_intervention("melatonin", "23:00"),  # 11 PM
         ]
 
         sorted_interventions = cf._sort_interventions(interventions)
@@ -160,10 +161,7 @@ class TestChronologicalSorting:
 
     def _make_intervention(self, itype: str, time_str: str) -> Intervention:
         return Intervention(
-            type=itype,
-            time=time_str,
-            title=f"Test {itype}",
-            description="Test description"
+            type=itype, time=time_str, title=f"Test {itype}", description="Test description"
         )
 
     def test_daytime_activities_sort_chronologically(self):
@@ -181,8 +179,9 @@ class TestChronologicalSorting:
         times = [i.time for i in sorted_interventions]
 
         # Should be in chronological order
-        assert times == ["08:00", "15:00", "18:00", "20:00"], \
+        assert times == ["08:00", "15:00", "18:00", "20:00"], (
             f"Expected chronological order, got {times}"
+        )
 
     def test_same_time_priority_ordering(self):
         """Items at same time should follow priority: wake > light > caffeine > sleep."""
@@ -192,7 +191,7 @@ class TestChronologicalSorting:
             self._make_intervention("sleep_target", "22:00"),
             self._make_intervention("caffeine_cutoff", "10:00"),
             self._make_intervention("wake_target", "10:00"),  # Same time as caffeine
-            self._make_intervention("light_seek", "10:00"),   # Same time
+            self._make_intervention("light_seek", "10:00"),  # Same time
         ]
 
         sorted_interventions = cf._sort_interventions(interventions)
@@ -201,10 +200,12 @@ class TestChronologicalSorting:
         ten_am_items = [i for i in sorted_interventions if i.time == "10:00"]
         types_at_10 = [i.type for i in ten_am_items]
 
-        assert types_at_10[0] == "wake_target", \
+        assert types_at_10[0] == "wake_target", (
             f"wake_target should come first at 10:00, got {types_at_10}"
-        assert types_at_10[1] == "light_seek", \
+        )
+        assert types_at_10[1] == "light_seek", (
             f"light_seek should come second at 10:00, got {types_at_10}"
+        )
 
 
 class TestFlightDaySorting:
@@ -212,10 +213,7 @@ class TestFlightDaySorting:
 
     def _make_intervention(self, itype: str, time_str: str) -> Intervention:
         return Intervention(
-            type=itype,
-            time=time_str,
-            title=f"Test {itype}",
-            description="Test description"
+            type=itype, time=time_str, title=f"Test {itype}", description="Test description"
         )
 
     def test_flight_day_early_wake_sorts_first(self):
@@ -243,10 +241,7 @@ class TestSleepTargetNearDeparture:
 
     def _make_intervention(self, itype: str, time_str: str) -> Intervention:
         return Intervention(
-            type=itype,
-            time=time_str,
-            title=f"Test {itype}",
-            description="Test description"
+            type=itype, time=time_str, title=f"Test {itype}", description="Test description"
         )
 
     def _make_phase(self, start_hour: int = 6, end_hour: int = 22) -> TravelPhase:
@@ -260,7 +255,7 @@ class TestSleepTargetNearDeparture:
             cumulative_shift=3.0,
             remaining_shift=5.0,
             day_number=0,
-            available_for_interventions=True
+            available_for_interventions=True,
         )
 
     def test_sleep_target_within_4h_of_departure_filtered(self):
@@ -281,8 +276,9 @@ class TestSleepTargetNearDeparture:
 
         # sleep_target should be filtered out
         types = [i.type for i in filtered]
-        assert "sleep_target" not in types, \
+        assert "sleep_target" not in types, (
             f"sleep_target within 4h of departure should be filtered, got {types}"
+        )
 
         # Check violation was recorded
         sleep_violations = [v for v in cf.violations if v.intervention_type == "sleep_target"]
@@ -305,8 +301,9 @@ class TestSleepTargetNearDeparture:
         filtered = cf.filter_phase(interventions, phase, departure)
 
         types = [i.type for i in filtered]
-        assert "sleep_target" not in types, \
-            f"sleep_target exactly 4h before departure should be filtered"
+        assert "sleep_target" not in types, (
+            "sleep_target exactly 4h before departure should be filtered"
+        )
 
     def test_sleep_target_more_than_4h_before_departure_kept(self):
         """sleep_target more than 4h before departure should be kept."""
@@ -324,8 +321,9 @@ class TestSleepTargetNearDeparture:
         filtered = cf.filter_phase(interventions, phase, departure)
 
         types = [i.type for i in filtered]
-        assert "sleep_target" in types, \
+        assert "sleep_target" in types, (
             f"sleep_target 5h before departure should be kept, got {types}"
+        )
 
     def test_sleep_target_after_departure_kept(self):
         """sleep_target after departure time should be kept (edge case)."""
@@ -343,8 +341,7 @@ class TestSleepTargetNearDeparture:
         filtered = cf.filter_phase(interventions, phase, departure)
 
         types = [i.type for i in filtered]
-        assert "sleep_target" in types, \
-            f"sleep_target after departure should be kept, got {types}"
+        assert "sleep_target" in types, f"sleep_target after departure should be kept, got {types}"
 
     def test_wake_target_not_affected_by_departure_proximity(self):
         """wake_target should never be filtered based on departure time."""
@@ -361,8 +358,7 @@ class TestSleepTargetNearDeparture:
         filtered = cf.filter_phase(interventions, phase, departure)
 
         types = [i.type for i in filtered]
-        assert "wake_target" in types, \
-            f"wake_target should never be filtered by departure proximity"
+        assert "wake_target" in types, "wake_target should never be filtered by departure proximity"
 
     def test_no_departure_time_sleep_target_kept(self):
         """Without departure_datetime, sleep_target should always be kept."""
@@ -379,5 +375,6 @@ class TestSleepTargetNearDeparture:
         filtered = cf.filter_phase(interventions, phase, departure_datetime=None)
 
         types = [i.type for i in filtered]
-        assert "sleep_target" in types, \
-            f"sleep_target should be kept when no departure_datetime provided"
+        assert "sleep_target" in types, (
+            "sleep_target should be kept when no departure_datetime provided"
+        )

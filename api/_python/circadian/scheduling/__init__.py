@@ -10,9 +10,9 @@ Modules:
 - constraint_filter: Apply practical constraints (phase bounds, sleep windows)
 """
 
-from .phase_generator import PhaseGenerator
-from .intervention_planner import InterventionPlanner
 from .constraint_filter import ConstraintFilter
+from .intervention_planner import InterventionPlanner
+from .phase_generator import PhaseGenerator
 
 __all__ = [
     "PhaseGenerator",

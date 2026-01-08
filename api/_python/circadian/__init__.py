@@ -7,17 +7,17 @@ personalized jet lag adaptation schedules.
 Main scheduler: ScheduleGeneratorV2 (phase-based)
 """
 
+from .scheduler_v2 import ScheduleGeneratorV2, generate_schedule_v2
 from .types import (
-    TripLeg,
-    ScheduleRequest,
-    Intervention,
     DaySchedule,
+    Intervention,
+    PhaseType,
+    ScheduleRequest,
     ScheduleResponse,
     # New phase types
     TravelPhase,
-    PhaseType,
+    TripLeg,
 )
-from .scheduler_v2 import ScheduleGeneratorV2, generate_schedule_v2
 
 __all__ = [
     # Types

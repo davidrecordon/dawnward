@@ -10,6 +10,9 @@
     "test": "vitest",
     "test:run": "vitest run",
     "test:python": "cd api/_python && python3 -m pytest tests/ -v",
+    "lint:python": "cd api/_python && ruff check . && ruff format --check .",
+    "lint:python:fix": "cd api/_python && ruff check . --fix && ruff format .",
+    "typecheck:python": "cd api/_python && mypy circadian/",
     "generate-airports": "bun run scripts/generate-airports.ts"
   },
   "dependencies": {

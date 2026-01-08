@@ -13,22 +13,24 @@ Implements per-phase planning including:
 - In-transit sleep suggestions for ULR flights
 """
 
-from datetime import datetime, time, timedelta
-from typing import List, Optional, Literal
 from dataclasses import dataclass
+from datetime import datetime, time
+from typing import Literal
+
 import pytz
 
-from ..types import TravelPhase, Intervention, ScheduleRequest
-from ..circadian_math import format_time, format_time_12h, time_to_minutes, minutes_to_time
-from ..science.prc import LightPRC, MelatoninPRC
+from ..circadian_math import format_time, format_time_12h, minutes_to_time, time_to_minutes
 from ..science.markers import CircadianMarkerTracker
-from ..science.sleep_pressure import SleepPressureModel
+from ..science.prc import LightPRC, MelatoninPRC
 from ..science.shift_calculator import ShiftCalculator
+from ..science.sleep_pressure import SleepPressureModel
+from ..types import Intervention, ScheduleRequest, TravelPhase
 
 
 @dataclass
 class PlannerContext:
     """Context for intervention planning."""
+
     markers: CircadianMarkerTracker
     sleep_pressure: SleepPressureModel
     shift_calc: ShiftCalculator
@@ -48,7 +50,9 @@ class InterventionPlanner:
     Practical constraints are applied by ConstraintFilter afterward.
     """
 
-    def __init__(self, request: ScheduleRequest, total_shift: float, direction: str):
+    def __init__(
+        self, request: ScheduleRequest, total_shift: float, direction: Literal["advance", "delay"]
+    ):
         """
         Initialize planner.
 
@@ -73,10 +77,10 @@ class InterventionPlanner:
             uses_melatonin=request.uses_melatonin,
             uses_caffeine=request.uses_caffeine,
             uses_exercise=request.uses_exercise,
-            nap_preference=request.nap_preference
+            nap_preference=request.nap_preference,
         )
 
-    def plan_phase(self, phase: TravelPhase) -> List[Intervention]:
+    def plan_phase(self, phase: TravelPhase) -> list[Intervention]:
         """
         Generate interventions for a single phase.
 
@@ -92,7 +96,9 @@ class InterventionPlanner:
         # Handle very short phases (< 8h available)
         # BUT always include wake/sleep targets for Day 0 (Flight Day) and Day 1 (Arrival)
         if phase.duration_hours < 8:
-            return self._plan_single_recommendation(phase, include_sleep_wake=(phase.day_number in (0, 1)))
+            return self._plan_single_recommendation(
+                phase, include_sleep_wake=(phase.day_number in (0, 1))
+            )
 
         interventions = []
 
@@ -101,7 +107,7 @@ class InterventionPlanner:
             day=phase.day_number,
             cumulative_shift=phase.cumulative_shift,
             total_shift=self.context.total_shift,
-            direction=self.context.direction
+            direction=self.context.direction,
         )
 
         cbtmin = day_markers["cbtmin"]
@@ -132,7 +138,7 @@ class InterventionPlanner:
 
         return interventions
 
-    def _plan_in_transit(self, phase: TravelPhase) -> List[Intervention]:
+    def _plan_in_transit(self, phase: TravelPhase) -> list[Intervention]:
         """
         Plan interventions for in-transit phases.
 
@@ -182,41 +188,49 @@ class InterventionPlanner:
                         departure_utc = departure_utc.astimezone(pytz.UTC)
 
                         flight_offset = (utc_time - departure_utc).total_seconds() / 3600
-                        flight_offset = max(0, round(flight_offset, 1))  # Clamp to >= 0, round to 0.1h
+                        flight_offset = max(
+                            0, round(flight_offset, 1)
+                        )  # Clamp to >= 0, round to 0.1h
 
                     except Exception:
                         # Fallback: extract HH:MM from ISO string
                         display_time = start_iso.split("T")[1][:5]
                         flight_offset = None
 
-                interventions.append(Intervention(
-                    time=display_time,
-                    type="nap_window",
-                    title=window.get("label", "Sleep opportunity"),
-                    description=(
-                        f"Your body clock makes sleep easier during this window. "
-                        f"Aim for ~{window.get('duration_hours', 4):.0f} hours if possible."
-                    ),
-                    duration_min=int(window.get("duration_hours", 4) * 60),
-                    flight_offset_hours=flight_offset
-                ))
+                interventions.append(
+                    Intervention(
+                        time=display_time,
+                        type="nap_window",
+                        title=window.get("label", "Sleep opportunity"),
+                        description=(
+                            f"Your body clock makes sleep easier during this window. "
+                            f"Aim for ~{window.get('duration_hours', 4):.0f} hours if possible."
+                        ),
+                        duration_min=int(window.get("duration_hours", 4) * 60),
+                        flight_offset_hours=flight_offset,
+                    )
+                )
         elif phase.flight_duration_hours and phase.flight_duration_hours >= 8:
             # Regular overnight flight: single nap suggestion
-            interventions.append(Intervention(
-                time="00:00",  # Placeholder - will be filtered/adjusted
-                type="nap_window",
-                title="In-flight sleep",
-                description=(
-                    "Try to sleep on the plane to arrive more rested. "
-                    "Use an eye mask and earplugs to improve sleep quality."
-                ),
-                duration_min=int(phase.flight_duration_hours * 0.5 * 60),  # ~50% of flight
-                flight_offset_hours=None
-            ))
+            interventions.append(
+                Intervention(
+                    time="00:00",  # Placeholder - will be filtered/adjusted
+                    type="nap_window",
+                    title="In-flight sleep",
+                    description=(
+                        "Try to sleep on the plane to arrive more rested. "
+                        "Use an eye mask and earplugs to improve sleep quality."
+                    ),
+                    duration_min=int(phase.flight_duration_hours * 0.5 * 60),  # ~50% of flight
+                    flight_offset_hours=None,
+                )
+            )
 
         return interventions
 
-    def _plan_single_recommendation(self, phase: TravelPhase, include_sleep_wake: bool = False) -> List[Intervention]:
+    def _plan_single_recommendation(
+        self, phase: TravelPhase, include_sleep_wake: bool = False
+    ) -> list[Intervention]:
         """
         Plan a single high-impact intervention for very short phases (<8h).
 
@@ -234,7 +248,7 @@ class InterventionPlanner:
             day=phase.day_number,
             cumulative_shift=phase.cumulative_shift,
             total_shift=self.context.total_shift,
-            direction=self.context.direction
+            direction=self.context.direction,
         )
 
         cbtmin = day_markers["cbtmin"]
@@ -250,16 +264,18 @@ class InterventionPlanner:
             # Most impactful for advance: morning light after CBTmin
             light_start, _ = LightPRC.optimal_light_window(cbtmin, "advance", 30)
 
-            interventions.append(Intervention(
-                time=format_time(light_start),
-                type="light_seek",
-                title="Get bright light",
-                description=(
-                    "Your departure day is short—focus on this one thing. "
-                    "Bright morning light helps shift your clock forward."
-                ),
-                duration_min=30
-            ))
+            interventions.append(
+                Intervention(
+                    time=format_time(light_start),
+                    type="light_seek",
+                    title="Get bright light",
+                    description=(
+                        "Your departure day is short—focus on this one thing. "
+                        "Bright morning light helps shift your clock forward."
+                    ),
+                    duration_min=30,
+                )
+            )
         else:
             # Most impactful for delay: evening light or melatonin
             if self.context.uses_melatonin:
@@ -270,38 +286,39 @@ class InterventionPlanner:
                 if optimal_minutes < wake_minutes:
                     optimal_time = wake_target
 
-                interventions.append(Intervention(
-                    time=format_time(optimal_time),
-                    type="melatonin",
-                    title="Take melatonin",
-                    description=(
-                        "Your departure day is short—focus on this one thing. "
-                        "Morning melatonin helps shift your clock back."
-                    ),
-                    duration_min=None
-                ))
+                interventions.append(
+                    Intervention(
+                        time=format_time(optimal_time),
+                        type="melatonin",
+                        title="Take melatonin",
+                        description=(
+                            "Your departure day is short—focus on this one thing. "
+                            "Morning melatonin helps shift your clock back."
+                        ),
+                        duration_min=None,
+                    )
+                )
             else:
                 # Fall back to evening light
                 light_start, _ = LightPRC.optimal_light_window(cbtmin, "delay", 30)
-                interventions.append(Intervention(
-                    time=format_time(light_start),
-                    type="light_seek",
-                    title="Get bright light",
-                    description=(
-                        "Your departure day is short—focus on this one thing. "
-                        "Evening light helps shift your clock back."
-                    ),
-                    duration_min=30
-                ))
+                interventions.append(
+                    Intervention(
+                        time=format_time(light_start),
+                        type="light_seek",
+                        title="Get bright light",
+                        description=(
+                            "Your departure day is short—focus on this one thing. "
+                            "Evening light helps shift your clock back."
+                        ),
+                        duration_min=30,
+                    )
+                )
 
         return interventions
 
     def _plan_sleep_wake(
-        self,
-        phase: TravelPhase,
-        wake_target: time,
-        sleep_target: time
-    ) -> List[Intervention]:
+        self, phase: TravelPhase, wake_target: time, sleep_target: time
+    ) -> list[Intervention]:
         """Plan sleep and wake target interventions."""
         # Direction-specific wake advice
         if self.context.direction == "advance":
@@ -315,10 +332,9 @@ class InterventionPlanner:
                 type="wake_target",
                 title="Target wake time",
                 description=(
-                    f"Try to wake up at this time to help shift your circadian clock. "
-                    f"{wake_advice}"
+                    f"Try to wake up at this time to help shift your circadian clock. {wake_advice}"
                 ),
-                duration_min=None
+                duration_min=None,
             ),
             Intervention(
                 time=format_time(sleep_target),
@@ -328,29 +344,21 @@ class InterventionPlanner:
                     "Aim to be in bed with lights out at this time. "
                     "Dim lights 1-2 hours before to prepare for sleep."
                 ),
-                duration_min=None
-            )
+                duration_min=None,
+            ),
         ]
 
     def _plan_light(
-        self,
-        phase: TravelPhase,
-        cbtmin: time,
-        wake_target: time,
-        sleep_target: time
-    ) -> List[Intervention]:
+        self, phase: TravelPhase, cbtmin: time, wake_target: time, sleep_target: time
+    ) -> list[Intervention]:
         """Plan light seek and avoid interventions using PRC."""
         interventions = []
 
         # Get optimal light seek window
-        seek_start, seek_end = LightPRC.optimal_light_window(
-            cbtmin, self.context.direction, 60
-        )
+        seek_start, seek_end = LightPRC.optimal_light_window(cbtmin, self.context.direction, 60)
 
         # Get light avoid window
-        avoid_start, avoid_end = LightPRC.light_avoid_window(
-            cbtmin, self.context.direction
-        )
+        avoid_start, avoid_end = LightPRC.light_avoid_window(cbtmin, self.context.direction)
 
         if self.context.direction == "advance":
             # ADVANCE: Morning light
@@ -363,16 +371,18 @@ class InterventionPlanner:
             if self._is_during_sleep(seek_minutes, sleep_minutes, wake_minutes):
                 seek_start = wake_target
 
-            interventions.append(Intervention(
-                time=format_time(seek_start),
-                type="light_seek",
-                title="Seek bright light",
-                description=(
-                    "Get bright outdoor light or use a 10,000 lux lightbox. "
-                    "This helps advance your circadian clock for eastward travel."
-                ),
-                duration_min=60
-            ))
+            interventions.append(
+                Intervention(
+                    time=format_time(seek_start),
+                    type="light_seek",
+                    title="Seek bright light",
+                    description=(
+                        "Get bright outdoor light or use a 10,000 lux lightbox. "
+                        "This helps advance your circadian clock for eastward travel."
+                    ),
+                    duration_min=60,
+                )
+            )
 
             # Light avoid (truncate to waking hours)
             avoid_result = self._truncate_to_waking(
@@ -380,16 +390,18 @@ class InterventionPlanner:
             )
             if avoid_result:
                 adj_start, adj_end, adj_duration = avoid_result
-                interventions.append(Intervention(
-                    time=format_time(adj_start),
-                    type="light_avoid",
-                    title="Avoid bright light",
-                    description=(
-                        f"Wear sunglasses or stay indoors until {format_time_12h(adj_end)}. "
-                        "Light now would shift your clock the wrong direction."
-                    ),
-                    duration_min=adj_duration
-                ))
+                interventions.append(
+                    Intervention(
+                        time=format_time(adj_start),
+                        type="light_avoid",
+                        title="Avoid bright light",
+                        description=(
+                            f"Wear sunglasses or stay indoors until {format_time_12h(adj_end)}. "
+                            "Light now would shift your clock the wrong direction."
+                        ),
+                        duration_min=adj_duration,
+                    )
+                )
 
         else:  # delay
             # DELAY: Evening light
@@ -398,16 +410,18 @@ class InterventionPlanner:
             seek_minutes = sleep_minutes - 180  # 3h before sleep
             seek_start = minutes_to_time(seek_minutes)
 
-            interventions.append(Intervention(
-                time=format_time(seek_start),
-                type="light_seek",
-                title="Seek bright light",
-                description=(
-                    "Get bright outdoor light or use a 10,000 lux lightbox. "
-                    "Evening light helps delay your circadian clock for westward travel."
-                ),
-                duration_min=60
-            ))
+            interventions.append(
+                Intervention(
+                    time=format_time(seek_start),
+                    type="light_seek",
+                    title="Seek bright light",
+                    description=(
+                        "Get bright outdoor light or use a 10,000 lux lightbox. "
+                        "Evening light helps delay your circadian clock for westward travel."
+                    ),
+                    duration_min=60,
+                )
+            )
 
             # Light avoid in morning
             avoid_result = self._truncate_to_waking(
@@ -415,20 +429,24 @@ class InterventionPlanner:
             )
             if avoid_result:
                 adj_start, adj_end, adj_duration = avoid_result
-                interventions.append(Intervention(
-                    time=format_time(adj_start),
-                    type="light_avoid",
-                    title="Avoid bright light",
-                    description=(
-                        f"Wear sunglasses or stay indoors until {format_time_12h(adj_end)}. "
-                        "Morning light would shift your clock the wrong direction."
-                    ),
-                    duration_min=adj_duration
-                ))
+                interventions.append(
+                    Intervention(
+                        time=format_time(adj_start),
+                        type="light_avoid",
+                        title="Avoid bright light",
+                        description=(
+                            f"Wear sunglasses or stay indoors until {format_time_12h(adj_end)}. "
+                            "Morning light would shift your clock the wrong direction."
+                        ),
+                        duration_min=adj_duration,
+                    )
+                )
 
         return interventions
 
-    def _plan_melatonin(self, phase: TravelPhase, dlmo: time, wake_target: time) -> Optional[Intervention]:
+    def _plan_melatonin(
+        self, phase: TravelPhase, dlmo: time, wake_target: time
+    ) -> Intervention | None:
         """Plan melatonin intervention using PRC.
 
         Args:
@@ -447,7 +465,7 @@ class InterventionPlanner:
                     "Take 0.5mg fast-release melatonin. "
                     "This helps advance your circadian clock for eastward travel."
                 ),
-                duration_min=None
+                duration_min=None,
             )
         else:
             # Delay: melatonin less commonly recommended
@@ -470,16 +488,13 @@ class InterventionPlanner:
                         "Take 0.5mg fast-release melatonin. "
                         "Morning melatonin can help delay your clock, but may cause drowsiness."
                     ),
-                    duration_min=None
+                    duration_min=None,
                 )
             return None
 
     def _plan_caffeine(
-        self,
-        phase: TravelPhase,
-        wake_target: time,
-        sleep_target: time
-    ) -> List[Intervention]:
+        self, phase: TravelPhase, wake_target: time, sleep_target: time
+    ) -> list[Intervention]:
         """Plan caffeine strategy interventions."""
         interventions = []
 
@@ -487,16 +502,18 @@ class InterventionPlanner:
         sleep_minutes = time_to_minutes(sleep_target)
 
         # Caffeine OK: from wake time
-        interventions.append(Intervention(
-            time=format_time(wake_target),
-            type="caffeine_ok",
-            title="Caffeine OK",
-            description=(
-                "Coffee and other caffeinated drinks are fine. "
-                "Caffeine can help with alertness during adjustment."
-            ),
-            duration_min=None
-        ))
+        interventions.append(
+            Intervention(
+                time=format_time(wake_target),
+                type="caffeine_ok",
+                title="Caffeine OK",
+                description=(
+                    "Coffee and other caffeinated drinks are fine. "
+                    "Caffeine can help with alertness during adjustment."
+                ),
+                duration_min=None,
+            )
+        )
 
         # Caffeine cutoff: ~10h before sleep (caffeine half-life ~5-6h)
         cutoff_minutes = sleep_minutes - 600  # 10 hours before sleep
@@ -505,25 +522,24 @@ class InterventionPlanner:
 
         # Only show cutoff if it's during waking hours
         if not self._is_during_sleep(cutoff_minutes, sleep_minutes, wake_minutes):
-            interventions.append(Intervention(
-                time=format_time(minutes_to_time(cutoff_minutes)),
-                type="caffeine_cutoff",
-                title="Caffeine cutoff",
-                description=(
-                    "Avoid caffeine from now on to protect tonight's sleep. "
-                    "Caffeine's half-life is ~6 hours, so late consumption disrupts sleep."
-                ),
-                duration_min=None
-            ))
+            interventions.append(
+                Intervention(
+                    time=format_time(minutes_to_time(cutoff_minutes)),
+                    type="caffeine_cutoff",
+                    title="Caffeine cutoff",
+                    description=(
+                        "Avoid caffeine from now on to protect tonight's sleep. "
+                        "Caffeine's half-life is ~6 hours, so late consumption disrupts sleep."
+                    ),
+                    duration_min=None,
+                )
+            )
 
         return interventions
 
     def _plan_nap(
-        self,
-        phase: TravelPhase,
-        wake_target: time,
-        sleep_target: time
-    ) -> Optional[Intervention]:
+        self, phase: TravelPhase, wake_target: time, sleep_target: time
+    ) -> Intervention | None:
         """Plan nap intervention based on phase type and preferences."""
         if self.context.nap_preference == "no":
             return None
@@ -535,7 +551,7 @@ class InterventionPlanner:
             nap_rec = self.sleep_pressure.calculate_arrival_recovery_nap(
                 arrival_time=arrival_time,
                 target_sleep_time=sleep_target,
-                sleep_debt_hours=4.0  # Assume typical red-eye debt
+                sleep_debt_hours=4.0,  # Assume typical red-eye debt
             )
 
             if nap_rec:
@@ -550,7 +566,7 @@ class InterventionPlanner:
                     ),
                     duration_min=nap_rec.max_duration_min,
                     window_end=format_time(nap_rec.window_end),
-                    ideal_time=format_time(nap_rec.ideal_time)
+                    ideal_time=format_time(nap_rec.ideal_time),
                 )
             return None
 
@@ -568,7 +584,7 @@ class InterventionPlanner:
                 ),
                 duration_min=nap_rec.max_duration_min,
                 window_end=format_time(nap_rec.window_end),
-                ideal_time=format_time(nap_rec.ideal_time)
+                ideal_time=format_time(nap_rec.ideal_time),
             )
 
         return None
@@ -583,12 +599,8 @@ class InterventionPlanner:
             return sleep_minutes <= check_minutes < wake_minutes
 
     def _truncate_to_waking(
-        self,
-        start: time,
-        end: time,
-        sleep_target: time,
-        wake_target: time
-    ) -> Optional[tuple]:
+        self, start: time, end: time, sleep_target: time, wake_target: time
+    ) -> tuple | None:
         """
         Truncate a time window to waking hours only.
 

@@ -13,37 +13,37 @@ Key concepts:
 - Wake maintenance zone: 1-3h before habitual sleep (high C, fights against S)
 """
 
-from datetime import time
-from typing import Tuple, Optional, Literal
 from dataclasses import dataclass
+from datetime import time
+from typing import Literal
 
-from ..circadian_math import time_to_minutes, minutes_to_time, parse_time
-
+from ..circadian_math import minutes_to_time, parse_time, time_to_minutes
 
 # Sleep architecture constants
-FULL_SLEEP_CYCLE_MIN = 90          # One complete NREM-REM cycle
-SLEEP_CYCLES_FOR_RECOVERY = 4      # ~6 hours minimum for good recovery
-NAP_INERTIA_THRESHOLD_MIN = 30     # Naps > 30 min risk sleep inertia
+FULL_SLEEP_CYCLE_MIN = 90  # One complete NREM-REM cycle
+SLEEP_CYCLES_FOR_RECOVERY = 4  # ~6 hours minimum for good recovery
+NAP_INERTIA_THRESHOLD_MIN = 30  # Naps > 30 min risk sleep inertia
 
 # Sleep pressure constants
-STANDARD_WAKE_HOURS = 16           # Typical waking day
-PRESSURE_BUILD_RATE = 1.0          # Normalized units per hour awake
-PRESSURE_DECAY_RATE = 0.5          # Units per hour of sleep
+STANDARD_WAKE_HOURS = 16  # Typical waking day
+PRESSURE_BUILD_RATE = 1.0  # Normalized units per hour awake
+PRESSURE_DECAY_RATE = 0.5  # Units per hour of sleep
 
 # Nap window constants (percent of wake period)
 STANDARD_NAP_START_PERCENT = 0.30  # 30% into wake period
-STANDARD_NAP_END_PERCENT = 0.50    # 50% into wake period
-HIGH_DEBT_NAP_START_PERCENT = 0.25 # Earlier when sleep-deprived
-HIGH_DEBT_NAP_END_PERCENT = 0.55   # Wider window when sleep-deprived
+STANDARD_NAP_END_PERCENT = 0.50  # 50% into wake period
+HIGH_DEBT_NAP_START_PERCENT = 0.25  # Earlier when sleep-deprived
+HIGH_DEBT_NAP_END_PERCENT = 0.55  # Wider window when sleep-deprived
 
 
 @dataclass
 class NapRecommendation:
     """Recommended nap window and parameters."""
+
     window_start: time
     window_end: time
-    ideal_time: time              # Center of optimal window
-    max_duration_min: int         # Maximum safe nap duration
+    ideal_time: time  # Center of optimal window
+    max_duration_min: int  # Maximum safe nap duration
     urgency: Literal["optional", "recommended", "important"]
 
 
@@ -138,6 +138,7 @@ class SleepPressureModel:
             wake_duration += 24 * 60
 
         # Adjust window based on sleep debt
+        urgency: Literal["optional", "recommended", "important"]
         if self._sleep_debt_hours >= 2:
             start_percent = HIGH_DEBT_NAP_START_PERCENT
             end_percent = HIGH_DEBT_NAP_END_PERCENT
@@ -162,15 +163,12 @@ class SleepPressureModel:
             window_end=window_end,
             ideal_time=ideal_time,
             max_duration_min=max_duration,
-            urgency=urgency
+            urgency=urgency,
         )
 
     def calculate_arrival_recovery_nap(
-        self,
-        arrival_time: time,
-        target_sleep_time: time,
-        sleep_debt_hours: float = 4.0
-    ) -> Optional[NapRecommendation]:
+        self, arrival_time: time, target_sleep_time: time, sleep_debt_hours: float = 4.0
+    ) -> NapRecommendation | None:
         """
         Calculate arrival-day recovery nap per design doc.
 
@@ -216,6 +214,7 @@ class SleepPressureModel:
         ideal_time = minutes_to_time(min(ideal_minutes, hard_cutoff - 30))
 
         # Determine urgency based on sleep debt
+        urgency: Literal["optional", "recommended", "important"]
         if sleep_debt_hours >= 5:
             urgency = "important"
         elif sleep_debt_hours >= 3:
@@ -228,7 +227,7 @@ class SleepPressureModel:
             window_end=window_end,
             ideal_time=ideal_time,
             max_duration_min=90,  # One full cycle for recovery
-            urgency=urgency
+            urgency=urgency,
         )
 
     def is_wake_maintenance_zone(self, check_time: time, sleep_time: time) -> bool:
@@ -259,7 +258,7 @@ class SleepPressureModel:
         else:
             return zone_start <= check_minutes <= zone_end
 
-    def classify_sleep_duration(self, duration_hours: float) -> Tuple[str, float]:
+    def classify_sleep_duration(self, duration_hours: float) -> tuple[str, float]:
         """
         Classify sleep duration and estimate pressure reset.
 

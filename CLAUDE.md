@@ -13,18 +13,51 @@ Dawnward is a free, open-source jet lag optimization web app. It uses the Arcasc
 bun dev              # Start Next.js dev server (localhost:3000)
 bun run build        # Production build
 bun start            # Start production server
-bun run lint         # Run ESLint
 
 # Testing
 bun test             # Run Vitest in watch mode
 bun test:run         # Run all TypeScript tests once
 bun test:python      # Run all Python pytest tests
 
+# Linting
+bun run lint         # Run ESLint (TypeScript)
+bun run lint:python  # Check Python with ruff (lint + format)
+bun run lint:python:fix  # Auto-fix Python issues
+bun run typecheck:python # Run mypy type checking
+
 # Database (Prisma)
 bun prisma generate     # Generate Prisma client to src/generated/prisma
 bun prisma migrate dev  # Run migrations in development
 bun prisma studio       # Open Prisma Studio GUI
 ```
+
+## Before Committing
+
+**Always run linters and tests before committing changes:**
+
+```bash
+# TypeScript changes
+bun run lint         # ESLint
+bun test:run         # Vitest
+
+# Python changes
+bun run lint:python  # ruff check + format
+bun run typecheck:python  # mypy
+bun test:python      # pytest
+```
+
+## Linting & Type Checking
+
+| Language   | Linter | Type Checker | Config |
+|------------|--------|--------------|--------|
+| TypeScript | ESLint 9 | tsc (via Next.js) | `eslint.config.mjs` |
+| Python     | ruff | mypy | `api/_python/pyproject.toml` |
+
+**ESLint** - Configured via `eslint-config-next` for Next.js best practices.
+
+**ruff** - Fast Python linter that replaces pylint, flake8, isort, and black. Runs both linting and formatting.
+
+**mypy** - Static type checking for Python. Currently configured with lenient settings; tighten over time.
 
 ## Tech Stack
 
@@ -35,6 +68,7 @@ bun prisma studio       # Open Prisma Studio GUI
 - **Python Runtime**: Vercel Python Functions for circadian model (Arcascope library)
 - **Analytics**: Vercel Analytics (respects GPC and DNT privacy signals)
 - **Testing**: Vitest for TypeScript, pytest for Python
+- **Linting**: ESLint for TypeScript, ruff + mypy for Python
 
 ## Architecture
 
@@ -169,12 +203,6 @@ This project uses two Claude Code plugins that should be invoked for significant
 - `test_realistic_flights.py` - Real airline routes (VS, BA, AF, SQ, CX) with actual departure/arrival times
 - `test_sorting.py` - Intervention sorting, late-night handling, sleep_target near departure filtering
 - `test_timezone_handling.py` - Phase timezone handling, is_in_transit flag
-
-**Running tests:**
-```bash
-bun test:run         # Run all TypeScript tests
-bun test:python      # Run all Python tests
-```
 
 ## Design Documents
 

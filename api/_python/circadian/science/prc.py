@@ -10,9 +10,9 @@ No flight awareness or practical constraints - that's handled by the scheduling 
 """
 
 from datetime import time
-from typing import Tuple, Literal
+from typing import Literal
 
-from ..circadian_math import time_to_minutes, minutes_to_time
+from ..circadian_math import minutes_to_time, time_to_minutes
 
 
 class LightPRC:
@@ -27,24 +27,22 @@ class LightPRC:
     """
 
     # PRC constants (hours relative to CBTmin)
-    ADVANCE_ZONE_START = 0      # Hours after CBTmin
-    ADVANCE_ZONE_END = 4        # Hours after CBTmin
-    ADVANCE_PEAK = 2.5          # Peak effect at +2.5h
+    ADVANCE_ZONE_START = 0  # Hours after CBTmin
+    ADVANCE_ZONE_END = 4  # Hours after CBTmin
+    ADVANCE_PEAK = 2.5  # Peak effect at +2.5h
 
-    DELAY_ZONE_START = -4       # Hours before CBTmin
-    DELAY_ZONE_END = 0          # Hours before CBTmin (at CBTmin)
-    DELAY_PEAK = -2.5           # Peak effect at -2.5h
+    DELAY_ZONE_START = -4  # Hours before CBTmin
+    DELAY_ZONE_END = 0  # Hours before CBTmin (at CBTmin)
+    DELAY_PEAK = -2.5  # Peak effect at -2.5h
 
     # Maximum achievable shifts per day
-    MAX_ADVANCE_PER_DAY = 2.0   # hours
-    MAX_DELAY_PER_DAY = 3.4     # hours
+    MAX_ADVANCE_PER_DAY = 2.0  # hours
+    MAX_DELAY_PER_DAY = 3.4  # hours
 
     @staticmethod
     def optimal_light_window(
-        cbtmin: time,
-        direction: Literal["advance", "delay"],
-        duration_min: int = 60
-    ) -> Tuple[time, time]:
+        cbtmin: time, direction: Literal["advance", "delay"], duration_min: int = 60
+    ) -> tuple[time, time]:
         """
         Calculate optimal light exposure window for maximum phase shift.
 
@@ -74,9 +72,8 @@ class LightPRC:
 
     @staticmethod
     def light_avoid_window(
-        cbtmin: time,
-        direction: Literal["advance", "delay"]
-    ) -> Tuple[time, time]:
+        cbtmin: time, direction: Literal["advance", "delay"]
+    ) -> tuple[time, time]:
         """
         Calculate window to avoid bright light (prevents antidromic shifts).
 
@@ -162,18 +159,15 @@ class MelatoninPRC:
     """
 
     # PRC constants (hours relative to DLMO)
-    ADVANCE_OPTIMAL = -5.0      # 5h before DLMO (afternoon/early evening)
-    DELAY_OPTIMAL = 10.0        # ~10h after DLMO (morning)
+    ADVANCE_OPTIMAL = -5.0  # 5h before DLMO (afternoon/early evening)
+    DELAY_OPTIMAL = 10.0  # ~10h after DLMO (morning)
 
     # Maximum achievable shifts
-    MAX_ADVANCE_PER_DAY = 1.5   # hours (with 0.5mg)
-    MAX_DELAY_PER_DAY = 1.0     # hours (less commonly used)
+    MAX_ADVANCE_PER_DAY = 1.5  # hours (with 0.5mg)
+    MAX_DELAY_PER_DAY = 1.0  # hours (less commonly used)
 
     @staticmethod
-    def optimal_melatonin_time(
-        dlmo: time,
-        direction: Literal["advance", "delay"]
-    ) -> time:
+    def optimal_melatonin_time(dlmo: time, direction: Literal["advance", "delay"]) -> time:
         """
         Calculate optimal melatonin timing for maximum phase shift.
 

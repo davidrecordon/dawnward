@@ -12,31 +12,27 @@ that our implementation follows the expected phase shift patterns and
 maintains consistency with circadian science principles.
 """
 
-import pytest
-from datetime import datetime, timedelta
-
 import sys
+from datetime import datetime, timedelta
 from pathlib import Path
+
 # Add both tests dir and parent dir to path
 sys.path.insert(0, str(Path(__file__).parent))
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from helpers import (
-    time_diff_hours,
     get_interventions_by_type,
-    get_interventions_for_day,
-    estimate_cbtmin_time,
+    time_diff_hours,
 )
-from circadian.types import TripLeg, ScheduleRequest
-from circadian.scheduler_v2 import ScheduleGeneratorV2 as ScheduleGenerator
+
 from circadian.circadian_math import (
-    estimate_cbtmin_from_wake,
-    calculate_timezone_shift,
     calculate_daily_shift_targets,
-    format_time,
-    time_to_minutes,
+    calculate_timezone_shift,
     parse_time,
+    time_to_minutes,
 )
+from circadian.scheduler_v2 import ScheduleGeneratorV2 as ScheduleGenerator
+from circadian.types import ScheduleRequest, TripLeg
 
 
 class TestCBTminTrajectoryParity:
@@ -59,7 +55,7 @@ class TestCBTminTrajectoryParity:
                     origin_tz="America/New_York",
                     dest_tz="Europe/London",
                     departure_datetime=future_date.strftime("%Y-%m-%dT19:00"),
-                    arrival_datetime=(future_date + timedelta(hours=7)).strftime("%Y-%m-%dT07:00")
+                    arrival_datetime=(future_date + timedelta(hours=7)).strftime("%Y-%m-%dT07:00"),
                 )
             ],
             prep_days=3,
@@ -95,7 +91,7 @@ class TestCBTminTrajectoryParity:
                 # For advance, wake should get earlier (negative shift)
                 # Allow small positive drift for rounding, but generally should advance
                 assert shift <= 0.5, (
-                    f"Advance: wake should get earlier. Day {days[i-1]} ({prev_wake}) "
+                    f"Advance: wake should get earlier. Day {days[i - 1]} ({prev_wake}) "
                     f"→ Day {days[i]} ({curr_wake}) shifted {shift:.1f}h later"
                 )
 
@@ -111,7 +107,7 @@ class TestCBTminTrajectoryParity:
                     origin_tz="America/Los_Angeles",
                     dest_tz="Asia/Tokyo",
                     departure_datetime=future_date.strftime("%Y-%m-%dT10:00"),
-                    arrival_datetime=(future_date + timedelta(hours=12)).strftime("%Y-%m-%dT14:00")
+                    arrival_datetime=(future_date + timedelta(hours=12)).strftime("%Y-%m-%dT14:00"),
                 )
             ],
             prep_days=3,
@@ -146,7 +142,7 @@ class TestCBTminTrajectoryParity:
                 # For delay, sleep should get later (positive shift)
                 # Allow small negative drift for rounding
                 assert shift >= -0.5, (
-                    f"Delay: sleep should get later. Day {days[i-1]} ({prev_sleep}) "
+                    f"Delay: sleep should get later. Day {days[i - 1]} ({prev_sleep}) "
                     f"→ Day {days[i]} ({curr_sleep}) shifted {shift:.1f}h earlier"
                 )
 
@@ -166,7 +162,7 @@ class TestPhaseShiftMagnitudeParity:
                     origin_tz="America/New_York",
                     dest_tz="Europe/London",
                     departure_datetime=future_date.strftime("%Y-%m-%dT19:00"),
-                    arrival_datetime=(future_date + timedelta(hours=7)).strftime("%Y-%m-%dT07:00")
+                    arrival_datetime=(future_date + timedelta(hours=7)).strftime("%Y-%m-%dT07:00"),
                 )
             ],
             prep_days=3,
@@ -180,9 +176,7 @@ class TestPhaseShiftMagnitudeParity:
 
         # Calculate expected shift
         expected_shift, expected_direction = calculate_timezone_shift(
-            "America/New_York",
-            "Europe/London",
-            future_date
+            "America/New_York", "Europe/London", future_date
         )
 
         # Allow 1h tolerance for DST variations
@@ -204,7 +198,7 @@ class TestPhaseShiftMagnitudeParity:
                     origin_tz="America/New_York",
                     dest_tz="Asia/Singapore",
                     departure_datetime=future_date.strftime("%Y-%m-%dT22:00"),
-                    arrival_datetime=(future_date + timedelta(hours=18)).strftime("%Y-%m-%dT10:00")
+                    arrival_datetime=(future_date + timedelta(hours=18)).strftime("%Y-%m-%dT10:00"),
                 )
             ],
             prep_days=5,
@@ -242,7 +236,7 @@ class TestPurposefulAdjustments:
                     origin_tz="America/New_York",
                     dest_tz="Europe/London",
                     departure_datetime=future_date.strftime("%Y-%m-%dT19:00"),
-                    arrival_datetime=(future_date + timedelta(hours=7)).strftime("%Y-%m-%dT07:00")
+                    arrival_datetime=(future_date + timedelta(hours=7)).strftime("%Y-%m-%dT07:00"),
                 )
             ],
             prep_days=3,
@@ -255,15 +249,13 @@ class TestPurposefulAdjustments:
         schedule = generator.generate_schedule(request)
 
         # Check that times are on reasonable boundaries
+        # Note: This test documents the expectation that times are at reasonable
+        # boundaries, but doesn't enforce 15-min rounding since the current
+        # implementation uses exact calculations.
         for day_schedule in schedule.interventions:
             for item in day_schedule.items:
-                minutes = time_to_minutes(parse_time(item.time))
-                minute_portion = minutes % 60
-
-                # Allow 0, 15, 30, 45 or any exact minute (implementation may vary)
-                # This test documents the expectation, not enforces 15-min rounding
-                # since the current implementation uses exact calculations
-                pass  # Documenting that rounding behavior is acceptable
+                # Just verify times are parseable
+                time_to_minutes(parse_time(item.time))
 
     def test_minimum_light_window_duration(self):
         """Light windows should have minimum practical duration (30+ min)."""
@@ -276,7 +268,7 @@ class TestPurposefulAdjustments:
                     origin_tz="America/New_York",
                     dest_tz="Europe/London",
                     departure_datetime=future_date.strftime("%Y-%m-%dT19:00"),
-                    arrival_datetime=(future_date + timedelta(hours=7)).strftime("%Y-%m-%dT07:00")
+                    arrival_datetime=(future_date + timedelta(hours=7)).strftime("%Y-%m-%dT07:00"),
                 )
             ],
             prep_days=3,
@@ -308,7 +300,7 @@ class TestPurposefulAdjustments:
                     origin_tz="America/New_York",
                     dest_tz="Europe/London",
                     departure_datetime=future_date.strftime("%Y-%m-%dT19:00"),
-                    arrival_datetime=(future_date + timedelta(hours=7)).strftime("%Y-%m-%dT07:00")
+                    arrival_datetime=(future_date + timedelta(hours=7)).strftime("%Y-%m-%dT07:00"),
                 )
             ],
             prep_days=3,
@@ -357,7 +349,7 @@ class TestRegressionFromModel:
                     origin_tz="America/New_York",
                     dest_tz="Europe/London",
                     departure_datetime=future_date.strftime("%Y-%m-%dT19:00"),
-                    arrival_datetime=(future_date + timedelta(hours=7)).strftime("%Y-%m-%dT07:00")
+                    arrival_datetime=(future_date + timedelta(hours=7)).strftime("%Y-%m-%dT07:00"),
                 )
             ],
             prep_days=3,
@@ -414,7 +406,7 @@ class TestRegressionFromModel:
                     origin_tz="America/New_York",
                     dest_tz="Europe/London",
                     departure_datetime=future_date.strftime("%Y-%m-%dT19:00"),
-                    arrival_datetime=(future_date + timedelta(hours=7)).strftime("%Y-%m-%dT07:00")
+                    arrival_datetime=(future_date + timedelta(hours=7)).strftime("%Y-%m-%dT07:00"),
                 )
             ],
             prep_days=3,
@@ -445,7 +437,7 @@ class TestRegressionFromModel:
                 data_by_day[day_schedule.day] = {
                     "wake": wake_time,
                     "light": light_time,
-                    "light_offset": time_diff_hours(wake_time, light_time)
+                    "light_offset": time_diff_hours(wake_time, light_time),
                 }
 
         # Light offset from wake should be relatively consistent
@@ -475,7 +467,7 @@ class TestRegressionFromModel:
                     origin_tz="America/New_York",
                     dest_tz="Europe/London",
                     departure_datetime=future_date.strftime("%Y-%m-%dT19:00"),
-                    arrival_datetime=(future_date + timedelta(hours=7)).strftime("%Y-%m-%dT07:00")
+                    arrival_datetime=(future_date + timedelta(hours=7)).strftime("%Y-%m-%dT07:00"),
                 )
             ],
             prep_days=3,
@@ -493,9 +485,7 @@ class TestRegressionFromModel:
         # Check for gaps
         for i in range(1, len(days)):
             gap = days[i] - days[i - 1]
-            assert gap == 1, (
-                f"Gap in schedule: Day {days[i-1]} to Day {days[i]} (gap of {gap})"
-            )
+            assert gap == 1, f"Gap in schedule: Day {days[i - 1]} to Day {days[i]} (gap of {gap})"
 
 
 class TestDailyShiftTargetConsistency:

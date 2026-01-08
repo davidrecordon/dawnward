@@ -9,12 +9,12 @@ Applies practical constraints to planned interventions:
 Records all modifications for transparency/debugging and science impact calculation.
 """
 
-from datetime import datetime, time, timedelta
-from typing import List, Literal, Optional
-from dataclasses import dataclass, field
+from dataclasses import dataclass
+from datetime import datetime, time
+from typing import Literal
 
-from ..types import TravelPhase, Intervention
-from ..circadian_math import time_to_minutes, parse_time
+from ..circadian_math import parse_time, time_to_minutes
+from ..types import Intervention, TravelPhase
 
 # Sleep target should not appear within this many hours before departure
 SLEEP_TARGET_DEPARTURE_BUFFER_HOURS = 4.0
@@ -23,6 +23,7 @@ SLEEP_TARGET_DEPARTURE_BUFFER_HOURS = 4.0
 @dataclass
 class ConstraintViolation:
     """Record of a constraint that was applied."""
+
     intervention_type: str
     original_time: str
     action_taken: Literal["removed", "moved", "shortened"]
@@ -41,14 +42,14 @@ class ConstraintFilter:
 
     def __init__(self):
         """Initialize filter with empty violation list."""
-        self.violations: List[ConstraintViolation] = []
+        self.violations: list[ConstraintViolation] = []
 
     def filter_phase(
         self,
-        interventions: List[Intervention],
+        interventions: list[Intervention],
         phase: TravelPhase,
-        departure_datetime: Optional[datetime] = None
-    ) -> List[Intervention]:
+        departure_datetime: datetime | None = None,
+    ) -> list[Intervention]:
         """
         Apply all constraints to a phase's interventions.
 
@@ -79,10 +80,10 @@ class ConstraintFilter:
 
     def _filter_phase_bounds(
         self,
-        interventions: List[Intervention],
+        interventions: list[Intervention],
         phase: TravelPhase,
-        departure_datetime: Optional[datetime] = None
-    ) -> List[Intervention]:
+        departure_datetime: datetime | None = None,
+    ) -> list[Intervention]:
         """
         Remove interventions outside phase start/end times.
 
@@ -118,13 +119,15 @@ class ConstraintFilter:
                 if departure_datetime and self._is_near_departure(
                     i_time, phase.start_datetime, departure_datetime
                 ):
-                    self.violations.append(ConstraintViolation(
-                        intervention_type="sleep_target",
-                        original_time=intervention.time,
-                        action_taken="removed",
-                        reason=f"Within {SLEEP_TARGET_DEPARTURE_BUFFER_HOURS}h of departure",
-                        science_impact="Sleep target too close to flight; sleep opportunity on flight is more relevant"
-                    ))
+                    self.violations.append(
+                        ConstraintViolation(
+                            intervention_type="sleep_target",
+                            original_time=intervention.time,
+                            action_taken="removed",
+                            reason=f"Within {SLEEP_TARGET_DEPARTURE_BUFFER_HOURS}h of departure",
+                            science_impact="Sleep target too close to flight; sleep opportunity on flight is more relevant",
+                        )
+                    )
                     continue
                 # Keep sleep_target if not near departure
                 result.append(intervention)
@@ -142,21 +145,21 @@ class ConstraintFilter:
                 result.append(intervention)
             else:
                 # Record violation
-                self.violations.append(ConstraintViolation(
-                    intervention_type=intervention.type,
-                    original_time=intervention.time,
-                    action_taken="removed",
-                    reason=f"Outside phase bounds ({phase.start_datetime.time()} to {phase.end_datetime.time()})",
-                    science_impact="Intervention unavailable; phase shift may be slower"
-                ))
+                self.violations.append(
+                    ConstraintViolation(
+                        intervention_type=intervention.type,
+                        original_time=intervention.time,
+                        action_taken="removed",
+                        reason=f"Outside phase bounds ({phase.start_datetime.time()} to {phase.end_datetime.time()})",
+                        science_impact="Intervention unavailable; phase shift may be slower",
+                    )
+                )
 
         return result
 
     def _filter_before_arrival(
-        self,
-        interventions: List[Intervention],
-        phase: TravelPhase
-    ) -> List[Intervention]:
+        self, interventions: list[Intervention], phase: TravelPhase
+    ) -> list[Intervention]:
         """
         For post_arrival phases, ensure no activities before landing.
 
@@ -187,19 +190,21 @@ class ConstraintFilter:
                 if i_minutes <= 6 * 60:
                     result.append(intervention)
                 else:
-                    self.violations.append(ConstraintViolation(
-                        intervention_type=intervention.type,
-                        original_time=intervention.time,
-                        action_taken="removed",
-                        reason=f"Before arrival at {phase.start_datetime.time()}",
-                        science_impact="Intervention impossible while in transit"
-                    ))
+                    self.violations.append(
+                        ConstraintViolation(
+                            intervention_type=intervention.type,
+                            original_time=intervention.time,
+                            action_taken="removed",
+                            reason=f"Before arrival at {phase.start_datetime.time()}",
+                            science_impact="Intervention impossible while in transit",
+                        )
+                    )
             else:
                 result.append(intervention)
 
         return result
 
-    def _filter_sleep_window(self, interventions: List[Intervention]) -> List[Intervention]:
+    def _filter_sleep_window(self, interventions: list[Intervention]) -> list[Intervention]:
         """
         Filter out interventions that fall during sleep hours.
 
@@ -240,13 +245,15 @@ class ConstraintFilter:
             i_minutes = time_to_minutes(parse_time(intervention.time))
 
             if self._is_during_sleep(i_minutes, sleep_minutes, wake_minutes):
-                self.violations.append(ConstraintViolation(
-                    intervention_type=intervention.type,
-                    original_time=intervention.time,
-                    action_taken="removed",
-                    reason="During sleep window",
-                    science_impact="Intervention during sleep is not actionable"
-                ))
+                self.violations.append(
+                    ConstraintViolation(
+                        intervention_type=intervention.type,
+                        original_time=intervention.time,
+                        action_taken="removed",
+                        reason="During sleep window",
+                        science_impact="Intervention during sleep is not actionable",
+                    )
+                )
             else:
                 result.append(intervention)
 
@@ -262,10 +269,7 @@ class ConstraintFilter:
             return sleep_minutes <= check_minutes < wake_minutes
 
     def _is_near_departure(
-        self,
-        intervention_time: time,
-        phase_date: datetime,
-        departure_datetime: datetime
+        self, intervention_time: time, phase_date: datetime, departure_datetime: datetime
     ) -> bool:
         """
         Check if an intervention time is within the buffer period before departure.
@@ -280,10 +284,7 @@ class ConstraintFilter:
         """
         # Build datetime for the intervention using the phase date
         intervention_datetime = phase_date.replace(
-            hour=intervention_time.hour,
-            minute=intervention_time.minute,
-            second=0,
-            microsecond=0
+            hour=intervention_time.hour, minute=intervention_time.minute, second=0, microsecond=0
         )
 
         # Calculate hours before departure
@@ -293,7 +294,7 @@ class ConstraintFilter:
         # Return True if intervention is within the buffer window (0 to N hours before)
         return 0 < hours_before_departure <= SLEEP_TARGET_DEPARTURE_BUFFER_HOURS
 
-    def _sort_interventions(self, interventions: List[Intervention]) -> List[Intervention]:
+    def _sort_interventions(self, interventions: list[Intervention]) -> list[Intervention]:
         """
         Sort interventions by time with proper secondary ordering.
 
@@ -306,6 +307,7 @@ class ConstraintFilter:
         - non-optional (light_seek, light_avoid) before optional
         - sleep_target last (at sleep time)
         """
+
         def sort_key(intervention: Intervention) -> tuple:
             time_str = intervention.time
             itype = intervention.type
@@ -341,7 +343,7 @@ class ConstraintFilter:
 
         return sorted(interventions, key=sort_key)
 
-    def get_science_impact_summary(self) -> Optional[str]:
+    def get_science_impact_summary(self) -> str | None:
         """
         Summarize how constraints affected circadian efficacy.
 
@@ -366,7 +368,7 @@ class ConstraintFilter:
 
         return f"{len(removed)} intervention(s) adjusted for practical constraints."
 
-    def get_detailed_violations(self) -> List[dict]:
+    def get_detailed_violations(self) -> list[dict]:
         """
         Get detailed list of all constraint violations.
 
@@ -378,7 +380,7 @@ class ConstraintFilter:
                 "time": v.original_time,
                 "action": v.action_taken,
                 "reason": v.reason,
-                "impact": v.science_impact
+                "impact": v.science_impact,
             }
             for v in self.violations
         ]

@@ -16,13 +16,12 @@ Key relationships:
 from datetime import time
 from typing import Literal
 
-from ..circadian_math import time_to_minutes, minutes_to_time, parse_time
-
+from ..circadian_math import minutes_to_time, parse_time, time_to_minutes
 
 # Phase relationships (hours)
-CBTMIN_BEFORE_WAKE = 2.5      # CBTmin is 2.5h before wake
-DLMO_BEFORE_SLEEP = 2.0       # DLMO is 2h before sleep
-DLMO_TO_CBTMIN = 6.0          # DLMO to CBTmin is ~6 hours (sleep onset to temp nadir)
+CBTMIN_BEFORE_WAKE = 2.5  # CBTmin is 2.5h before wake
+DLMO_BEFORE_SLEEP = 2.0  # DLMO is 2h before sleep
+DLMO_TO_CBTMIN = 6.0  # DLMO to CBTmin is ~6 hours (sleep onset to temp nadir)
 
 
 class CircadianMarkerTracker:
@@ -64,9 +63,7 @@ class CircadianMarkerTracker:
         return minutes_to_time(self._base_dlmo_minutes)
 
     def get_cbtmin_at_shift(
-        self,
-        cumulative_shift: float,
-        direction: Literal["advance", "delay"]
+        self, cumulative_shift: float, direction: Literal["advance", "delay"]
     ) -> time:
         """
         Get CBTmin position at a given cumulative shift.
@@ -90,9 +87,7 @@ class CircadianMarkerTracker:
         return minutes_to_time(current_minutes)
 
     def get_dlmo_at_shift(
-        self,
-        cumulative_shift: float,
-        direction: Literal["advance", "delay"]
+        self, cumulative_shift: float, direction: Literal["advance", "delay"]
     ) -> time:
         """
         Get DLMO position at a given cumulative shift.
@@ -120,7 +115,7 @@ class CircadianMarkerTracker:
         day: int,
         cumulative_shift: float,
         total_shift: float,
-        direction: Literal["advance", "delay"]
+        direction: Literal["advance", "delay"],
     ) -> dict:
         """
         Get all markers for a specific day of adaptation.
@@ -178,11 +173,7 @@ class CircadianMarkerTracker:
             "sleep_target": minutes_to_time(sleep_minutes),
         }
 
-    def estimate_adaptation_progress(
-        self,
-        current_cbtmin: time,
-        target_cbtmin: time
-    ) -> float:
+    def estimate_adaptation_progress(self, current_cbtmin: time, target_cbtmin: time) -> float:
         """
         Estimate adaptation progress as a percentage.
 

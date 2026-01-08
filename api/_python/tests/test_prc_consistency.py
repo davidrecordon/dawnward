@@ -8,24 +8,23 @@ Scientific references:
 - Burgess et al. (2010): Melatonin PRC - optimal timing relative to DLMO
 """
 
-import pytest
-from datetime import datetime, timedelta
-
 import sys
+from datetime import datetime, timedelta
 from pathlib import Path
+
 # Add both tests dir and parent dir to path
 sys.path.insert(0, str(Path(__file__).parent))
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from helpers import (
-    time_diff_hours,
-    get_interventions_by_type,
-    get_interventions_for_day,
     estimate_cbtmin_time,
     estimate_dlmo_time,
+    get_interventions_by_type,
+    time_diff_hours,
 )
-from circadian.types import TripLeg, ScheduleRequest
+
 from circadian.scheduler_v2 import ScheduleGeneratorV2 as ScheduleGenerator
+from circadian.types import ScheduleRequest, TripLeg
 
 
 class TestLightPRCAlignment:
@@ -51,7 +50,7 @@ class TestLightPRCAlignment:
                     origin_tz="America/New_York",
                     dest_tz="Europe/London",
                     departure_datetime=future_date.strftime("%Y-%m-%dT19:00"),
-                    arrival_datetime=(future_date + timedelta(hours=7)).strftime("%Y-%m-%dT07:00")
+                    arrival_datetime=(future_date + timedelta(hours=7)).strftime("%Y-%m-%dT07:00"),
                 )
             ],
             prep_days=3,
@@ -106,7 +105,7 @@ class TestLightPRCAlignment:
                     origin_tz="America/Los_Angeles",
                     dest_tz="Asia/Tokyo",
                     departure_datetime=future_date.strftime("%Y-%m-%dT10:00"),
-                    arrival_datetime=(future_date + timedelta(hours=12)).strftime("%Y-%m-%dT14:00")
+                    arrival_datetime=(future_date + timedelta(hours=12)).strftime("%Y-%m-%dT14:00"),
                 )
             ],
             prep_days=3,
@@ -164,7 +163,7 @@ class TestLightAvoidanceAudit:
                     origin_tz="America/New_York",
                     dest_tz="Europe/London",
                     departure_datetime=future_date.strftime("%Y-%m-%dT19:00"),
-                    arrival_datetime=(future_date + timedelta(hours=7)).strftime("%Y-%m-%dT07:00")
+                    arrival_datetime=(future_date + timedelta(hours=7)).strftime("%Y-%m-%dT07:00"),
                 )
             ],
             prep_days=3,
@@ -186,9 +185,7 @@ class TestLightAvoidanceAudit:
                     light_interventions.append(item)
 
         # Should have light interventions
-        assert len(light_interventions) > 0, (
-            "Advance schedule should have light interventions"
-        )
+        assert len(light_interventions) > 0, "Advance schedule should have light interventions"
 
     def test_delay_avoids_advance_zone(self):
         """light_avoid should cover post-CBT_min period for delay schedules.
@@ -204,7 +201,7 @@ class TestLightAvoidanceAudit:
                     origin_tz="America/Los_Angeles",
                     dest_tz="Asia/Tokyo",
                     departure_datetime=future_date.strftime("%Y-%m-%dT10:00"),
-                    arrival_datetime=(future_date + timedelta(hours=12)).strftime("%Y-%m-%dT14:00")
+                    arrival_datetime=(future_date + timedelta(hours=12)).strftime("%Y-%m-%dT14:00"),
                 )
             ],
             prep_days=3,
@@ -264,7 +261,7 @@ class TestMelatoninPRCAlignment:
                     origin_tz="America/New_York",
                     dest_tz="Europe/London",
                     departure_datetime=future_date.strftime("%Y-%m-%dT19:00"),
-                    arrival_datetime=(future_date + timedelta(hours=7)).strftime("%Y-%m-%dT07:00")
+                    arrival_datetime=(future_date + timedelta(hours=7)).strftime("%Y-%m-%dT07:00"),
                 )
             ],
             prep_days=3,
@@ -304,7 +301,7 @@ class TestMelatoninPRCAlignment:
                     origin_tz="America/New_York",
                     dest_tz="Europe/London",
                     departure_datetime=future_date.strftime("%Y-%m-%dT19:00"),
-                    arrival_datetime=(future_date + timedelta(hours=7)).strftime("%Y-%m-%dT07:00")
+                    arrival_datetime=(future_date + timedelta(hours=7)).strftime("%Y-%m-%dT07:00"),
                 )
             ],
             prep_days=3,
@@ -347,7 +344,7 @@ class TestConsistentPRCApplication:
                     origin_tz="America/New_York",
                     dest_tz="Europe/London",
                     departure_datetime=future_date.strftime("%Y-%m-%dT19:00"),
-                    arrival_datetime=(future_date + timedelta(hours=7)).strftime("%Y-%m-%dT07:00")
+                    arrival_datetime=(future_date + timedelta(hours=7)).strftime("%Y-%m-%dT07:00"),
                 )
             ],
             prep_days=3,

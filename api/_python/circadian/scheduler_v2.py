@@ -12,24 +12,22 @@ Architecture:
 """
 
 from datetime import datetime
-from typing import List, Optional
 
+from .circadian_math import (
+    calculate_actual_prep_days,
+    calculate_timezone_shift,
+    format_time,
+    get_current_datetime_in_tz,
+)
+from .scheduling.constraint_filter import ConstraintFilter
+from .scheduling.intervention_planner import InterventionPlanner
+from .scheduling.phase_generator import PhaseGenerator
 from .types import (
-    TripLeg,
+    DaySchedule,
     ScheduleRequest,
     ScheduleResponse,
-    DaySchedule,
-    TravelPhase,
+    TripLeg,
 )
-from .circadian_math import (
-    calculate_timezone_shift,
-    calculate_actual_prep_days,
-    get_current_datetime_in_tz,
-    format_time,
-)
-from .scheduling.phase_generator import PhaseGenerator
-from .scheduling.intervention_planner import InterventionPlanner
-from .scheduling.constraint_filter import ConstraintFilter
 
 
 class ScheduleGeneratorV2:
@@ -50,9 +48,7 @@ class ScheduleGeneratorV2:
     """
 
     def generate_schedule(
-        self,
-        request: ScheduleRequest,
-        current_datetime: Optional[datetime] = None
+        self, request: ScheduleRequest, current_datetime: datetime | None = None
     ) -> ScheduleResponse:
         """
         Generate a complete adaptation schedule for the trip.
@@ -80,9 +76,7 @@ class ScheduleGeneratorV2:
 
         # Auto-adjust prep days if departure is sooner than requested
         actual_prep_days = calculate_actual_prep_days(
-            first_leg.departure_datetime,
-            request.prep_days,
-            current_datetime
+            first_leg.departure_datetime, request.prep_days, current_datetime
         )
 
         # 2. Generate travel phases
@@ -92,7 +86,7 @@ class ScheduleGeneratorV2:
             wake_time=request.wake_time,
             sleep_time=request.sleep_time,
             total_shift=total_shift,
-            direction=direction
+            direction=direction,
         )
         phases = phase_gen.generate_phases()
 
@@ -120,9 +114,7 @@ class ScheduleGeneratorV2:
             interventions = planner.plan_phase(phase)
 
             # Apply practical constraints (pass departure time for sleep_target filtering)
-            interventions = constraint_filter.filter_phase(
-                interventions, phase, departure_datetime
-            )
+            interventions = constraint_filter.filter_phase(interventions, phase, departure_datetime)
 
             # Filter past interventions for today only
             day_date = phase.start_datetime.date().isoformat()
@@ -138,17 +130,19 @@ class ScheduleGeneratorV2:
             # Detect if phase spans midnight (ends on a different day)
             spans_midnight = phase.end_datetime.date() > phase.start_datetime.date()
 
-            day_schedules.append(DaySchedule(
-                day=phase.day_number,
-                date=day_date,
-                timezone=phase.timezone or "In transit",
-                items=interventions,
-                phase_type=phase.phase_type,
-                phase_start=format_time(phase.start_datetime.time()),
-                phase_end=format_time(phase.end_datetime.time()),
-                phase_spans_midnight=spans_midnight if spans_midnight else None,
-                is_in_transit=phase.phase_type in ("in_transit", "in_transit_ulr")
-            ))
+            day_schedules.append(
+                DaySchedule(
+                    day=phase.day_number,
+                    date=day_date,
+                    timezone=phase.timezone or "In transit",
+                    items=interventions,
+                    phase_type=phase.phase_type,
+                    phase_start=format_time(phase.start_datetime.time()),
+                    phase_end=format_time(phase.end_datetime.time()),
+                    phase_spans_midnight=spans_midnight if spans_midnight else None,
+                    is_in_transit=phase.phase_type in ("in_transit", "in_transit_ulr"),
+                )
+            )
 
         # 4. Build response
         # Count adaptation phases for estimated days
@@ -162,10 +156,10 @@ class ScheduleGeneratorV2:
             origin_tz=origin_tz,
             dest_tz=dest_tz,
             interventions=day_schedules,
-            _science_impact_internal=constraint_filter.get_science_impact_summary()
+            _science_impact_internal=constraint_filter.get_science_impact_summary(),
         )
 
-    def _calculate_total_shift(self, legs: List[TripLeg]) -> tuple:
+    def _calculate_total_shift(self, legs: list[TripLeg]) -> tuple:
         """
         Calculate the total timezone shift across all legs.
 
@@ -184,15 +178,13 @@ class ScheduleGeneratorV2:
             return calculate_timezone_shift(
                 leg.origin_tz,
                 leg.dest_tz,
-                datetime.fromisoformat(leg.departure_datetime.replace("Z", "+00:00"))
+                datetime.fromisoformat(leg.departure_datetime.replace("Z", "+00:00")),
             )
 
         # For multi-leg, calculate from first origin to last destination
         first_origin = legs[0].origin_tz
         last_dest = legs[-1].dest_tz
-        reference_date = datetime.fromisoformat(
-            legs[0].departure_datetime.replace("Z", "+00:00")
-        )
+        reference_date = datetime.fromisoformat(legs[0].departure_datetime.replace("Z", "+00:00"))
 
         return calculate_timezone_shift(first_origin, last_dest, reference_date)
 
@@ -201,7 +193,7 @@ class ScheduleGeneratorV2:
         interventions: list,
         day_date: str,
         current_datetime: datetime,
-        buffer_minutes: int = 30
+        buffer_minutes: int = 30,
     ) -> list:
         """
         Filter out interventions that are past the current time (for today only).
@@ -216,6 +208,7 @@ class ScheduleGeneratorV2:
             Filtered list with past interventions removed (for today only)
         """
         from datetime import timedelta
+
         from .circadian_math import parse_time
 
         # Only filter if this day is today
@@ -246,8 +239,7 @@ class ScheduleGeneratorV2:
 
 
 def generate_schedule_v2(
-    request: ScheduleRequest,
-    current_datetime: Optional[datetime] = None
+    request: ScheduleRequest, current_datetime: datetime | None = None
 ) -> ScheduleResponse:
     """
     Convenience function to generate a schedule using phase-based system.

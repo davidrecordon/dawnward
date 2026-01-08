@@ -22,26 +22,24 @@ Organized by jet lag severity:
 - Severe (12-17h shift): Dubai, Singapore, Hong Kong, Tokyo, Sydney
 """
 
-import pytest
-from datetime import datetime, timedelta
-
 import sys
+from datetime import datetime, timedelta
 from pathlib import Path
+
+import pytest
 
 sys.path.insert(0, str(Path(__file__).parent))
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from helpers import (
     FlightInfo,
-    ValidationIssue,
-    validate_sleep_not_before_flight,
-    validate_no_activities_before_landing,
-    validate_daily_sleep_opportunity,
-    validate_sleep_wake_order,
     run_all_validations,
+    validate_no_activities_before_landing,
+    validate_sleep_not_before_flight,
 )
-from circadian.types import TripLeg, ScheduleRequest
+
 from circadian.scheduler_v2 import ScheduleGeneratorV2
+from circadian.types import ScheduleRequest, TripLeg
 
 # Use the phase-based scheduler (v2) which fixes flight timing issues
 ScheduleGenerator = ScheduleGeneratorV2
@@ -58,6 +56,7 @@ def make_flight_datetime(base_date: datetime, time_str: str, day_offset: int = 0
 # =============================================================================
 # MINIMAL JET LAG (3h shift)
 # =============================================================================
+
 
 class TestMinimalJetLag:
     """
@@ -109,7 +108,9 @@ class TestMinimalJetLag:
 
         # 2h west = delay direction (LA is UTC-8, Honolulu is UTC-10)
         assert schedule.direction == "delay", f"Expected delay direction, got {schedule.direction}"
-        assert schedule.total_shift_hours == 2, f"Expected 2h shift, got {schedule.total_shift_hours}"
+        assert schedule.total_shift_hours == 2, (
+            f"Expected 2h shift, got {schedule.total_shift_hours}"
+        )
 
         issues = run_all_validations(schedule, flight)
         errors = [i for i in issues if i.severity == "error"]
@@ -157,7 +158,9 @@ class TestMinimalJetLag:
         )
 
         # 3h east = advance direction
-        assert schedule.direction == "advance", f"Expected advance direction, got {schedule.direction}"
+        assert schedule.direction == "advance", (
+            f"Expected advance direction, got {schedule.direction}"
+        )
 
         issues = run_all_validations(schedule, flight)
         errors = [i for i in issues if i.severity == "error"]
@@ -205,7 +208,9 @@ class TestMinimalJetLag:
         )
 
         # 3h east = advance direction
-        assert schedule.direction == "advance", f"Expected advance direction, got {schedule.direction}"
+        assert schedule.direction == "advance", (
+            f"Expected advance direction, got {schedule.direction}"
+        )
 
         issues = run_all_validations(schedule, flight)
         errors = [i for i in issues if i.severity == "error"]
@@ -267,6 +272,7 @@ class TestMinimalJetLag:
 # MODERATE JET LAG (8-9h shift)
 # =============================================================================
 
+
 class TestModerateJetLag:
     """
     Flights with moderate jet lag (8-9 hours).
@@ -321,7 +327,9 @@ class TestModerateJetLag:
         )
 
         # 8h east = advance direction
-        assert schedule.direction == "advance", f"Expected advance direction, got {schedule.direction}"
+        assert schedule.direction == "advance", (
+            f"Expected advance direction, got {schedule.direction}"
+        )
 
         issues = run_all_validations(schedule, flight)
         errors = [i for i in issues if i.severity == "error"]
@@ -417,7 +425,9 @@ class TestModerateJetLag:
         )
 
         # 9h east = advance direction
-        assert schedule.direction == "advance", f"Expected advance direction, got {schedule.direction}"
+        assert schedule.direction == "advance", (
+            f"Expected advance direction, got {schedule.direction}"
+        )
 
         issues = run_all_validations(schedule, flight)
         errors = [i for i in issues if i.severity == "error"]
@@ -513,7 +523,9 @@ class TestModerateJetLag:
         )
 
         # 9h east = advance direction
-        assert schedule.direction == "advance", f"Expected advance direction, got {schedule.direction}"
+        assert schedule.direction == "advance", (
+            f"Expected advance direction, got {schedule.direction}"
+        )
 
         issues = run_all_validations(schedule, flight)
         errors = [i for i in issues if i.severity == "error"]
@@ -575,6 +587,7 @@ class TestModerateJetLag:
 # SEVERE JET LAG (12-17h shift)
 # =============================================================================
 
+
 class TestSevereJetLag:
     """
     Flights with severe jet lag (12-17 hours).
@@ -632,7 +645,9 @@ class TestSevereJetLag:
         )
 
         # 12h shift - could be either direction, typically advance
-        assert schedule.total_shift_hours == 12, f"Expected 12h shift, got {schedule.total_shift_hours}"
+        assert schedule.total_shift_hours == 12, (
+            f"Expected 12h shift, got {schedule.total_shift_hours}"
+        )
 
         issues = run_all_validations(schedule, flight)
         errors = [i for i in issues if i.severity == "error"]
@@ -680,7 +695,9 @@ class TestSevereJetLag:
         )
 
         # 12h shift - could be either direction, typically delay for westward
-        assert schedule.total_shift_hours == 12, f"Expected 12h shift, got {schedule.total_shift_hours}"
+        assert schedule.total_shift_hours == 12, (
+            f"Expected 12h shift, got {schedule.total_shift_hours}"
+        )
 
         issues = run_all_validations(schedule, flight)
         errors = [i for i in issues if i.severity == "error"]
@@ -729,7 +746,9 @@ class TestSevereJetLag:
 
         # 16h shift → 8h delay (shorter path)
         assert schedule.direction == "delay", f"Expected delay direction, got {schedule.direction}"
-        assert schedule.total_shift_hours == 8, f"Expected 8h shift (via delay), got {schedule.total_shift_hours}"
+        assert schedule.total_shift_hours == 8, (
+            f"Expected 8h shift (via delay), got {schedule.total_shift_hours}"
+        )
 
         issues = run_all_validations(schedule, flight)
         errors = [i for i in issues if i.severity == "error"]
@@ -777,7 +796,9 @@ class TestSevereJetLag:
         )
 
         # 16h shift → 8h advance (shorter path for return)
-        assert schedule.direction == "advance", f"Expected advance direction, got {schedule.direction}"
+        assert schedule.direction == "advance", (
+            f"Expected advance direction, got {schedule.direction}"
+        )
 
         issues = run_all_validations(schedule, flight)
         errors = [i for i in issues if i.severity == "error"]
@@ -874,7 +895,9 @@ class TestSevereJetLag:
         )
 
         # 16h shift → 8h advance
-        assert schedule.direction == "advance", f"Expected advance direction, got {schedule.direction}"
+        assert schedule.direction == "advance", (
+            f"Expected advance direction, got {schedule.direction}"
+        )
 
         issues = run_all_validations(schedule, flight)
         errors = [i for i in issues if i.severity == "error"]
@@ -923,7 +946,9 @@ class TestSevereJetLag:
 
         # 17h shift → 7h delay (shorter path)
         assert schedule.direction == "delay", f"Expected delay direction, got {schedule.direction}"
-        assert schedule.total_shift_hours == 7, f"Expected 7h shift, got {schedule.total_shift_hours}"
+        assert schedule.total_shift_hours == 7, (
+            f"Expected 7h shift, got {schedule.total_shift_hours}"
+        )
 
         issues = run_all_validations(schedule, flight)
         errors = [i for i in issues if i.severity == "error"]
@@ -971,7 +996,9 @@ class TestSevereJetLag:
         )
 
         # 17h shift → 7h advance
-        assert schedule.direction == "advance", f"Expected advance direction, got {schedule.direction}"
+        assert schedule.direction == "advance", (
+            f"Expected advance direction, got {schedule.direction}"
+        )
 
         issues = run_all_validations(schedule, flight)
         errors = [i for i in issues if i.severity == "error"]
@@ -1028,7 +1055,9 @@ class TestSevereJetLag:
         # 19h shift → 5h delay (shorter path going west)
         # LA (UTC-8) to Sydney (UTC+11 AEDT in Jan) = 19h east, or 5h west
         assert schedule.direction == "delay", f"Expected delay direction, got {schedule.direction}"
-        assert schedule.total_shift_hours == 5, f"Expected 5h shift, got {schedule.total_shift_hours}"
+        assert schedule.total_shift_hours == 5, (
+            f"Expected 5h shift, got {schedule.total_shift_hours}"
+        )
 
         # Run full validations
         issues = run_all_validations(schedule, flight)
@@ -1050,7 +1079,7 @@ class TestSevereJetLag:
         # Additional regression check: verify no sleep_target within 4h of 20:15 departure
         sleep_issues = validate_sleep_not_before_flight(schedule, flight, min_gap_hours=4.0)
         sleep_errors = [i for i in sleep_issues if i.severity == "error"]
-        assert len(sleep_errors) == 0, f"Sleep before departure regression:\n" + "\n".join(
+        assert len(sleep_errors) == 0, "Sleep before departure regression:\n" + "\n".join(
             f"  - {i.message}" for i in sleep_errors
         )
 
@@ -1095,7 +1124,9 @@ class TestSevereJetLag:
 
         # 19h shift → 5h advance (shorter path going east)
         # Sydney (UTC+11) to LA (UTC-8) = 19h west, or 5h east
-        assert schedule.direction == "advance", f"Expected advance direction, got {schedule.direction}"
+        assert schedule.direction == "advance", (
+            f"Expected advance direction, got {schedule.direction}"
+        )
 
         issues = run_all_validations(schedule, flight)
         errors = [i for i in issues if i.severity == "error"]
@@ -1109,34 +1140,38 @@ class TestSevereJetLag:
 # PARAMETERIZED VALIDATION TESTS
 # =============================================================================
 
+
 class TestPracticalValidation:
     """Cross-cutting validation tests using parameterized flight configs."""
 
-    @pytest.mark.parametrize("flight_name,origin_tz,dest_tz,depart_time,arrive_time,arrive_day", [
-        # Minimal jet lag (3h)
-        ("HA11 SFO-HNL", "America/Los_Angeles", "Pacific/Honolulu", "07:00", "09:35", 0),
-        ("HA12 HNL-SFO", "Pacific/Honolulu", "America/Los_Angeles", "12:30", "20:30", 0),
-        ("AA16 SFO-JFK", "America/Los_Angeles", "America/New_York", "11:00", "19:35", 0),
-        ("AA177 JFK-SFO", "America/New_York", "America/Los_Angeles", "19:35", "23:21", 0),
-        # Moderate jet lag (8-9h)
-        ("VS20 SFO-LHR", "America/Los_Angeles", "Europe/London", "16:30", "10:40", 1),
-        ("VS19 LHR-SFO", "Europe/London", "America/Los_Angeles", "11:40", "14:40", 0),
-        ("AF83 SFO-CDG", "America/Los_Angeles", "Europe/Paris", "15:40", "11:35", 1),
-        ("AF84 CDG-SFO", "Europe/Paris", "America/Los_Angeles", "13:25", "15:55", 0),
-        ("LH455 SFO-FRA", "America/Los_Angeles", "Europe/Berlin", "14:40", "10:30", 1),
-        ("LH454 FRA-SFO", "Europe/Berlin", "America/Los_Angeles", "13:20", "15:55", 0),
-        # Severe jet lag (12-17h)
-        ("EK226 SFO-DXB", "America/Los_Angeles", "Asia/Dubai", "15:40", "19:25", 1),
-        ("EK225 DXB-SFO", "Asia/Dubai", "America/Los_Angeles", "08:50", "12:50", 0),
-        ("SQ31 SFO-SIN", "America/Los_Angeles", "Asia/Singapore", "09:40", "19:05", 1),
-        ("SQ32 SIN-SFO", "Asia/Singapore", "America/Los_Angeles", "09:15", "07:50", 0),
-        ("CX879 SFO-HKG", "America/Los_Angeles", "Asia/Hong_Kong", "11:25", "19:00", 1),
-        ("CX872 HKG-SFO", "Asia/Hong_Kong", "America/Los_Angeles", "01:00", "21:15", -1),
-        ("JL1 SFO-HND", "America/Los_Angeles", "Asia/Tokyo", "12:55", "17:20", 1),
-        ("JL2 HND-SFO", "Asia/Tokyo", "America/Los_Angeles", "18:05", "10:15", 0),
-        ("QF74 SFO-SYD", "America/Los_Angeles", "Australia/Sydney", "20:15", "06:10", 2),
-        ("QF73 SYD-SFO", "Australia/Sydney", "America/Los_Angeles", "21:25", "15:55", 0),
-    ])
+    @pytest.mark.parametrize(
+        "flight_name,origin_tz,dest_tz,depart_time,arrive_time,arrive_day",
+        [
+            # Minimal jet lag (3h)
+            ("HA11 SFO-HNL", "America/Los_Angeles", "Pacific/Honolulu", "07:00", "09:35", 0),
+            ("HA12 HNL-SFO", "Pacific/Honolulu", "America/Los_Angeles", "12:30", "20:30", 0),
+            ("AA16 SFO-JFK", "America/Los_Angeles", "America/New_York", "11:00", "19:35", 0),
+            ("AA177 JFK-SFO", "America/New_York", "America/Los_Angeles", "19:35", "23:21", 0),
+            # Moderate jet lag (8-9h)
+            ("VS20 SFO-LHR", "America/Los_Angeles", "Europe/London", "16:30", "10:40", 1),
+            ("VS19 LHR-SFO", "Europe/London", "America/Los_Angeles", "11:40", "14:40", 0),
+            ("AF83 SFO-CDG", "America/Los_Angeles", "Europe/Paris", "15:40", "11:35", 1),
+            ("AF84 CDG-SFO", "Europe/Paris", "America/Los_Angeles", "13:25", "15:55", 0),
+            ("LH455 SFO-FRA", "America/Los_Angeles", "Europe/Berlin", "14:40", "10:30", 1),
+            ("LH454 FRA-SFO", "Europe/Berlin", "America/Los_Angeles", "13:20", "15:55", 0),
+            # Severe jet lag (12-17h)
+            ("EK226 SFO-DXB", "America/Los_Angeles", "Asia/Dubai", "15:40", "19:25", 1),
+            ("EK225 DXB-SFO", "Asia/Dubai", "America/Los_Angeles", "08:50", "12:50", 0),
+            ("SQ31 SFO-SIN", "America/Los_Angeles", "Asia/Singapore", "09:40", "19:05", 1),
+            ("SQ32 SIN-SFO", "Asia/Singapore", "America/Los_Angeles", "09:15", "07:50", 0),
+            ("CX879 SFO-HKG", "America/Los_Angeles", "Asia/Hong_Kong", "11:25", "19:00", 1),
+            ("CX872 HKG-SFO", "Asia/Hong_Kong", "America/Los_Angeles", "01:00", "21:15", -1),
+            ("JL1 SFO-HND", "America/Los_Angeles", "Asia/Tokyo", "12:55", "17:20", 1),
+            ("JL2 HND-SFO", "Asia/Tokyo", "America/Los_Angeles", "18:05", "10:15", 0),
+            ("QF74 SFO-SYD", "America/Los_Angeles", "Australia/Sydney", "20:15", "06:10", 2),
+            ("QF73 SYD-SFO", "Australia/Sydney", "America/Los_Angeles", "21:25", "15:55", 0),
+        ],
+    )
     def test_no_sleep_within_4h_of_departure(
         self, flight_name, origin_tz, dest_tz, depart_time, arrive_time, arrive_day
     ):
@@ -1184,20 +1219,23 @@ class TestPracticalValidation:
             f"  - {i.message}" for i in errors
         )
 
-    @pytest.mark.parametrize("flight_name,origin_tz,dest_tz,depart_time,arrive_time,arrive_day", [
-        # Next-day arrivals (overnight flights)
-        ("VS20 SFO-LHR", "America/Los_Angeles", "Europe/London", "16:30", "10:40", 1),
-        ("AF83 SFO-CDG", "America/Los_Angeles", "Europe/Paris", "15:40", "11:35", 1),
-        ("LH455 SFO-FRA", "America/Los_Angeles", "Europe/Berlin", "14:40", "10:30", 1),
-        ("EK226 SFO-DXB", "America/Los_Angeles", "Asia/Dubai", "15:40", "19:25", 1),
-        ("SQ31 SFO-SIN", "America/Los_Angeles", "Asia/Singapore", "09:40", "19:05", 1),
-        ("CX879 SFO-HKG", "America/Los_Angeles", "Asia/Hong_Kong", "11:25", "19:00", 1),
-        ("JL1 SFO-HND", "America/Los_Angeles", "Asia/Tokyo", "12:55", "17:20", 1),
-        # Special: +2 day arrival
-        ("QF74 SFO-SYD", "America/Los_Angeles", "Australia/Sydney", "20:15", "06:10", 2),
-        # Special: -1 day arrival (date line crossing)
-        ("CX872 HKG-SFO", "Asia/Hong_Kong", "America/Los_Angeles", "01:00", "21:15", -1),
-    ])
+    @pytest.mark.parametrize(
+        "flight_name,origin_tz,dest_tz,depart_time,arrive_time,arrive_day",
+        [
+            # Next-day arrivals (overnight flights)
+            ("VS20 SFO-LHR", "America/Los_Angeles", "Europe/London", "16:30", "10:40", 1),
+            ("AF83 SFO-CDG", "America/Los_Angeles", "Europe/Paris", "15:40", "11:35", 1),
+            ("LH455 SFO-FRA", "America/Los_Angeles", "Europe/Berlin", "14:40", "10:30", 1),
+            ("EK226 SFO-DXB", "America/Los_Angeles", "Asia/Dubai", "15:40", "19:25", 1),
+            ("SQ31 SFO-SIN", "America/Los_Angeles", "Asia/Singapore", "09:40", "19:05", 1),
+            ("CX879 SFO-HKG", "America/Los_Angeles", "Asia/Hong_Kong", "11:25", "19:00", 1),
+            ("JL1 SFO-HND", "America/Los_Angeles", "Asia/Tokyo", "12:55", "17:20", 1),
+            # Special: +2 day arrival
+            ("QF74 SFO-SYD", "America/Los_Angeles", "Australia/Sydney", "20:15", "06:10", 2),
+            # Special: -1 day arrival (date line crossing)
+            ("CX872 HKG-SFO", "Asia/Hong_Kong", "America/Los_Angeles", "01:00", "21:15", -1),
+        ],
+    )
     def test_no_activities_before_landing(
         self, flight_name, origin_tz, dest_tz, depart_time, arrive_time, arrive_day
     ):
