@@ -119,3 +119,68 @@ export function getTimePeriod(
   if (hour >= 17 && hour < 21) return "evening";
   return "night";
 }
+
+/**
+ * Get the user's browser timezone (IANA format)
+ */
+export function getUserTimezone(): string {
+  return Intl.DateTimeFormat().resolvedOptions().timeZone;
+}
+
+/**
+ * Get current time in HH:MM format for a specific timezone
+ */
+export function getCurrentTimeInTimezone(tz: string): string {
+  const now = new Date();
+  return now.toLocaleTimeString("en-GB", {
+    timeZone: tz,
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+}
+
+/**
+ * Determine the appropriate timezone for "now" based on flight phase.
+ *
+ * For days with multiple timezones (Flight & Arrival Day), we need to show
+ * "now" in the timezone that matches the user's current phase:
+ * - Pre-departure: origin timezone (they're still at origin)
+ * - In-transit: destination timezone (where they're adapting to)
+ * - Post-arrival: destination timezone (they're at destination)
+ *
+ * @param originTz - Origin timezone (e.g., "Europe/Paris")
+ * @param destTz - Destination timezone (e.g., "America/Los_Angeles")
+ * @param departureDateTime - Departure in ISO format (origin tz)
+ * @param arrivalDateTime - Arrival in ISO format (dest tz)
+ * @returns The timezone to use for the "now" marker
+ */
+export function getNowTimezone(
+  originTz: string,
+  destTz: string,
+  departureDateTime: string,
+  arrivalDateTime: string
+): string {
+  const now = new Date();
+
+  // Get current time in both timezones using locale string conversion
+  const nowInOrigin = new Date(
+    now.toLocaleString("en-US", { timeZone: originTz })
+  );
+  const nowInDest = new Date(
+    now.toLocaleString("en-US", { timeZone: destTz })
+  );
+
+  // Parse departure/arrival times
+  const departure = new Date(departureDateTime);
+  const arrival = new Date(arrivalDateTime);
+
+  // Determine phase based on current time vs flight times
+  if (nowInOrigin < departure) {
+    return originTz; // Pre-departure: use origin timezone
+  } else if (nowInDest > arrival) {
+    return destTz; // Post-arrival: use destination timezone
+  } else {
+    return destTz; // In transit: use destination (where adapting to)
+  }
+}

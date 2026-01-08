@@ -119,24 +119,55 @@ describe("formatTime", () => {
 });
 
 describe("getDayLabel", () => {
-  it("returns 'Day -X' for negative days", () => {
-    expect(getDayLabel(-1)).toBe("Day -1");
-    expect(getDayLabel(-2)).toBe("Day -2");
-    expect(getDayLabel(-5)).toBe("Day -5");
+  describe("standard flights (no same-day arrival)", () => {
+    it("returns 'Day -X' for negative days", () => {
+      expect(getDayLabel(-1)).toBe("Day -1");
+      expect(getDayLabel(-2)).toBe("Day -2");
+      expect(getDayLabel(-5)).toBe("Day -5");
+    });
+
+    it("returns 'Flight Day' for day 0", () => {
+      expect(getDayLabel(0)).toBe("Flight Day");
+    });
+
+    it("returns 'Arrival' for day 1", () => {
+      expect(getDayLabel(1)).toBe("Arrival");
+    });
+
+    it("returns 'Day +X' for days after arrival", () => {
+      expect(getDayLabel(2)).toBe("Day +2");
+      expect(getDayLabel(3)).toBe("Day +3");
+      expect(getDayLabel(10)).toBe("Day +10");
+    });
   });
 
-  it("returns 'Flight Day' for day 0", () => {
-    expect(getDayLabel(0)).toBe("Flight Day");
-  });
+  describe("same-day arrival (westbound flights)", () => {
+    it("returns 'Flight & Arrival Day' for day 0 with hasSameDayArrival", () => {
+      expect(getDayLabel(0, true)).toBe("Flight & Arrival Day");
+    });
 
-  it("returns 'Arrival' for day 1", () => {
-    expect(getDayLabel(1)).toBe("Arrival");
-  });
+    it("returns 'Day -X' for negative days (unaffected by hasSameDayArrival)", () => {
+      expect(getDayLabel(-1, true)).toBe("Day -1");
+      expect(getDayLabel(-2, true)).toBe("Day -2");
+    });
 
-  it("returns 'Day +X' for days after arrival", () => {
-    expect(getDayLabel(2)).toBe("Day +2");
-    expect(getDayLabel(3)).toBe("Day +3");
-    expect(getDayLabel(10)).toBe("Day +10");
+    it("returns 'Arrival' for day 1 (but day 1 usually doesn't exist for same-day)", () => {
+      // Note: For same-day arrivals, day 1 typically doesn't exist in the schedule
+      // because the arrival is merged into day 0. This test documents behavior if it did.
+      expect(getDayLabel(1, true)).toBe("Arrival");
+    });
+
+    it("shifts day numbers down by 1 for days after arrival", () => {
+      // For same-day arrivals: day 2 → Day +1, day 3 → Day +2, etc.
+      expect(getDayLabel(2, true)).toBe("Day +1");
+      expect(getDayLabel(3, true)).toBe("Day +2");
+      expect(getDayLabel(4, true)).toBe("Day +3");
+    });
+
+    it("handles hasSameDayArrival=false same as undefined", () => {
+      expect(getDayLabel(0, false)).toBe("Flight Day");
+      expect(getDayLabel(2, false)).toBe("Day +2");
+    });
   });
 });
 

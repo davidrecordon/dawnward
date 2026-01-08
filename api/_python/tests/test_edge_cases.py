@@ -477,3 +477,97 @@ class TestBoundaryConditions:
         assert "melatonin" not in all_types
         assert "caffeine_ok" not in all_types
         assert "caffeine_cutoff" not in all_types
+
+
+class TestMelatoninTimingConstraints:
+    """Test that melatonin is never scheduled before wake time."""
+
+    def test_delay_melatonin_not_before_wake(self):
+        """For delay direction, melatonin should be at or after wake time.
+
+        Previously a bug allowed morning melatonin at 8am when wake was 9am.
+        """
+        generator = ScheduleGenerator()
+        future_date = datetime.now() + timedelta(days=5)
+
+        # CDG to SFO (westbound = delay, 9h shift)
+        request = ScheduleRequest(
+            legs=[
+                TripLeg(
+                    origin_tz="Europe/Paris",
+                    dest_tz="America/Los_Angeles",
+                    departure_datetime=future_date.strftime("%Y-%m-%dT13:30"),
+                    arrival_datetime=future_date.strftime("%Y-%m-%dT15:15")
+                )
+            ],
+            prep_days=3,
+            wake_time="07:00",
+            sleep_time="23:00",
+            uses_melatonin=True,
+            uses_caffeine=True,
+        )
+
+        schedule = generator.generate_schedule(request)
+        assert schedule is not None
+        assert schedule.direction == "delay", "CDG→SFO should be delay direction"
+
+        # Check all days: melatonin time should be >= wake time
+        for day_schedule in schedule.interventions:
+            melatonin_items = [i for i in day_schedule.items if i.type == "melatonin"]
+            wake_items = [i for i in day_schedule.items if i.type == "wake_target"]
+
+            if melatonin_items and wake_items:
+                mel_time = melatonin_items[0].time  # HH:MM format
+                wake_time = wake_items[0].time
+
+                # Parse times
+                mel_minutes = int(mel_time.split(":")[0]) * 60 + int(mel_time.split(":")[1])
+                wake_minutes = int(wake_time.split(":")[0]) * 60 + int(wake_time.split(":")[1])
+
+                # For delay direction (morning melatonin), melatonin should be >= wake
+                assert mel_minutes >= wake_minutes, (
+                    f"Day {day_schedule.day}: melatonin at {mel_time} is before "
+                    f"wake at {wake_time}. Can't take melatonin while asleep!"
+                )
+
+    def test_delay_melatonin_clamped_to_late_wake(self):
+        """Test that late wake time (9am) properly clamps melatonin."""
+        generator = ScheduleGenerator()
+        future_date = datetime.now() + timedelta(days=5)
+
+        # Westbound with late wake time
+        request = ScheduleRequest(
+            legs=[
+                TripLeg(
+                    origin_tz="Europe/Paris",
+                    dest_tz="America/Los_Angeles",
+                    departure_datetime=future_date.strftime("%Y-%m-%dT13:30"),
+                    arrival_datetime=future_date.strftime("%Y-%m-%dT15:15")
+                )
+            ],
+            prep_days=3,
+            wake_time="09:00",  # Late wake
+            sleep_time="01:00",  # Late sleep (owl chronotype)
+            uses_melatonin=True,
+            uses_caffeine=True,
+        )
+
+        schedule = generator.generate_schedule(request)
+        assert schedule is not None
+
+        # All melatonin should be at or after 9am wake
+        for day_schedule in schedule.interventions:
+            melatonin_items = [i for i in day_schedule.items if i.type == "melatonin"]
+            wake_items = [i for i in day_schedule.items if i.type == "wake_target"]
+
+            if melatonin_items and wake_items:
+                mel_time = melatonin_items[0].time
+                wake_time = wake_items[0].time
+
+                mel_minutes = int(mel_time.split(":")[0]) * 60 + int(mel_time.split(":")[1])
+                wake_minutes = int(wake_time.split(":")[0]) * 60 + int(wake_time.split(":")[1])
+
+                assert mel_minutes >= wake_minutes, (
+                    f"Day {day_schedule.day}: melatonin at {mel_time} scheduled before "
+                    f"wake at {wake_time}"
+                )

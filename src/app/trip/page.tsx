@@ -224,7 +224,7 @@ export default function TripPage() {
                       : "text-slate-600 group-hover:text-slate-900"
                   }`}
                 >
-                  {getDayLabel(daySchedule.day)}
+                  {getDayLabel(daySchedule.day, daySchedule.hasSameDayArrival)}
                 </div>
                 <div
                   className={`text-[10px] transition-colors ${

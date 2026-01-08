@@ -110,17 +110,31 @@ export function formatTime(time: string): string {
 }
 
 /**
- * Get a friendly label for a day number
+ * Get a friendly label for a day number.
+ *
+ * @param day - Day number relative to departure (negative = prep, 0 = flight, positive = after)
+ * @param hasSameDayArrival - True if departure and arrival are on the same calendar day (westbound flights).
+ *                           When true, day 0 becomes "Flight & Arrival Day" and subsequent days are shifted
+ *                           (day 2 → "Day +1", day 3 → "Day +2", etc.)
  */
-export function getDayLabel(day: number): string {
+export function getDayLabel(day: number, hasSameDayArrival?: boolean): string {
   if (day < 0) {
     return `Day ${day}`;
   } else if (day === 0) {
+    // For westbound same-day arrivals, show combined label
+    if (hasSameDayArrival) {
+      return "Flight & Arrival Day";
+    }
     return "Flight Day";
   } else if (day === 1) {
+    // Day 1 is "Arrival" only if NOT same-day arrival
+    // (for same-day arrivals, day 1 doesn't exist - it's merged into day 0)
     return "Arrival";
   } else {
-    return `Day +${day}`;
+    // For same-day arrivals, shift the day numbers down by 1
+    // (day 2 becomes "Day +1", day 3 becomes "Day +2", etc.)
+    const displayDay = hasSameDayArrival ? day - 1 : day;
+    return `Day +${displayDay}`;
   }
 }
 

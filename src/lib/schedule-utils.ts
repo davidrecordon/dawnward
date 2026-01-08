@@ -49,6 +49,8 @@ const PHASE_ORDER: Record<PhaseType, number> = {
  */
 export function mergePhasesByDate(interventions: DaySchedule[]): DaySchedule[] {
   const byDate = new Map<string, DaySchedule>();
+  // Track which phase types exist for each date (for same-day arrival detection)
+  const phaseTypesByDate = new Map<string, Set<PhaseType>>();
 
   // Sort phases by type order first (preparation < pre_departure < in_transit < post_arrival)
   const sortedPhases = [...interventions].sort((a, b) => {
@@ -59,6 +61,14 @@ export function mergePhasesByDate(interventions: DaySchedule[]): DaySchedule[] {
 
   for (const phase of sortedPhases) {
     const existing = byDate.get(phase.date);
+
+    // Track phase types for this date
+    if (phase.phase_type) {
+      if (!phaseTypesByDate.has(phase.date)) {
+        phaseTypesByDate.set(phase.date, new Set());
+      }
+      phaseTypesByDate.get(phase.date)!.add(phase.phase_type);
+    }
 
     // Tag items with their source timezone
     const taggedItems: Intervention[] = phase.items.map((item) => ({
@@ -79,6 +89,22 @@ export function mergePhasesByDate(interventions: DaySchedule[]): DaySchedule[] {
         ...phase,
         items: taggedItems,
       });
+    }
+  }
+
+  // Check if any date has both pre_departure and post_arrival (same-day arrival)
+  let hasSameDayArrival = false;
+  for (const phaseTypes of phaseTypesByDate.values()) {
+    if (phaseTypes.has("pre_departure") && phaseTypes.has("post_arrival")) {
+      hasSameDayArrival = true;
+      break;
+    }
+  }
+
+  // Set hasSameDayArrival flag on ALL days so they can adjust their labels
+  if (hasSameDayArrival) {
+    for (const day of byDate.values()) {
+      day.hasSameDayArrival = true;
     }
   }
 
@@ -105,4 +131,25 @@ export function mergePhasesByDate(interventions: DaySchedule[]): DaySchedule[] {
   return Array.from(byDate.values()).sort((a, b) =>
     a.date.localeCompare(b.date)
   );
+}
+
+/**
+ * Check if a day's interventions span multiple timezones.
+ *
+ * Used to decide whether to show timezone labels on UI elements like
+ * the "You are here" marker - only needed when there's ambiguity.
+ *
+ * @param interventions - Array of interventions for a single day
+ * @returns true if interventions have 2+ distinct timezones
+ */
+export function dayHasMultipleTimezones(interventions: Intervention[]): boolean {
+  const timezones = new Set<string>();
+
+  for (const item of interventions) {
+    if (item.timezone) {
+      timezones.add(item.timezone);
+    }
+  }
+
+  return timezones.size > 1;
 }

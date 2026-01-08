@@ -117,7 +117,7 @@ class InterventionPlanner:
 
         # 3. Melatonin (if enabled)
         if self.context.uses_melatonin:
-            mel = self._plan_melatonin(phase, dlmo)
+            mel = self._plan_melatonin(phase, dlmo, wake_target)
             if mel:
                 interventions.append(mel)
 
@@ -264,6 +264,12 @@ class InterventionPlanner:
             # Most impactful for delay: evening light or melatonin
             if self.context.uses_melatonin:
                 optimal_time = MelatoninPRC.optimal_melatonin_time(dlmo, "delay")
+                # Clamp to wake time (can't take melatonin while asleep)
+                optimal_minutes = time_to_minutes(optimal_time)
+                wake_minutes = time_to_minutes(wake_target)
+                if optimal_minutes < wake_minutes:
+                    optimal_time = wake_target
+
                 interventions.append(Intervention(
                     time=format_time(optimal_time),
                     type="melatonin",
@@ -297,14 +303,20 @@ class InterventionPlanner:
         sleep_target: time
     ) -> List[Intervention]:
         """Plan sleep and wake target interventions."""
+        # Direction-specific wake advice
+        if self.context.direction == "advance":
+            wake_advice = "Get bright light soon after waking."
+        else:
+            wake_advice = "Avoid bright light for the first few hours after waking."
+
         return [
             Intervention(
                 time=format_time(wake_target),
                 type="wake_target",
                 title="Target wake time",
                 description=(
-                    "Try to wake up at this time to help shift your circadian clock. "
-                    "Get bright light soon after waking."
+                    f"Try to wake up at this time to help shift your circadian clock. "
+                    f"{wake_advice}"
                 ),
                 duration_min=None
             ),
@@ -416,8 +428,14 @@ class InterventionPlanner:
 
         return interventions
 
-    def _plan_melatonin(self, phase: TravelPhase, dlmo: time) -> Optional[Intervention]:
-        """Plan melatonin intervention using PRC."""
+    def _plan_melatonin(self, phase: TravelPhase, dlmo: time, wake_target: time) -> Optional[Intervention]:
+        """Plan melatonin intervention using PRC.
+
+        Args:
+            phase: The travel phase to plan
+            dlmo: Dim light melatonin onset time
+            wake_target: Target wake time (melatonin won't be scheduled before this)
+        """
         optimal_time = MelatoninPRC.optimal_melatonin_time(dlmo, self.context.direction)
 
         if self.context.direction == "advance":
@@ -434,6 +452,16 @@ class InterventionPlanner:
         else:
             # Delay: melatonin less commonly recommended
             if MelatoninPRC.is_delay_melatonin_recommended(self.context.total_shift):
+                # For delay, morning melatonin must be after wake time
+                optimal_minutes = time_to_minutes(optimal_time)
+                wake_minutes = time_to_minutes(wake_target)
+
+                # If melatonin is before wake time, shift to wake time
+                # (comparing within same day, accounting for early morning hours)
+                if optimal_minutes < wake_minutes:
+                    # Melatonin scheduled before wake - adjust to wake time
+                    optimal_time = wake_target
+
                 return Intervention(
                     time=format_time(optimal_time),
                     type="melatonin",

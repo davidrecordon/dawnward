@@ -8,11 +8,11 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { mergePhasesByDate } from "./schedule-utils";
-import type { DaySchedule, Intervention } from "@/types/schedule";
+import { mergePhasesByDate, dayHasMultipleTimezones } from "./schedule-utils";
+import type { DaySchedule, Intervention, InterventionType } from "@/types/schedule";
 
 function makeIntervention(
-  type: string,
+  type: InterventionType,
   time: string,
   extras: Partial<Intervention> = {}
 ): Intervention {
@@ -206,5 +206,229 @@ describe("mergePhasesByDate", () => {
       expect(wakeItem?.timezone).toBe("America/Los_Angeles");
       expect(lightItem?.timezone).toBe("Europe/London");
     });
+  });
+
+  describe("same-day arrival detection", () => {
+    it("should set hasSameDayArrival when pre_departure and post_arrival share a date", () => {
+      // Westbound flight (e.g., CDG→SFO) where departure and arrival are on same calendar day
+      const phases: DaySchedule[] = [
+        makeDaySchedule(
+          "2025-01-15",
+          0,
+          [makeIntervention("wake_target", "07:00")],
+          { phase_type: "pre_departure", timezone: "Europe/Paris" }
+        ),
+        makeDaySchedule(
+          "2025-01-15",
+          1,
+          [makeIntervention("sleep_target", "22:00")],
+          { phase_type: "post_arrival", timezone: "America/Los_Angeles" }
+        ),
+      ];
+
+      const merged = mergePhasesByDate(phases);
+
+      // Should detect same-day arrival
+      expect(merged[0].hasSameDayArrival).toBe(true);
+    });
+
+    it("should set hasSameDayArrival on ALL days when detected", () => {
+      // Full westbound schedule with preparation + flight day + adaptation
+      const phases: DaySchedule[] = [
+        makeDaySchedule(
+          "2025-01-14",
+          -1,
+          [makeIntervention("melatonin", "22:00")],
+          { phase_type: "preparation", timezone: "Europe/Paris" }
+        ),
+        makeDaySchedule(
+          "2025-01-15",
+          0,
+          [makeIntervention("wake_target", "09:00")],
+          { phase_type: "pre_departure", timezone: "Europe/Paris" }
+        ),
+        makeDaySchedule(
+          "2025-01-15",
+          1,
+          [makeIntervention("sleep_target", "17:00")],
+          { phase_type: "post_arrival", timezone: "America/Los_Angeles" }
+        ),
+        makeDaySchedule(
+          "2025-01-16",
+          2,
+          [makeIntervention("wake_target", "04:00")],
+          { phase_type: "adaptation", timezone: "America/Los_Angeles" }
+        ),
+      ];
+
+      const merged = mergePhasesByDate(phases);
+
+      // All days should have hasSameDayArrival flag
+      expect(merged.length).toBe(3); // Jan 14, 15, 16
+      expect(merged[0].hasSameDayArrival).toBe(true); // Day -1
+      expect(merged[1].hasSameDayArrival).toBe(true); // Flight & Arrival Day
+      expect(merged[2].hasSameDayArrival).toBe(true); // Day +1
+    });
+
+    it("should NOT set hasSameDayArrival for eastbound flights", () => {
+      // Eastbound flight (e.g., SFO→LHR) where arrival is next day
+      const phases: DaySchedule[] = [
+        makeDaySchedule(
+          "2025-01-15",
+          0,
+          [makeIntervention("wake_target", "07:00")],
+          { phase_type: "pre_departure", timezone: "America/Los_Angeles" }
+        ),
+        makeDaySchedule(
+          "2025-01-16",
+          1,
+          [makeIntervention("sleep_target", "22:00")],
+          { phase_type: "post_arrival", timezone: "Europe/London" }
+        ),
+      ];
+
+      const merged = mergePhasesByDate(phases);
+
+      // Should NOT detect same-day arrival (different dates)
+      expect(merged[0].hasSameDayArrival).toBeUndefined();
+      expect(merged[1].hasSameDayArrival).toBeUndefined();
+    });
+
+    it("should NOT set hasSameDayArrival when only pre_departure exists", () => {
+      const phases: DaySchedule[] = [
+        makeDaySchedule(
+          "2025-01-15",
+          0,
+          [makeIntervention("wake_target", "07:00")],
+          { phase_type: "pre_departure", timezone: "America/Los_Angeles" }
+        ),
+      ];
+
+      const merged = mergePhasesByDate(phases);
+      expect(merged[0].hasSameDayArrival).toBeUndefined();
+    });
+
+    it("should NOT set hasSameDayArrival when only post_arrival exists", () => {
+      const phases: DaySchedule[] = [
+        makeDaySchedule(
+          "2025-01-15",
+          1,
+          [makeIntervention("sleep_target", "22:00")],
+          { phase_type: "post_arrival", timezone: "Europe/London" }
+        ),
+      ];
+
+      const merged = mergePhasesByDate(phases);
+      expect(merged[0].hasSameDayArrival).toBeUndefined();
+    });
+
+    it("should merge pre_departure and post_arrival into single day entry", () => {
+      const phases: DaySchedule[] = [
+        makeDaySchedule(
+          "2025-01-15",
+          0,
+          [
+            makeIntervention("melatonin", "08:00"),
+            makeIntervention("wake_target", "09:00"),
+          ],
+          { phase_type: "pre_departure", timezone: "Europe/Paris" }
+        ),
+        makeDaySchedule(
+          "2025-01-15",
+          1,
+          [
+            makeIntervention("wake_target", "02:00"),
+            makeIntervention("sleep_target", "17:00"),
+          ],
+          { phase_type: "post_arrival", timezone: "America/Los_Angeles" }
+        ),
+      ];
+
+      const merged = mergePhasesByDate(phases);
+
+      // Should have single day entry with all items
+      expect(merged.length).toBe(1);
+      expect(merged[0].items.length).toBe(4);
+      expect(merged[0].hasSameDayArrival).toBe(true);
+
+      // Items should have their source timezones
+      const parisItems = merged[0].items.filter(
+        (i) => i.timezone === "Europe/Paris"
+      );
+      const laItems = merged[0].items.filter(
+        (i) => i.timezone === "America/Los_Angeles"
+      );
+      expect(parisItems.length).toBe(2);
+      expect(laItems.length).toBe(2);
+    });
+  });
+});
+
+describe("dayHasMultipleTimezones", () => {
+  it("returns false for empty interventions", () => {
+    expect(dayHasMultipleTimezones([])).toBe(false);
+  });
+
+  it("returns false when all interventions have the same timezone", () => {
+    const interventions: Intervention[] = [
+      makeIntervention("wake_target", "07:00", { timezone: "America/Los_Angeles" }),
+      makeIntervention("light_seek", "08:00", { timezone: "America/Los_Angeles" }),
+      makeIntervention("sleep_target", "22:00", { timezone: "America/Los_Angeles" }),
+    ];
+
+    expect(dayHasMultipleTimezones(interventions)).toBe(false);
+  });
+
+  it("returns false when interventions have no timezone", () => {
+    const interventions: Intervention[] = [
+      makeIntervention("wake_target", "07:00"),
+      makeIntervention("light_seek", "08:00"),
+    ];
+
+    expect(dayHasMultipleTimezones(interventions)).toBe(false);
+  });
+
+  it("returns true when interventions have different timezones", () => {
+    const interventions: Intervention[] = [
+      makeIntervention("wake_target", "09:00", { timezone: "Europe/Paris" }),
+      makeIntervention("melatonin", "08:00", { timezone: "Europe/Paris" }),
+      makeIntervention("sleep_target", "17:00", { timezone: "America/Los_Angeles" }),
+    ];
+
+    expect(dayHasMultipleTimezones(interventions)).toBe(true);
+  });
+
+  it("returns true for Flight & Arrival Day with pre-departure and post-arrival items", () => {
+    // Simulates CDG→SFO same-day arrival
+    const interventions: Intervention[] = [
+      makeIntervention("melatonin", "08:00", { timezone: "Europe/Paris" }),
+      makeIntervention("wake_target", "09:00", { timezone: "Europe/Paris" }),
+      makeIntervention("wake_target", "02:00", { timezone: "America/Los_Angeles" }),
+      makeIntervention("sleep_target", "17:00", { timezone: "America/Los_Angeles" }),
+    ];
+
+    expect(dayHasMultipleTimezones(interventions)).toBe(true);
+  });
+
+  it("returns false for single-timezone adaptation day", () => {
+    // Day +1 after arrival - all in destination timezone
+    const interventions: Intervention[] = [
+      makeIntervention("wake_target", "04:00", { timezone: "America/Los_Angeles" }),
+      makeIntervention("light_avoid", "04:00", { timezone: "America/Los_Angeles" }),
+      makeIntervention("light_seek", "15:00", { timezone: "America/Los_Angeles" }),
+      makeIntervention("sleep_target", "19:00", { timezone: "America/Los_Angeles" }),
+    ];
+
+    expect(dayHasMultipleTimezones(interventions)).toBe(false);
+  });
+
+  it("ignores undefined timezone when counting", () => {
+    const interventions: Intervention[] = [
+      makeIntervention("wake_target", "07:00", { timezone: "America/Los_Angeles" }),
+      makeIntervention("light_seek", "08:00"), // No timezone
+      makeIntervention("sleep_target", "22:00", { timezone: "America/Los_Angeles" }),
+    ];
+
+    expect(dayHasMultipleTimezones(interventions)).toBe(false);
   });
 });

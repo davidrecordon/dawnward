@@ -1,10 +1,16 @@
 "use client";
 
 import { getDayLabel } from "@/lib/intervention-utils";
-import { formatLongDate, getCurrentTime } from "@/lib/time-utils";
+import { dayHasMultipleTimezones } from "@/lib/schedule-utils";
+import {
+  formatLongDate,
+  getCurrentTimeInTimezone,
+  getNowTimezone,
+} from "@/lib/time-utils";
 import { InterventionCard } from "./intervention-card";
 import { FlightCard } from "./flight-card";
 import { NowMarker } from "./now-marker";
+import { TimezoneTransition } from "./timezone-transition";
 import type { DaySchedule, Intervention } from "@/types/schedule";
 import type { Airport } from "@/types/airport";
 
@@ -19,11 +25,17 @@ interface DaySectionProps {
   isCurrentDay: boolean;
 }
 
-type ScheduleItem =
+// Items with time (used during sorting)
+type TimedItem =
   | { kind: "intervention"; time: string; data: Intervention; index: number; timezone?: string }
   | { kind: "departure"; time: string; timezone: string }
   | { kind: "arrival"; time: string; timezone: string }
-  | { kind: "now"; time: string };
+  | { kind: "now"; time: string; timezone: string };
+
+// All items including transitions (used during rendering)
+type ScheduleItem =
+  | TimedItem
+  | { kind: "timezone_transition"; fromTz: string; toTz: string };
 
 /**
  * Convert time string to sortable minutes.
@@ -50,8 +62,8 @@ export function DaySection({
   arrivalTime,
   isCurrentDay,
 }: DaySectionProps) {
-  // Build combined items array
-  const items: ScheduleItem[] = [];
+  // Build combined items array (TimedItem before transitions are inserted)
+  const items: TimedItem[] = [];
 
   // Only show timezone on Flight Day (0) and Arrival day (1)
   const showTimezone = daySchedule.day === 0 || daySchedule.day === 1;
@@ -81,19 +93,25 @@ export function DaySection({
     items.push({ kind: "arrival", time: arrivalTime, timezone: destination.tz });
   }
 
-  // Add "now" marker if this is today
+  // Add "now" marker if this is today, with phase-aware timezone
   if (isCurrentDay) {
-    const now = getCurrentTime();
-    items.push({ kind: "now", time: now });
+    const nowTz = getNowTimezone(
+      origin.tz,
+      destination.tz,
+      `${departureDate}T${departureTime}`,
+      `${arrivalDate}T${arrivalTime}`
+    );
+    const nowTime = getCurrentTimeInTimezone(nowTz);
+    items.push({ kind: "now", time: nowTime, timezone: nowTz });
   }
 
   // Sort items with timezone-aware logic
   // Flight events act as phase boundaries: departure ends pre-departure, arrival starts post-arrival
   items.sort((a, b) => {
-    // Get timezone for each item, defaulting to daySchedule.timezone if undefined
-    const rawTzA = a.kind === "intervention" ? a.timezone : a.kind === "departure" ? origin.tz : a.kind === "arrival" ? destination.tz : daySchedule.timezone;
-    const rawTzB = b.kind === "intervention" ? b.timezone : b.kind === "departure" ? origin.tz : b.kind === "arrival" ? destination.tz : daySchedule.timezone;
-    // Normalize undefined to daySchedule.timezone so "now" marker sorts correctly
+    // Get timezone for each item
+    const rawTzA = a.kind === "intervention" ? a.timezone : a.kind === "departure" ? origin.tz : a.kind === "arrival" ? destination.tz : a.kind === "now" ? a.timezone : daySchedule.timezone;
+    const rawTzB = b.kind === "intervention" ? b.timezone : b.kind === "departure" ? origin.tz : b.kind === "arrival" ? destination.tz : b.kind === "now" ? b.timezone : daySchedule.timezone;
+    // Normalize undefined to daySchedule.timezone for interventions without timezone
     const tzA = rawTzA ?? daySchedule.timezone;
     const tzB = rawTzB ?? daySchedule.timezone;
 
@@ -133,6 +151,46 @@ export function DaySection({
     return (kindOrder[a.kind] ?? 99) - (kindOrder[b.kind] ?? 99);
   });
 
+  // Determine if this day has multiple timezones (for deciding whether to show tz on "now" marker)
+  // Check interventions plus flight events
+  const hasMultipleTimezones =
+    dayHasMultipleTimezones(daySchedule.items) ||
+    (daySchedule.date === departureDate && daySchedule.date === arrivalDate && origin.tz !== destination.tz);
+
+  // Insert timezone transitions when timezone changes between consecutive items
+  const itemsWithTransitions: ScheduleItem[] = [];
+  let lastTimezone: string | undefined;
+
+  for (const item of items) {
+    // Get timezone for this item
+    let itemTz: string | undefined;
+    if (item.kind === "intervention") {
+      itemTz = item.timezone;
+    } else if (item.kind === "departure") {
+      itemTz = item.timezone;
+    } else if (item.kind === "arrival") {
+      itemTz = item.timezone;
+    } else if (item.kind === "now") {
+      itemTz = item.timezone;
+    }
+
+    // Insert transition if timezone changed (and both are defined)
+    if (lastTimezone && itemTz && lastTimezone !== itemTz) {
+      itemsWithTransitions.push({
+        kind: "timezone_transition",
+        fromTz: lastTimezone,
+        toTz: itemTz,
+      });
+    }
+
+    itemsWithTransitions.push(item);
+
+    // Update lastTimezone only for items that have one
+    if (itemTz) {
+      lastTimezone = itemTz;
+    }
+  }
+
   // Get day label styling based on day number
   const getDayLabelStyle = () => {
     if (daySchedule.day < 0) return "text-sky-600"; // Pre-departure
@@ -154,7 +212,7 @@ export function DaySection({
             <span
               className={`text-sm font-bold tracking-wide uppercase ${getDayLabelStyle()}`}
             >
-              {getDayLabel(daySchedule.day)}
+              {getDayLabel(daySchedule.day, daySchedule.hasSameDayArrival)}
             </span>
             <span className="text-slate-400">•</span>
             <span className="text-slate-600 font-medium">
@@ -171,7 +229,18 @@ export function DaySection({
 
         {/* Items */}
         <div className="space-y-3">
-          {items.map((item) => {
+          {itemsWithTransitions.map((item, idx) => {
+            // Timezone transitions render without dot
+            if (item.kind === "timezone_transition") {
+              return (
+                <TimezoneTransition
+                  key={`tz-transition-${idx}`}
+                  fromTz={item.fromTz}
+                  toTz={item.toTz}
+                />
+              );
+            }
+
             // Determine dot color based on item type
             const getDotStyle = () => {
               if (item.kind === "now") {
@@ -221,14 +290,19 @@ export function DaySection({
                     timezone={item.timezone}
                   />
                 )}
-                {item.kind === "now" && <NowMarker time={item.time} />}
+                {item.kind === "now" && (
+                  <NowMarker
+                    time={item.time}
+                    timezone={hasMultipleTimezones ? item.timezone : undefined}
+                  />
+                )}
               </div>
             );
           })}
         </div>
 
         {/* Empty day message */}
-        {items.length === 0 && (
+        {itemsWithTransitions.length === 0 && (
           <div className="relative py-6 text-center text-slate-400 text-sm">
             No scheduled interventions for this day
           </div>

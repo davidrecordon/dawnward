@@ -68,6 +68,8 @@ export interface DaySchedule {
   phase_type?: PhaseType;
   /** IANA timezone for this day's times (e.g., "America/Los_Angeles" or "In transit") */
   timezone?: string;
+  /** True if both pre_departure and post_arrival phases exist on same date (westbound same-day arrival) */
+  hasSameDayArrival?: boolean;
 }
 
 /**

@@ -9,6 +9,9 @@ import {
   isAfterSchedule,
   getCurrentDayNumber,
   getTimePeriod,
+  getUserTimezone,
+  getCurrentTimeInTimezone,
+  getNowTimezone,
 } from "../time-utils";
 import type { ScheduleData } from "../time-utils";
 
@@ -304,5 +307,193 @@ describe("getCurrentDayNumber", () => {
     ]);
 
     expect(getCurrentDayNumber(schedule)).toBe(0);
+  });
+});
+
+describe("getUserTimezone", () => {
+  it("returns a valid IANA timezone string", () => {
+    const tz = getUserTimezone();
+    // Should be a non-empty string
+    expect(typeof tz).toBe("string");
+    expect(tz.length).toBeGreaterThan(0);
+    // Should contain a slash (IANA format like "America/Los_Angeles")
+    // or be a short name like "UTC"
+    expect(tz).toMatch(/^[A-Za-z_\/]+$/);
+  });
+});
+
+describe("getCurrentTimeInTimezone", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("returns time in HH:MM format for specified timezone", () => {
+    // Set time to Jan 15, 2026 at 20:00 UTC
+    vi.setSystemTime(new Date("2026-01-15T20:00:00Z"));
+
+    // In America/Los_Angeles (UTC-8), it should be 12:00
+    const laTime = getCurrentTimeInTimezone("America/Los_Angeles");
+    expect(laTime).toBe("12:00");
+
+    // In Europe/London (UTC+0), it should be 20:00
+    const londonTime = getCurrentTimeInTimezone("Europe/London");
+    expect(londonTime).toBe("20:00");
+  });
+
+  it("handles timezone with positive UTC offset", () => {
+    // Set time to Jan 15, 2026 at 14:30 UTC
+    vi.setSystemTime(new Date("2026-01-15T14:30:00Z"));
+
+    // In Asia/Tokyo (UTC+9), it should be 23:30
+    const tokyoTime = getCurrentTimeInTimezone("Asia/Tokyo");
+    expect(tokyoTime).toBe("23:30");
+  });
+
+  it("handles day boundary crossing", () => {
+    // Set time to Jan 15, 2026 at 23:00 UTC
+    vi.setSystemTime(new Date("2026-01-15T23:00:00Z"));
+
+    // In Asia/Tokyo (UTC+9), it should be 08:00 (next day)
+    const tokyoTime = getCurrentTimeInTimezone("Asia/Tokyo");
+    expect(tokyoTime).toBe("08:00");
+  });
+
+  it("returns UTC time correctly", () => {
+    vi.setSystemTime(new Date("2026-01-15T09:45:00Z"));
+    expect(getCurrentTimeInTimezone("UTC")).toBe("09:45");
+  });
+});
+
+describe("getNowTimezone", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  describe("phase detection for CDG→SFO (westbound)", () => {
+    // CDG→SFO: Departure 13:30 Europe/Paris, Arrival 15:15 America/Los_Angeles
+    // Same calendar day (westbound gains time)
+    const originTz = "Europe/Paris";
+    const destTz = "America/Los_Angeles";
+    const departureDateTime = "2026-01-15T13:30"; // 1:30 PM Paris time
+    const arrivalDateTime = "2026-01-15T15:15"; // 3:15 PM LA time
+
+    it("returns origin timezone when before departure", () => {
+      // Set time to 08:00 UTC = 09:00 Paris (before 13:30 departure)
+      vi.setSystemTime(new Date("2026-01-15T08:00:00Z"));
+
+      const result = getNowTimezone(
+        originTz,
+        destTz,
+        departureDateTime,
+        arrivalDateTime
+      );
+
+      expect(result).toBe(originTz);
+    });
+
+    it("returns destination timezone when after arrival", () => {
+      // Set time to 00:00 UTC Jan 16 = 16:00 LA on Jan 15 (after 15:15 arrival)
+      vi.setSystemTime(new Date("2026-01-16T00:00:00Z"));
+
+      const result = getNowTimezone(
+        originTz,
+        destTz,
+        departureDateTime,
+        arrivalDateTime
+      );
+
+      expect(result).toBe(destTz);
+    });
+
+    it("returns destination timezone when in transit", () => {
+      // Set time to 14:00 UTC = 15:00 Paris, 06:00 LA
+      // After Paris departure (13:30), before LA arrival (15:15)
+      vi.setSystemTime(new Date("2026-01-15T14:00:00Z"));
+
+      const result = getNowTimezone(
+        originTz,
+        destTz,
+        departureDateTime,
+        arrivalDateTime
+      );
+
+      // In transit uses destination timezone
+      expect(result).toBe(destTz);
+    });
+  });
+
+  describe("phase detection for SFO→LHR (eastbound)", () => {
+    // SFO→LHR: Departure 17:00 America/Los_Angeles, Arrival 11:00 Europe/London (next day)
+    const originTz = "America/Los_Angeles";
+    const destTz = "Europe/London";
+    const departureDateTime = "2026-01-15T17:00"; // 5:00 PM LA time
+    const arrivalDateTime = "2026-01-16T11:00"; // 11:00 AM London (next day)
+
+    it("returns origin timezone when before departure", () => {
+      // Set time to 20:00 UTC Jan 15 = 12:00 LA (before 17:00 departure)
+      vi.setSystemTime(new Date("2026-01-15T20:00:00Z"));
+
+      const result = getNowTimezone(
+        originTz,
+        destTz,
+        departureDateTime,
+        arrivalDateTime
+      );
+
+      expect(result).toBe(originTz);
+    });
+
+    it("returns destination timezone when after arrival", () => {
+      // Set time to 14:00 UTC Jan 16 = 14:00 London (after 11:00 arrival)
+      vi.setSystemTime(new Date("2026-01-16T14:00:00Z"));
+
+      const result = getNowTimezone(
+        originTz,
+        destTz,
+        departureDateTime,
+        arrivalDateTime
+      );
+
+      expect(result).toBe(destTz);
+    });
+  });
+
+  describe("edge cases", () => {
+    it("returns origin timezone at exact departure time", () => {
+      vi.setSystemTime(new Date("2026-01-15T12:30:00Z")); // Exactly 13:30 Paris
+
+      const result = getNowTimezone(
+        "Europe/Paris",
+        "America/Los_Angeles",
+        "2026-01-15T13:30",
+        "2026-01-15T15:15"
+      );
+
+      // At exact departure time, should still be destination (past departure)
+      expect(result).toBe("America/Los_Angeles");
+    });
+
+    it("handles same timezone (domestic flight)", () => {
+      // LAX to SFO, both in America/Los_Angeles
+      vi.setSystemTime(new Date("2026-01-15T18:00:00Z")); // 10:00 AM LA
+
+      const result = getNowTimezone(
+        "America/Los_Angeles",
+        "America/Los_Angeles",
+        "2026-01-15T08:00",
+        "2026-01-15T09:30"
+      );
+
+      // Should return the timezone (both are same)
+      expect(result).toBe("America/Los_Angeles");
+    });
   });
 });
