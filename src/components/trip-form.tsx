@@ -281,7 +281,7 @@ export function TripForm({ formState, onFormChange }: TripFormProps) {
             <PreferenceToggle
               icon={<Coffee className="h-4 w-4" />}
               title="Strategic caffeine"
-              description="Coffee timing recommendations"
+              description="Coffee or tea timing recommendations"
               checked={formState.useCaffeine}
               onCheckedChange={(checked) => updateField("useCaffeine", checked)}
               colorScheme="orange"
