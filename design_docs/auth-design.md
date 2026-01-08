@@ -526,3 +526,11 @@ Not in v1, but the design accommodates:
 3. **Team/Family Sharing**: Could add `trip_shares` table for sharing trips with other users.
 
 4. **API Keys**: For power users who want to integrate with other tools, could add personal API keys.
+
+5. **Show Phase Windows**: User preference to display "available intervention windows" per day (e.g., "07:00 - 22:00"). The backend already returns `phase_start`, `phase_end`, and `phase_spans_midnight` fields on each day. Currently hidden from UI as it adds complexity without actionable value for most users, but power users may want transparency into algorithm decisions.
+
+6. **Gentle Mode**: Slower circadian shifting (1h/day instead of 1.5h) for more reasonable wake/sleep times. Trades faster adaptation for user compliance - avoids 3-4 AM wake times and 2:30 AM sleep targets that many users can't realistically achieve.
+
+7. **Quick Tips Mode**: Simplified schedules for minimal timezone shifts (≤3h). Instead of aggressive multi-day prep, show just arrival-day recommendations. Many travelers "power through" domestic jet lag without intervention.
+
+8. **Show Circadian Goals**: Toggle to display aspirational wake/sleep targets separately from actionable interventions. Helps users understand the difference between "aim for this if possible" vs "do this action now."
