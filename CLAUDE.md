@@ -15,9 +15,9 @@ bun run build        # Production build
 bun start            # Start production server
 
 # Testing
-bun test             # Run Vitest in watch mode
-bun test:run         # Run all TypeScript tests once
-bun test:python      # Run all Python pytest tests
+bun run test         # Run Vitest in watch mode
+bun run test:run     # Run all TypeScript tests once
+bun run test:python  # Run all Python pytest tests
 
 # Linting
 bun run lint         # Run ESLint (TypeScript)
@@ -38,12 +38,12 @@ bun prisma studio       # Open Prisma Studio GUI
 ```bash
 # TypeScript changes
 bun run lint         # ESLint
-bun test:run         # Vitest
+bun run test:run     # Vitest
 
 # Python changes
 bun run lint:python  # ruff check + format
 bun run typecheck:python  # mypy
-bun test:python      # pytest
+bun run test:python  # pytest
 ```
 
 ## Linting & Type Checking
