@@ -15,6 +15,7 @@
       "Bash(ruff format:*)",
       "Bash(tsc:*)",
       "Bash(vitest:*)",
+      "Skill(commit-commands:commit)",
       "Skill(feature-dev:*)",
       "Skill(frontend-design:*)",
       "WebFetch(domain:arcascope.github.io)",
