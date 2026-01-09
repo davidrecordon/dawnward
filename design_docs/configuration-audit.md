@@ -162,20 +162,27 @@ config/
 
 ### Intensity Rates (Soft Duplication)
 
-The schedule intensity rates appear in two places:
+The schedule intensity rates are defined in `shift_calculator.py` but documented/hardcoded in multiple other locations:
 
-| Location                          | Type          | Content                                                                      |
-| --------------------------------- | ------------- | ---------------------------------------------------------------------------- |
-| `types.py:86-90`                  | Comments      | `# - gentle: 0.75h/day advance, 1.0h/day delay`                              |
-| `shift_calculator.py:51-64`       | Code          | `INTENSITY_CONFIGS` dict with actual values                                  |
-| `test_realistic_flights.py:1427`  | Test comments | Same rates documented                                                        |
-| `test_shift_rates.py:36-38`       | Test comments | Same rates documented                                                        |
+| Location                           | Type             | Content                                                 |
+| ---------------------------------- | ---------------- | ------------------------------------------------------- |
+| `shift_calculator.py:51-64`        | Code (canonical) | `INTENSITY_CONFIGS` dict - **source of truth**          |
+| `types.py:86-90`                   | Comments         | `# - gentle: 0.75h/day advance, 1.0h/day delay`         |
+| `test_shift_rates.py:36-38`        | Test comments    | Same rates documented in docstring                      |
+| `test_shift_rates.py:44-57`        | Test assertions  | Hardcoded values: `assert config.advance_rate == 0.75`  |
+| `test_shift_rates.py:66-74`        | Test parameters  | Hardcoded values in `@pytest.mark.parametrize`          |
+| `test_realistic_flights.py:1427-9` | Test comments    | Same rates documented in docstring                      |
 
-**Risk:** Comments in `types.py` could drift out of sync with the actual `INTENSITY_CONFIGS` values.
+**Risk:** If rates in `INTENSITY_CONFIGS` change, the comments in `types.py` and tests will become stale. The test assertions would fail (good), but the comments would not (bad).
 
-**Recommended fix:** Either:
-1. Remove the rates from `types.py` comments and reference `shift_calculator.py` as source of truth
-2. Or add a cross-reference comment: `# See INTENSITY_CONFIGS in shift_calculator.py for current values`
+**Recommended fix:**
+1. **`types.py`**: Remove inline rate values from comments, add cross-reference:
+   ```python
+   # Schedule intensity controls circadian shift rates (direction-specific)
+   # See INTENSITY_CONFIGS in science/shift_calculator.py for current values
+   ScheduleIntensity = Literal["gentle", "balanced", "aggressive"]
+   ```
+2. **Tests**: Keep assertion values (they validate correctness) but remove duplicated comments that document the rates
 
 ---
 
