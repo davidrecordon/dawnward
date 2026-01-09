@@ -158,6 +158,27 @@ config/
 
 ---
 
+## Configuration Duplication Issues
+
+### Intensity Rates (Soft Duplication)
+
+The schedule intensity rates appear in two places:
+
+| Location                          | Type          | Content                                                                      |
+| --------------------------------- | ------------- | ---------------------------------------------------------------------------- |
+| `types.py:86-90`                  | Comments      | `# - gentle: 0.75h/day advance, 1.0h/day delay`                              |
+| `shift_calculator.py:51-64`       | Code          | `INTENSITY_CONFIGS` dict with actual values                                  |
+| `test_realistic_flights.py:1427`  | Test comments | Same rates documented                                                        |
+| `test_shift_rates.py:36-38`       | Test comments | Same rates documented                                                        |
+
+**Risk:** Comments in `types.py` could drift out of sync with the actual `INTENSITY_CONFIGS` values.
+
+**Recommended fix:** Either:
+1. Remove the rates from `types.py` comments and reference `shift_calculator.py` as source of truth
+2. Or add a cross-reference comment: `# See INTENSITY_CONFIGS in shift_calculator.py for current values`
+
+---
+
 ## Summary
 
 | Category          | Count | Action                                         |
@@ -166,6 +187,7 @@ config/
 | Algorithm Config  | ~10   | Could centralize (low priority)                |
 | User Preferences  | ~15   | Add to DB schema + settings UI (high priority) |
 | Frontend Defaults | ~7    | Already mostly centralized                     |
+| Duplication       | 1     | Fix soft duplication in intensity rates        |
 
 **Priority User Preferences to Add:**
 
