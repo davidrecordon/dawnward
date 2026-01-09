@@ -14,10 +14,9 @@ Implements per-phase planning including:
 """
 
 from dataclasses import dataclass
-from datetime import datetime, time
+from datetime import UTC, datetime, time
 from typing import Literal
-
-import pytz
+from zoneinfo import ZoneInfo
 
 from ..circadian_math import (
     format_time,
@@ -154,7 +153,7 @@ class InterventionPlanner:
 
         utc_time = parse_iso_datetime(iso_str)
         if utc_time.tzinfo is None:
-            utc_time = pytz.UTC.localize(utc_time)
+            utc_time = utc_time.replace(tzinfo=UTC)
         return utc_time
 
     def _plan_in_transit(self, phase: TravelPhase) -> list[Intervention]:
@@ -171,7 +170,7 @@ class InterventionPlanner:
 
         if phase.is_ulr_flight and phase.sleep_windows:
             dest_tz_str = self.request.legs[0].dest_tz if self.request.legs else "UTC"
-            dest_tz = pytz.timezone(dest_tz_str)
+            dest_tz = ZoneInfo(dest_tz_str)
 
             for window in phase.sleep_windows:
                 start_iso = window.get("start", "")
@@ -187,9 +186,9 @@ class InterventionPlanner:
                     # Calculate hours into flight from departure
                     departure_utc = phase.start_datetime
                     if departure_utc.tzinfo is None:
-                        origin_tz = pytz.timezone(self.request.legs[0].origin_tz)
-                        departure_utc = origin_tz.localize(departure_utc)
-                    departure_utc = departure_utc.astimezone(pytz.UTC)
+                        origin_tz_name = self.request.legs[0].origin_tz
+                        departure_utc = departure_utc.replace(tzinfo=ZoneInfo(origin_tz_name))
+                    departure_utc = departure_utc.astimezone(UTC)
 
                     flight_offset = (utc_time - departure_utc).total_seconds() / 3600
                     flight_offset = max(0, round(flight_offset, 1))

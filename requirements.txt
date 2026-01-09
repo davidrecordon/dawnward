@@ -2,5 +2,6 @@
 # Install with: pip install -r requirements.txt
 # Note: We use local circadian module in api/_python/, not the pip package
 
-numpy>=1.24.0       # Numerical computations
-pytz>=2024.1        # Timezone handling
+numpy>=1.24.0           # Numerical computations
+python-dateutil>=2.8.0  # Robust ISO 8601 datetime parsing
+# Note: zoneinfo is built-in since Python 3.9 (no pytz needed)

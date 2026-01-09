@@ -23,5 +23,3 @@ disallow_untyped_defs = true
 check_untyped_defs = true
 ignore_missing_imports = true
 strict_optional = true
-# Disable import-untyped errors for pytz
-disable_error_code = ["import-untyped"]

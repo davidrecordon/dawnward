@@ -5,9 +5,10 @@ Estimates circadian markers (CBTmin, DLMO) from habitual sleep schedule
 and calculates timezone shifts.
 """
 
-from datetime import datetime, time
+from datetime import UTC, datetime, time
+from zoneinfo import ZoneInfo
 
-import pytz
+from dateutil.parser import isoparse
 
 
 def parse_time(time_str: str) -> time:
@@ -20,7 +21,8 @@ def parse_iso_datetime(iso_str: str) -> datetime:
     """
     Parse an ISO 8601 datetime string to a datetime object.
 
-    Handles the Z suffix by converting it to +00:00 for Python's fromisoformat().
+    Uses python-dateutil's isoparse for robust handling of all ISO 8601 variants
+    including Z suffix, microseconds, and various timezone formats.
 
     Args:
         iso_str: ISO 8601 datetime string (e.g., "2024-01-15T10:30:00Z" or "2024-01-15T10:30:00+00:00")
@@ -28,7 +30,7 @@ def parse_iso_datetime(iso_str: str) -> datetime:
     Returns:
         Parsed datetime object (timezone-aware if offset present)
     """
-    return datetime.fromisoformat(iso_str.replace("Z", "+00:00"))
+    return isoparse(iso_str)
 
 
 def time_to_minutes(t: time) -> int:
@@ -72,9 +74,8 @@ def get_current_datetime_in_tz(tz_name: str) -> datetime:
     Returns:
         Current datetime in the specified timezone (naive, for local comparisons)
     """
-    tz = pytz.timezone(tz_name)
-    now_utc = datetime.now(pytz.UTC)
-    now_local = now_utc.astimezone(tz)
+    now_utc = datetime.now(UTC)
+    now_local = now_utc.astimezone(ZoneInfo(tz_name))
     # Return naive datetime for consistent comparisons with departure times
     return now_local.replace(tzinfo=None)
 
@@ -134,8 +135,8 @@ def get_timezone_offset_hours(tz_name: str, reference_date: datetime | None = No
     if reference_date is None:
         reference_date = datetime.now()
 
-    tz = pytz.timezone(tz_name)
-    localized = tz.localize(reference_date.replace(tzinfo=None))
+    # Replace any existing tzinfo with the target timezone
+    localized = reference_date.replace(tzinfo=ZoneInfo(tz_name))
     offset = localized.utcoffset()
     if offset is None:
         return 0.0

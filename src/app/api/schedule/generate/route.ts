@@ -4,21 +4,7 @@ import path from "path";
 import { writeFile, unlink, mkdir } from "fs/promises";
 import { randomUUID } from "crypto";
 import os from "os";
-
-interface GenerateRequest {
-  origin_tz: string;
-  dest_tz: string;
-  departure_datetime: string;
-  arrival_datetime: string;
-  prep_days: number;
-  wake_time: string;
-  sleep_time: string;
-  uses_melatonin: boolean;
-  uses_caffeine: boolean;
-  uses_exercise: boolean;
-  nap_preference: "no" | "flight_only" | "all_days";
-  schedule_intensity?: "gentle" | "balanced" | "aggressive";
-}
+import { z } from "zod";
 
 // Validation patterns
 const DATETIME_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/;
@@ -37,71 +23,49 @@ function isValidTimezone(tz: string): boolean {
   }
 }
 
-function validateRequest(body: GenerateRequest): string | null {
-  // Required fields
-  const requiredFields = [
-    "origin_tz",
-    "dest_tz",
-    "departure_datetime",
-    "arrival_datetime",
-    "prep_days",
-    "wake_time",
-    "sleep_time",
-  ];
+// Zod schema for timezone validation with IANA check
+const timezoneSchema = z.string().min(1).refine(isValidTimezone, {
+  message: "Invalid IANA timezone",
+});
 
-  for (const field of requiredFields) {
-    if (!(field in body)) {
-      return `Missing required field: ${field}`;
-    }
-  }
-
-  // Timezone validation - check against IANA timezone database
-  if (!isValidTimezone(body.origin_tz)) {
-    return `Invalid origin timezone: ${body.origin_tz}`;
-  }
-  if (!isValidTimezone(body.dest_tz)) {
-    return `Invalid destination timezone: ${body.dest_tz}`;
-  }
-
-  // Datetime validation
-  if (!DATETIME_PATTERN.test(body.departure_datetime)) {
-    return `Invalid departure datetime format: ${body.departure_datetime}`;
-  }
-  if (!DATETIME_PATTERN.test(body.arrival_datetime)) {
-    return `Invalid arrival datetime format: ${body.arrival_datetime}`;
-  }
-
-  // Time validation
-  if (!TIME_PATTERN.test(body.wake_time)) {
-    return `Invalid wake time format: ${body.wake_time}`;
-  }
-  if (!TIME_PATTERN.test(body.sleep_time)) {
-    return `Invalid sleep time format: ${body.sleep_time}`;
-  }
-
-  // Prep days validation
-  if (
-    typeof body.prep_days !== "number" ||
-    body.prep_days < 1 ||
-    body.prep_days > 7
-  ) {
-    return `prep_days must be a number between 1 and 7`;
-  }
-
-  return null;
-}
+// Zod schema for schedule generation request
+const scheduleRequestSchema = z.object({
+  origin_tz: timezoneSchema,
+  dest_tz: timezoneSchema,
+  departure_datetime: z
+    .string()
+    .regex(DATETIME_PATTERN, "Invalid datetime format (expected YYYY-MM-DDTHH:MM)"),
+  arrival_datetime: z
+    .string()
+    .regex(DATETIME_PATTERN, "Invalid datetime format (expected YYYY-MM-DDTHH:MM)"),
+  prep_days: z.number().int().min(1).max(7),
+  wake_time: z.string().regex(TIME_PATTERN, "Invalid time format (expected HH:MM)"),
+  sleep_time: z.string().regex(TIME_PATTERN, "Invalid time format (expected HH:MM)"),
+  uses_melatonin: z.boolean().default(true),
+  uses_caffeine: z.boolean().default(true),
+  uses_exercise: z.boolean().default(false),
+  nap_preference: z.enum(["no", "flight_only", "all_days"]).default("flight_only"),
+  schedule_intensity: z.enum(["gentle", "balanced", "aggressive"]).default("balanced"),
+});
 
 export async function POST(request: Request) {
   let tempFilePath: string | null = null;
 
   try {
-    const body: GenerateRequest = await request.json();
+    const rawBody = await request.json();
 
-    // Validate input
-    const validationError = validateRequest(body);
-    if (validationError) {
-      return NextResponse.json({ error: validationError }, { status: 400 });
+    // Validate input with Zod (includes defaults)
+    const parseResult = scheduleRequestSchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      const firstError = parseResult.error.issues[0];
+      const fieldPath = firstError.path.join(".");
+      const message = fieldPath
+        ? `${fieldPath}: ${firstError.message}`
+        : firstError.message;
+      return NextResponse.json({ error: message }, { status: 400 });
     }
+
+    const body = parseResult.data;
 
     // Create temp directory if needed
     const tempDir = path.join(os.tmpdir(), "dawnward");
@@ -111,6 +75,7 @@ export async function POST(request: Request) {
     const requestId = randomUUID();
     tempFilePath = path.join(tempDir, `request-${requestId}.json`);
 
+    // Zod schema already applied defaults, so we can use body directly
     const requestData = {
       origin_tz: body.origin_tz,
       dest_tz: body.dest_tz,
@@ -119,11 +84,11 @@ export async function POST(request: Request) {
       prep_days: body.prep_days,
       wake_time: body.wake_time,
       sleep_time: body.sleep_time,
-      uses_melatonin: body.uses_melatonin ?? true,
-      uses_caffeine: body.uses_caffeine ?? true,
-      uses_exercise: body.uses_exercise ?? false,
-      nap_preference: body.nap_preference ?? "flight_only",
-      schedule_intensity: body.schedule_intensity ?? "balanced",
+      uses_melatonin: body.uses_melatonin,
+      uses_caffeine: body.uses_caffeine,
+      uses_exercise: body.uses_exercise,
+      nap_preference: body.nap_preference,
+      schedule_intensity: body.schedule_intensity,
     };
 
     await writeFile(tempFilePath, JSON.stringify(requestData));

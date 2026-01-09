@@ -1,52 +1,9 @@
 /**
  * Timezone calculation utilities for trip planning
+ * Uses Luxon for robust timezone handling
  */
 
-/**
- * Get the UTC offset in hours for a timezone at a specific date
- * Uses Intl.DateTimeFormat to get the offset
- */
-function getTimezoneOffsetHours(timezone: string, date: Date): number {
-  // Create formatters for UTC and the target timezone
-  const utcFormat = new Intl.DateTimeFormat("en-US", {
-    timeZone: "UTC",
-    hour: "numeric",
-    minute: "numeric",
-    hour12: false,
-  });
-
-  const tzFormat = new Intl.DateTimeFormat("en-US", {
-    timeZone: timezone,
-    hour: "numeric",
-    minute: "numeric",
-    hour12: false,
-  });
-
-  // Get the time parts
-  const utcParts = utcFormat.formatToParts(date);
-  const tzParts = tzFormat.formatToParts(date);
-
-  const utcHour = parseInt(
-    utcParts.find((p) => p.type === "hour")?.value || "0"
-  );
-  const utcMinute = parseInt(
-    utcParts.find((p) => p.type === "minute")?.value || "0"
-  );
-  const tzHour = parseInt(tzParts.find((p) => p.type === "hour")?.value || "0");
-  const tzMinute = parseInt(
-    tzParts.find((p) => p.type === "minute")?.value || "0"
-  );
-
-  // Calculate difference in hours
-  let hourDiff = tzHour - utcHour;
-  const minuteDiff = tzMinute - utcMinute;
-
-  // Handle day boundary crossing
-  if (hourDiff > 12) hourDiff -= 24;
-  if (hourDiff < -12) hourDiff += 24;
-
-  return hourDiff + minuteDiff / 60;
-}
+import { DateTime } from "luxon";
 
 /**
  * Calculate the time shift in hours between two IANA timezones
@@ -58,10 +15,11 @@ export function calculateTimeShift(
   destTz: string,
   referenceDate: Date = new Date()
 ): number {
-  const originOffset = getTimezoneOffsetHours(originTz, referenceDate);
-  const destOffset = getTimezoneOffsetHours(destTz, referenceDate);
+  const dt = DateTime.fromJSDate(referenceDate);
+  const originOffset = dt.setZone(originTz).offset; // minutes from UTC
+  const destOffset = dt.setZone(destTz).offset;
 
-  return destOffset - originOffset;
+  return (destOffset - originOffset) / 60; // convert to hours
 }
 
 /**
@@ -72,40 +30,7 @@ export function formatTimeShift(hours: number): string {
   const sign = hours >= 0 ? "+" : "";
   // Round to nearest half hour for display
   const rounded = Math.round(hours * 2) / 2;
-
-  if (rounded % 1 === 0) {
-    return `${sign}${rounded}h`;
-  }
   return `${sign}${rounded}h`;
-}
-
-/**
- * Parse datetime-local string and get UTC milliseconds for a given timezone.
- * The datetime-local format is "YYYY-MM-DDTHH:MM" and represents local time
- * in the specified timezone, NOT the browser's timezone.
- */
-function getUtcMillisForLocalTime(
-  datetimeLocal: string,
-  timezone: string
-): number {
-  // Parse components from datetime-local string (e.g., "2026-01-28T08:30")
-  const [datePart, timePart] = datetimeLocal.split("T");
-  const [year, month, day] = datePart.split("-").map(Number);
-  const [hour, minute] = timePart.split(":").map(Number);
-
-  // Create a UTC date with the same calendar values
-  // This gives us a reference point without browser timezone interference
-  const utcDate = Date.UTC(year, month - 1, day, hour, minute, 0, 0);
-
-  // Get the offset for this timezone at this approximate time
-  // We use the UTC date as reference since we need to know the offset
-  const offset = getTimezoneOffsetHours(timezone, new Date(utcDate));
-
-  // The datetime-local value represents local time in the target timezone.
-  // To get UTC: if local time is 08:30 and offset is -8 (Pacific),
-  // then UTC = 08:30 - (-8) = 16:30 UTC
-  // So we subtract the offset (in ms) from our reference
-  return utcDate - offset * 60 * 60 * 1000;
 }
 
 /**
@@ -127,18 +52,22 @@ export function calculateFlightDuration(
   }
 
   try {
-    // Convert both times to UTC milliseconds, interpreting each in its timezone
-    const depUTC = getUtcMillisForLocalTime(departureDateTime, originTz);
-    const arrUTC = getUtcMillisForLocalTime(arrivalDateTime, destTz);
+    // Parse each datetime in its respective timezone
+    const departure = DateTime.fromISO(departureDateTime, { zone: originTz });
+    const arrival = DateTime.fromISO(arrivalDateTime, { zone: destTz });
 
-    // Calculate duration in milliseconds
-    const durationMs = arrUTC - depUTC;
+    if (!departure.isValid || !arrival.isValid) {
+      return null;
+    }
 
-    if (durationMs < 0) {
+    // Calculate duration in minutes
+    const diff = arrival.diff(departure, "minutes");
+    const totalMinutes = Math.round(diff.minutes);
+
+    if (totalMinutes < 0) {
       return null; // Invalid: arrival before departure
     }
 
-    const totalMinutes = Math.round(durationMs / (1000 * 60));
     const hours = Math.floor(totalMinutes / 60);
     const minutes = totalMinutes % 60;
 
