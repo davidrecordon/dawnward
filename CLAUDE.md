@@ -103,7 +103,11 @@ prisma/
 ├── schema.prisma     # Database schema
 └── migrations/       # Database migrations
 
-design_docs/          # Product specifications and design decisions
+design_docs/
+├── completed/        # Implemented features (archived)
+├── exploration/      # Future ideas, rough scopes, cleanup notes
+├── shovel_ready/     # Scoped and ready to implement
+└── [*.md]            # Core reference docs (decisions, backend, auth, etc.)
 ```
 
 ### Key Patterns
@@ -233,15 +237,19 @@ This project uses Claude Code plugins that should be invoked for significant wor
 
 See `design_docs/` for detailed specifications:
 
-- `decisions-overview.md` - All key decisions in one place
-- `backend-design.md` - API routes, database schema, MCP tools
-- `auth-design.md` - NextAuth.js setup, progressive signup flow
-- `testing-design.md` - 6-layer validation strategy (model parity, physiological bounds, PRC consistency, scenario regression, edge cases, realistic flights)
-- `science-methodology.md` - Circadian science foundation (PRCs, melatonin, caffeine, in-flight sleep, multi-leg trips)
-
-## Visual and Branding Design Documents
-
-- `design_docs/brand.md` - All of Dawnward's color, tone and style
-- `design_docs/frontend-design.md` - Screen structure, components, user flows, and responsive behavior
-- `design_docs/ui-v2-homepage-only.html` - An initial static mockup of the homepage which is small enough to fit into your context window
-- `design_docs/ui-v2.html` - An initial static mockup of key screens
+```
+design_docs/
+├── completed/           # Implemented features (archived)
+├── exploration/         # Future ideas, rough scopes, cleanup notes
+├── shovel_ready/        # Scoped and ready to implement
+│
+├── decisions-overview.md    # All key decisions in one place
+├── backend-design.md        # API routes, database schema, MCP tools
+├── auth-design.md           # NextAuth.js setup, progressive signup flow
+├── testing-design.md        # 6-layer validation strategy
+├── science-methodology.md   # Circadian science foundation
+├── brand.md                 # Color, tone, and style guidelines
+├── frontend-design.md       # Screen structure, components, user flows
+├── ui-v2.html               # Static mockup of key screens
+└── ui-v2-homepage-only.html # Homepage mockup (fits in context window)
+```

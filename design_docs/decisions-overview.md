@@ -135,7 +135,7 @@ Key tables (full SQL in backend design doc):
 - Pull actual sleep data to calibrate circadian phase
 - Background sync via cron job
 - Adaptive plans that update based on real sleep vs. predicted
-- Spec document exists: `eight-sleep-integration.md`
+- Spec document exists: `exploration/eight-sleep-integration.md`
 
 ### Other Future Considerations
 
@@ -157,12 +157,17 @@ Key tables (full SQL in backend design doc):
 
 ## Artifacts Reference
 
-| Artifact           | Location                     |
-| ------------------ | ---------------------------- |
-| Science research   | `science-methodology.md`     |
-| Backend design doc | `backend-design.md`          |
-| Auth design doc    | `auth-design.md`             |
-| UI mockup          | `ui-v2.html`                 |
-| Eight Sleep spec   | `eight-sleep-integration.md` |
-| Testing design doc | `testing-design.md`          |
-| This decisions doc | `decisions-overview.md`      |
+| Artifact           | Location                                |
+| ------------------ | --------------------------------------- |
+| Science research   | `science-methodology.md`                |
+| Backend design doc | `backend-design.md`                     |
+| Auth design doc    | `auth-design.md`                        |
+| Frontend design    | `frontend-design.md`                    |
+| Brand guidelines   | `brand.md`                              |
+| UI mockup          | `ui-v2.html`                            |
+| Testing design doc | `testing-design.md`                     |
+| This decisions doc | `decisions-overview.md`                 |
+| Eight Sleep spec   | `exploration/eight-sleep-integration.md`|
+| Config audit       | `exploration/configuration-audit.md`    |
+| Shovel-ready specs | `shovel_ready/*.md`                     |
+| Completed designs  | `completed/*.md`                        |
