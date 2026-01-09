@@ -40,7 +40,7 @@ class ConstraintFilter:
     interventions are now explicitly filtered to phase bounds.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize filter with empty violation list."""
         self.violations: list[ConstraintViolation] = []
 

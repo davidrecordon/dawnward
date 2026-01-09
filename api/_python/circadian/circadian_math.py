@@ -105,7 +105,7 @@ def estimate_dlmo_from_sleep(sleep_time: str) -> time:
     return minutes_to_time(dlmo_minutes)
 
 
-def get_timezone_offset_hours(tz_name: str, reference_date: datetime = None) -> float:
+def get_timezone_offset_hours(tz_name: str, reference_date: datetime | None = None) -> float:
     """
     Get UTC offset in hours for a timezone at a given date.
 
@@ -121,12 +121,14 @@ def get_timezone_offset_hours(tz_name: str, reference_date: datetime = None) -> 
 
     tz = pytz.timezone(tz_name)
     localized = tz.localize(reference_date.replace(tzinfo=None))
-    offset_seconds = localized.utcoffset().total_seconds()
-    return offset_seconds / 3600
+    offset = localized.utcoffset()
+    if offset is None:
+        return 0.0
+    return float(offset.total_seconds()) / 3600
 
 
 def calculate_timezone_shift(
-    origin_tz: str, dest_tz: str, reference_date: datetime = None
+    origin_tz: str, dest_tz: str, reference_date: datetime | None = None
 ) -> tuple[float, str]:
     """
     Calculate the timezone shift and optimal direction for adaptation.
@@ -172,7 +174,7 @@ def calculate_timezone_shift(
 
 
 def calculate_actual_prep_days(
-    departure_datetime: str, requested_prep_days: int, current_datetime: datetime = None
+    departure_datetime: str, requested_prep_days: int, current_datetime: datetime | None = None
 ) -> int:
     """
     Auto-adjust prep days if departure is sooner than requested.

@@ -17,12 +17,11 @@ ignore = [
 
 [tool.mypy]
 python_version = "3.12"
-warn_return_any = false
+warn_return_any = true
 warn_unused_ignores = true
-# Start lenient, tighten over time
-disallow_untyped_defs = false
+disallow_untyped_defs = true
+check_untyped_defs = true
 ignore_missing_imports = true
-# Disable strict Optional for now (many functions need updating)
-strict_optional = false
+strict_optional = true
 # Disable import-untyped errors for pytz
 disable_error_code = ["import-untyped"]

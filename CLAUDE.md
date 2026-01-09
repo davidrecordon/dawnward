@@ -64,7 +64,7 @@ bun run test:python  # pytest
 
 **ruff** - Fast Python linter that replaces pylint, flake8, isort, and black. Runs both linting and formatting.
 
-**mypy** - Static type checking for Python. Currently configured with lenient settings; tighten over time.
+**mypy** - Static type checking for Python with strict settings (`strict_optional`, `disallow_untyped_defs`, `warn_return_any`).
 
 ## Tech Stack
 
