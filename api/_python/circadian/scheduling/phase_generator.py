@@ -192,12 +192,26 @@ class PhaseGenerator:
                     cumulative = target.cumulative_shift
                     break
 
-            # Full day: wake to sleep
-            phase_start = datetime.combine(day_date, self.wake_time)
-            phase_end = datetime.combine(day_date, self.sleep_time)
+            # Adjust wake/sleep times based on cumulative shift
+            # This ensures phase bounds match the day's targets, not normal times
+            if self.direction == "advance":
+                # Advancing clock = wake/sleep earlier
+                adjusted_wake_minutes = wake_minutes - int(cumulative * 60)
+                adjusted_sleep_minutes = sleep_minutes - int(cumulative * 60)
+            else:
+                # Delaying clock = wake/sleep later
+                adjusted_wake_minutes = wake_minutes + int(cumulative * 60)
+                adjusted_sleep_minutes = sleep_minutes + int(cumulative * 60)
+
+            adjusted_wake = minutes_to_time(adjusted_wake_minutes)
+            adjusted_sleep = minutes_to_time(adjusted_sleep_minutes)
+
+            # Full day: adjusted wake to adjusted sleep
+            phase_start = datetime.combine(day_date, adjusted_wake)
+            phase_end = datetime.combine(day_date, adjusted_sleep)
 
             # Handle sleep time crossing midnight
-            if sleep_minutes < wake_minutes:
+            if adjusted_sleep_minutes < adjusted_wake_minutes or adjusted_sleep_minutes >= 24 * 60:
                 phase_end += timedelta(days=1)
 
             phases.append(
@@ -219,7 +233,7 @@ class PhaseGenerator:
         """
         Generate the pre-departure phase.
 
-        Starts at wake time, ends 3 hours before departure (airport buffer).
+        Starts at adjusted wake time, ends 3 hours before departure (airport buffer).
         """
         leg = self.legs[0]
         departure = datetime.fromisoformat(leg.departure_datetime.replace("Z", "+00:00"))
@@ -227,16 +241,24 @@ class PhaseGenerator:
         # Phase ends 3 hours before departure
         phase_end = departure - timedelta(hours=PRE_DEPARTURE_BUFFER_HOURS)
 
-        # Phase starts at wake time on departure day
-        phase_start = datetime.combine(departure.date(), self.wake_time)
+        # Calculate cumulative shift at departure
+        cumulative = self._get_cumulative_shift_at_day(0)
+
+        # Adjust wake time based on cumulative shift
+        wake_minutes = time_to_minutes(self.wake_time)
+        if self.direction == "advance":
+            adjusted_wake_minutes = wake_minutes - int(cumulative * 60)
+        else:
+            adjusted_wake_minutes = wake_minutes + int(cumulative * 60)
+        adjusted_wake = minutes_to_time(adjusted_wake_minutes)
+
+        # Phase starts at adjusted wake time on departure day
+        phase_start = datetime.combine(departure.date(), adjusted_wake)
 
         # If wake time is after flight departure (rare edge case), adjust
         if phase_start > phase_end:
             # Very early flight - minimal pre-departure phase
             phase_start = phase_end - timedelta(hours=1)
-
-        # Calculate cumulative shift at departure
-        cumulative = self._get_cumulative_shift_at_day(0)
 
         return TravelPhase(
             phase_type="pre_departure",

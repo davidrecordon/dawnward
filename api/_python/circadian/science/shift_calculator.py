@@ -2,13 +2,13 @@
 Optimal shift rate calculations.
 
 Scientific basis:
-- Phase advance limit: ~1.5h/day (Khalsa 2003, light PRC)
-- Phase delay limit: ~2.0h/day (natural drift + light)
+- Phase advance limit: ~1.0h/day realistic with ~70% compliance (literature: up to 1.5h/day optimal)
+- Phase delay limit: ~1.5h/day realistic with ~70% compliance (literature: up to 2.0h/day optimal)
 - Natural circadian period: ~24.2h (favors delays)
 
 Key principles:
 - Advances are harder than delays
-- Gentler shifts are healthier but take longer
+- Rates assume real-world compliance, not lab-optimal conditions
 - Total adaptation time = total_shift / daily_rate
 """
 
@@ -58,25 +58,21 @@ class ShiftCalculator:
         """
         Calculate optimal daily shift rate based on prep days and direction.
 
-        Strategy from backend-design.md:
-        - prep_days >= 5: max 1.0 h/day (very gentle)
-        - prep_days >= 3: max 1.5 h/day (moderate, research-supported)
-        - prep_days < 3: max 2.0 h/day for delays, 1.5 h/day for advances
+        Conservative rates assuming ~70% user compliance (realistic-flight-responses.md):
+        - Advance: 1.0h/day (physiologically harder, literature-supported)
+        - Delay: 1.5h/day (easier but still conservative for real-world compliance)
+
+        With 5+ prep days, use gentler 1.0h/day for both directions.
         """
         if self.direction == "advance":
-            # Advances are harder - physiological max ~1.5h/day
-            if self.prep_days >= 5:
-                return self.MAX_GENTLE
-            else:
-                return self.MAX_ADVANCE_MODERATE
+            # Advances are harder - 1.0h/day is realistic with compliance
+            return self.MAX_ADVANCE_MODERATE  # 1.0h/day
         else:
-            # Delays are easier - can go faster
+            # Delays are easier but still use conservative rate
             if self.prep_days >= 5:
-                return self.MAX_GENTLE
-            elif self.prep_days >= 3:
-                return self.MAX_DELAY_MODERATE
+                return self.MAX_GENTLE  # 1.0h/day for very gentle adaptation
             else:
-                return self.MAX_DELAY_AGGRESSIVE
+                return self.MAX_DELAY_MODERATE  # 1.5h/day (was 2.0 for < 3 days)
 
     @property
     def daily_rate(self) -> float:

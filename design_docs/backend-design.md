@@ -530,29 +530,30 @@ numpy
 
 ### Adaptive Algorithm
 
-The prep_days parameter controls shift intensity:
+The shift rate depends on **direction** and **prep days**. Rates assume ~70% real-world compliance:
 
 ```python
-def calculate_daily_shift_target(total_shift: float, prep_days: int) -> float:
+def calculate_daily_shift_rate(direction: str, prep_days: int) -> float:
     """
-    More prep days = gentler daily shifts.
+    Direction-aware shift rates (per realistic-flight-responses.md).
 
-    Research supports ~1-2 hours/day as safe shifting range.
-    Faster risks overshooting or hitting the "dead zone" where
-    light exposure backfires.
+    Advances are physiologically harder than delays:
+    - Literature max: advance ~1.5h/day, delay ~2.0h/day
+    - Realistic with compliance: advance ~1.0h/day, delay ~1.5h/day
     """
-    if prep_days >= 5:
-        max_daily = 1.0   # Very gentle
-    elif prep_days >= 3:
-        max_daily = 1.5   # Moderate
+    if direction == "advance":
+        # Advances are harder - 1.0h/day is realistic
+        return 1.0
     else:
-        max_daily = 2.0   # Aggressive but safe
+        # Delays are easier, but use conservative rate
+        if prep_days >= 5:
+            return 1.0  # Gentle adaptation
+        else:
+            return 1.5  # Standard delay rate
 
-    # Total days = prep + flight + 2 arrival days buffer
-    total_days = prep_days + 3
-    ideal_daily = abs(total_shift) / total_days
-
-    return min(ideal_daily, max_daily)
+# Estimated adaptation days = total_shift / daily_rate
+# Example: 8h advance at 1.0h/day = 8 days
+# Example: 8h delay at 1.5h/day = 6 days
 ```
 
 ### Model Integration

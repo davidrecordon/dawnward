@@ -462,8 +462,9 @@ class InterventionPlanner:
                 type="melatonin",
                 title="Take melatonin",
                 description=(
-                    "Take 0.5mg fast-release melatonin. "
-                    "This helps advance your circadian clock for eastward travel."
+                    "Take 0.5mg fast-release melatonin now. "
+                    "This timing shifts your body clock earlier — "
+                    "it's not meant to make you sleepy right now."
                 ),
                 duration_min=None,
             )
