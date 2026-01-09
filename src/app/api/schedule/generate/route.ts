@@ -17,6 +17,7 @@ interface GenerateRequest {
   uses_caffeine: boolean;
   uses_exercise: boolean;
   nap_preference: "no" | "flight_only" | "all_days";
+  schedule_intensity?: "gentle" | "balanced" | "aggressive";
 }
 
 // Validation patterns
@@ -122,6 +123,7 @@ export async function POST(request: Request) {
       uses_caffeine: body.uses_caffeine ?? true,
       uses_exercise: body.uses_exercise ?? false,
       nap_preference: body.nap_preference ?? "flight_only",
+      schedule_intensity: body.schedule_intensity ?? "balanced",
     };
 
     await writeFile(tempFilePath, JSON.stringify(requestData));
@@ -160,6 +162,7 @@ request = ScheduleRequest(
     uses_caffeine=data['uses_caffeine'],
     uses_exercise=data['uses_exercise'],
     nap_preference=data.get('nap_preference', 'flight_only'),
+    schedule_intensity=data.get('schedule_intensity', 'balanced'),
 )
 
 generator = ScheduleGeneratorV2()

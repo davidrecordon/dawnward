@@ -3,7 +3,7 @@
  */
 
 import type { Airport } from "./airport";
-import type { NapPreference } from "./trip-form";
+import type { NapPreference, ScheduleIntensity } from "./trip-form";
 
 /**
  * Intervention types from the circadian schedule generator
@@ -126,6 +126,7 @@ export interface StoredSchedule {
     usesCaffeine: boolean;
     usesExercise: boolean;
     napPreference: NapPreference;
+    scheduleIntensity: ScheduleIntensity;
   };
   /** Generated schedule */
   schedule: ScheduleResponse;

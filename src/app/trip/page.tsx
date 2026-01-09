@@ -69,6 +69,7 @@ export default function TripPage() {
             uses_caffeine: formState.useCaffeine,
             uses_exercise: formState.useExercise,
             nap_preference: formState.napPreference,
+            schedule_intensity: formState.scheduleIntensity,
           }),
         });
 

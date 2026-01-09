@@ -7,13 +7,16 @@ Scientific basis:
 - Natural circadian period: ~24.2h (favors delays)
 
 Key principles:
-- Advances are harder than delays
+- Advances are harder than delays (different rates per direction)
 - Rates assume real-world compliance, not lab-optimal conditions
 - Total adaptation time = total_shift / daily_rate
+- User controls disruption via: intensity (rate) × prep_days (duration)
 """
 
 from dataclasses import dataclass
 from typing import Literal
+
+from circadian.types import ScheduleIntensity
 
 
 @dataclass
@@ -25,22 +28,62 @@ class DailyShiftTarget:
     cumulative_shift: float  # Total hours shifted by end of this day
 
 
+@dataclass
+class IntensityConfig:
+    """Configuration for a schedule intensity level.
+
+    Each intensity has direction-specific rates since advances are physiologically
+    harder than delays. User controls total disruption via intensity × prep_days.
+    """
+
+    advance_rate: float  # Hours per day for eastward (advance) shifts
+    delay_rate: float  # Hours per day for westward (delay) shifts
+
+
+# Intensity configurations with direction-specific rates:
+# - Advances are physiologically harder than delays
+# - User controls total disruption via: intensity (rate) × prep_days (duration)
+#
+# Rates based on circadian science:
+# - Gentle: Conservative rates for those with less flexible schedules
+# - Balanced: Good trade-off between speed and comfort
+# - Aggressive: Fastest adaptation for those who can handle disruption
+INTENSITY_CONFIGS: dict[ScheduleIntensity, IntensityConfig] = {
+    "gentle": IntensityConfig(
+        advance_rate=0.75,  # 0.75h/day for eastward
+        delay_rate=1.0,  # 1.0h/day for westward
+    ),
+    "balanced": IntensityConfig(
+        advance_rate=1.0,  # 1.0h/day for eastward
+        delay_rate=1.5,  # 1.5h/day for westward
+    ),
+    "aggressive": IntensityConfig(
+        advance_rate=1.25,  # 1.25h/day for eastward
+        delay_rate=2.0,  # 2.0h/day for westward
+    ),
+}
+
+
+def get_intensity_config(intensity: ScheduleIntensity) -> IntensityConfig:
+    """Get the configuration for a given intensity level."""
+    return INTENSITY_CONFIGS[intensity]
+
+
 class ShiftCalculator:
     """
     Calculate optimal daily shift rates for circadian adaptation.
 
     Balances speed of adaptation against circadian health.
-    More prep days = gentler daily shifts.
+    Rate is now controlled primarily by schedule_intensity setting.
     """
 
-    # Physiological limits (hours per day)
-    MAX_ADVANCE_AGGRESSIVE = 1.5  # Hard limit for advances
-    MAX_ADVANCE_MODERATE = 1.0  # Comfortable for advances
-    MAX_DELAY_AGGRESSIVE = 2.0  # Safe limit for delays
-    MAX_DELAY_MODERATE = 1.5  # Comfortable for delays
-    MAX_GENTLE = 1.0  # Very gentle (5+ prep days)
-
-    def __init__(self, total_shift: float, direction: Literal["advance", "delay"], prep_days: int):
+    def __init__(
+        self,
+        total_shift: float,
+        direction: Literal["advance", "delay"],
+        prep_days: int,
+        intensity: ScheduleIntensity = "balanced",
+    ):
         """
         Initialize calculator.
 
@@ -48,31 +91,31 @@ class ShiftCalculator:
             total_shift: Total hours to shift (absolute value)
             direction: "advance" (eastward) or "delay" (westward)
             prep_days: Number of preparation days before departure
+            intensity: Schedule intensity level (gentle/balanced/aggressive)
         """
         self.total_shift = abs(total_shift)
         self.direction = direction
         self.prep_days = prep_days
+        self.intensity = intensity
+        self._intensity_config = get_intensity_config(intensity)
         self._daily_rate = self._calculate_optimal_rate()
 
     def _calculate_optimal_rate(self) -> float:
         """
-        Calculate optimal daily shift rate based on prep days and direction.
+        Calculate optimal daily shift rate based on intensity and direction.
 
-        Conservative rates assuming ~70% user compliance (realistic-flight-responses.md):
-        - Advance: 1.0h/day (physiologically harder, literature-supported)
-        - Delay: 1.5h/day (easier but still conservative for real-world compliance)
-
-        With 5+ prep days, use gentler 1.0h/day for both directions.
+        All intensity levels use direction-specific rates since advances are
+        physiologically harder than delays.
         """
         if self.direction == "advance":
-            # Advances are harder - 1.0h/day is realistic with compliance
-            return self.MAX_ADVANCE_MODERATE  # 1.0h/day
+            return self._intensity_config.advance_rate
         else:
-            # Delays are easier but still use conservative rate
-            if self.prep_days >= 5:
-                return self.MAX_GENTLE  # 1.0h/day for very gentle adaptation
-            else:
-                return self.MAX_DELAY_MODERATE  # 1.5h/day (was 2.0 for < 3 days)
+            return self._intensity_config.delay_rate
+
+    @property
+    def intensity_config(self) -> IntensityConfig:
+        """Get the intensity configuration for this calculator."""
+        return self._intensity_config
 
     @property
     def daily_rate(self) -> float:

@@ -87,6 +87,7 @@ class ScheduleGeneratorV2:
             sleep_time=request.sleep_time,
             total_shift=total_shift,
             direction=direction,
+            intensity=request.schedule_intensity,
         )
         phases = phase_gen.generate_phases()
 

@@ -25,7 +25,7 @@ from ..circadian_math import (
     time_to_minutes,
 )
 from ..science.shift_calculator import ShiftCalculator
-from ..types import PhaseType, TravelPhase, TripLeg
+from ..types import PhaseType, ScheduleIntensity, TravelPhase, TripLeg
 
 # Constants
 PRE_DEPARTURE_BUFFER_HOURS = 3.0  # End interventions 3h before flight
@@ -50,6 +50,7 @@ class PhaseGenerator:
         sleep_time: str,
         total_shift: float,
         direction: Literal["advance", "delay"],
+        intensity: ScheduleIntensity = "balanced",
     ):
         """
         Initialize phase generator.
@@ -61,6 +62,7 @@ class PhaseGenerator:
             sleep_time: Habitual sleep time (HH:MM)
             total_shift: Total timezone shift needed (absolute value)
             direction: "advance" or "delay"
+            intensity: Schedule intensity level (gentle/balanced/aggressive)
         """
         self.legs = legs
         self.prep_days = prep_days
@@ -68,9 +70,10 @@ class PhaseGenerator:
         self.sleep_time = parse_time(sleep_time)
         self.total_shift = abs(total_shift)
         self.direction = direction
+        self.intensity = intensity
 
-        # Initialize shift calculator
-        self.shift_calc = ShiftCalculator(total_shift, direction, prep_days)
+        # Initialize shift calculator with intensity
+        self.shift_calc = ShiftCalculator(total_shift, direction, prep_days, intensity)
 
     def generate_phases(self) -> list[TravelPhase]:
         """
@@ -250,6 +253,7 @@ class PhaseGenerator:
             adjusted_wake_minutes = wake_minutes - int(cumulative * 60)
         else:
             adjusted_wake_minutes = wake_minutes + int(cumulative * 60)
+
         adjusted_wake = minutes_to_time(adjusted_wake_minutes)
 
         # Phase starts at adjusted wake time on departure day
@@ -421,7 +425,8 @@ class PhaseGenerator:
             cumulative = target.cumulative_shift
             remaining = self.total_shift - cumulative
 
-            # Calculate adjusted wake/sleep times based on remaining shift
+            # Calculate adjusted wake/sleep times based on remaining shift.
+            # Times shift naturally toward destination schedule.
             if self.direction == "advance":
                 adjusted_wake = wake_minutes + int(remaining * 60)
                 adjusted_sleep = sleep_minutes + int(remaining * 60)

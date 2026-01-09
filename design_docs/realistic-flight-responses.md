@@ -309,18 +309,36 @@ Better:
 
 ### 6 & 7. Schedule Intensity (Aggressiveness)
 
-**Decision: Three modes with segmented control UI**
+**Decision: Three modes with direction-specific rates**
 
-#### Mode Specifications
+#### Key Concept: Intensity × Prep Days
 
-| Parameter     | Gentle                  | Balanced       | Aggressive        |
-| ------------- | ----------------------- | -------------- | ----------------- |
-| Max shift/day | 1.0h                    | 1.25h          | 1.5h              |
-| Wake floor    | 5:30 AM                 | 5:00 AM        | None              |
-| Sleep ceiling | Midnight                | 1:00 AM        | None              |
-| Target user   | Work/family constraints | Most travelers | Flexible schedule |
+Schedule intensity controls the **rate of change** — how quickly wake/sleep targets shift each day during pre-departure prep. The user controls total disruption through two inputs:
 
-**Default**: Balanced (for all users initially; signed-in preference later)
+1. **Intensity**: Controls rate of daily shift (gentle/balanced/aggressive)
+2. **Prep days**: Controls duration of shifting (1-7 days)
+
+There are **no hard clamps** on wake floors or sleep ceilings. If a user doesn't want to wake at 4 AM, they should use Gentle mode or fewer prep days. The philosophy is "you chose this intensity, so we trust your schedule flexibility."
+
+#### Direction-Specific Rates
+
+All intensity modes use different rates for advances (eastward) vs delays (westward), because advances are physiologically harder:
+
+| Mode       | Advance Rate | Delay Rate | Target User       |
+| ---------- | ------------ | ---------- | ----------------- |
+| Gentle     | 0.75h/day    | 1.0h/day   | Work/family       |
+| Balanced   | 1.0h/day     | 1.5h/day   | Most travelers    |
+| Aggressive | 1.25h/day    | 2.0h/day   | Flexible schedule |
+
+**Default**: Balanced
+
+#### Why Direction Matters
+
+The human circadian period averages ~24.2h, meaning we naturally drift later each day. This makes:
+- **Delays (westward)** easier — we're going with our natural drift
+- **Advances (eastward)** harder — we're fighting against it
+
+This is why a 6h westward trip (SF → Hawaii) feels easier than a 6h eastward trip (Hawaii → SF).
 
 #### UI
 
@@ -334,31 +352,37 @@ Schedule intensity
 └─────────┴──────────┴────────────┘
 
 Helper text (updates based on selection):
-- Gentle: "Easier to follow — wake no earlier than 5:30 AM, sleep by midnight"
-- Balanced: "Good balance of speed and practicality"
-- Aggressive: "Fastest adaptation — requires flexible schedule"
+- Gentle: "Easier to follow — gradual schedule shifts"
+- Balanced: "Good balance of speed and comfort"
+- Aggressive: "Fastest adaptation — larger daily shifts"
 ```
 
 #### Example: SFO → London (8h advance), 3 prep days, normal wake 7:00 AM
 
-| Day                      | Gentle          | Balanced        | Aggressive |
-| ------------------------ | --------------- | --------------- | ---------- |
-| Day -3                   | 6:00 AM         | 5:45 AM         | 5:30 AM    |
-| Day -2                   | 5:30 AM         | 5:00 AM         | 4:00 AM    |
-| Day -1                   | 5:30 AM (floor) | 5:00 AM (floor) | 2:30 AM    |
-| Day 0                    | 5:30 AM (floor) | 5:00 AM (floor) | 1:00 AM    |
-| **Total shifted**        | 1.5h            | 2h              | 6h         |
-| **Remaining at arrival** | 6.5h            | 6h              | 2h         |
+| Day                      | Gentle   | Balanced | Aggressive |
+| ------------------------ | -------- | -------- | ---------- |
+| Day -3                   | 6:15 AM  | 6:00 AM  | 5:45 AM    |
+| Day -2                   | 5:30 AM  | 5:00 AM  | 4:30 AM    |
+| Day -1                   | 4:45 AM  | 4:00 AM  | 3:15 AM    |
+| Day 0                    | 4:00 AM  | 3:00 AM  | 2:00 AM    |
+| **Daily shift**          | 0.75h    | 1.0h     | 1.25h      |
+| **Total shifted**        | 3h       | 4h       | 5h         |
+| **Remaining at arrival** | 5h       | 4h       | 3h         |
+
+*Note: All modes will continue shifting post-arrival until fully adapted.*
 
 #### Example: SFO → Tokyo (8h delay), 3 prep days, normal sleep 10:00 PM
 
-| Day               | Gentle             | Balanced          | Aggressive |
-| ----------------- | ------------------ | ----------------- | ---------- |
-| Day -3            | 11:00 PM           | 11:15 PM          | 11:30 PM   |
-| Day -2            | 12:00 AM (ceiling) | 12:30 AM          | 1:00 AM    |
-| Day -1            | 12:00 AM (ceiling) | 1:00 AM (ceiling) | 2:30 AM    |
-| Day 0             | 12:00 AM (ceiling) | 1:00 AM (ceiling) | 4:00 AM    |
-| **Total shifted** | 2h                 | 3h                | 6h         |
+| Day                      | Gentle   | Balanced | Aggressive |
+| ------------------------ | -------- | -------- | ---------- |
+| Day -3                   | 11:00 PM | 11:30 PM | 12:00 AM   |
+| Day -2                   | 12:00 AM | 1:00 AM  | 2:00 AM    |
+| Day -1                   | 1:00 AM  | 2:30 AM  | 4:00 AM    |
+| Day 0                    | 2:00 AM  | 4:00 AM  | 6:00 AM    |
+| **Daily shift**          | 1.0h     | 1.5h     | 2.0h       |
+| **Total shifted**        | 4h       | 6h       | 8h         |
+
+*Note: Delays shift faster because they align with natural circadian drift.*
 
 ---
 
@@ -493,34 +517,42 @@ The card design is unified; the copy does the work.
 
 ## Summary of Required Changes
 
-| #   | Type    | Change                                                               |
-| --- | ------- | -------------------------------------------------------------------- |
-| 1   | Science | None — don't expose phase windows to UI                              |
-| 2   | Science | Build in-flight intervention generator (see detailed spec above)     |
-| 3   | Science | Update adaptation rate: 1.5h/day delay, 1.0h/day advance             |
-| 4   | Science | Fix light window to use wake_target, not normal_wake                 |
-| 5   | Science | Update melatonin description copy                                    |
-| 6/7 | Product | Add schedule intensity setting (segmented control, default Balanced) |
-| 8   | Product | Implement 5-tier system with differentiated UI per tier              |
-| 9   | Product | No changes needed                                                    |
+| #   | Type    | Change                                                               | Status    |
+| --- | ------- | -------------------------------------------------------------------- | --------- |
+| 1   | Science | None — don't expose phase windows to UI                              | Done      |
+| 2   | Science | Build in-flight intervention generator (see detailed spec above)     | Pending   |
+| 3   | Science | Update adaptation rate: 1.5h/day delay, 1.0h/day advance             | Done      |
+| 4   | Science | Fix light window to use wake_target, not normal_wake                 | Done      |
+| 5   | Science | Update melatonin description copy                                    | Done      |
+| 6/7 | Product | Add schedule intensity with direction-specific rates (see table)     | Done      |
+| 8   | Product | Implement 5-tier system with differentiated UI per tier              | Pending   |
+| 9   | Product | No changes needed                                                    | N/A       |
 
 ---
 
-## Files to Modify
+## Files Modified/To Modify
 
 ```
 api/_python/circadian/
-├── scheduler_v2.py               # Tier detection, intensity config
-├── in_flight_generator.py        # NEW: in-flight intervention logic
+├── science/
+│   └── shift_calculator.py       # Direction-specific rates (#6/7) ✅
 ├── scheduling/
-│   ├── intervention_planner.py   # Light window fix (#4)
-│   └── adaptation_estimator.py   # Rate formula (#3)
+│   ├── phase_generator.py        # Removed clamping logic (#6/7) ✅
+│   └── intervention_planner.py   # Light window fix, removed overrides (#4, #6/7) ✅
+├── scheduler_v2.py               # Tier detection (pending #8)
+└── in_flight_generator.py        # NEW: in-flight intervention logic (pending #2)
 
-lib/
-├── interventions.ts              # Melatonin descriptions (#5)
+src/
+├── lib/
+│   └── interventions.ts          # Melatonin descriptions (#5) ✅
+├── components/
+│   ├── trip-form.tsx             # Schedule intensity selector (#6/7) ✅
+│   └── trip-schedule.tsx         # Tier-based rendering (pending #8)
+└── app/
+    └── api/schedule/generate/
+        └── route.ts              # Intensity in request (#6/7) ✅
 
-components/
-├── TripForm.tsx                  # Schedule intensity selector (#6/7)
-├── TripSchedule.tsx              # Tier-based rendering (#8)
-└── InFlightPhase.tsx             # NEW: in-flight card rendering (#2)
+tests/
+├── test_shift_rates.py           # Updated for new rates (#6/7) ✅
+└── test_realistic_flights.py     # Updated intensity tests (#6/7) ✅
 ```

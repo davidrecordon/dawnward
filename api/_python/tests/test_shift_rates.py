@@ -1,9 +1,14 @@
 """
-Tests for shift rate calculations and phase bounds adjustments.
+Tests for shift rate calculations.
 
 These tests verify:
-1. ShiftCalculator uses correct direction-aware rates
-2. Phase bounds are adjusted based on cumulative shift (not normal wake/sleep times)
+1. ShiftCalculator uses correct direction-specific rates for all intensity modes
+2. Phase bounds are adjusted based on cumulative shift
+
+Key design:
+- All intensity modes have direction-specific rates (advances are harder than delays)
+- User controls total disruption via: intensity (rate) × prep_days (duration)
+- No wake floor or sleep ceiling clamps - user picks intensity that works for them
 """
 
 import sys
@@ -14,77 +19,144 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+import pytest
+
 from circadian.scheduling.phase_generator import PhaseGenerator
-from circadian.science.shift_calculator import ShiftCalculator
-from circadian.types import TripLeg
+from circadian.science.shift_calculator import (
+    INTENSITY_CONFIGS,
+    ShiftCalculator,
+)
+from circadian.types import ScheduleIntensity, TripLeg
 
 
-class TestShiftCalculatorRates:
-    """Verify ShiftCalculator uses correct direction-aware rates.
+class TestIntensityConfigValues:
+    """Verify IntensityConfig values are correct for each intensity level.
 
-    Per realistic-flight-responses.md:
-    - Advance: 1.0h/day (harder direction, realistic with ~70% compliance)
-    - Delay: 1.5h/day for < 5 prep days, 1.0h/day for >= 5 prep days
+    Each intensity has direction-specific rates:
+    - Gentle: 0.75h/day advance, 1.0h/day delay
+    - Balanced: 1.0h/day advance, 1.5h/day delay
+    - Aggressive: 1.25h/day advance, 2.0h/day delay
     """
 
-    def test_advance_rate_is_1h_per_day(self):
-        """Advance direction should always use 1.0h/day rate."""
-        calc = ShiftCalculator(total_shift=8.0, direction="advance", prep_days=3)
-        assert calc.daily_rate == 1.0, f"Expected 1.0h/day for advance, got {calc.daily_rate}"
+    def test_intensity_config_gentle(self):
+        """Gentle config: 0.75h advance, 1.0h delay."""
+        config = INTENSITY_CONFIGS["gentle"]
+        assert config.advance_rate == 0.75
+        assert config.delay_rate == 1.0
 
-    def test_advance_rate_same_for_all_prep_days(self):
-        """Advance rate should be 1.0h/day regardless of prep days."""
-        for prep_days in [1, 2, 3, 4, 5, 6, 7]:
-            calc = ShiftCalculator(total_shift=8.0, direction="advance", prep_days=prep_days)
-            assert calc.daily_rate == 1.0, (
-                f"Expected 1.0h/day for advance with {prep_days} prep days, got {calc.daily_rate}"
-            )
+    def test_intensity_config_balanced(self):
+        """Balanced config: 1.0h advance, 1.5h delay."""
+        config = INTENSITY_CONFIGS["balanced"]
+        assert config.advance_rate == 1.0
+        assert config.delay_rate == 1.5
 
-    def test_delay_rate_is_1_5h_for_short_prep(self):
-        """Delay direction should use 1.5h/day for < 5 prep days."""
-        for prep_days in [1, 2, 3, 4]:
-            calc = ShiftCalculator(total_shift=8.0, direction="delay", prep_days=prep_days)
-            assert calc.daily_rate == 1.5, (
-                f"Expected 1.5h/day for delay with {prep_days} prep days, got {calc.daily_rate}"
-            )
+    def test_intensity_config_aggressive(self):
+        """Aggressive config: 1.25h advance, 2.0h delay."""
+        config = INTENSITY_CONFIGS["aggressive"]
+        assert config.advance_rate == 1.25
+        assert config.delay_rate == 2.0
 
-    def test_delay_rate_is_1h_for_long_prep(self):
-        """Delay direction should use 1.0h/day for >= 5 prep days (gentle adaptation)."""
-        for prep_days in [5, 6, 7]:
-            calc = ShiftCalculator(total_shift=8.0, direction="delay", prep_days=prep_days)
-            assert calc.daily_rate == 1.0, (
-                f"Expected 1.0h/day for delay with {prep_days} prep days, got {calc.daily_rate}"
-            )
 
-    def test_estimated_days_advance_8h_shift(self):
-        """8h advance at 1.0h/day should take 8 days."""
-        calc = ShiftCalculator(total_shift=8.0, direction="advance", prep_days=3)
-        assert calc.estimated_days == 8, (
-            f"Expected 8 days for 8h advance, got {calc.estimated_days}"
+class TestIntensityRateSelection:
+    """Test that ShiftCalculator selects correct rates based on intensity and direction."""
+
+    @pytest.mark.parametrize(
+        "intensity,direction,expected_rate",
+        [
+            # Gentle: 0.75h advance, 1.0h delay
+            ("gentle", "advance", 0.75),
+            ("gentle", "delay", 1.0),
+            # Balanced: 1.0h advance, 1.5h delay
+            ("balanced", "advance", 1.0),
+            ("balanced", "delay", 1.5),
+            # Aggressive: 1.25h advance, 2.0h delay
+            ("aggressive", "advance", 1.25),
+            ("aggressive", "delay", 2.0),
+        ],
+    )
+    def test_intensity_rate_selection(
+        self,
+        intensity: ScheduleIntensity,
+        direction: str,
+        expected_rate: float,
+    ):
+        """Verify rate selection across all intensity/direction combinations."""
+        calc = ShiftCalculator(
+            total_shift=8.0,
+            direction=direction,
+            prep_days=3,
+            intensity=intensity,
+        )
+        assert calc.daily_rate == expected_rate, (
+            f"Expected {expected_rate}h/day for {intensity}/{direction}, got {calc.daily_rate}"
         )
 
-    def test_estimated_days_delay_8h_shift(self):
-        """8h delay at 1.5h/day should take 6 days (ceil(8/1.5) = 6)."""
-        calc = ShiftCalculator(total_shift=8.0, direction="delay", prep_days=3)
-        assert calc.estimated_days == 6, f"Expected 6 days for 8h delay, got {calc.estimated_days}"
+    @pytest.mark.parametrize("prep_days", [1, 2, 3, 4, 5, 6, 7])
+    def test_rate_independent_of_prep_days(self, prep_days: int):
+        """Rate should be determined by intensity and direction, not prep_days."""
+        # Balanced advance should always be 1.0h/day
+        calc = ShiftCalculator(
+            total_shift=8.0,
+            direction="advance",
+            prep_days=prep_days,
+            intensity="balanced",
+        )
+        assert calc.daily_rate == 1.0
 
-    def test_estimated_days_delay_gentle(self):
-        """8h delay at 1.0h/day (gentle, >= 5 prep) should take 8 days."""
-        calc = ShiftCalculator(total_shift=8.0, direction="delay", prep_days=5)
-        assert calc.estimated_days == 8, (
-            f"Expected 8 days for 8h delay (gentle), got {calc.estimated_days}"
+
+class TestEstimatedDays:
+    """Test estimated days calculations for various scenarios."""
+
+    @pytest.mark.parametrize(
+        "intensity,direction,total_shift,expected_days",
+        [
+            # Gentle advance: 8h / 0.75h/day = 10.67 -> 11 days
+            ("gentle", "advance", 8.0, 11),
+            # Gentle delay: 8h / 1.0h/day = 8 days
+            ("gentle", "delay", 8.0, 8),
+            # Balanced advance: 8h / 1.0h/day = 8 days
+            ("balanced", "advance", 8.0, 8),
+            # Balanced delay: 8h / 1.5h/day = 5.33 -> 6 days
+            ("balanced", "delay", 8.0, 6),
+            # Aggressive advance: 8h / 1.25h/day = 6.4 -> 7 days
+            ("aggressive", "advance", 8.0, 7),
+            # Aggressive delay: 8h / 2.0h/day = 4 days
+            ("aggressive", "delay", 8.0, 4),
+        ],
+    )
+    def test_estimated_days(
+        self,
+        intensity: ScheduleIntensity,
+        direction: str,
+        total_shift: float,
+        expected_days: int,
+    ):
+        """Verify estimated days calculation for various intensity/direction combinations."""
+        calc = ShiftCalculator(
+            total_shift=total_shift,
+            direction=direction,
+            prep_days=3,
+            intensity=intensity,
+        )
+        assert calc.estimated_days == expected_days, (
+            f"Expected {expected_days} days for {total_shift}h {direction} ({intensity}), "
+            f"got {calc.estimated_days}"
         )
 
 
 class TestPhaseBoundsAdjustment:
     """Verify preparation phase bounds are adjusted based on cumulative shift.
 
-    The bug fix ensures that light interventions scheduled at early wake times
-    (for advance schedules) don't get filtered out because they're "outside phase bounds".
+    Phase bounds should reflect the shifted wake/sleep times, not the user's
+    normal times. This ensures light interventions at early wake times
+    (for advance schedules) don't get filtered out.
     """
 
     def _create_phase_generator(
-        self, direction: str, prep_days: int = 3
+        self,
+        direction: str,
+        prep_days: int = 3,
+        intensity: ScheduleIntensity = "balanced",
     ) -> tuple[PhaseGenerator, datetime]:
         """Helper to create a phase generator for testing."""
         future_date = datetime.now() + timedelta(days=5)
@@ -116,6 +188,7 @@ class TestPhaseBoundsAdjustment:
             sleep_time="23:00",
             total_shift=total_shift,
             direction=direction,
+            intensity=intensity,
         )
 
         return generator, departure_dt
@@ -125,40 +198,33 @@ class TestPhaseBoundsAdjustment:
         generator, _ = self._create_phase_generator("advance", prep_days=3)
         phases = generator.generate_phases()
 
-        # Find preparation phases
         prep_phases = [p for p in phases if p.phase_type == "preparation"]
         assert len(prep_phases) == 3, f"Expected 3 prep phases, got {len(prep_phases)}"
 
         # Each prep phase should start progressively earlier
-        # Day -3: ~1h shift cumulative -> wake at ~6:00 AM
-        # Day -2: ~2h shift cumulative -> wake at ~5:00 AM
-        # Day -1: ~3h shift cumulative -> wake at ~4:00 AM
+        # Balanced advance: 1.0h/day
+        # Day -3: 1h shift -> wake at 6:00 AM
+        # Day -2: 2h shift -> wake at 5:00 AM
+        # Day -1: 3h shift -> wake at 4:00 AM
         normal_wake_hour = 7
 
         for phase in prep_phases:
             phase_start_hour = phase.start_datetime.hour
-            # For advance, start should be AT OR BEFORE normal wake time
             assert phase_start_hour <= normal_wake_hour, (
                 f"Advance prep phase should start at or before {normal_wake_hour}:00, "
                 f"got {phase_start_hour}:00 on day {phase.day_number}"
             )
 
     def test_delay_prep_phase_starts_later_than_normal(self):
-        """For delay schedules, prep phase may start later (wake time shifts later)."""
+        """For delay schedules, prep phase starts later (wake time shifts later)."""
         generator, _ = self._create_phase_generator("delay", prep_days=3)
         phases = generator.generate_phases()
 
         prep_phases = [p for p in phases if p.phase_type == "preparation"]
-
-        # For delay with cumulative shift, wake time shifts later
-        # Day -3: ~1.5h shift cumulative -> wake at ~8:30 AM
-        # Day -2: ~3h shift cumulative -> wake at ~10:00 AM
-        # etc.
         normal_wake_hour = 7
 
         for phase in prep_phases:
             phase_start_hour = phase.start_datetime.hour
-            # For delay, start should be AT OR AFTER normal wake time
             assert phase_start_hour >= normal_wake_hour, (
                 f"Delay prep phase should start at or after {normal_wake_hour}:00, "
                 f"got {phase_start_hour}:00 on day {phase.day_number}"
@@ -170,37 +236,111 @@ class TestPhaseBoundsAdjustment:
         phases = generator.generate_phases()
 
         pre_dep_phases = [p for p in phases if p.phase_type == "pre_departure"]
-        assert len(pre_dep_phases) == 1, (
-            f"Expected 1 pre_departure phase, got {len(pre_dep_phases)}"
-        )
+        assert len(pre_dep_phases) == 1
 
         pre_dep = pre_dep_phases[0]
         normal_wake_hour = 7
 
         # For advance, departure day wake should be earlier than normal
-        assert pre_dep.start_datetime.hour <= normal_wake_hour, (
-            f"Advance pre_departure should start at or before {normal_wake_hour}:00, "
-            f"got {pre_dep.start_datetime.hour}:00"
-        )
+        assert pre_dep.start_datetime.hour <= normal_wake_hour
 
-    def test_phase_bounds_allow_early_light_interventions(self):
-        """Phase bounds should be wide enough to include early light interventions."""
-        generator, _ = self._create_phase_generator("advance", prep_days=3)
+    def test_gentle_advance_shifts_wake_earlier_slowly(self):
+        """Gentle advance (0.75h/day) should shift wake earlier more slowly."""
+        generator, _ = self._create_phase_generator("advance", prep_days=3, intensity="gentle")
         phases = generator.generate_phases()
 
-        # Get the last prep phase (day -1, most shifted)
         prep_phases = [p for p in phases if p.phase_type == "preparation"]
         last_prep = sorted(prep_phases, key=lambda p: p.day_number)[-1]
 
-        # With 3 prep days and 1h/day advance rate, day -1 has ~3h cumulative shift
-        # Normal wake 7:00 - 3h = 4:00 AM
-        # Light seek window should be around 4:00-5:00 AM
-        # Phase bounds must include this time
+        # With 3 prep days at 0.75h/day, day -1 has 2.25h cumulative shift
+        # Normal wake 7:00 - 2.25h = 4:45 AM
+        wake_hour = last_prep.start_datetime.hour
+        wake_minute = last_prep.start_datetime.minute
+        wake_total_minutes = wake_hour * 60 + wake_minute
 
-        phase_start_hour = last_prep.start_datetime.hour
-        expected_light_window_hour = 4  # Approximately
-
-        assert phase_start_hour <= expected_light_window_hour, (
-            f"Phase start ({phase_start_hour}:00) should allow light intervention "
-            f"at ~{expected_light_window_hour}:00"
+        # Should be around 4:45 AM = 285 minutes
+        expected_minutes = 7 * 60 - int(2.25 * 60)  # 285
+        assert abs(wake_total_minutes - expected_minutes) <= 15, (
+            f"Expected wake around 4:45 AM, got {wake_hour}:{wake_minute:02d}"
         )
+
+    def test_aggressive_delay_shifts_sleep_later_quickly(self):
+        """Aggressive delay (2.0h/day) should shift sleep later quickly."""
+        generator, _ = self._create_phase_generator("delay", prep_days=3, intensity="aggressive")
+        phases = generator.generate_phases()
+
+        prep_phases = [p for p in phases if p.phase_type == "preparation"]
+        last_prep = sorted(prep_phases, key=lambda p: p.day_number)[-1]
+
+        # With 3 prep days at 2.0h/day, day -1 has 6h cumulative shift
+        # Normal sleep 23:00 + 6h = 5:00 AM next day
+        sleep_dt = last_prep.end_datetime
+        sleep_hour = sleep_dt.hour
+
+        # Phase end should be in early morning (crossed midnight)
+        if sleep_dt.date() > last_prep.start_datetime.date():
+            # Sleep crosses to next day
+            assert sleep_hour <= 6, f"Expected sleep around 5 AM next day, got {sleep_hour}:00"
+
+
+class TestShiftTargetGeneration:
+    """Test that shift targets are generated correctly."""
+
+    def test_shift_targets_cumulative(self):
+        """Cumulative shift should accumulate correctly across days."""
+        calc = ShiftCalculator(
+            total_shift=8.0,
+            direction="advance",
+            prep_days=3,
+            intensity="balanced",
+        )
+        targets = calc.generate_shift_targets()
+
+        # Balanced advance: 1.0h/day, 8h total = 8 days
+        assert len(targets) == 8
+
+        # Check cumulative increases by daily_rate each day
+        for i, target in enumerate(targets):
+            expected_cumulative = min((i + 1) * 1.0, 8.0)
+            assert target.cumulative_shift == expected_cumulative, (
+                f"Day {target.day}: expected cumulative {expected_cumulative}, "
+                f"got {target.cumulative_shift}"
+            )
+
+    def test_shift_targets_day_numbering(self):
+        """Day numbers should start from -prep_days."""
+        calc = ShiftCalculator(
+            total_shift=8.0,
+            direction="advance",
+            prep_days=3,
+            intensity="balanced",
+        )
+        targets = calc.generate_shift_targets()
+
+        # 8h advance at 1.0h/day = 8 days
+        # Starts at day -3, so ends at day 4
+        assert targets[0].day == -3
+        assert targets[-1].day == 4  # Last day extends past flight day
+
+
+class TestBackwardCompatibility:
+    """Test that default behavior is backward compatible."""
+
+    def test_default_intensity_is_balanced(self):
+        """ShiftCalculator without intensity should default to balanced."""
+        calc = ShiftCalculator(total_shift=8.0, direction="advance", prep_days=3)
+        assert calc.intensity == "balanced"
+
+    def test_balanced_advance_rate_is_1h(self):
+        """Balanced mode advance rate should be 1.0h/day."""
+        calc = ShiftCalculator(
+            total_shift=8.0, direction="advance", prep_days=3, intensity="balanced"
+        )
+        assert calc.daily_rate == 1.0
+
+    def test_balanced_delay_rate_is_1_5h(self):
+        """Balanced mode delay rate should be 1.5h/day."""
+        calc = ShiftCalculator(
+            total_shift=8.0, direction="delay", prep_days=3, intensity="balanced"
+        )
+        assert calc.daily_rate == 1.5

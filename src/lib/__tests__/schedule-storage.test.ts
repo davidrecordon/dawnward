@@ -30,6 +30,7 @@ const mockFormState: TripFormState = {
   useCaffeine: true,
   useExercise: false,
   napPreference: "flight_only",
+  scheduleIntensity: "balanced",
 };
 
 describe("form state storage", () => {
@@ -81,6 +82,7 @@ describe("form state storage", () => {
         useCaffeine: false,
         useExercise: false,
         napPreference: "flight_only",
+        scheduleIntensity: "balanced",
       };
 
       saveFormState(partialState);

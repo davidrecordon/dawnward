@@ -7,6 +7,7 @@ import {
   Calendar,
   ChevronRight,
   Coffee,
+  Gauge,
   MapPin,
   Moon,
   Pill,
@@ -307,6 +308,26 @@ export function TripForm({ formState, onFormChange }: TripFormProps) {
                 { value: "all_days", label: "On all days" },
               ]}
               colorScheme="purple"
+            />
+
+            <PreferenceSelector
+              icon={<Gauge className="h-4 w-4" />}
+              title="Schedule intensity"
+              description={
+                formState.scheduleIntensity === "gentle"
+                  ? "Easier to follow — stays close to your usual schedule"
+                  : formState.scheduleIntensity === "balanced"
+                    ? "Good balance of speed and practicality"
+                    : "Fastest adaptation — requires flexible schedule"
+              }
+              value={formState.scheduleIntensity}
+              onValueChange={(value) => updateField("scheduleIntensity", value)}
+              options={[
+                { value: "gentle", label: "Gentle" },
+                { value: "balanced", label: "Balanced" },
+                { value: "aggressive", label: "Aggressive" },
+              ]}
+              colorScheme="sky"
             />
 
             <PreferenceToggle

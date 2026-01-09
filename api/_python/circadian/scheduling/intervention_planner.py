@@ -66,7 +66,9 @@ class InterventionPlanner:
         # Initialize science layer components
         self.markers = CircadianMarkerTracker(request.wake_time, request.sleep_time)
         self.sleep_pressure = SleepPressureModel(request.wake_time, request.sleep_time)
-        self.shift_calc = ShiftCalculator(total_shift, direction, request.prep_days)
+        self.shift_calc = ShiftCalculator(
+            total_shift, direction, request.prep_days, request.schedule_intensity
+        )
 
         self.context = PlannerContext(
             markers=self.markers,
@@ -257,8 +259,25 @@ class InterventionPlanner:
         sleep_target = day_markers["sleep_target"]
 
         # Include wake/sleep targets for key days (Day 0 Flight Day, Day 1 Arrival)
+        # Exception: pre_departure doesn't get sleep_target (user already slept,
+        # and phase ends before departure, not at sleep time)
         if include_sleep_wake:
-            interventions.extend(self._plan_sleep_wake(phase, wake_target, sleep_target))
+            if phase.phase_type == "pre_departure":
+                # Only include wake_target for departure day
+                interventions.append(
+                    Intervention(
+                        time=format_time(wake_target),
+                        type="wake_target",
+                        title="Target wake time",
+                        description=(
+                            f"Try to wake up at this time. "
+                            f"{'Get bright light soon after waking.' if self.context.direction == 'advance' else 'Avoid bright light for the first few hours after waking.'}"
+                        ),
+                        duration_min=None,
+                    )
+                )
+            else:
+                interventions.extend(self._plan_sleep_wake(phase, wake_target, sleep_target))
 
         if self.context.direction == "advance":
             # Most impactful for advance: morning light after CBTmin

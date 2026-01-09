@@ -6,6 +6,14 @@ import type { Airport } from "./airport";
 export type NapPreference = "no" | "flight_only" | "all_days";
 
 /**
+ * Schedule intensity options controlling circadian shift rates (direction-specific)
+ * - gentle: 0.75h/day advance, 1.0h/day delay (easier to follow)
+ * - balanced: 1.0h/day advance, 1.5h/day delay (good balance)
+ * - aggressive: 1.25h/day advance, 2.0h/day delay (fastest adaptation)
+ */
+export type ScheduleIntensity = "gentle" | "balanced" | "aggressive";
+
+/**
  * Form state for the trip planning form
  */
 export interface TripFormState {
@@ -25,6 +33,8 @@ export interface TripFormState {
   useExercise: boolean;
   /** Nap preference: "no", "flight_only", or "all_days" */
   napPreference: NapPreference;
+  /** Schedule intensity: "gentle", "balanced", or "aggressive" */
+  scheduleIntensity: ScheduleIntensity;
   /** User's usual wake time in HH:MM format */
   wakeTime: string;
   /** User's usual sleep time in HH:MM format */
@@ -45,6 +55,7 @@ export const defaultFormState: TripFormState = {
   useCaffeine: true,
   useExercise: false,
   napPreference: "flight_only",
+  scheduleIntensity: "balanced",
   wakeTime: "07:00",
   sleepTime: "22:00",
   prepDays: 3,

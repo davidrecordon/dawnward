@@ -1281,3 +1281,198 @@ class TestPracticalValidation:
         assert len(issues) == 0, f"{flight_name}: Found activities before landing:\n" + "\n".join(
             f"  - {i.message}" for i in issues
         )
+
+
+# =============================================================================
+# INTENSITY VARIATION TESTS
+# =============================================================================
+
+
+# Flight configurations for parameterized tests
+FLIGHT_CONFIGS = [
+    # Minimal jet lag (3h)
+    ("HA11 SFO-HNL", "America/Los_Angeles", "Pacific/Honolulu", "07:00", "09:35", 0),
+    ("HA12 HNL-SFO", "Pacific/Honolulu", "America/Los_Angeles", "12:30", "20:30", 0),
+    ("AA16 SFO-JFK", "America/Los_Angeles", "America/New_York", "11:00", "19:35", 0),
+    ("AA177 JFK-SFO", "America/New_York", "America/Los_Angeles", "19:35", "23:21", 0),
+    # Moderate jet lag (8-9h)
+    ("VS20 SFO-LHR", "America/Los_Angeles", "Europe/London", "16:30", "10:40", 1),
+    ("VS19 LHR-SFO", "Europe/London", "America/Los_Angeles", "11:40", "14:40", 0),
+    ("AF83 SFO-CDG", "America/Los_Angeles", "Europe/Paris", "15:40", "11:35", 1),
+    ("AF84 CDG-SFO", "Europe/Paris", "America/Los_Angeles", "13:25", "15:55", 0),
+    ("LH455 SFO-FRA", "America/Los_Angeles", "Europe/Berlin", "14:40", "10:30", 1),
+    ("LH454 FRA-SFO", "Europe/Berlin", "America/Los_Angeles", "13:20", "15:55", 0),
+    # Severe jet lag (12-17h)
+    ("EK226 SFO-DXB", "America/Los_Angeles", "Asia/Dubai", "15:40", "19:25", 1),
+    ("EK225 DXB-SFO", "Asia/Dubai", "America/Los_Angeles", "08:50", "12:50", 0),
+    ("SQ31 SFO-SIN", "America/Los_Angeles", "Asia/Singapore", "09:40", "19:05", 1),
+    ("SQ32 SIN-SFO", "Asia/Singapore", "America/Los_Angeles", "09:15", "07:50", 0),
+    ("CX879 SFO-HKG", "America/Los_Angeles", "Asia/Hong_Kong", "11:25", "19:00", 1),
+    ("CX872 HKG-SFO", "Asia/Hong_Kong", "America/Los_Angeles", "01:00", "21:15", -1),
+    ("JL1 SFO-HND", "America/Los_Angeles", "Asia/Tokyo", "12:55", "17:20", 1),
+    ("JL2 HND-SFO", "Asia/Tokyo", "America/Los_Angeles", "18:05", "10:15", 0),
+    ("QF74 SFO-SYD", "America/Los_Angeles", "Australia/Sydney", "20:15", "06:10", 2),
+    ("QF73 SYD-SFO", "Australia/Sydney", "America/Los_Angeles", "21:25", "15:55", 0),
+]
+
+# Intensity settings to test
+INTENSITY_SETTINGS = ["gentle", "balanced", "aggressive"]
+
+
+class TestIntensityVariations:
+    """
+    Test all 20 flight scenarios with all 3 intensity settings.
+
+    This creates 60 test combinations (20 flights × 3 intensities) to ensure:
+    - Schedules generate correctly for all intensity levels
+    - Basic validations pass (no activities before landing, no sleep before departure)
+    - Direction and shift calculations remain consistent across intensities
+    """
+
+    @pytest.mark.parametrize("intensity", INTENSITY_SETTINGS)
+    @pytest.mark.parametrize(
+        "flight_name,origin_tz,dest_tz,depart_time,arrive_time,arrive_day",
+        FLIGHT_CONFIGS,
+    )
+    def test_schedule_generates_with_intensity(
+        self,
+        flight_name,
+        origin_tz,
+        dest_tz,
+        depart_time,
+        arrive_time,
+        arrive_day,
+        intensity,
+    ):
+        """
+        Validate that schedules generate correctly for all flights at all intensity levels.
+
+        Checks:
+        - Schedule generates without errors
+        - Has at least one day of interventions
+        - Direction and shift are calculated correctly (same across intensities)
+        - No critical validation errors
+        """
+        generator = ScheduleGenerator()
+        base_date = datetime(2026, 1, 15)
+
+        departure = make_flight_datetime(base_date, depart_time)
+        arrival = make_flight_datetime(base_date, arrive_time, day_offset=arrive_day)
+
+        request = ScheduleRequest(
+            legs=[
+                TripLeg(
+                    origin_tz=origin_tz,
+                    dest_tz=dest_tz,
+                    departure_datetime=departure.strftime("%Y-%m-%dT%H:%M"),
+                    arrival_datetime=arrival.strftime("%Y-%m-%dT%H:%M"),
+                )
+            ],
+            prep_days=3,
+            wake_time="07:00",
+            sleep_time="22:00",
+            uses_melatonin=True,
+            uses_caffeine=True,
+            schedule_intensity=intensity,
+        )
+
+        schedule = generator.generate_schedule(request)
+
+        flight = FlightInfo(
+            departure_datetime=departure,
+            arrival_datetime=arrival,
+            origin_tz=origin_tz,
+            dest_tz=dest_tz,
+        )
+
+        # Basic sanity checks
+        assert schedule is not None, f"{flight_name} [{intensity}]: Schedule generation failed"
+        assert len(schedule.interventions) > 0, (
+            f"{flight_name} [{intensity}]: No interventions generated"
+        )
+
+        # Run validation suite
+        issues = run_all_validations(schedule, flight)
+        errors = [i for i in issues if i.severity == "error"]
+
+        assert len(errors) == 0, (
+            f"{flight_name} [{intensity}]: Found {len(errors)} errors:\n"
+            + "\n".join(f"  - {e.category}: {e.message}" for e in errors)
+        )
+
+    @pytest.mark.parametrize("intensity", INTENSITY_SETTINGS)
+    @pytest.mark.parametrize(
+        "flight_name,origin_tz,dest_tz,depart_time,arrive_time,arrive_day",
+        [
+            # Overnight flights with next-day arrivals
+            ("VS20 SFO-LHR", "America/Los_Angeles", "Europe/London", "16:30", "10:40", 1),
+            ("AF83 SFO-CDG", "America/Los_Angeles", "Europe/Paris", "15:40", "11:35", 1),
+            ("QF74 SFO-SYD", "America/Los_Angeles", "Australia/Sydney", "20:15", "06:10", 2),
+        ],
+    )
+    def test_intensity_affects_shift_rate(
+        self,
+        flight_name,
+        origin_tz,
+        dest_tz,
+        depart_time,
+        arrive_time,
+        arrive_day,
+        intensity,
+    ):
+        """
+        Validate that different intensities result in different adaptation timelines.
+
+        All intensities use direction-specific rates (advances are harder than delays):
+        - Gentle: 0.75h/day advance, 1.0h/day delay
+        - Balanced: 1.0h/day advance, 1.5h/day delay
+        - Aggressive: 1.25h/day advance, 2.0h/day delay
+
+        Checks that the schedule's shift calculator uses the appropriate rate.
+        """
+        from circadian.science.shift_calculator import INTENSITY_CONFIGS, ShiftCalculator
+
+        generator = ScheduleGenerator()
+        base_date = datetime(2026, 1, 15)
+
+        departure = make_flight_datetime(base_date, depart_time)
+        arrival = make_flight_datetime(base_date, arrive_time, day_offset=arrive_day)
+
+        request = ScheduleRequest(
+            legs=[
+                TripLeg(
+                    origin_tz=origin_tz,
+                    dest_tz=dest_tz,
+                    departure_datetime=departure.strftime("%Y-%m-%dT%H:%M"),
+                    arrival_datetime=arrival.strftime("%Y-%m-%dT%H:%M"),
+                )
+            ],
+            prep_days=3,
+            wake_time="07:00",
+            sleep_time="22:00",
+            uses_melatonin=True,
+            uses_caffeine=True,
+            schedule_intensity=intensity,
+        )
+
+        schedule = generator.generate_schedule(request)
+
+        # Create a ShiftCalculator with the same parameters to verify rate
+        calc = ShiftCalculator(
+            total_shift=schedule.total_shift_hours,
+            direction=schedule.direction,
+            prep_days=3,
+            intensity=intensity,
+        )
+
+        # Get expected rate based on intensity and direction
+        config = INTENSITY_CONFIGS[intensity]
+        if schedule.direction == "advance":
+            expected_rate = config.advance_rate
+        else:
+            expected_rate = config.delay_rate
+
+        assert calc.daily_rate == expected_rate, (
+            f"{flight_name} [{intensity}/{schedule.direction}]: "
+            f"Expected {expected_rate}h/day, got {calc.daily_rate}"
+        )

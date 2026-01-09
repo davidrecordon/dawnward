@@ -235,6 +235,12 @@ def validate_no_activities_before_landing(
     the user what their body's ideal schedule is, even if unachievable
     due to travel. These are exempt from this validation.
 
+    Special handling for phases spanning midnight:
+    When a phase spans midnight (phase_spans_midnight=True), early morning
+    times (00:00-06:00) are actually on the NEXT calendar day, not before
+    landing. For example, a flight landing at 19:05 with interventions at
+    04:00 means 04:00 on the next day (after ~9 hours since landing).
+
     Args:
         schedule: The generated schedule
         flight: Flight information
@@ -249,6 +255,10 @@ def validate_no_activities_before_landing(
     # Types that are informational targets (always OK to show)
     informational_targets = {"wake_target", "sleep_target"}
 
+    # Early morning threshold - times before this are considered "next day"
+    # when a phase spans midnight
+    early_morning_threshold = 6 * 60  # 06:00 = 360 minutes
+
     # Find the first post-arrival day (usually day 1, but depends on flight timing)
     for day_schedule in schedule.interventions:
         if day_schedule.day < 1:
@@ -256,12 +266,21 @@ def validate_no_activities_before_landing(
 
         # For day 1, check if activities are before landing
         if day_schedule.day == 1:
+            # Check if this phase spans midnight
+            spans_midnight = getattr(day_schedule, "phase_spans_midnight", False) or False
+
             for item in day_schedule.items:
                 # Skip informational targets - they show ideal schedule even if unachievable
                 if item.type in informational_targets:
                     continue
 
                 item_minutes = time_to_minutes(parse_time(item.time))
+
+                # If phase spans midnight and time is early morning, it's actually next day
+                if spans_midnight and item_minutes < early_morning_threshold:
+                    # This is an early morning time on the next calendar day,
+                    # not before landing. Skip validation.
+                    continue
 
                 # Check if this activity is before the flight lands
                 if item_minutes < arrival_minutes:

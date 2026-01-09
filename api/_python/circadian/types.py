@@ -83,6 +83,12 @@ class TripLeg:
 
 NapPreference = Literal["no", "flight_only", "all_days"]
 
+# Schedule intensity controls circadian shift rates (direction-specific)
+# - gentle: 0.75h/day advance, 1.0h/day delay (easier to follow)
+# - balanced: 1.0h/day advance, 1.5h/day delay (good balance)
+# - aggressive: 1.25h/day advance, 2.0h/day delay (fastest adaptation)
+ScheduleIntensity = Literal["gentle", "balanced", "aggressive"]
+
 
 @dataclass
 class ScheduleRequest:
@@ -96,6 +102,7 @@ class ScheduleRequest:
     uses_caffeine: bool = True
     uses_exercise: bool = False
     nap_preference: NapPreference = "flight_only"
+    schedule_intensity: ScheduleIntensity = "balanced"
 
 
 InterventionType = Literal[
