@@ -21,6 +21,7 @@ from typing import Literal
 from ..circadian_math import (
     calculate_timezone_shift,
     minutes_to_time,
+    parse_iso_datetime,
     parse_time,
     time_to_minutes,
 )
@@ -74,6 +75,36 @@ class PhaseGenerator:
 
         # Initialize shift calculator with intensity
         self.shift_calc = ShiftCalculator(total_shift, direction, prep_days, intensity)
+
+    def _adjust_time_for_shift(
+        self, base_minutes: int, shift_hours: float, pre_flight: bool
+    ) -> int:
+        """
+        Adjust a time (in minutes) based on circadian shift.
+
+        Args:
+            base_minutes: Base time in minutes from midnight
+            shift_hours: Hours of shift to apply
+            pre_flight: True for prep/pre-departure (shifting toward destination),
+                       False for post-arrival/adaptation (remaining shift from destination)
+
+        Returns:
+            Adjusted time in minutes
+        """
+        shift_minutes = int(shift_hours * 60)
+
+        if pre_flight:
+            # Before flight: advancing = earlier times, delaying = later times
+            if self.direction == "advance":
+                return base_minutes - shift_minutes
+            return base_minutes + shift_minutes
+        else:
+            # After flight: body offset by remaining shift
+            # For advance: body wants later times (still behind destination)
+            # For delay: body wants earlier times (still ahead of destination)
+            if self.direction == "advance":
+                return base_minutes + shift_minutes
+            return base_minutes - shift_minutes
 
     def generate_phases(self) -> list[TravelPhase]:
         """
@@ -157,7 +188,7 @@ class PhaseGenerator:
         """Check if all legs go the same direction (all east or all west)."""
         directions = []
         for leg in self.legs:
-            departure_dt = datetime.fromisoformat(leg.departure_datetime.replace("Z", "+00:00"))
+            departure_dt = parse_iso_datetime(leg.departure_datetime)
             _, direction = calculate_timezone_shift(leg.origin_tz, leg.dest_tz, departure_dt)
             directions.append(direction)
         return len(set(directions)) == 1
@@ -167,17 +198,15 @@ class PhaseGenerator:
         if len(self.legs) < 2:
             return 0
 
-        leg1_arrival = datetime.fromisoformat(self.legs[0].arrival_datetime.replace("Z", "+00:00"))
-        leg2_departure = datetime.fromisoformat(
-            self.legs[1].departure_datetime.replace("Z", "+00:00")
-        )
+        leg1_arrival = parse_iso_datetime(self.legs[0].arrival_datetime)
+        leg2_departure = parse_iso_datetime(self.legs[1].departure_datetime)
         return (leg2_departure - leg1_arrival).total_seconds() / 3600
 
     def _generate_preparation_phases(self) -> list[TravelPhase]:
         """Generate preparation phases (full days before departure)."""
         phases = []
         leg = self.legs[0]
-        departure = datetime.fromisoformat(leg.departure_datetime.replace("Z", "+00:00"))
+        departure = parse_iso_datetime(leg.departure_datetime)
 
         # Get shift targets for each prep day
         shift_targets = self.shift_calc.generate_shift_targets()
@@ -197,14 +226,12 @@ class PhaseGenerator:
 
             # Adjust wake/sleep times based on cumulative shift
             # This ensures phase bounds match the day's targets, not normal times
-            if self.direction == "advance":
-                # Advancing clock = wake/sleep earlier
-                adjusted_wake_minutes = wake_minutes - int(cumulative * 60)
-                adjusted_sleep_minutes = sleep_minutes - int(cumulative * 60)
-            else:
-                # Delaying clock = wake/sleep later
-                adjusted_wake_minutes = wake_minutes + int(cumulative * 60)
-                adjusted_sleep_minutes = sleep_minutes + int(cumulative * 60)
+            adjusted_wake_minutes = self._adjust_time_for_shift(
+                wake_minutes, cumulative, pre_flight=True
+            )
+            adjusted_sleep_minutes = self._adjust_time_for_shift(
+                sleep_minutes, cumulative, pre_flight=True
+            )
 
             adjusted_wake = minutes_to_time(adjusted_wake_minutes)
             adjusted_sleep = minutes_to_time(adjusted_sleep_minutes)
@@ -239,7 +266,7 @@ class PhaseGenerator:
         Starts at adjusted wake time, ends 3 hours before departure (airport buffer).
         """
         leg = self.legs[0]
-        departure = datetime.fromisoformat(leg.departure_datetime.replace("Z", "+00:00"))
+        departure = parse_iso_datetime(leg.departure_datetime)
 
         # Phase ends 3 hours before departure
         phase_end = departure - timedelta(hours=PRE_DEPARTURE_BUFFER_HOURS)
@@ -249,11 +276,9 @@ class PhaseGenerator:
 
         # Adjust wake time based on cumulative shift
         wake_minutes = time_to_minutes(self.wake_time)
-        if self.direction == "advance":
-            adjusted_wake_minutes = wake_minutes - int(cumulative * 60)
-        else:
-            adjusted_wake_minutes = wake_minutes + int(cumulative * 60)
-
+        adjusted_wake_minutes = self._adjust_time_for_shift(
+            wake_minutes, cumulative, pre_flight=True
+        )
         adjusted_wake = minutes_to_time(adjusted_wake_minutes)
 
         # Phase starts at adjusted wake time on departure day
@@ -284,8 +309,8 @@ class PhaseGenerator:
         - 12+h: IN_TRANSIT_ULR with two sleep windows
         """
         leg = self.legs[0]
-        departure = datetime.fromisoformat(leg.departure_datetime.replace("Z", "+00:00"))
-        arrival = datetime.fromisoformat(leg.arrival_datetime.replace("Z", "+00:00"))
+        departure = parse_iso_datetime(leg.departure_datetime)
+        arrival = parse_iso_datetime(leg.arrival_datetime)
         flight_hours = (arrival - departure).total_seconds() / 3600
 
         cumulative = self._get_cumulative_shift_at_day(0)
@@ -366,7 +391,7 @@ class PhaseGenerator:
         This is the critical "arrival-day fatigue" period.
         """
         leg = self.legs[-1]
-        arrival = datetime.fromisoformat(leg.arrival_datetime.replace("Z", "+00:00"))
+        arrival = parse_iso_datetime(leg.arrival_datetime)
 
         # Calculate cumulative shift at arrival (day 1)
         cumulative = self._get_cumulative_shift_at_day(1)
@@ -375,14 +400,7 @@ class PhaseGenerator:
         # Calculate target sleep time for arrival day
         # The body is still offset from destination by remaining shift
         sleep_minutes = time_to_minutes(self.sleep_time)
-
-        if self.direction == "advance":
-            # Body wants to sleep later than ideal
-            adjusted_sleep = sleep_minutes + int(remaining * 60)
-        else:
-            # Body wants to sleep earlier than ideal
-            adjusted_sleep = sleep_minutes - int(remaining * 60)
-
+        adjusted_sleep = self._adjust_time_for_shift(sleep_minutes, remaining, pre_flight=False)
         target_sleep = minutes_to_time(adjusted_sleep)
         phase_end = datetime.combine(arrival.date(), target_sleep)
 
@@ -405,7 +423,7 @@ class PhaseGenerator:
         """Generate adaptation phases (full days at destination)."""
         phases = []
         leg = self.legs[-1]
-        arrival = datetime.fromisoformat(leg.arrival_datetime.replace("Z", "+00:00"))
+        arrival = parse_iso_datetime(leg.arrival_datetime)
 
         # Get shift targets
         shift_targets = self.shift_calc.generate_shift_targets()
@@ -425,14 +443,9 @@ class PhaseGenerator:
             cumulative = target.cumulative_shift
             remaining = self.total_shift - cumulative
 
-            # Calculate adjusted wake/sleep times based on remaining shift.
-            # Times shift naturally toward destination schedule.
-            if self.direction == "advance":
-                adjusted_wake = wake_minutes + int(remaining * 60)
-                adjusted_sleep = sleep_minutes + int(remaining * 60)
-            else:
-                adjusted_wake = wake_minutes - int(remaining * 60)
-                adjusted_sleep = sleep_minutes - int(remaining * 60)
+            # Calculate adjusted wake/sleep times based on remaining shift
+            adjusted_wake = self._adjust_time_for_shift(wake_minutes, remaining, pre_flight=False)
+            adjusted_sleep = self._adjust_time_for_shift(sleep_minutes, remaining, pre_flight=False)
 
             phase_start = datetime.combine(current_date, minutes_to_time(adjusted_wake))
             phase_end = datetime.combine(current_date, minutes_to_time(adjusted_sleep))
@@ -478,8 +491,8 @@ class PhaseGenerator:
         cumulative = self._get_cumulative_shift_at_day(0)
 
         for i, leg in enumerate(self.legs):
-            departure = datetime.fromisoformat(leg.departure_datetime.replace("Z", "+00:00"))
-            arrival = datetime.fromisoformat(leg.arrival_datetime.replace("Z", "+00:00"))
+            departure = parse_iso_datetime(leg.departure_datetime)
+            arrival = parse_iso_datetime(leg.arrival_datetime)
             flight_hours = (arrival - departure).total_seconds() / 3600
 
             phase_type: PhaseType = (
@@ -509,15 +522,29 @@ class PhaseGenerator:
         return phases
 
     def _generate_partial_adaptation_phases(self) -> list[TravelPhase]:
-        """Generate phases for partial adaptation strategy (48-96h layover)."""
-        # Similar to aim-through but with some local adaptation at layover
-        # For now, implement same as aim-through (can be refined later)
+        """
+        Generate phases for partial adaptation strategy (48-96h layover).
+
+        TODO: Implement partial adaptation logic where user partially adapts
+        to layover timezone while maintaining trajectory toward final destination.
+        See design_docs/science-methodology.md for details.
+
+        Currently uses aim-through as fallback behavior.
+        """
         return self._generate_aim_through_phases()
 
     def _generate_restart_phases(self) -> list[TravelPhase]:
-        """Generate phases treating legs as separate trips (>96h layover or opposite directions)."""
-        # For restart, generate phases for each leg independently
-        # This is more complex - for now, use aim-through as fallback
+        """
+        Generate phases treating legs as separate trips (>96h layover or opposite directions).
+
+        TODO: Implement restart logic where each leg is treated as an independent trip.
+        This applies when:
+        - Layover > 96 hours (sufficient time for meaningful local adaptation)
+        - Legs go opposite directions (e.g., NYC -> London -> LA)
+        See design_docs/flight-timing-edge-cases.md for details.
+
+        Currently uses aim-through as fallback behavior.
+        """
         return self._generate_aim_through_phases()
 
     def _get_cumulative_shift_at_day(self, day: int) -> float:

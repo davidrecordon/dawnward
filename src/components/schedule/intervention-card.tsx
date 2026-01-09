@@ -4,8 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
   getInterventionStyle,
-  formatTime,
-  getTimezoneAbbr,
+  formatTimeWithTimezone,
 } from "@/lib/intervention-utils";
 import type { Intervention } from "@/types/schedule";
 
@@ -19,7 +18,7 @@ interface InterventionCardProps {
 
 /**
  * Format flight offset hours for display
- * e.g., 4.5 → "~4.5 hours into flight"
+ * e.g., 4.5 -> "~4.5 hours into flight"
  */
 function formatFlightOffset(hours: number): string {
   if (hours < 1) {
@@ -36,15 +35,10 @@ export function InterventionCard({
   intervention,
   timezone,
   variant = "default",
-}: InterventionCardProps) {
+}: InterventionCardProps): React.JSX.Element {
   const style = getInterventionStyle(intervention.type);
   const Icon = style.icon;
   const isNested = variant === "nested";
-
-  // Format time with optional timezone abbreviation
-  const timeDisplay = timezone
-    ? `${formatTime(intervention.time)} ${getTimezoneAbbr(timezone)}`
-    : formatTime(intervention.time);
 
   // Check if this is an in-flight item with offset info
   const hasFlightOffset =
@@ -93,7 +87,7 @@ export function InterventionCard({
             variant="secondary"
             className="shrink-0 bg-white/70 font-medium text-slate-600"
           >
-            {timeDisplay}
+            {formatTimeWithTimezone(intervention.time, timezone)}
           </Badge>
         )}
       </CardContent>

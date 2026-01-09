@@ -2,38 +2,7 @@
 
 import * as React from "react";
 import { cn } from "@/lib/utils";
-
-type ColorScheme = "emerald" | "orange" | "sky" | "purple";
-
-const colorSchemes: Record<
-  ColorScheme,
-  { bg: string; iconBg: string; iconColor: string; buttonActive: string }
-> = {
-  emerald: {
-    bg: "bg-emerald-50/80",
-    iconBg: "bg-emerald-100",
-    iconColor: "text-emerald-600",
-    buttonActive: "bg-emerald-500 text-white",
-  },
-  orange: {
-    bg: "bg-orange-50/80",
-    iconBg: "bg-orange-100",
-    iconColor: "text-orange-600",
-    buttonActive: "bg-orange-500 text-white",
-  },
-  sky: {
-    bg: "bg-sky-50/80",
-    iconBg: "bg-sky-100",
-    iconColor: "text-sky-600",
-    buttonActive: "bg-sky-500 text-white",
-  },
-  purple: {
-    bg: "bg-purple-50/80",
-    iconBg: "bg-purple-100",
-    iconColor: "text-purple-600",
-    buttonActive: "bg-purple-500 text-white",
-  },
-};
+import { type ColorScheme, colorSchemes } from "@/lib/preference-colors";
 
 interface Option<T extends string> {
   value: T;
@@ -58,7 +27,7 @@ export function PreferenceSelector<T extends string>({
   onValueChange,
   options,
   colorScheme,
-}: PreferenceSelectorProps<T>) {
+}: PreferenceSelectorProps<T>): React.JSX.Element {
   const colors = colorSchemes[colorScheme];
 
   return (

@@ -3,7 +3,7 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Plane, PlaneTakeoff, PlaneLanding } from "lucide-react";
-import { formatTime, getTimezoneAbbr } from "@/lib/intervention-utils";
+import { formatTimeWithTimezone } from "@/lib/intervention-utils";
 import type { Airport } from "@/types/airport";
 
 interface FlightCardProps {
@@ -21,7 +21,7 @@ export function FlightCard({
   origin,
   destination,
   timezone,
-}: FlightCardProps) {
+}: FlightCardProps): React.JSX.Element {
   const isDeparture = type === "departure";
   const Icon = isDeparture ? PlaneTakeoff : PlaneLanding;
   const title = isDeparture
@@ -30,11 +30,6 @@ export function FlightCard({
   const subtitle = isDeparture
     ? `${origin.city} → ${destination.city}`
     : `Welcome to ${destination.city}`;
-
-  // Format time with timezone abbreviation
-  const timeDisplay = timezone
-    ? `${formatTime(time)} ${getTimezoneAbbr(timezone)}`
-    : formatTime(time);
 
   return (
     <Card className="border-sky-200/50 bg-gradient-to-r from-sky-50 to-sky-100/80 shadow-sm transition-all duration-300 hover:translate-x-1 hover:shadow-md">
@@ -50,7 +45,7 @@ export function FlightCard({
           <p className="text-sm text-sky-600">{subtitle}</p>
         </div>
         <Badge className="shrink-0 bg-sky-500 font-medium text-white hover:bg-sky-500">
-          {timeDisplay}
+          {formatTimeWithTimezone(time, timezone)}
         </Badge>
       </CardContent>
     </Card>

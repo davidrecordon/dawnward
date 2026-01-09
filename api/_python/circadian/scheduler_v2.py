@@ -18,6 +18,7 @@ from .circadian_math import (
     calculate_timezone_shift,
     format_time,
     get_current_datetime_in_tz,
+    parse_iso_datetime,
 )
 from .scheduling.constraint_filter import ConstraintFilter
 from .scheduling.intervention_planner import InterventionPlanner
@@ -96,9 +97,7 @@ class ScheduleGeneratorV2:
         constraint_filter = ConstraintFilter()
 
         # Parse departure datetime for sleep_target filtering
-        departure_datetime = datetime.fromisoformat(
-            first_leg.departure_datetime.replace("Z", "+00:00")
-        )
+        departure_datetime = parse_iso_datetime(first_leg.departure_datetime)
         # Remove timezone info for consistent comparisons
         if departure_datetime.tzinfo is not None:
             departure_datetime = departure_datetime.replace(tzinfo=None)
@@ -179,13 +178,13 @@ class ScheduleGeneratorV2:
             return calculate_timezone_shift(
                 leg.origin_tz,
                 leg.dest_tz,
-                datetime.fromisoformat(leg.departure_datetime.replace("Z", "+00:00")),
+                parse_iso_datetime(leg.departure_datetime),
             )
 
         # For multi-leg, calculate from first origin to last destination
         first_origin = legs[0].origin_tz
         last_dest = legs[-1].dest_tz
-        reference_date = datetime.fromisoformat(legs[0].departure_datetime.replace("Z", "+00:00"))
+        reference_date = parse_iso_datetime(legs[0].departure_datetime)
 
         return calculate_timezone_shift(first_origin, last_dest, reference_date)
 

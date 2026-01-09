@@ -16,6 +16,21 @@ def parse_time(time_str: str) -> time:
     return time(int(parts[0]), int(parts[1]))
 
 
+def parse_iso_datetime(iso_str: str) -> datetime:
+    """
+    Parse an ISO 8601 datetime string to a datetime object.
+
+    Handles the Z suffix by converting it to +00:00 for Python's fromisoformat().
+
+    Args:
+        iso_str: ISO 8601 datetime string (e.g., "2024-01-15T10:30:00Z" or "2024-01-15T10:30:00+00:00")
+
+    Returns:
+        Parsed datetime object (timezone-aware if offset present)
+    """
+    return datetime.fromisoformat(iso_str.replace("Z", "+00:00"))
+
+
 def time_to_minutes(t: time) -> int:
     """Convert time to minutes since midnight."""
     return t.hour * 60 + t.minute
@@ -190,7 +205,7 @@ def calculate_actual_prep_days(
     if current_datetime is None:
         current_datetime = datetime.now()
 
-    departure = datetime.fromisoformat(departure_datetime.replace("Z", "+00:00"))
+    departure = parse_iso_datetime(departure_datetime)
     if departure.tzinfo is None:
         departure = departure.replace(tzinfo=None)
         current_datetime = current_datetime.replace(tzinfo=None)
@@ -281,3 +296,23 @@ def shift_time(base_time: time, hours: float) -> time:
     shift_minutes = int(hours * 60)
     new_minutes = base_minutes + shift_minutes
     return minutes_to_time(new_minutes)
+
+
+def is_during_sleep(check_minutes: int, sleep_minutes: int, wake_minutes: int) -> bool:
+    """
+    Check if a time (in minutes since midnight) falls during the sleep window.
+
+    Args:
+        check_minutes: Time to check (minutes since midnight)
+        sleep_minutes: Sleep start time (minutes since midnight)
+        wake_minutes: Wake time (minutes since midnight)
+
+    Returns:
+        True if check_minutes falls within the sleep window
+    """
+    check_minutes = check_minutes % (24 * 60)
+
+    if sleep_minutes > wake_minutes:  # Sleep crosses midnight
+        return check_minutes >= sleep_minutes or check_minutes < wake_minutes
+    else:
+        return sleep_minutes <= check_minutes < wake_minutes

@@ -19,7 +19,14 @@ from typing import Literal
 
 import pytz
 
-from ..circadian_math import format_time, format_time_12h, minutes_to_time, time_to_minutes
+from ..circadian_math import (
+    format_time,
+    format_time_12h,
+    is_during_sleep,
+    minutes_to_time,
+    parse_iso_datetime,
+    time_to_minutes,
+)
 from ..science.markers import CircadianMarkerTracker
 from ..science.prc import LightPRC, MelatoninPRC
 from ..science.shift_calculator import ShiftCalculator
@@ -140,6 +147,16 @@ class InterventionPlanner:
 
         return interventions
 
+    def _parse_utc_timestamp(self, iso_str: str) -> datetime | None:
+        """Parse an ISO timestamp string to a timezone-aware UTC datetime."""
+        if "T" not in iso_str:
+            return None
+
+        utc_time = parse_iso_datetime(iso_str)
+        if utc_time.tzinfo is None:
+            utc_time = pytz.UTC.localize(utc_time)
+        return utc_time
+
     def _plan_in_transit(self, phase: TravelPhase) -> list[Intervention]:
         """
         Plan interventions for in-transit phases.
@@ -153,52 +170,34 @@ class InterventionPlanner:
         interventions = []
 
         if phase.is_ulr_flight and phase.sleep_windows:
-            # Get destination timezone from the request
             dest_tz_str = self.request.legs[0].dest_tz if self.request.legs else "UTC"
+            dest_tz = pytz.timezone(dest_tz_str)
 
-            # ULR flight: show sleep window suggestions
             for window in phase.sleep_windows:
                 start_iso = window.get("start", "")
                 display_time = "00:00"
                 flight_offset = None
 
-                if "T" in start_iso:
-                    try:
-                        # Parse UTC timestamp (format: "2026-01-09T09:15:00" or with Z suffix)
-                        utc_str = start_iso.replace("Z", "+00:00")
-                        if "+" not in utc_str and "-" not in utc_str[10:]:
-                            # No timezone info, assume UTC
-                            utc_time = datetime.fromisoformat(utc_str)
-                            utc_time = pytz.UTC.localize(utc_time)
-                        else:
-                            utc_time = datetime.fromisoformat(utc_str)
-                            if utc_time.tzinfo is None:
-                                utc_time = pytz.UTC.localize(utc_time)
+                utc_time = self._parse_utc_timestamp(start_iso)
+                if utc_time:
+                    # Convert to destination timezone for display
+                    local_time = utc_time.astimezone(dest_tz)
+                    display_time = local_time.strftime("%H:%M")
 
-                        # Convert to destination timezone for display
-                        dest_tz = pytz.timezone(dest_tz_str)
-                        local_time = utc_time.astimezone(dest_tz)
-                        display_time = local_time.strftime("%H:%M")
+                    # Calculate hours into flight from departure
+                    departure_utc = phase.start_datetime
+                    if departure_utc.tzinfo is None:
+                        origin_tz = pytz.timezone(self.request.legs[0].origin_tz)
+                        departure_utc = origin_tz.localize(departure_utc)
+                    departure_utc = departure_utc.astimezone(pytz.UTC)
 
-                        # Calculate hours into flight from departure
-                        # phase.start_datetime is departure time (may have tzinfo)
-                        departure_utc = phase.start_datetime
-                        if departure_utc.tzinfo is None:
-                            # Assume origin timezone from first leg
-                            origin_tz = pytz.timezone(self.request.legs[0].origin_tz)
-                            departure_utc = origin_tz.localize(departure_utc)
-                        departure_utc = departure_utc.astimezone(pytz.UTC)
+                    flight_offset = (utc_time - departure_utc).total_seconds() / 3600
+                    flight_offset = max(0, round(flight_offset, 1))
+                elif "T" in start_iso:
+                    # Fallback: extract HH:MM from ISO string
+                    display_time = start_iso.split("T")[1][:5]
 
-                        flight_offset = (utc_time - departure_utc).total_seconds() / 3600
-                        flight_offset = max(
-                            0, round(flight_offset, 1)
-                        )  # Clamp to >= 0, round to 0.1h
-
-                    except Exception:
-                        # Fallback: extract HH:MM from ISO string
-                        display_time = start_iso.split("T")[1][:5]
-                        flight_offset = None
-
+                duration_hours = window.get("duration_hours", 4)
                 interventions.append(
                     Intervention(
                         time=display_time,
@@ -206,9 +205,9 @@ class InterventionPlanner:
                         title=window.get("label", "Sleep opportunity"),
                         description=(
                             f"Your body clock makes sleep easier during this window. "
-                            f"Aim for ~{window.get('duration_hours', 4):.0f} hours if possible."
+                            f"Aim for ~{duration_hours:.0f} hours if possible."
                         ),
-                        duration_min=int(window.get("duration_hours", 4) * 60),
+                        duration_min=int(duration_hours * 60),
                         flight_offset_hours=flight_offset,
                     )
                 )
@@ -387,7 +386,7 @@ class InterventionPlanner:
             sleep_minutes = time_to_minutes(sleep_target)
 
             # If optimal time is during sleep, use wake time
-            if self._is_during_sleep(seek_minutes, sleep_minutes, wake_minutes):
+            if is_during_sleep(seek_minutes, sleep_minutes, wake_minutes):
                 seek_start = wake_target
 
             interventions.append(
@@ -541,7 +540,7 @@ class InterventionPlanner:
             cutoff_minutes += 24 * 60
 
         # Only show cutoff if it's during waking hours
-        if not self._is_during_sleep(cutoff_minutes, sleep_minutes, wake_minutes):
+        if not is_during_sleep(cutoff_minutes, sleep_minutes, wake_minutes):
             interventions.append(
                 Intervention(
                     time=format_time(minutes_to_time(cutoff_minutes)),
@@ -609,15 +608,6 @@ class InterventionPlanner:
 
         return None
 
-    def _is_during_sleep(self, check_minutes: int, sleep_minutes: int, wake_minutes: int) -> bool:
-        """Check if a time (in minutes) falls during the sleep window."""
-        check_minutes = check_minutes % (24 * 60)
-
-        if sleep_minutes > wake_minutes:  # Sleep crosses midnight
-            return check_minutes >= sleep_minutes or check_minutes < wake_minutes
-        else:
-            return sleep_minutes <= check_minutes < wake_minutes
-
     def _truncate_to_waking(
         self, start: time, end: time, sleep_target: time, wake_target: time
     ) -> tuple | None:
@@ -631,8 +621,8 @@ class InterventionPlanner:
         sleep_minutes = time_to_minutes(sleep_target)
         wake_minutes = time_to_minutes(wake_target)
 
-        start_during_sleep = self._is_during_sleep(start_minutes, sleep_minutes, wake_minutes)
-        end_during_sleep = self._is_during_sleep(end_minutes, sleep_minutes, wake_minutes)
+        start_during_sleep = is_during_sleep(start_minutes, sleep_minutes, wake_minutes)
+        end_during_sleep = is_during_sleep(end_minutes, sleep_minutes, wake_minutes)
 
         if start_during_sleep and end_during_sleep:
             return None

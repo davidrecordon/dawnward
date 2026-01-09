@@ -13,6 +13,7 @@ Key principles:
 - User controls disruption via: intensity (rate) × prep_days (duration)
 """
 
+import math
 from dataclasses import dataclass
 from typing import Literal
 
@@ -107,10 +108,8 @@ class ShiftCalculator:
         All intensity levels use direction-specific rates since advances are
         physiologically harder than delays.
         """
-        if self.direction == "advance":
-            return self._intensity_config.advance_rate
-        else:
-            return self._intensity_config.delay_rate
+        config = self._intensity_config
+        return config.advance_rate if self.direction == "advance" else config.delay_rate
 
     @property
     def intensity_config(self) -> IntensityConfig:
@@ -125,8 +124,6 @@ class ShiftCalculator:
     @property
     def estimated_days(self) -> int:
         """Estimate total days needed for full adaptation."""
-        import math
-
         return math.ceil(self.total_shift / self._daily_rate)
 
     def generate_shift_targets(self) -> list[DailyShiftTarget]:

@@ -3,29 +3,7 @@
 import * as React from "react";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
-
-type ColorScheme = "emerald" | "orange" | "sky";
-
-const colorSchemes: Record<
-  ColorScheme,
-  { bg: string; iconBg: string; iconColor: string }
-> = {
-  emerald: {
-    bg: "bg-emerald-50/80",
-    iconBg: "bg-emerald-100",
-    iconColor: "text-emerald-600",
-  },
-  orange: {
-    bg: "bg-orange-50/80",
-    iconBg: "bg-orange-100",
-    iconColor: "text-orange-600",
-  },
-  sky: {
-    bg: "bg-sky-50/80",
-    iconBg: "bg-sky-100",
-    iconColor: "text-sky-600",
-  },
-};
+import { type ColorScheme, colorSchemes } from "@/lib/preference-colors";
 
 interface PreferenceToggleProps {
   icon: React.ReactNode;
@@ -43,7 +21,7 @@ export function PreferenceToggle({
   checked,
   onCheckedChange,
   colorScheme,
-}: PreferenceToggleProps) {
+}: PreferenceToggleProps): React.JSX.Element {
   const colors = colorSchemes[colorScheme];
 
   return (

@@ -13,7 +13,7 @@ from dataclasses import dataclass
 from datetime import datetime, time
 from typing import Literal
 
-from ..circadian_math import parse_time, time_to_minutes
+from ..circadian_math import is_during_sleep, parse_time, time_to_minutes
 from ..types import Intervention, TravelPhase
 
 # Sleep target should not appear within this many hours before departure
@@ -244,7 +244,7 @@ class ConstraintFilter:
 
             i_minutes = time_to_minutes(parse_time(intervention.time))
 
-            if self._is_during_sleep(i_minutes, sleep_minutes, wake_minutes):
+            if is_during_sleep(i_minutes, sleep_minutes, wake_minutes):
                 self.violations.append(
                     ConstraintViolation(
                         intervention_type=intervention.type,
@@ -258,15 +258,6 @@ class ConstraintFilter:
                 result.append(intervention)
 
         return result
-
-    def _is_during_sleep(self, check_minutes: int, sleep_minutes: int, wake_minutes: int) -> bool:
-        """Check if a time falls within the sleep window."""
-        check_minutes = check_minutes % (24 * 60)
-
-        if sleep_minutes > wake_minutes:  # Sleep crosses midnight
-            return check_minutes >= sleep_minutes or check_minutes < wake_minutes
-        else:
-            return sleep_minutes <= check_minutes < wake_minutes
 
     def _is_near_departure(
         self, intervention_time: time, phase_date: datetime, departure_datetime: datetime

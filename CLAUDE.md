@@ -175,7 +175,7 @@ Required:
 
 ## Claude Code Skills
 
-This project uses two Claude Code plugins that should be invoked for significant work:
+This project uses Claude Code plugins that should be invoked for significant work:
 
 **`/frontend-design`** - Use when building or modifying UI components
 
@@ -190,11 +190,20 @@ This project uses two Claude Code plugins that should be invoked for significant
 - Asks clarifying questions, designs architecture, then implements
 - Includes code review phase
 
+**`code-simplifier`** - Use after completing significant work
+
+- Reviews recently modified code for duplication and complexity
+- Extracts shared utilities, consolidates patterns
+- Removes dead code, simplifies conditionals
+- Invoke via Task tool with `subagent_type: "code-simplifier:code-simplifier"`
+
 **When to use them:**
 
 - Building new components or pages → `/frontend-design`
 - Implementing backend features, APIs, or complex logic → `/feature-dev`
 - Small fixes, typos, or simple changes → No skill needed
+
+**Before proposing to commit:** Always run `code-simplifier` after completing multi-file changes or new features. This catches duplication introduced during development and keeps the codebase clean. The workflow is: implement → tests pass → simplify → tests still pass → commit.
 
 ## Testing
 
