@@ -692,6 +692,15 @@ Event titles by type:
 - `sleep_target` → "😴 Target bedtime"
 - `wake_target` → "⏰ Target wake time"
 
+### Grouping Same-Time Events
+
+**Future consideration:** When multiple interventions occur at the same time (e.g., wake_target + light_seek + caffeine_ok all at 10:00 AM), consider grouping them into a single calendar event rather than creating separate events. This would reduce calendar clutter and match the nested card treatment in the UI.
+
+Possible approaches:
+- Single event with combined title: "⏰ Wake up: Light + Caffeine"
+- Single event with bullet-point description listing all interventions
+- Parent event with sub-events (if calendar API supports)
+
 ### Sync Strategy
 
 One-way push with delete-and-replace:

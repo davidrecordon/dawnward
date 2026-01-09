@@ -46,6 +46,21 @@ export interface Intervention {
 }
 
 /**
+ * Group of interventions anchored by wake_target.
+ * Used to display "wake up and do these things" as a nested visual.
+ */
+export interface WakeTargetGroup {
+  /** The wake_target intervention (always type: "wake_target") */
+  wakeTarget: Intervention;
+  /** Other interventions at the same time */
+  children: Intervention[];
+  /** Shared time in HH:MM format */
+  time: string;
+  /** Optional timezone for display */
+  timezone?: string;
+}
+
+/**
  * Phase types from the V2 scheduler
  */
 export type PhaseType =

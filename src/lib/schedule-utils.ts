@@ -2,7 +2,12 @@
  * Schedule manipulation utilities
  */
 
-import type { DaySchedule, Intervention, PhaseType } from "@/types/schedule";
+import type {
+  DaySchedule,
+  Intervention,
+  PhaseType,
+  WakeTargetGroup,
+} from "@/types/schedule";
 
 /**
  * Convert time string to sortable minutes.
@@ -161,4 +166,79 @@ export function dayHasMultipleTimezones(
   }
 
   return timezones.size > 1;
+}
+
+/**
+ * Result of grouping interventions by wake_target.
+ */
+export interface GroupedInterventions {
+  /** Wake target groups (wake_target with same-time children) */
+  groups: WakeTargetGroup[];
+  /** Interventions not grouped (no wake_target at their time) */
+  ungrouped: Intervention[];
+}
+
+/**
+ * Group interventions that share the same time as a wake_target.
+ *
+ * Creates "wake up and do these things" groups where the wake_target
+ * is the parent and other same-time interventions are children.
+ *
+ * @param interventions - Array of interventions for a single day
+ * @returns Groups (wake_target with children) and ungrouped interventions
+ */
+export function groupWakeTargetInterventions(
+  interventions: Intervention[]
+): GroupedInterventions {
+  const groups: WakeTargetGroup[] = [];
+  const ungrouped: Intervention[] = [];
+
+  // Track which interventions have been grouped
+  const groupedIndices = new Set<number>();
+
+  // Find all wake_targets and group same-time interventions with them
+  interventions.forEach((intervention, index) => {
+    if (intervention.type !== "wake_target") return;
+
+    // Skip in-transit wake_targets (they have unique flight_offset context)
+    if (intervention.is_in_transit) {
+      return;
+    }
+
+    // Find children: same time, same timezone, not in-transit
+    const children: Intervention[] = [];
+    const groupKey = `${intervention.time}|${intervention.timezone ?? ""}`;
+
+    interventions.forEach((other, otherIndex) => {
+      if (otherIndex === index) return; // Skip self
+      if (other.type === "wake_target") return; // Don't nest wake_targets
+      if (other.is_in_transit) return; // Skip in-transit items
+
+      const otherKey = `${other.time}|${other.timezone ?? ""}`;
+      if (otherKey === groupKey) {
+        children.push(other);
+        groupedIndices.add(otherIndex);
+      }
+    });
+
+    // Only create a group if there are children
+    if (children.length > 0) {
+      groups.push({
+        wakeTarget: intervention,
+        children,
+        time: intervention.time,
+        timezone: intervention.timezone,
+      });
+      groupedIndices.add(index);
+    }
+  });
+
+  // Collect ungrouped interventions (preserving order)
+  interventions.forEach((intervention, index) => {
+    if (!groupedIndices.has(index)) {
+      ungrouped.push(intervention);
+    }
+  });
+
+  return { groups, ungrouped };
 }

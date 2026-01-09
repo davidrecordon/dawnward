@@ -16,7 +16,7 @@
       "Bash(tsc:*)",
       "Bash(vitest:*)",
       "Skill(feature-dev:*)",
-      "Skill(frontend-design)",
+      "Skill(frontend-design:*)",
       "WebFetch(domain:arcascope.github.io)",
       "WebSearch"
     ]

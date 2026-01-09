@@ -212,6 +212,15 @@ background: linear-gradient(
 - Time badge (right, e.g., "6:00 AM")
 - Completed state: checkbox checked, text strikethrough, reduced opacity
 
+**Nested wake target cards:**
+
+When multiple interventions occur at the same time as a `wake_target`, they display as nested children under the wake target card. This creates a clear "wake up and do these things" visual hierarchy.
+
+- Parent card: full styling with time badge (e.g., "Target wake time" at 10:00 AM)
+- Children cards: compact styling (smaller icon, no time badge)
+- Connecting lines: amber-200 vertical + horizontal connectors
+- Only `wake_target` triggers nesting; other same-time items remain separate
+
 **Intervention types and icons:**
 | Type | Icon | Color | Example title |
 |------|------|-------|---------------|
