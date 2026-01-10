@@ -16,7 +16,8 @@
     "lint:python": "cd api/_python && ruff check . && ruff format --check .",
     "lint:python:fix": "cd api/_python && ruff check . --fix && ruff format .",
     "typecheck:python": "cd api/_python && mypy circadian/",
-    "generate-airports": "bun run scripts/generate-airports.ts"
+    "generate-airports": "bun run scripts/generate-airports.ts",
+    "postinstall": "prisma generate"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.1",
