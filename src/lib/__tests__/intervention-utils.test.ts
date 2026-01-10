@@ -4,6 +4,8 @@ import {
   formatTime,
   getDayLabel,
   formatShortDate,
+  formatFlightOffset,
+  formatFlightPhase,
 } from "../intervention-utils";
 
 describe("getInterventionStyle", () => {
@@ -185,5 +187,70 @@ describe("formatShortDate", () => {
   it("handles single digit days without padding", () => {
     const result = formatShortDate("2026-03-05");
     expect(result).toBe("Mar 5");
+  });
+});
+
+describe("formatFlightOffset", () => {
+  it("formats zero as 'As soon as you can'", () => {
+    expect(formatFlightOffset(0)).toBe("As soon as you can");
+  });
+
+  it("formats fractional hours under 1 as minutes", () => {
+    expect(formatFlightOffset(0.5)).toBe("~30 minutes into flight");
+    expect(formatFlightOffset(0.25)).toBe("~15 minutes into flight");
+    expect(formatFlightOffset(0.75)).toBe("~45 minutes into flight");
+  });
+
+  it("formats whole hours", () => {
+    expect(formatFlightOffset(1)).toBe("~1 hours into flight");
+    expect(formatFlightOffset(4)).toBe("~4 hours into flight");
+    expect(formatFlightOffset(12)).toBe("~12 hours into flight");
+  });
+
+  it("formats fractional hours >= 1", () => {
+    expect(formatFlightOffset(4.5)).toBe("~4.5 hours into flight");
+    expect(formatFlightOffset(2.25)).toBe("~2.25 hours into flight");
+  });
+
+  it("rounds minutes to nearest whole number", () => {
+    // 0.1 hours = 6 minutes
+    expect(formatFlightOffset(0.1)).toBe("~6 minutes into flight");
+    // 0.167 hours ≈ 10 minutes
+    expect(formatFlightOffset(0.167)).toBe("~10 minutes into flight");
+  });
+});
+
+describe("formatFlightPhase", () => {
+  it("returns 'Early in flight' for first third", () => {
+    expect(formatFlightPhase(2, 17)).toBe("Early in flight");
+    expect(formatFlightPhase(5, 17)).toBe("Early in flight");
+    expect(formatFlightPhase(0, 15)).toBe("Early in flight");
+  });
+
+  it("returns 'Mid-flight' for middle third", () => {
+    expect(formatFlightPhase(8, 17)).toBe("Mid-flight");
+    expect(formatFlightPhase(6, 15)).toBe("Mid-flight");
+    expect(formatFlightPhase(7, 15)).toBe("Mid-flight");
+  });
+
+  it("returns 'Later in flight' for final third", () => {
+    expect(formatFlightPhase(13, 17)).toBe("Later in flight");
+    expect(formatFlightPhase(15, 17)).toBe("Later in flight");
+    expect(formatFlightPhase(12, 15)).toBe("Later in flight");
+  });
+
+  it("handles boundary cases at 33% and 66%", () => {
+    // At exactly 33%, should still be "Early in flight" (progress < 0.33)
+    // 5.5/17 = 0.3235 which is < 0.33
+    expect(formatFlightPhase(5.5, 17)).toBe("Early in flight");
+    // Just past 33%, should be "Mid-flight"
+    // 5.7/17 = 0.335 which is >= 0.33
+    expect(formatFlightPhase(5.7, 17)).toBe("Mid-flight");
+    // Just below 66%, should still be "Mid-flight"
+    // 11.1/17 = 0.6529 which is < 0.66
+    expect(formatFlightPhase(11.1, 17)).toBe("Mid-flight");
+    // At 66% and above, should be "Later in flight"
+    // 11.22/17 = 0.66 which is >= 0.66
+    expect(formatFlightPhase(11.22, 17)).toBe("Later in flight");
   });
 });

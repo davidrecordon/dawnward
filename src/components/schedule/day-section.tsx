@@ -12,10 +12,12 @@ import {
   getNowTimezone,
 } from "@/lib/time-utils";
 import { InterventionCard } from "./intervention-card";
+import { InFlightSleepCard } from "./inflight-sleep-card";
 import { FlightCard } from "./flight-card";
 import { NowMarker } from "./now-marker";
 import { TimezoneTransition } from "./timezone-transition";
 import { WakeTargetCard } from "./wake-target-card";
+import { calculateFlightDuration } from "@/lib/timezone-utils";
 import type {
   DaySchedule,
   Intervention,
@@ -58,6 +60,18 @@ type ScheduleItem =
   | TimedItem
   | { kind: "timezone_transition"; fromTz: string; toTz: string };
 
+/**
+ * Determines if a nap_window intervention is an in-flight sleep opportunity.
+ * In-flight sleep windows have a numeric flight_offset_hours from the Python scheduler.
+ * Ground-based naps have null/undefined flight_offset_hours.
+ */
+function isInFlightSleep(intervention: Intervention): boolean {
+  return (
+    intervention.type === "nap_window" &&
+    intervention.flight_offset_hours != null
+  );
+}
+
 export function DaySection({
   daySchedule,
   origin,
@@ -73,6 +87,17 @@ export function DaySection({
 
   // Only show timezone on Flight Day (0) and Arrival day (1)
   const showTimezone = daySchedule.day === 0 || daySchedule.day === 1;
+
+  // Calculate flight duration for in-flight sleep card progress bar
+  const flightDuration = calculateFlightDuration(
+    `${departureDate}T${departureTime}`,
+    `${arrivalDate}T${arrivalTime}`,
+    origin.tz,
+    destination.tz
+  );
+  const totalFlightHours = flightDuration
+    ? flightDuration.hours + flightDuration.minutes / 60
+    : undefined;
 
   // Prepare interventions with timezone info for grouping
   const interventionsWithTimezone: Intervention[] = daySchedule.items.map(
@@ -342,12 +367,19 @@ export function DaySection({
                 />
 
                 {/* Render card based on item type */}
-                {item.kind === "intervention" && (
-                  <InterventionCard
-                    intervention={item.data}
-                    timezone={item.timezone}
-                  />
-                )}
+                {item.kind === "intervention" &&
+                  (isInFlightSleep(item.data) ? (
+                    <InFlightSleepCard
+                      intervention={item.data}
+                      timezone={item.timezone}
+                      totalFlightHours={totalFlightHours}
+                    />
+                  ) : (
+                    <InterventionCard
+                      intervention={item.data}
+                      timezone={item.timezone}
+                    />
+                  ))}
                 {item.kind === "wake_target_group" && (
                   <WakeTargetCard group={item.data} timezone={item.timezone} />
                 )}

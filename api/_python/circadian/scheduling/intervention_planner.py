@@ -576,11 +576,10 @@ class InterventionPlanner:
                 return Intervention(
                     time=format_time(nap_rec.window_start),
                     type="nap_window",
-                    title=f"Recovery nap ({nap_rec.max_duration_min} min max)",
+                    title="Recovery nap",
                     description=(
-                        f"You'll be tired from the flight. A recovery nap helps you function "
-                        f"while your body adjusts. Hard cutoff: {format_time_12h(nap_rec.window_end)} "
-                        f"to protect tonight's sleep."
+                        f"You'll be tired from the flight. Nap anytime before "
+                        f"{format_time_12h(nap_rec.window_end)} to recover while protecting tonight's sleep."
                     ),
                     duration_min=nap_rec.max_duration_min,
                     window_end=format_time(nap_rec.window_end),
@@ -595,10 +594,10 @@ class InterventionPlanner:
             return Intervention(
                 time=format_time(nap_rec.window_start),
                 type="nap_window",
-                title=f"Optional nap ({nap_rec.max_duration_min} min max)",
+                title="Optional nap",
                 description=(
-                    f"If you're tired, a short nap can help. Keep it under {nap_rec.max_duration_min} minutes "
-                    f"and finish by {format_time_12h(nap_rec.window_end)} to protect nighttime sleep."
+                    f"Nap anytime before {format_time_12h(nap_rec.window_end)} if you're tired. "
+                    f"Keep it under {nap_rec.max_duration_min} minutes to protect tonight's sleep."
                 ),
                 duration_min=nap_rec.max_duration_min,
                 window_end=format_time(nap_rec.window_end),

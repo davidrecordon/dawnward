@@ -198,3 +198,38 @@ export function formatTimeWithTimezone(
   if (!timezone) return formattedTime;
   return `${formattedTime} ${getTimezoneAbbr(timezone, date)}`;
 }
+
+/**
+ * Format flight offset hours for display.
+ * Used for in-flight sleep windows to show when during the flight they occur.
+ *
+ * @param hours - Hours into flight (e.g., 4.5)
+ * @returns Human-readable string like "~4.5 hours into flight"
+ */
+export function formatFlightOffset(hours: number): string {
+  if (hours < 1) {
+    const minutes = Math.round(hours * 60);
+    if (minutes === 0) {
+      return "As soon as you can";
+    }
+    return `~${minutes} minutes into flight`;
+  }
+  return `~${hours} hours into flight`;
+}
+
+/**
+ * Get a descriptive label for when during a flight a sleep window occurs.
+ *
+ * @param offsetHours - Hours into flight
+ * @param totalHours - Total flight duration in hours
+ * @returns "Early in flight", "Mid-flight", or "Later in flight"
+ */
+export function formatFlightPhase(
+  offsetHours: number,
+  totalHours: number
+): string {
+  const progress = offsetHours / totalHours;
+  if (progress < 0.33) return "Early in flight";
+  if (progress < 0.66) return "Mid-flight";
+  return "Later in flight";
+}

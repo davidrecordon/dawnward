@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   getInterventionStyle,
   formatTimeWithTimezone,
+  formatFlightOffset,
 } from "@/lib/intervention-utils";
 import type { Intervention } from "@/types/schedule";
 
@@ -14,21 +15,6 @@ interface InterventionCardProps {
   timezone?: string;
   /** Card variant: default shows full card, nested shows compact version without time */
   variant?: "default" | "nested";
-}
-
-/**
- * Format flight offset hours for display
- * e.g., 4.5 -> "~4.5 hours into flight"
- */
-function formatFlightOffset(hours: number): string {
-  if (hours < 1) {
-    const minutes = Math.round(hours * 60);
-    if (minutes === 0) {
-      return `As soon as you can`;
-    }
-    return `~${minutes} minutes into flight`;
-  }
-  return `~${hours} hours into flight`;
 }
 
 export function InterventionCard({
@@ -41,9 +27,7 @@ export function InterventionCard({
   const isNested = variant === "nested";
 
   // Check if this is an in-flight item with offset info
-  const hasFlightOffset =
-    intervention.flight_offset_hours !== undefined &&
-    intervention.flight_offset_hours !== null;
+  const hasFlightOffset = intervention.flight_offset_hours != null;
 
   return (
     <Card
