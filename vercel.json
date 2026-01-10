@@ -5,17 +5,11 @@
       "use": "@vercel/next"
     },
     {
-      "src": "serverless/schedule/generate.py",
+      "src": "api/schedule/generate.py",
       "use": "@vercel/python",
       "config": {
-        "includeFiles": ["serverless/_python/**"]
+        "includeFiles": ["api/_python/**"]
       }
-    }
-  ],
-  "rewrites": [
-    {
-      "source": "/api/schedule/generate",
-      "destination": "/serverless/schedule/generate"
     }
   ]
 }
