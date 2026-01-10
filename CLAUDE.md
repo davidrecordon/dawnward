@@ -92,7 +92,11 @@ bun run test:python  # pytest
 src/
 ├── app/              # Next.js App Router pages and API routes
 │   ├── auth/         # Sign-in and error pages
-│   └── api/auth/     # NextAuth route handlers
+│   ├── api/auth/     # NextAuth route handlers
+│   ├── api/trips/    # Trip CRUD and sharing endpoints
+│   ├── trip/[id]/    # DB-backed trip view
+│   ├── s/[code]/     # Shared trip view (public)
+│   └── history/      # User's trip history (auth required)
 ├── components/
 │   ├── ui/           # shadcn/ui components (Button, Card, Input, etc.)
 │   ├── auth/         # Auth components (SignInButton, UserMenu, etc.)
@@ -129,22 +133,29 @@ design_docs/
 
 **UI Components**: Using shadcn/ui with Radix primitives. Components use `class-variance-authority` for variants and the `cn()` helper for class merging. Add new components with `bunx shadcn@latest add <component>` (use bunx, not npx).
 
-**Auth Flow**: Progressive signup - anonymous users can generate schedules (stored in localStorage), then sign in with Google to save trips and preferences. Auth uses JWT sessions for Edge Runtime compatibility. Config is split: `auth.config.ts` (Edge-compatible) and `auth.ts` (with Prisma adapter).
+**Auth Flow**: Progressive signup - anonymous users can generate schedules (saved to DB with `userId: null`), then sign in with Google to access trip history and preferences. Auth uses JWT sessions for Edge Runtime compatibility. Config is split: `auth.config.ts` (Edge-compatible) and `auth.ts` (with Prisma adapter).
+
+**Trip Storage**: All trips are stored in the database via `SharedSchedule` model. localStorage is only used for form draft state. Trips can optionally be shared via short codes (`/s/abc123`).
 
 ### Database Schema (Key Tables)
 
-**Implemented (Phase 1 Auth):**
+**Auth (NextAuth.js):**
 
 - `User` - id, email, name, image, preferences (wake/sleep times, melatonin/caffeine, intensity)
 - `Account` - OAuth provider accounts (Google tokens, scopes)
 - `Session` - Database sessions (though JWT strategy is used)
 - `VerificationToken` - For email verification (future use)
 
-**Planned (Trip Persistence):**
+**Trip Storage:**
 
-- `trips` - Container for legs with status (planned/active/completed) and prep_days
-- `legs` - Individual flight segments with origin/destination timezones and datetimes
-- `schedules` - Generated plans with model_version and inputs_hash for cache invalidation
+- `SharedSchedule` - All trips (shared or not), with optional share code
+  - `id` (cuid), `code` (nullable short code for sharing)
+  - `userId` (nullable - null for anonymous users)
+  - Schedule inputs: originTz, destTz, departure/arrival times, preferences
+  - Metadata: routeLabel, viewCount, createdAt, lastViewedAt
+
+**Planned:**
+
 - `calendar_syncs` - Track Google Calendar event IDs for delete-and-replace sync
 
 ### Schedule Generation
@@ -168,6 +179,23 @@ Key intervention types:
 ### MCP Interface
 
 Public read-only endpoint at `/api/mcp` for Claude to answer jet lag questions. No auth required, rate limited by IP.
+
+## Security Considerations
+
+**Trip Access Control:**
+- Private trips (no share code) are only viewable by the owner
+- Shared trips (`/s/[code]`) are publicly viewable
+- `/trip/[id]` returns 404 for non-owners of unshared trips (prevents IDOR)
+
+**API Authorization:**
+- DELETE and share endpoints require authentication AND ownership
+- Use consistent 404 responses to prevent enumeration attacks
+- Share codes use `crypto.randomBytes()` for unpredictable generation
+
+**Anonymous Users:**
+- Can create trips (saved with `userId: null`)
+- Cannot access trip history or share trips
+- Anonymous trips need periodic cleanup (TODO: cron job)
 
 ## Environment Variables
 
@@ -232,7 +260,7 @@ This project uses Claude Code plugins that should be invoked for significant wor
 
 ## Testing
 
-**TypeScript (Vitest)**: ~180 tests covering utility functions and components
+**TypeScript (Vitest)**: ~290 tests covering utility functions and components
 
 - `src/lib/__tests__/time-utils.test.ts` - Date/time formatting, timezone-aware operations
 - `src/lib/__tests__/timezone-utils.test.ts` - Flight duration calculation, timezone shifts
@@ -240,8 +268,12 @@ This project uses Claude Code plugins that should be invoked for significant wor
 - `src/lib/__tests__/intervention-utils.test.ts` - Intervention styling, time formatting
 - `src/lib/__tests__/schedule-storage.test.ts` - Form state localStorage persistence
 - `src/lib/__tests__/error-utils.test.ts` - Error message extraction
+- `src/lib/__tests__/short-code.test.ts` - Share code generation
+- `src/lib/__tests__/trip-status.test.ts` - Relative time labels ("in 2 days", "yesterday")
+- `src/lib/__tests__/trip-utils.test.ts` - Trip data mapping utilities
 - `src/lib/schedule-utils.test.ts` - Schedule merging and sorting logic
 - `src/app/api/schedule/generate/__tests__/route.test.ts` - API route data construction
+- `src/app/api/user/preferences/__tests__/route.test.ts` - User preferences API
 - `src/components/__tests__/header.test.tsx` - Session-aware header rendering
 - `src/components/auth/__tests__/sign-in-button.test.tsx` - Sign-in button variants
 - `src/components/auth/__tests__/user-menu.test.tsx` - User menu, avatar initials

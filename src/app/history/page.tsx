@@ -1,19 +1,31 @@
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
+import { prisma } from "@/lib/prisma";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plane } from "lucide-react";
 import Link from "next/link";
+import { TripHistoryList } from "@/components/trip-history-list";
 
 export default async function HistoryPage() {
   const session = await auth();
 
-  if (!session?.user) {
+  if (!session?.user?.id) {
     redirect("/auth/signin?callbackUrl=/history");
   }
 
-  // TODO: Query trips from database once trip persistence is implemented
-  const trips: never[] = [];
+  const trips = await prisma.sharedSchedule.findMany({
+    where: { userId: session.user.id },
+    orderBy: { createdAt: "desc" },
+    select: {
+      id: true,
+      routeLabel: true,
+      originTz: true,
+      destTz: true,
+      departureDatetime: true,
+      code: true,
+    },
+  });
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-8">
@@ -46,9 +58,7 @@ export default async function HistoryPage() {
             </CardContent>
           </Card>
         ) : (
-          <div className="space-y-3">
-            {/* Trip list will go here when persistence is implemented */}
-          </div>
+          <TripHistoryList initialTrips={trips} />
         )}
       </div>
     </div>

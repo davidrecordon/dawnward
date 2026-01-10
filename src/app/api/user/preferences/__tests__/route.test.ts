@@ -77,7 +77,9 @@ describe("GET /api/user/preferences", () => {
     });
 
     it("returns 401 when session.user has no id", async () => {
-      mockedAuth.mockResolvedValue({ user: { email: "test@example.com" } } as never);
+      mockedAuth.mockResolvedValue({
+        user: { email: "test@example.com" },
+      } as never);
 
       const response = await GET();
 
@@ -103,7 +105,9 @@ describe("GET /api/user/preferences", () => {
     });
 
     it("returns user preferences when user exists", async () => {
-      mockedPrisma.user.findUnique.mockResolvedValue(mockUserPreferences as never);
+      mockedPrisma.user.findUnique.mockResolvedValue(
+        mockUserPreferences as never
+      );
 
       const response = await GET();
 
@@ -113,7 +117,9 @@ describe("GET /api/user/preferences", () => {
     });
 
     it("queries database with correct user id", async () => {
-      mockedPrisma.user.findUnique.mockResolvedValue(mockUserPreferences as never);
+      mockedPrisma.user.findUnique.mockResolvedValue(
+        mockUserPreferences as never
+      );
 
       await GET();
 
@@ -161,7 +167,9 @@ describe("PATCH /api/user/preferences", () => {
     });
 
     it("returns 401 when session.user has no id", async () => {
-      mockedAuth.mockResolvedValue({ user: { email: "test@example.com" } } as never);
+      mockedAuth.mockResolvedValue({
+        user: { email: "test@example.com" },
+      } as never);
 
       const response = await PATCH(createRequest({ usesMelatonin: true }));
 
@@ -200,7 +208,9 @@ describe("PATCH /api/user/preferences", () => {
     });
 
     it("returns 400 for invalid preference values", async () => {
-      const response = await PATCH(createRequest({ scheduleIntensity: "extreme" }));
+      const response = await PATCH(
+        createRequest({ scheduleIntensity: "extreme" })
+      );
 
       expect(response.status).toBe(400);
       const data = await response.json();

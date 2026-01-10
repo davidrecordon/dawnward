@@ -7,6 +7,7 @@ import {
   ChevronRight,
   Coffee,
   Gauge,
+  Loader2,
   MapPin,
   Moon,
   Pill,
@@ -30,6 +31,7 @@ interface TripFormProps {
   formState: TripFormState;
   onFormChange: (state: TripFormState) => void;
   onSubmit?: () => void;
+  isSubmitting?: boolean;
 }
 
 interface FormErrors {
@@ -49,7 +51,12 @@ function FieldError({ message }: { message?: string }) {
   );
 }
 
-export function TripForm({ formState, onFormChange, onSubmit }: TripFormProps) {
+export function TripForm({
+  formState,
+  onFormChange,
+  onSubmit,
+  isSubmitting,
+}: TripFormProps) {
   const router = useRouter();
   const [errors, setErrors] = React.useState<FormErrors>({});
   const submitButtonRef = React.useRef<HTMLButtonElement>(null);
@@ -375,11 +382,21 @@ export function TripForm({ formState, onFormChange, onSubmit }: TripFormProps) {
         <Button
           ref={submitButtonRef}
           onClick={handleSubmit}
+          disabled={isSubmitting}
           className="w-full bg-sky-500 text-white hover:bg-sky-600"
           size="lg"
         >
-          Generate My Schedule
-          <ChevronRight className="ml-2 h-4 w-4" />
+          {isSubmitting ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Generating...
+            </>
+          ) : (
+            <>
+              Generate My Schedule
+              <ChevronRight className="ml-2 h-4 w-4" />
+            </>
+          )}
         </Button>
       </CardContent>
     </Card>

@@ -21,8 +21,9 @@ model User {
   updatedAt     DateTime  @updatedAt
 
   // Relationships
-  accounts Account[]
-  sessions Session[]
+  accounts         Account[]
+  sessions         Session[]
+  sharedSchedules  SharedSchedule[]
 
   // User preferences
   defaultPrepDays     Int     @default(3)
@@ -73,4 +74,34 @@ model VerificationToken {
   expires    DateTime
 
   @@unique([identifier, token])
+}
+
+model SharedSchedule {
+  id     String  @id @default(cuid())
+  code   String? @unique @db.VarChar(8) // null = saved but not shared
+  userId String? // null = anonymous user
+  user   User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Schedule inputs (denormalized for fast regeneration)
+  originTz          String
+  destTz            String
+  departureDatetime String
+  arrivalDatetime   String
+  prepDays          Int
+  wakeTime          String
+  sleepTime         String
+  usesMelatonin     Boolean
+  usesCaffeine      Boolean
+  usesExercise      Boolean
+  napPreference     String @default("flight_only")
+  scheduleIntensity String @default("balanced")
+
+  // Metadata
+  routeLabel   String?
+  viewCount    Int       @default(0)
+  createdAt    DateTime  @default(now())
+  lastViewedAt DateTime?
+
+  @@index([userId])
+  @@index([code])
 }

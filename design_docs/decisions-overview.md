@@ -49,8 +49,8 @@
 - **Google only** via NextAuth.js v5
 - **Phase 1 complete:** Sign-in, protected routes (`/history`, `/settings`), user preferences
 - **Session strategy:** JWT (for Edge Runtime compatibility with Next.js middleware)
-- **Progressive signup:** Anonymous users can generate schedules, then sign in to save
-- **localStorage:** Used only as OAuth bridge (holds one trip during redirect, clears after login or 24h)
+- **Progressive signup:** Anonymous users can generate schedules (saved to DB), sign in to access history
+- **localStorage:** Form draft state only; all saved trips live in database
 - **OAuth scopes (Phase 1):** `openid`, `email`, `profile`
 - **OAuth scopes (Phase 2):** Add `calendar.events` for Google Calendar sync
 
@@ -60,6 +60,15 @@
 - **Target calendar:** Primary calendar
 - **Sync strategy:** Delete-and-replace (not complex two-way sync)
 - **Event notifications:** Calendar event alerts at time of intervention
+
+### Trip Storage & Sharing
+
+- **All trips in database** — localStorage only for form draft state
+- **Anonymous support:** Trips saved with `userId: null`, accessible by direct link
+- **Shareable URLs:** Short codes (`/s/abc123`) for sharing schedules
+- **Login required to share** — creates upsell moment, enables attribution
+- **Trip history:** Users can view and delete past trips at `/history`
+- **Unified view:** Both `/trip/[id]` and `/s/[code]` use same display component
 
 ### User Preferences (stored in DB)
 
@@ -144,7 +153,6 @@ Key tables (full SQL in backend design doc):
 
 - Flight lookup API (FlightAware, AeroDataBox)
 - Push notifications (PWA or native)
-- Trip sharing via public link
 - Apple/GitHub OAuth providers
 - Eight Sleep bed temperature control (auto-cool at target bedtime)
 
@@ -156,6 +164,7 @@ Key tables (full SQL in backend design doc):
 | ----------------------------- | -------------------------------------------------- |
 | Curate airport JSON           | DONE — 7,168 airports in public/data/airports.json |
 | Phase 1 Auth (Google sign-in) | DONE — JWT sessions, protected routes, user prefs  |
+| Shareable URLs                | DONE — `/s/[code]` short links, trip history page  |
 | Set up hello@dawnward.app     | TODO — Used for Google OAuth consent screen        |
 | Phase 2 Auth (Calendar sync)  | TODO — Add calendar.events scope, sync API         |
 

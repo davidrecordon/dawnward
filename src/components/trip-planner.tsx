@@ -12,6 +12,40 @@ import { defaultFormState, type TripFormState } from "@/types/trip-form";
 import { getFormState, saveFormState } from "@/lib/schedule-storage";
 import type { UserPreferences } from "@/types/user-preferences";
 
+/** Save trip to database and return the trip ID */
+async function saveTripToDb(formState: TripFormState): Promise<string> {
+  const response = await fetch("/api/trips", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      origin_tz: formState.origin?.tz,
+      dest_tz: formState.destination?.tz,
+      departure_datetime: formState.departureDateTime,
+      arrival_datetime: formState.arrivalDateTime,
+      prep_days: formState.prepDays,
+      wake_time: formState.wakeTime,
+      sleep_time: formState.sleepTime,
+      uses_melatonin: formState.useMelatonin,
+      uses_caffeine: formState.useCaffeine,
+      uses_exercise: formState.useExercise,
+      nap_preference: formState.napPreference,
+      schedule_intensity: formState.scheduleIntensity,
+      route_label:
+        formState.origin?.code && formState.destination?.code
+          ? `${formState.origin.code} → ${formState.destination.code}`
+          : undefined,
+    }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || "Failed to save trip");
+  }
+
+  const { id } = await response.json();
+  return id;
+}
+
 /** All preference field keys (for loading from user settings) */
 // eslint-disable-next-line @typescript-eslint/no-unused-vars -- Used for PreferenceKey type derivation
 const PREFERENCE_FIELDS = [
@@ -102,6 +136,7 @@ export function TripPlanner() {
   const [isHydrated, setIsHydrated] = React.useState(false);
   const [showSaveModal, setShowSaveModal] = React.useState(false);
   const [hasShownModal, setHasShownModal] = React.useState(false);
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
 
   // Track the user's saved preferences (null if not signed in or not loaded)
   const [savedPreferences, setSavedPreferences] = React.useState<Pick<
@@ -154,6 +189,20 @@ export function TripPlanner() {
     }
   }, [formState, isHydrated]);
 
+  // Save trip to database and navigate to schedule view
+  const navigateToSchedule = React.useCallback(async () => {
+    if (isSubmitting) return;
+
+    setIsSubmitting(true);
+    try {
+      const tripId = await saveTripToDb(formState);
+      router.push(`/trip/${tripId}`);
+    } catch (error) {
+      console.error("Failed to save trip:", error);
+      setIsSubmitting(false);
+    }
+  }, [formState, router, isSubmitting]);
+
   // Handle form submission - check if saveable preferences changed
   const handleSubmit = () => {
     // If user is signed in and saveable preferences changed, show save modal
@@ -170,8 +219,8 @@ export function TripPlanner() {
       return;
     }
 
-    // Otherwise, navigate directly
-    router.push("/trip");
+    // Otherwise, save to DB and navigate
+    navigateToSchedule();
   };
 
   // Handle modal close (either save or skip)
@@ -184,8 +233,8 @@ export function TripPlanner() {
       setSavedPreferences(extractPreferences(formState));
     }
 
-    // Navigate to trip page
-    router.push("/trip");
+    // Save to DB and navigate to schedule view
+    navigateToSchedule();
   };
 
   return (
@@ -196,6 +245,7 @@ export function TripPlanner() {
           formState={formState}
           onFormChange={setFormState}
           onSubmit={handleSubmit}
+          isSubmitting={isSubmitting}
         />
 
         {/* Right column: Preview cards */}
