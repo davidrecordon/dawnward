@@ -79,6 +79,32 @@ export async function POST(request: Request) {
 
     const data = parseResult.data;
 
+    // Check for duplicate trip (authenticated users only)
+    if (userId) {
+      const existingTrip = await prisma.sharedSchedule.findFirst({
+        where: {
+          userId,
+          originTz: data.origin_tz,
+          destTz: data.dest_tz,
+          departureDatetime: data.departure_datetime,
+          arrivalDatetime: data.arrival_datetime,
+          prepDays: data.prep_days,
+          wakeTime: data.wake_time,
+          sleepTime: data.sleep_time,
+          usesMelatonin: data.uses_melatonin,
+          usesCaffeine: data.uses_caffeine,
+          usesExercise: data.uses_exercise,
+          napPreference: data.nap_preference,
+          scheduleIntensity: data.schedule_intensity,
+        },
+        select: { id: true },
+      });
+
+      if (existingTrip) {
+        return NextResponse.json({ id: existingTrip.id, saved: true });
+      }
+    }
+
     // Create saved trip (no share code)
     const trip = await prisma.sharedSchedule.create({
       data: {
