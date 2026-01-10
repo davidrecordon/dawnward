@@ -1,11 +1,13 @@
 {
   "functions": {
-    "api/schedule/generate.py": {
-      "includeFiles": "api/_python/**"
+    "serverless/schedule/generate.py": {
+      "includeFiles": "serverless/_python/**"
     }
   },
-  "routes": [
-    { "src": "/api/schedule/generate", "dest": "/api/schedule/generate.py" },
-    { "src": "/api/(.*)", "dest": "/api/$1" }
+  "rewrites": [
+    {
+      "source": "/api/schedule/generate",
+      "destination": "/serverless/schedule/generate"
+    }
   ]
 }
