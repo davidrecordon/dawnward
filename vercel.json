@@ -3,5 +3,9 @@
     "api/schedule/generate.py": {
       "includeFiles": "api/_python/**"
     }
-  }
+  },
+  "routes": [
+    { "src": "/api/schedule/generate", "dest": "/api/schedule/generate.py" },
+    { "src": "/api/(.*)", "dest": "/api/$1" }
+  ]
 }
