@@ -94,9 +94,13 @@ src/
 │   ├── auth/         # Sign-in and error pages
 │   ├── api/auth/     # NextAuth route handlers
 │   ├── api/trips/    # Trip CRUD and sharing endpoints
+│   ├── api/user/     # User preferences endpoint
+│   ├── api/share/    # Shared trip lookup
 │   ├── trip/[id]/    # DB-backed trip view
 │   ├── s/[code]/     # Shared trip view (public)
-│   └── history/      # User's trip history (auth required)
+│   ├── trips/        # User's trip history (auth required)
+│   ├── settings/     # User preferences (auth required)
+│   └── science/      # Science explainer page
 ├── components/
 │   ├── ui/           # shadcn/ui components (Button, Card, Input, etc.)
 │   ├── auth/         # Auth components (SignInButton, UserMenu, etc.)
@@ -176,9 +180,9 @@ Key intervention types:
 - `sleep_target` / `wake_target` - Target sleep schedule
 - `sleep_window` - In-flight sleep opportunities (for ultra-long-haul flights)
 
-### MCP Interface
+### MCP Interface (Planned)
 
-Public read-only endpoint at `/api/mcp` for Claude to answer jet lag questions. No auth required, rate limited by IP.
+Future: Public read-only endpoint at `/api/mcp` for Claude to answer jet lag questions. Not yet implemented.
 
 ## Security Considerations
 
@@ -260,7 +264,7 @@ This project uses Claude Code plugins that should be invoked for significant wor
 
 ## Testing
 
-**TypeScript (Vitest)**: ~290 tests covering utility functions and components
+**TypeScript (Vitest)**: ~300 tests covering utility functions and components
 
 - `src/lib/__tests__/time-utils.test.ts` - Date/time formatting, timezone-aware operations
 - `src/lib/__tests__/timezone-utils.test.ts` - Flight duration calculation, timezone shifts
@@ -271,12 +275,18 @@ This project uses Claude Code plugins that should be invoked for significant wor
 - `src/lib/__tests__/short-code.test.ts` - Share code generation
 - `src/lib/__tests__/trip-status.test.ts` - Relative time labels ("in 2 days", "yesterday")
 - `src/lib/__tests__/trip-utils.test.ts` - Trip data mapping utilities
+- `src/lib/__tests__/auth-utils.test.ts` - Callback URL validation, auth utilities
+- `src/lib/__tests__/form-defaults.test.ts` - Form default value handling
 - `src/lib/schedule-utils.test.ts` - Schedule merging and sorting logic
 - `src/app/api/schedule/generate/__tests__/route.test.ts` - API route data construction
 - `src/app/api/user/preferences/__tests__/route.test.ts` - User preferences API
+- `src/app/api/trips/__tests__/route.test.ts` - Trip CRUD and deduplication
 - `src/components/__tests__/header.test.tsx` - Session-aware header rendering
+- `src/components/__tests__/preferences-save-modal.test.tsx` - Preference save modal
 - `src/components/auth/__tests__/sign-in-button.test.tsx` - Sign-in button variants
 - `src/components/auth/__tests__/user-menu.test.tsx` - User menu, avatar initials
+- `src/components/schedule/__tests__/day-section.test.tsx` - Schedule day section rendering
+- `src/types/__tests__/user-preferences.test.ts` - User preference type validation
 
 **Python (pytest)**: ~135 tests covering schedule generation (6-layer validation strategy)
 

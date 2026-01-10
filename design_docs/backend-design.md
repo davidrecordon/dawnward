@@ -17,7 +17,7 @@ Dawnward is a free, open-source web app for jet lag optimization. It uses the Ar
 
 | Layer          | Technology               | Notes                                  |
 | -------------- | ------------------------ | -------------------------------------- |
-| Framework      | Next.js 14+ (App Router) | Vercel-native, React Server Components |
+| Framework      | Next.js 16+ (App Router) | Vercel-native, React Server Components |
 | Auth           | NextAuth.js v5           | Google provider with Calendar scope    |
 | Database       | Vercel Postgres          | Free tier (256MB)                      |
 | Python Runtime | Vercel Python Functions  | For Arcascope circadian library        |

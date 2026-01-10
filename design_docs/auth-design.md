@@ -30,7 +30,7 @@ Phase 1 authentication is fully implemented with Google OAuth.
 - NextAuth v5 configuration with JWT strategy
 - Edge-compatible middleware for route protection
 - Auth UI components (SignInButton, SignInPrompt, UserMenu)
-- Protected routes: `/history`, `/settings`
+- Protected routes: `/trips`, `/settings`
 - Tests for auth components
 
 ### Phase 2 (Calendar - Later)
@@ -39,6 +39,7 @@ Phase 1 authentication is fully implemented with Google OAuth.
 - Google Calendar API client
 - Calendar sync functionality
 - Re-auth flow for missing calendar scope
+- Remove `calendar-coming-soon-modal.tsx` placeholder
 
 ---
 
@@ -940,6 +941,7 @@ model CalendarSync {
 5. Create calendar sync API route
 6. Add CalendarSync model to Prisma
 7. Update UI with "Add to Calendar" functionality
+8. Remove `calendar-coming-soon-modal.tsx` and update `trip-planner.tsx` / `trip-schedule-view.tsx` to use real calendar buttons
 
 ---
 

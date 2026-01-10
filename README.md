@@ -31,6 +31,10 @@ The app generates a day-by-day schedule starting several days before your flight
 - **Schedule intensity** — Choose gentle, balanced, or aggressive adaptation
 - **Mobile-first UI** — Check your schedule on your phone
 - **No account required** — Generate schedules without signing up
+- **User accounts** — Sign in with Google to save trips and preferences
+- **Trip history** — View and manage your saved trips
+- **Shareable URLs** — Share your schedule with travel companions
+- **Saved preferences** — Set default wake/sleep times and intervention preferences
 
 ---
 
@@ -59,7 +63,7 @@ The app generates a day-by-day schedule starting several days before your flight
 ```bash
 # Install dependencies
 bun install
-pip install -r requirements.txt
+pip install -r requirements.txt  # Python deps for circadian model
 
 # Run development server
 bun dev
@@ -101,6 +105,10 @@ bun prisma migrate dev
 ```
 src/
 ├── app/              # Next.js pages and API routes
+│   ├── trips/        # Trip history (auth required)
+│   ├── settings/     # User preferences (auth required)
+│   ├── science/      # Science explainer page
+│   └── api/          # API endpoints
 ├── components/       # React components
 │   └── ui/           # shadcn/ui components
 ├── lib/              # Utilities and helpers
