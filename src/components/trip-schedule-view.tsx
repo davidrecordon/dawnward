@@ -12,6 +12,7 @@ import {
 } from "@/components/schedule/journey-states";
 import { SignInPrompt } from "@/components/auth/sign-in-prompt";
 import { ShareButton } from "@/components/share-button";
+import { CalendarComingSoonModal } from "@/components/calendar-coming-soon-modal";
 import { getDayLabel, formatShortDate } from "@/lib/intervention-utils";
 import { mergePhasesByDate } from "@/lib/schedule-utils";
 import {
@@ -80,6 +81,7 @@ export function TripScheduleView({
   const [schedule, setSchedule] = useState<ScheduleResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showCalendarModal, setShowCalendarModal] = useState(false);
 
   useEffect(() => {
     async function generateSchedule() {
@@ -337,7 +339,11 @@ export function TripScheduleView({
         {isOwner && (
           <div className="flex gap-3 pt-4">
             <ShareButton formState={formStateForShare} tripId={tripId} />
-            <Button variant="outline" className="flex-1 bg-white/70">
+            <Button
+              variant="outline"
+              className="flex-1 bg-white/70"
+              onClick={() => setShowCalendarModal(true)}
+            >
               <Calendar className="mr-2 h-4 w-4" />
               Add to Calendar
             </Button>
@@ -361,6 +367,13 @@ export function TripScheduleView({
             </Link>
           </div>
         )}
+
+        {/* Calendar Coming Soon Modal */}
+        <CalendarComingSoonModal
+          open={showCalendarModal}
+          onClose={() => setShowCalendarModal(false)}
+          isSignedIn={isLoggedIn}
+        />
       </div>
     </div>
   );

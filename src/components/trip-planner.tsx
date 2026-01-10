@@ -8,6 +8,7 @@ import { Calendar } from "lucide-react";
 import { TripForm } from "@/components/trip-form";
 import { TripPreviewCard } from "@/components/trip-preview-card";
 import { PreferencesSaveModal } from "@/components/preferences-save-modal";
+import { CalendarComingSoonModal } from "@/components/calendar-coming-soon-modal";
 import { defaultFormState, type TripFormState } from "@/types/trip-form";
 import { getFormState, saveFormState } from "@/lib/schedule-storage";
 import type { UserPreferences } from "@/types/user-preferences";
@@ -135,6 +136,7 @@ export function TripPlanner() {
     React.useState<TripFormState>(defaultFormState);
   const [isHydrated, setIsHydrated] = React.useState(false);
   const [showSaveModal, setShowSaveModal] = React.useState(false);
+  const [showCalendarModal, setShowCalendarModal] = React.useState(false);
   const [hasShownModal, setHasShownModal] = React.useState(false);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
 
@@ -268,7 +270,10 @@ export function TripPlanner() {
             <p className="mb-3 text-sm text-slate-500">
               Get reminders pushed directly to your calendar
             </p>
-            <button className="rounded-lg border border-slate-300 px-4 py-1.5 text-sm hover:bg-slate-50">
+            <button
+              onClick={() => setShowCalendarModal(true)}
+              className="rounded-lg border border-slate-300 px-4 py-1.5 text-sm hover:bg-slate-50"
+            >
               Connect Calendar
             </button>
           </div>
@@ -292,6 +297,14 @@ export function TripPlanner() {
         open={showSaveModal}
         onClose={handleModalClose}
         preferences={extractSaveablePreferences(formState)}
+      />
+
+      {/* Calendar Coming Soon Modal */}
+      <CalendarComingSoonModal
+        open={showCalendarModal}
+        onClose={() => setShowCalendarModal(false)}
+        isSignedIn={status === "authenticated"}
+        userEmail={session?.user?.email}
       />
     </>
   );
