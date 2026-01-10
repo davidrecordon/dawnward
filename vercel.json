@@ -3,12 +3,16 @@
     {
       "src": "package.json",
       "use": "@vercel/next"
+    },
+    {
+      "src": "api/schedule/generate.py",
+      "use": "@vercel/python@5.0.2",
+      "config": {
+        "includeFiles": "api/_python/**"
+      }
     }
   ],
-  "functions": {
-    "api/schedule/generate.py": {
-      "runtime": "@vercel/python@5",
-      "includeFiles": "api/_python/**"
-    }
-  }
+  "routes": [
+    { "src": "/api/schedule/generate", "dest": "api/schedule/generate.py" }
+  ]
 }
