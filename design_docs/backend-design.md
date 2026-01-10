@@ -19,10 +19,21 @@ Dawnward is a free, open-source web app for jet lag optimization. It uses the Ar
 | -------------- | ------------------------ | -------------------------------------- |
 | Framework      | Next.js 16+ (App Router) | Vercel-native, React Server Components |
 | Auth           | NextAuth.js v5           | Google provider with Calendar scope    |
-| Database       | Vercel Postgres          | Free tier (256MB)                      |
+| Database       | Prisma Postgres          | With `@prisma/adapter-pg` driver       |
 | Python Runtime | Vercel Python Functions  | For Arcascope circadian library        |
 | Analytics      | Vercel Analytics         | Free tier                              |
 | Repo           | GitHub                   | Vercel auto-deploys from main          |
+
+### Vercel Deployment
+
+Next.js and Python serverless functions coexist via explicit `vercel.json` configuration. See `vercel-design.md` for the full deployment architecture.
+
+**Key points:**
+
+- Uses `builds` array to explicitly specify `@vercel/next` and `@vercel/python@5.0.2`
+- Uses `routes` to direct `/api/schedule/generate` to the Python function
+- All other `/api/*` routes are handled by Next.js (including auth)
+- Local development uses a TypeScript wrapper that spawns Python
 
 ---
 
@@ -758,14 +769,11 @@ async function syncToCalendar(tripId, userId) {
 ## Environment Variables
 
 ```bash
-# Database
-POSTGRES_URL=
-POSTGRES_PRISMA_URL=
-POSTGRES_URL_NON_POOLING=
+# Database (Prisma Postgres)
+DATABASE_URL=  # PostgreSQL connection string
 
-# NextAuth
-NEXTAUTH_URL=https://dawnward.app
-NEXTAUTH_SECRET=
+# Auth.js v5
+AUTH_SECRET=  # Generate with: openssl rand -base64 32
 
 # Google OAuth
 GOOGLE_CLIENT_ID=
@@ -774,6 +782,8 @@ GOOGLE_CLIENT_SECRET=
 # Optional
 RATE_LIMIT_DISABLED=false  # For development
 ```
+
+**Note:** Auth.js v5 uses `AUTH_SECRET` (not `NEXTAUTH_SECRET`). The `NEXTAUTH_URL` variable is no longer required—the URL is inferred from request headers.
 
 ---
 

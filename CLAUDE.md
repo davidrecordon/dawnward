@@ -80,6 +80,7 @@ bun run test:python  # pytest
 - **Database**: Prisma Postgres with `@prisma/adapter-pg` driver adapter
 - **Styling**: Tailwind CSS v4 with shadcn/ui components
 - **Python Runtime**: Vercel Python Functions for circadian model (Arcascope library)
+- **Deployment**: Vercel with explicit `builds` config (Next.js + Python coexist via `vercel.json`)
 - **Analytics**: Vercel Analytics (respects GPC and DNT privacy signals)
 - **Testing**: Vitest for TypeScript, pytest for Python
 - **Linting**: ESLint + Prettier for TypeScript, ruff + mypy for Python
@@ -187,16 +188,19 @@ Future: Public read-only endpoint at `/api/mcp` for Claude to answer jet lag que
 ## Security Considerations
 
 **Trip Access Control:**
+
 - Private trips (no share code) are only viewable by the owner
 - Shared trips (`/s/[code]`) are publicly viewable
 - `/trip/[id]` returns 404 for non-owners of unshared trips (prevents IDOR)
 
 **API Authorization:**
+
 - DELETE and share endpoints require authentication AND ownership
 - Use consistent 404 responses to prevent enumeration attacks
 - Share codes use `crypto.randomBytes()` for unpredictable generation
 
 **Anonymous Users:**
+
 - Can create trips (saved with `userId: null`)
 - Cannot access trip history or share trips
 - Anonymous trips need periodic cleanup (TODO: cron job)
@@ -206,9 +210,10 @@ Future: Public read-only endpoint at `/api/mcp` for Claude to answer jet lag que
 Required:
 
 - `DATABASE_URL` - PostgreSQL connection string
-- `NEXTAUTH_URL` - App URL (https://dawnward.app)
-- `NEXTAUTH_SECRET` - Session encryption key
+- `AUTH_SECRET` - Session encryption key (Auth.js v5 uses AUTH_SECRET, not NEXTAUTH_SECRET)
 - `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` - Google OAuth credentials
+
+Note: `NEXTAUTH_URL` is no longer required—Auth.js v5 infers the URL from request headers.
 
 ## Brand & UI Guidelines
 
@@ -312,6 +317,7 @@ design_docs/
 ├── decisions-overview.md    # All key decisions in one place
 ├── backend-design.md        # API routes, database schema, MCP tools
 ├── auth-design.md           # NextAuth.js setup, progressive signup flow
+├── vercel-design.md         # Vercel deployment: Next.js + Python coexistence
 ├── testing-design.md        # 6-layer validation strategy
 ├── science-methodology.md   # Circadian science foundation
 ├── debugging-tips.md        # Scheduler debugging lessons learned
