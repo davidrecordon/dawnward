@@ -1,9 +1,17 @@
 {
-  "functions": {
-    "serverless/schedule/generate.py": {
-      "includeFiles": "serverless/_python/**"
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@vercel/next"
+    },
+    {
+      "src": "serverless/schedule/generate.py",
+      "use": "@vercel/python",
+      "config": {
+        "includeFiles": ["serverless/_python/**"]
+      }
     }
-  },
+  ],
   "rewrites": [
     {
       "source": "/api/schedule/generate",
