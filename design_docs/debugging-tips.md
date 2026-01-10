@@ -116,10 +116,14 @@ Python's `None` becomes `null` in JSON, not `undefined`.
 
 ```typescript
 // WRONG
-if (item.flight_offset_hours !== undefined) { /* never runs for null */ }
+if (item.flight_offset_hours !== undefined) {
+  /* never runs for null */
+}
 
 // CORRECT
-if (item.flight_offset_hours != null) { /* handles both null and undefined */ }
+if (item.flight_offset_hours != null) {
+  /* handles both null and undefined */
+}
 ```
 
 ### 2. Phase Type String Matching
@@ -180,6 +184,7 @@ if phase.duration_hours < 8:
 ```
 
 Originally this only added:
+
 - wake_target (for day 0/1)
 - sleep_target (for non-pre_departure day 0/1)
 - ONE light_seek OR ONE melatonin
@@ -197,6 +202,7 @@ if self.context.uses_caffeine:
 ### Early Morning Departures Have Zero Pre-Departure Phase
 
 For flights departing at 09:40 AM with wake time 07:00 AM:
+
 - Pre-departure phase: 07:00 → 06:40 (departure - 3h) = **negative duration**
 - Phase is effectively skipped
 - Interventions appear on day -1 instead of day 0
@@ -231,11 +237,11 @@ if intervention.type in clamp_to_start and i_minutes < phase_start_minutes:
 
 ### Regular Flights (Non-ULR)
 
-| Flight Duration | Gets Sleep Suggestion? |
-|-----------------|------------------------|
-| < 6 hours       | No                     |
-| 6-12 hours      | Yes (regular nap)      |
-| 12+ hours       | Yes (ULR sleep windows)|
+| Flight Duration | Gets Sleep Suggestion?  |
+| --------------- | ----------------------- |
+| < 6 hours       | No                      |
+| 6-12 hours      | Yes (regular nap)       |
+| 12+ hours       | Yes (ULR sleep windows) |
 
 The threshold was lowered from 8h to 6h to help users on more overnight flights.
 
@@ -264,6 +270,7 @@ if phase.phase_type == "in_transit" and not phase.is_ulr_flight:
 ```
 
 When adding a new intervention to a phase, check BOTH:
+
 1. The intervention planner generates it (`_plan_in_transit()`, etc.)
 2. The scheduler doesn't skip the entire phase (`scheduler_v2.py`)
 

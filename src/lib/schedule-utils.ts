@@ -4,9 +4,10 @@
 
 import type {
   DaySchedule,
+  GroupableParent,
   Intervention,
   PhaseType,
-  WakeTargetGroup,
+  TimedItemGroup,
 } from "@/types/schedule";
 
 /**
@@ -169,76 +170,121 @@ export function dayHasMultipleTimezones(
 }
 
 /**
- * Result of grouping interventions by wake_target.
+ * Input item for groupTimedItems - matches the TimedItem union from day-section.tsx.
+ * Defined here to avoid circular dependencies.
  */
-export interface GroupedInterventions {
-  /** Wake target groups (wake_target with same-time children) */
-  groups: WakeTargetGroup[];
-  /** Interventions not grouped (no wake_target at their time) */
-  ungrouped: Intervention[];
+export type GroupableItem =
+  | {
+      kind: "intervention";
+      time: string;
+      data: Intervention;
+      timezone?: string;
+    }
+  | { kind: "arrival"; time: string; timezone: string }
+  | { kind: "departure"; time: string; timezone: string }
+  | { kind: "now"; time: string; timezone: string };
+
+/**
+ * Result of groupTimedItems.
+ */
+export interface GroupedTimedItems {
+  /** Groups with parent (wake_target or arrival) and children */
+  groups: TimedItemGroup[];
+  /** Items that weren't grouped */
+  ungrouped: GroupableItem[];
 }
 
 /**
- * Group interventions that share the same time as a wake_target.
+ * Determine if an item can be a parent in nested card groups.
  *
- * Creates "wake up and do these things" groups where the wake_target
- * is the parent and other same-time interventions are children.
- *
- * @param interventions - Array of interventions for a single day
- * @returns Groups (wake_target with children) and ungrouped interventions
+ * Groupable parents:
+ * - wake_target interventions (not in-transit)
+ * - arrival markers
  */
-export function groupWakeTargetInterventions(
-  interventions: Intervention[]
-): GroupedInterventions {
-  const groups: WakeTargetGroup[] = [];
-  const ungrouped: Intervention[] = [];
+function canBeParent(item: GroupableItem): boolean {
+  // Arrival markers are always parents
+  if (item.kind === "arrival") {
+    return true;
+  }
 
-  // Track which interventions have been grouped
+  // wake_target interventions (except in-transit ones with unique flight context)
+  return (
+    item.kind === "intervention" &&
+    item.data.type === "wake_target" &&
+    !item.data.is_in_transit
+  );
+}
+
+/**
+ * Group timed items that share the same time as a groupable parent.
+ *
+ * Creates "parent + nested children" groups for UI rendering.
+ * Groupable parents: wake_target interventions, arrival markers.
+ * Children: interventions at same time+timezone (except other parents, in-transit items).
+ *
+ * @param items - Array of timed items for a single day (before sorting)
+ * @returns Groups (parent with children) and ungrouped items
+ */
+export function groupTimedItems(items: GroupableItem[]): GroupedTimedItems {
+  const groups: TimedItemGroup[] = [];
   const groupedIndices = new Set<number>();
 
-  // Find all wake_targets and group same-time interventions with them
-  interventions.forEach((intervention, index) => {
-    if (intervention.type !== "wake_target") return;
+  // Build grouping key from time and timezone
+  const makeKey = (time: string, tz?: string): string => `${time}|${tz ?? ""}`;
 
-    // Skip in-transit wake_targets (they have unique flight_offset context)
-    if (intervention.is_in_transit) {
-      return;
-    }
+  // Check if an item can be a child (intervention, not in-transit, not a parent)
+  const canBeChild = (
+    item: GroupableItem
+  ): item is GroupableItem & { kind: "intervention" } =>
+    item.kind === "intervention" &&
+    !item.data.is_in_transit &&
+    !canBeParent(item);
 
-    // Find children: same time, same timezone, not in-transit
+  // Find all parent items and group same-time items with them
+  for (let parentIdx = 0; parentIdx < items.length; parentIdx++) {
+    const parentItem = items[parentIdx];
+    if (!canBeParent(parentItem)) continue;
+
+    const parentKey = makeKey(parentItem.time, parentItem.timezone);
     const children: Intervention[] = [];
-    const groupKey = `${intervention.time}|${intervention.timezone ?? ""}`;
 
-    interventions.forEach((other, otherIndex) => {
-      if (otherIndex === index) return; // Skip self
-      if (other.type === "wake_target") return; // Don't nest wake_targets
-      if (other.is_in_transit) return; // Skip in-transit items
+    // Find children: same time+timezone interventions
+    for (let childIdx = 0; childIdx < items.length; childIdx++) {
+      if (childIdx === parentIdx) continue;
 
-      const otherKey = `${other.time}|${other.timezone ?? ""}`;
-      if (otherKey === groupKey) {
-        children.push(other);
-        groupedIndices.add(otherIndex);
+      const childItem = items[childIdx];
+      if (!canBeChild(childItem)) continue;
+
+      const childKey = makeKey(childItem.time, childItem.timezone);
+      if (childKey === parentKey) {
+        children.push(childItem.data);
+        groupedIndices.add(childIdx);
       }
-    });
+    }
 
     // Only create a group if there are children
     if (children.length > 0) {
-      groups.push({
-        wakeTarget: intervention,
-        children,
-        time: intervention.time,
-        timezone: intervention.timezone,
-      });
-      groupedIndices.add(index);
-    }
-  });
+      const parent: GroupableParent =
+        parentItem.kind === "intervention"
+          ? {
+              kind: "intervention",
+              data: parentItem.data,
+              timezone: parentItem.timezone,
+            }
+          : { kind: "arrival", timezone: parentItem.timezone };
 
-  // Collect ungrouped interventions (preserving order)
-  interventions.forEach((intervention, index) => {
-    if (!groupedIndices.has(index)) {
-      ungrouped.push(intervention);
+      groups.push({
+        parent,
+        children,
+        time: parentItem.time,
+        timezone: parentItem.timezone,
+      });
+      groupedIndices.add(parentIdx);
     }
-  });
+  }
+
+  // Collect ungrouped items (preserving order)
+  const ungrouped = items.filter((_, index) => !groupedIndices.has(index));
 
   return { groups, ungrouped };
 }

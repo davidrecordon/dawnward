@@ -46,13 +46,21 @@ export interface Intervention {
 }
 
 /**
- * Group of interventions anchored by wake_target.
- * Used to display "wake up and do these things" as a nested visual.
+ * Parent type for grouped items (used by groupTimedItems).
+ * Can be a wake_target intervention or an arrival marker.
  */
-export interface WakeTargetGroup {
-  /** The wake_target intervention (always type: "wake_target") */
-  wakeTarget: Intervention;
-  /** Other interventions at the same time */
+export type GroupableParent =
+  | { kind: "intervention"; data: Intervention; timezone?: string }
+  | { kind: "arrival"; timezone: string };
+
+/**
+ * Group of timed items anchored by a parent (wake_target or arrival).
+ * Used for unified "parent + nested children" visual hierarchy.
+ */
+export interface TimedItemGroup {
+  /** The parent item (wake_target intervention or arrival) */
+  parent: GroupableParent;
+  /** Child interventions at the same time */
   children: Intervention[];
   /** Shared time in HH:MM format */
   time: string;
