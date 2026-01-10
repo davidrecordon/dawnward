@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Plane } from "lucide-react";
 import { auth, signIn } from "@/auth";
 import { UserMenu } from "./auth/user-menu";
+import { HeaderSaveStatus } from "./header-save-status";
 
 export async function Header() {
   const session = await auth();
@@ -16,23 +17,26 @@ export async function Header() {
           <span className="text-lg font-semibold tracking-tight">Dawnward</span>
         </Link>
 
-        {session?.user ? (
-          <UserMenu user={session.user} />
-        ) : (
-          <form
-            action={async () => {
-              "use server";
-              await signIn("google");
-            }}
-          >
-            <button
-              type="submit"
-              className="rounded-md px-3 py-1.5 text-sm text-slate-500 hover:bg-slate-100"
+        <div className="flex items-center gap-4">
+          <HeaderSaveStatus />
+          {session?.user ? (
+            <UserMenu user={session.user} />
+          ) : (
+            <form
+              action={async () => {
+                "use server";
+                await signIn("google");
+              }}
             >
-              Sign in
-            </button>
-          </form>
-        )}
+              <button
+                type="submit"
+                className="rounded-md px-3 py-1.5 text-sm text-slate-500 hover:bg-slate-100"
+              >
+                Sign in
+              </button>
+            </form>
+          )}
+        </div>
       </div>
     </header>
   );

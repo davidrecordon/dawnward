@@ -30,8 +30,10 @@ model User {
   defaultSleepTime    String  @default("23:00")
   usesMelatonin       Boolean @default(true)
   usesCaffeine        Boolean @default(true)
+  usesExercise        Boolean @default(false)
   caffeineCutoffHours Int     @default(6)
-  scheduleIntensity   String  @default("balanced") // gentle, balanced, aggressive
+  napPreference       String  @default("flight_only") // no, flight_only, all_days
+  scheduleIntensity   String  @default("balanced")    // gentle, balanced, aggressive
 }
 
 model Account {

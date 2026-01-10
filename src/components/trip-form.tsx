@@ -4,7 +4,6 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import {
   Activity,
-  Calendar,
   ChevronRight,
   Coffee,
   Gauge,
@@ -18,10 +17,10 @@ import type { Airport } from "@/types/airport";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { Slider } from "@/components/ui/slider";
 import { AirportSelect } from "@/components/airport-select";
 import { PreferenceToggle } from "@/components/preference-toggle";
 import { PreferenceSelector } from "@/components/preference-selector";
+import { PrepDaysSlider } from "@/components/prep-days-slider";
 import { FormError } from "@/components/form-error";
 import { DateTimeSelect } from "@/components/ui/datetime-select";
 import { TimeSelect } from "@/components/ui/time-select";
@@ -30,6 +29,7 @@ import type { TripFormState } from "@/types/trip-form";
 interface TripFormProps {
   formState: TripFormState;
   onFormChange: (state: TripFormState) => void;
+  onSubmit?: () => void;
 }
 
 interface FormErrors {
@@ -49,7 +49,7 @@ function FieldError({ message }: { message?: string }) {
   );
 }
 
-export function TripForm({ formState, onFormChange }: TripFormProps) {
+export function TripForm({ formState, onFormChange, onSubmit }: TripFormProps) {
   const router = useRouter();
   const [errors, setErrors] = React.useState<FormErrors>({});
   const submitButtonRef = React.useRef<HTMLButtonElement>(null);
@@ -182,8 +182,12 @@ export function TripForm({ formState, onFormChange }: TripFormProps) {
       return;
     }
 
-    // Navigate to trip page - schedule will be generated there from saved form state
-    router.push("/trip");
+    // Call custom submit handler if provided, otherwise navigate directly
+    if (onSubmit) {
+      onSubmit();
+    } else {
+      router.push("/trip");
+    }
   };
 
   return (
@@ -339,33 +343,10 @@ export function TripForm({ formState, onFormChange }: TripFormProps) {
               colorScheme="sky"
             />
 
-            {/* Prep days slider */}
-            <div className="space-y-3 pt-1">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Calendar className="h-4 w-4 text-sky-500" />
-                  <Label className="text-sm font-medium">
-                    Days before departure
-                  </Label>
-                </div>
-                <span className="text-sm font-semibold text-sky-600">
-                  {formState.prepDays}{" "}
-                  {formState.prepDays === 1 ? "day" : "days"}
-                </span>
-              </div>
-              <Slider
-                value={[formState.prepDays]}
-                onValueChange={([value]) => updateField("prepDays", value)}
-                min={1}
-                max={7}
-                step={1}
-                className="[&_[data-slot=slider-range]]:bg-sky-500 [&_[data-slot=slider-thumb]]:border-sky-500 [&_[data-slot=slider-track]]:bg-slate-200"
-              />
-              <p className="text-muted-foreground text-xs">
-                Start adapting earlier for a gentler transition (auto-adjusts if
-                trip is sooner)
-              </p>
-            </div>
+            <PrepDaysSlider
+              value={formState.prepDays}
+              onValueChange={(value) => updateField("prepDays", value)}
+            />
           </div>
 
           <hr className="border-slate-200" />
