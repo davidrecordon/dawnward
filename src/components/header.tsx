@@ -19,6 +19,14 @@ export async function Header() {
 
         <div className="flex items-center gap-4">
           <HeaderSaveStatus />
+          {session?.user && (
+            <Link
+              href="/trips"
+              className="hidden text-sm text-slate-600 hover:text-slate-900 sm:block"
+            >
+              My Trips
+            </Link>
+          )}
           {session?.user ? (
             <UserMenu user={session.user} />
           ) : (

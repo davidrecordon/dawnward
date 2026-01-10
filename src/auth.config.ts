@@ -29,7 +29,7 @@ export const authConfig: NextAuthConfig = {
     authorized({ auth, request: { nextUrl } }) {
       const isLoggedIn = !!auth?.user;
       const isProtectedRoute =
-        nextUrl.pathname.startsWith("/history") ||
+        nextUrl.pathname.startsWith("/trips") ||
         nextUrl.pathname.startsWith("/settings");
 
       if (isProtectedRoute && !isLoggedIn) {

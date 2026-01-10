@@ -7,11 +7,11 @@ import { Plane } from "lucide-react";
 import Link from "next/link";
 import { TripHistoryList } from "@/components/trip-history-list";
 
-export default async function HistoryPage() {
+export default async function TripsPage() {
   const session = await auth();
 
   if (!session?.user?.id) {
-    redirect("/auth/signin?callbackUrl=/history");
+    redirect("/auth/signin?callbackUrl=/trips");
   }
 
   const trips = await prisma.sharedSchedule.findMany({
@@ -31,11 +31,9 @@ export default async function HistoryPage() {
     <div className="mx-auto max-w-3xl px-4 py-8">
       <div className="space-y-6">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">
-            Trip History
-          </h1>
+          <h1 className="text-2xl font-semibold tracking-tight">My Trips</h1>
           <p className="text-muted-foreground">
-            Your past, active, and upcoming trips
+            Your upcoming and past trips
           </p>
         </div>
 

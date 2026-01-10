@@ -10,5 +10,5 @@ export default NextAuth(authConfig).auth;
 
 export const config = {
   // Match protected routes
-  matcher: ["/history/:path*", "/settings/:path*"],
+  matcher: ["/trips/:path*", "/settings/:path*"],
 };

@@ -50,9 +50,9 @@ export function UserMenu({ user }: UserMenuProps) {
         </div>
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
-          <Link href="/history" className="flex items-center gap-2">
+          <Link href="/trips" className="flex items-center gap-2">
             <History className="h-4 w-4" />
-            Trip History
+            My Trips
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
