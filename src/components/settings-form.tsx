@@ -29,7 +29,7 @@ export function SettingsForm({ initialPreferences }: SettingsFormProps) {
   const [preferences, setPreferences] =
     React.useState<UserPreferences>(initialPreferences);
   const { setStatus } = useSaveStatus();
-  const isFirstRender = React.useRef(true);
+  const initialRef = React.useRef(initialPreferences);
 
   const updateField = <K extends keyof UserPreferences>(
     field: K,
@@ -40,9 +40,8 @@ export function SettingsForm({ initialPreferences }: SettingsFormProps) {
 
   // Auto-save with debounce when preferences change
   React.useEffect(() => {
-    // Skip initial render
-    if (isFirstRender.current) {
-      isFirstRender.current = false;
+    // Only save if preferences actually changed from initial
+    if (JSON.stringify(preferences) === JSON.stringify(initialRef.current)) {
       return;
     }
 
