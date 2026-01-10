@@ -105,10 +105,12 @@ class ScheduleGeneratorV2:
         day_schedules = []
 
         for phase in phases:
-            # Skip in-transit phases for now (no actionable interventions)
-            # But keep ULR sleep suggestions
+            # Skip short in-transit phases (< 6h) - no actionable interventions
+            # Keep ULR flights (12h+) and regular flights 6h+ that have sleep suggestions
             if phase.phase_type == "in_transit" and not phase.is_ulr_flight:
-                continue
+                flight_hours = phase.flight_duration_hours or 0
+                if flight_hours < 6:
+                    continue
 
             # Get science-optimal interventions
             interventions = planner.plan_phase(phase)

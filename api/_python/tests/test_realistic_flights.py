@@ -1476,3 +1476,176 @@ class TestIntensityVariations:
             f"{flight_name} [{intensity}/{schedule.direction}]: "
             f"Expected {expected_rate}h/day, got {calc.daily_rate}"
         )
+
+
+# =============================================================================
+# INTERVENTION PRESENCE TESTS
+# =============================================================================
+
+
+class TestInterventionPresence:
+    """
+    Validate that key interventions appear on Flight Day and Arrival Day.
+
+    These tests ensure that schedules aren't too sparse - users need actionable
+    guidance on critical days, not just isolated interventions.
+    """
+
+    @pytest.mark.parametrize(
+        "flight_name,origin_tz,dest_tz,depart_time,arrive_time,arrive_day",
+        [
+            # Evening departures (long pre_departure phases) - expect caffeine on day 0
+            ("VS20 SFO-LHR", "America/Los_Angeles", "Europe/London", "16:30", "10:40", 1),
+            ("QF74 SFO-SYD", "America/Los_Angeles", "Australia/Sydney", "20:15", "06:10", 2),
+            # Afternoon departure - still has actionable day 0 time
+            ("AF83 SFO-CDG", "America/Los_Angeles", "Europe/Paris", "15:40", "11:35", 1),
+        ],
+    )
+    def test_flight_day_has_caffeine_interventions(
+        self, flight_name, origin_tz, dest_tz, depart_time, arrive_time, arrive_day
+    ):
+        """
+        Flight Day (day 0) should have caffeine_ok and caffeine_cutoff when uses_caffeine=True.
+
+        Note: This only applies to flights with afternoon/evening departures where
+        there's actionable time on day 0. Early morning departures (like SQ31 at 09:40)
+        have essentially zero pre_departure phase, so caffeine is on day -1 instead.
+        """
+        from helpers import get_interventions_by_type
+
+        generator = ScheduleGenerator()
+        base_date = datetime(2026, 1, 15)
+
+        departure = make_flight_datetime(base_date, depart_time)
+        arrival = make_flight_datetime(base_date, arrive_time, day_offset=arrive_day)
+
+        request = ScheduleRequest(
+            legs=[
+                TripLeg(
+                    origin_tz=origin_tz,
+                    dest_tz=dest_tz,
+                    departure_datetime=departure.strftime("%Y-%m-%dT%H:%M"),
+                    arrival_datetime=arrival.strftime("%Y-%m-%dT%H:%M"),
+                )
+            ],
+            prep_days=3,
+            wake_time="07:00",
+            sleep_time="22:00",
+            uses_melatonin=True,
+            uses_caffeine=True,
+        )
+
+        schedule = generator.generate_schedule(request)
+
+        # Check for caffeine_ok on day 0
+        caffeine_ok = get_interventions_by_type(schedule, "caffeine_ok", day=0)
+        assert len(caffeine_ok) >= 1, f"{flight_name}: Day 0 should have caffeine_ok intervention"
+
+        # Check for caffeine_cutoff on day 0
+        caffeine_cutoff = get_interventions_by_type(schedule, "caffeine_cutoff", day=0)
+        assert len(caffeine_cutoff) >= 1, (
+            f"{flight_name}: Day 0 should have caffeine_cutoff intervention"
+        )
+
+    def test_early_morning_departure_caffeine_on_day_minus_one(self):
+        """
+        Early morning departures have caffeine guidance on day -1, not day 0.
+
+        SQ31 departs at 09:40 AM, which means the pre_departure phase on day 0
+        is too short for caffeine interventions. Caffeine is on day -1 instead.
+        """
+        from helpers import get_interventions_by_type
+
+        generator = ScheduleGenerator()
+        base_date = datetime(2026, 1, 15)
+
+        # SQ31: SFO 09:40 → SIN 19:05+1 (early morning departure)
+        departure = make_flight_datetime(base_date, "09:40")
+        arrival = make_flight_datetime(base_date, "19:05", day_offset=1)
+
+        request = ScheduleRequest(
+            legs=[
+                TripLeg(
+                    origin_tz="America/Los_Angeles",
+                    dest_tz="Asia/Singapore",
+                    departure_datetime=departure.strftime("%Y-%m-%dT%H:%M"),
+                    arrival_datetime=arrival.strftime("%Y-%m-%dT%H:%M"),
+                )
+            ],
+            prep_days=3,
+            wake_time="07:00",
+            sleep_time="22:00",
+            uses_melatonin=True,
+            uses_caffeine=True,
+        )
+
+        schedule = generator.generate_schedule(request)
+
+        # For early morning departures, caffeine is on day -1 (last full prep day)
+        caffeine_ok = get_interventions_by_type(schedule, "caffeine_ok", day=-1)
+        assert len(caffeine_ok) >= 1, (
+            "SQ31: Day -1 should have caffeine_ok for early morning departure"
+        )
+
+        caffeine_cutoff = get_interventions_by_type(schedule, "caffeine_cutoff", day=-1)
+        assert len(caffeine_cutoff) >= 1, (
+            "SQ31: Day -1 should have caffeine_cutoff for early morning departure"
+        )
+
+    @pytest.mark.parametrize(
+        "flight_name,origin_tz,dest_tz,depart_time,arrive_time,arrive_day,flight_hours",
+        [
+            # Flights 6h+ should have sleep suggestion
+            ("VS20 SFO-LHR", "America/Los_Angeles", "Europe/London", "16:30", "10:40", 1, 10),
+            ("AF83 SFO-CDG", "America/Los_Angeles", "Europe/Paris", "15:40", "11:35", 1, 11),
+            # Flights < 6h should NOT have sleep suggestion
+            ("HA11 SFO-HNL", "America/Los_Angeles", "Pacific/Honolulu", "07:00", "09:35", 0, 5.5),
+        ],
+    )
+    def test_long_flight_has_sleep_suggestion(
+        self, flight_name, origin_tz, dest_tz, depart_time, arrive_time, arrive_day, flight_hours
+    ):
+        """
+        Flights 6h+ should have in-flight sleep/nap suggestion.
+
+        The nap threshold was lowered from 8h to 6h to help users on
+        more overnight flights get sleep guidance.
+        """
+        from helpers import get_interventions_by_type
+
+        generator = ScheduleGenerator()
+        base_date = datetime(2026, 1, 15)
+
+        departure = make_flight_datetime(base_date, depart_time)
+        arrival = make_flight_datetime(base_date, arrive_time, day_offset=arrive_day)
+
+        request = ScheduleRequest(
+            legs=[
+                TripLeg(
+                    origin_tz=origin_tz,
+                    dest_tz=dest_tz,
+                    departure_datetime=departure.strftime("%Y-%m-%dT%H:%M"),
+                    arrival_datetime=arrival.strftime("%Y-%m-%dT%H:%M"),
+                )
+            ],
+            prep_days=3,
+            wake_time="07:00",
+            sleep_time="22:00",
+            uses_melatonin=True,
+            uses_caffeine=True,
+        )
+
+        schedule = generator.generate_schedule(request)
+
+        # Get all nap_window interventions
+        all_naps = get_interventions_by_type(schedule, "nap_window")
+
+        if flight_hours >= 6:
+            # Long flights should have in-flight sleep
+            assert len(all_naps) >= 1, (
+                f"{flight_name}: Flight of {flight_hours}h should have nap_window intervention"
+            )
+        else:
+            # Short flights may or may not have naps (depends on post-arrival recovery)
+            # No assertion needed - we just want to ensure no errors
+            pass

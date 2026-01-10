@@ -254,6 +254,7 @@ design_docs/
 ├── auth-design.md           # NextAuth.js setup, progressive signup flow
 ├── testing-design.md        # 6-layer validation strategy
 ├── science-methodology.md   # Circadian science foundation
+├── debugging-tips.md        # Scheduler debugging lessons learned
 ├── brand.md                 # Color, tone, and style guidelines
 ├── frontend-design.md       # Screen structure, components, user flows
 ├── ui-v2.html               # Static mockup of key screens

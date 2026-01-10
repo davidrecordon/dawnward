@@ -167,3 +167,106 @@ def test_ulr_sleep_windows_have_flight_offset_hours():
     for nap in nap_windows:
         assert nap.flight_offset_hours is not None
 ```
+
+## Short Phase Intervention Coverage
+
+### `_plan_single_recommendation()` is Minimal by Design
+
+For phases < 8 hours, `_plan_single_recommendation()` is called instead of full planning:
+
+```python
+if phase.duration_hours < 8:
+    return self._plan_single_recommendation(phase, include_sleep_wake=True)
+```
+
+Originally this only added:
+- wake_target (for day 0/1)
+- sleep_target (for non-pre_departure day 0/1)
+- ONE light_seek OR ONE melatonin
+
+**Problem**: Users saw sparse schedules on Flight Day with only one intervention.
+
+**Fix**: Add caffeine guidance to short phases:
+
+```python
+# In _plan_single_recommendation()
+if self.context.uses_caffeine:
+    interventions.extend(self._plan_caffeine(phase, wake_target, sleep_target))
+```
+
+### Early Morning Departures Have Zero Pre-Departure Phase
+
+For flights departing at 09:40 AM with wake time 07:00 AM:
+- Pre-departure phase: 07:00 → 06:40 (departure - 3h) = **negative duration**
+- Phase is effectively skipped
+- Interventions appear on day -1 instead of day 0
+
+This is **expected behavior** - there's no actionable time on flight day for early departures.
+
+## Phase Bounds Clamping vs Filtering
+
+### When to Clamp vs Filter
+
+The constraint filter removes interventions outside phase bounds. But light interventions are critical for circadian shifting.
+
+**Old behavior**: Light at 06:30 AM with phase start at 07:00 AM → filtered (removed)
+
+**New behavior**: Clamp light interventions to phase start instead:
+
+```python
+clamp_to_start = {"light_seek", "light_avoid"}
+
+if intervention.type in clamp_to_start and i_minutes < phase_start_minutes:
+    # Clamp to phase start - suboptimal but actionable
+    clamped = Intervention(
+        time=format_time(phase.start_datetime.time()),
+        type=intervention.type,
+        ...
+    )
+```
+
+**Science impact**: Slightly suboptimal timing, but still beneficial for phase shifting.
+
+## In-Flight Nap Thresholds
+
+### Regular Flights (Non-ULR)
+
+| Flight Duration | Gets Sleep Suggestion? |
+|-----------------|------------------------|
+| < 6 hours       | No                     |
+| 6-12 hours      | Yes (regular nap)      |
+| 12+ hours       | Yes (ULR sleep windows)|
+
+The threshold was lowered from 8h to 6h to help users on more overnight flights.
+
+```python
+# In _plan_in_transit()
+if phase.flight_duration_hours and phase.flight_duration_hours >= 6:
+    return self._plan_regular_flight_nap(phase)
+```
+
+### Scheduler Phase Skipping
+
+**Problem**: The scheduler was skipping ALL non-ULR in-transit phases, even when they had nap suggestions.
+
+```python
+# WRONG: Skips all non-ULR in-transit phases
+if phase.phase_type == "in_transit" and not phase.is_ulr_flight:
+    continue
+```
+
+```python
+# CORRECT: Only skip short flights that wouldn't have nap suggestions
+if phase.phase_type == "in_transit" and not phase.is_ulr_flight:
+    flight_hours = phase.flight_duration_hours or 0
+    if flight_hours < 6:
+        continue
+```
+
+When adding a new intervention to a phase, check BOTH:
+1. The intervention planner generates it (`_plan_in_transit()`, etc.)
+2. The scheduler doesn't skip the entire phase (`scheduler_v2.py`)
+
+### ULR Flights (12+ hours)
+
+Ultra-long-haul flights get TWO sleep windows calculated based on circadian biology, not just a generic nap suggestion.

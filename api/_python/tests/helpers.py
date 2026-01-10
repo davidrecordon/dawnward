@@ -425,3 +425,37 @@ def run_all_validations(schedule: ScheduleResponse, flight: FlightInfo) -> list[
     issues.extend(validate_daily_sleep_opportunity(schedule))
     issues.extend(validate_sleep_wake_order(schedule))
     return issues
+
+
+def validate_intervention_presence(
+    schedule: ScheduleResponse,
+    day: int,
+    required_types: set[str],
+) -> list[ValidationIssue]:
+    """
+    Validate that required intervention types appear on a specific day.
+
+    Args:
+        schedule: The generated schedule
+        day: Day number to check (e.g., 0 for flight day, 1 for arrival day)
+        required_types: Set of intervention types that should be present
+
+    Returns:
+        List of validation issues for missing interventions
+    """
+    day_interventions = get_interventions_for_day(schedule, day)
+    present_types = {i.type for i in day_interventions}
+    missing = required_types - present_types
+
+    issues = []
+    for missing_type in missing:
+        issues.append(
+            ValidationIssue(
+                severity="error",
+                category="missing_intervention",
+                message=f"Day {day} missing required intervention: {missing_type}",
+                day=day,
+                time="",
+            )
+        )
+    return issues

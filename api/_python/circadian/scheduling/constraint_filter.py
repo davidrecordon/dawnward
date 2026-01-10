@@ -13,7 +13,7 @@ from dataclasses import dataclass
 from datetime import datetime, time
 from typing import Literal
 
-from ..circadian_math import is_during_sleep, parse_time, time_to_minutes
+from ..circadian_math import format_time, is_during_sleep, parse_time, time_to_minutes
 from ..types import Intervention, TravelPhase
 
 # Sleep target should not appear within this many hours before departure
@@ -147,8 +147,31 @@ class ConstraintFilter:
                 # Normal phase (e.g., 07:00 to 22:00)
                 in_bounds = phase_start_minutes <= i_minutes <= phase_end_minutes
 
+            # Types that should be clamped to phase start instead of filtered
+            # Light interventions are important even if slightly suboptimal timing
+            clamp_to_start = {"light_seek", "light_avoid"}
+
             if in_bounds:
                 result.append(intervention)
+            elif intervention.type in clamp_to_start and i_minutes < phase_start_minutes:
+                # Clamp early light interventions to phase start - suboptimal but actionable
+                clamped = Intervention(
+                    time=format_time(phase.start_datetime.time()),
+                    type=intervention.type,
+                    title=intervention.title,
+                    description=intervention.description,
+                    duration_min=intervention.duration_min,
+                )
+                result.append(clamped)
+                self.violations.append(
+                    ConstraintViolation(
+                        intervention_type=intervention.type,
+                        original_time=intervention.time,
+                        action_taken="moved",
+                        reason=f"Clamped from {intervention.time} to phase start {format_time(phase.start_datetime.time())}",
+                        science_impact="Slightly suboptimal timing, but still beneficial",
+                    )
+                )
             else:
                 # Record violation
                 self.violations.append(

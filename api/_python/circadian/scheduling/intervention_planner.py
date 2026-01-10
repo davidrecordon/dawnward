@@ -198,16 +198,17 @@ class InterventionPlanner:
         """
         Plan interventions for in-transit phases.
 
-        For regular flights: nap suggestion
-        For ULR flights: two sleep window suggestions with times in destination timezone
-
-        Sleep window times are converted from UTC to destination timezone for display,
-        with flight_offset_hours indicating how many hours into the flight.
+        Routes to appropriate helper based on flight type:
+        - ULR flights (12h+): circadian-timed sleep windows via _plan_ulr_sleep_windows
+        - Regular flights (6h+): generic nap suggestion via _plan_regular_flight_nap
+        - Short flights (<6h): no interventions (phase skipped in scheduler)
         """
         if phase.is_ulr_flight and phase.sleep_windows:
             return self._plan_ulr_sleep_windows(phase)
 
-        if phase.flight_duration_hours and phase.flight_duration_hours >= 8:
+        # Suggest sleep for flights 6h+ - even non-ULR overnight flights
+        # benefit from sleep suggestions
+        if phase.flight_duration_hours and phase.flight_duration_hours >= 6:
             return self._plan_regular_flight_nap(phase)
 
         return []
@@ -260,7 +261,7 @@ class InterventionPlanner:
         return max(0, round(offset_hours, 1))
 
     def _plan_regular_flight_nap(self, phase: TravelPhase) -> list[Intervention]:
-        """Plan a single nap suggestion for regular overnight flights (8+ hours)."""
+        """Plan a single nap suggestion for flights 6+ hours."""
         flight_hours = phase.flight_duration_hours or 8
         return [
             Intervention(
@@ -326,6 +327,11 @@ class InterventionPlanner:
                 )
             else:
                 interventions.extend(self._plan_sleep_wake(phase, wake_target, sleep_target))
+
+        # Include caffeine guidance even for short phases - users benefit from knowing
+        # when coffee is OK and when to cut off
+        if self.context.uses_caffeine:
+            interventions.extend(self._plan_caffeine(phase, wake_target, sleep_target))
 
         if self.context.direction == "advance":
             # Most impactful for advance: morning light after CBTmin
