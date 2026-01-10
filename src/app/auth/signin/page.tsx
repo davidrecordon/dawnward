@@ -1,22 +1,10 @@
 import { auth, signIn } from "@/auth";
 import { redirect } from "next/navigation";
 import { SignInButton } from "@/components/auth/sign-in-button";
+import { getSafeCallbackUrl } from "@/lib/auth-utils";
 
 interface Props {
   searchParams: Promise<{ callbackUrl?: string; error?: string }>;
-}
-
-/**
- * Validate callbackUrl to prevent open redirect attacks.
- * Only allows relative paths starting with "/" (not "//").
- */
-function getSafeCallbackUrl(callbackUrl: string | undefined): string {
-  if (!callbackUrl) return "/";
-  // Must start with "/" but not "//" (protocol-relative URL)
-  if (callbackUrl.startsWith("/") && !callbackUrl.startsWith("//")) {
-    return callbackUrl;
-  }
-  return "/";
 }
 
 export default async function SignInPage({ searchParams }: Props) {
