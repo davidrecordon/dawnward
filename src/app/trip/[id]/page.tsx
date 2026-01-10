@@ -29,9 +29,12 @@ export default async function TripByIdPage({ params }: Props) {
   const session = await auth();
   const isOwner = session?.user?.id === trip.userId;
 
-  // SECURITY: Only allow viewing if owner OR trip is shared (has code)
+  // SECURITY: Only allow viewing if:
+  // 1. Owner viewing their own trip (isOwner)
+  // 2. Trip is shared publicly (has code)
+  // 3. Trip is anonymous (userId is null) - creator can view via direct link
   // Prevents IDOR - can't view other users' private trips by guessing ID
-  if (!isOwner && !trip.code) {
+  if (!isOwner && !trip.code && trip.userId !== null) {
     notFound();
   }
 
