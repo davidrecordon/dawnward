@@ -15,66 +15,129 @@ Document all hardcoded constants in the codebase, categorize them, and identify 
 
 These are from peer-reviewed circadian research. Changing breaks the Forger99 model.
 
-| File                        | Constant              | Value                     | Source                      |
-| --------------------------- | --------------------- | ------------------------- | --------------------------- |
-| `markers.py:23-25`          | `CBTMIN_BEFORE_WAKE`  | 2.5h                      | Czeisler & Gooley 2007      |
-|                             | `DLMO_BEFORE_SLEEP`   | 2.0h                      | Burgess et al. 2010         |
-|                             | `DLMO_TO_CBTMIN`      | 6.0h                      | Core circadian relationship |
-| `prc.py:30-40`              | Light PRC zones       | 0-4h advance, -4-0h delay | Khalsa 2003                 |
-|                             | `MAX_ADVANCE_PER_DAY` | 2.0h                      | Khalsa 2003                 |
-|                             | `MAX_DELAY_PER_DAY`   | 3.4h                      | Khalsa 2003                 |
-| `prc.py:165-170`            | Melatonin PRC         | -5h advance, +10h delay   | Burgess 2010                |
-| `sleep_pressure.py:24-31`   | Two-Process Model     | 90min cycles, 16h wake    | Borbély                     |
-| `shift_calculator.py:36-40` | Shift rate limits     | 1.0-2.0h/day              | Physiological limits        |
+#### Circadian Markers (`markers.py`)
+
+| Line | Constant             | Value | Source                      |
+| ---- | -------------------- | ----- | --------------------------- |
+| 22   | `CBTMIN_BEFORE_WAKE` | 2.5h  | Czeisler & Gooley 2007      |
+| 23   | `DLMO_BEFORE_SLEEP`  | 2.0h  | Burgess et al. 2010         |
+| 24   | `DLMO_TO_CBTMIN`     | 6.0h  | Core circadian relationship |
+
+#### Light Phase Response Curve (`prc.py`)
+
+| Line | Constant              | Value | Source      |
+| ---- | --------------------- | ----- | ----------- |
+| 30   | `ADVANCE_ZONE_START`  | 0h    | Khalsa 2003 |
+| 31   | `ADVANCE_ZONE_END`    | 4h    | Khalsa 2003 |
+| 32   | `ADVANCE_PEAK`        | 2.5h  | Khalsa 2003 |
+| 34   | `DELAY_ZONE_START`    | -4h   | Khalsa 2003 |
+| 35   | `DELAY_ZONE_END`      | 0h    | Khalsa 2003 |
+| 36   | `DELAY_PEAK`          | -2.5h | Khalsa 2003 |
+| 39   | `MAX_ADVANCE_PER_DAY` | 2.0h  | Khalsa 2003 |
+| 40   | `MAX_DELAY_PER_DAY`   | 3.4h  | Khalsa 2003 |
+
+#### Melatonin Phase Response Curve (`prc.py`)
+
+| Line | Constant              | Value | Source                                     |
+| ---- | --------------------- | ----- | ------------------------------------------ |
+| 162  | `ADVANCE_OPTIMAL`     | -5.0h | Burgess 2010                               |
+| 163  | `DELAY_OPTIMAL`       | 10.0h | Burgess 2010                               |
+| 166  | `MAX_ADVANCE_PER_DAY` | 1.5h  | Burgess 2010                               |
+| 167  | `MAX_DELAY_PER_DAY`   | 1.0h  | Burgess 2010                               |
+| 209  | Delay threshold       | 6.0h  | Recommend delay melatonin for shifts >= 6h |
+
+#### Two-Process Model (`sleep_pressure.py`)
+
+| Line | Constant                    | Value | Source       |
+| ---- | --------------------------- | ----- | ------------ |
+| 23   | `FULL_SLEEP_CYCLE_MIN`      | 90    | Borbély      |
+| 24   | `SLEEP_CYCLES_FOR_RECOVERY` | 4     | Borbély      |
+| 25   | `NAP_INERTIA_THRESHOLD_MIN` | 30    | Borbély      |
+| 28   | `STANDARD_WAKE_HOURS`       | 16    | Borbély      |
+| 29   | `PRESSURE_BUILD_RATE`       | 1.0   | Borbély      |
+| 30   | `PRESSURE_DECAY_RATE`       | 0.5   | Borbély      |
+| 251  | Wake maintenance zone start | 3h    | Before sleep |
+| 252  | Wake maintenance zone end   | 1h    | Before sleep |
 
 ### Category 2: Algorithm Configuration (Could Centralize)
 
 System behavior that could move to a config file.
 
-| File                         | Constant                              | Value    | Purpose                                |
-| ---------------------------- | ------------------------------------- | -------- | -------------------------------------- |
-| `phase_generator.py:32`      | `PRE_DEPARTURE_BUFFER_HOURS`          | 3.0      | Airport arrival buffer                 |
-| `phase_generator.py:33`      | `ULR_FLIGHT_THRESHOLD_HOURS`          | 12.0     | Ultra-long-range flight classification |
-| `phase_generator.py:145-147` | Layover thresholds                    | 48h, 96h | Multi-leg strategy                     |
-| `constraint_filter.py:20`    | `SLEEP_TARGET_DEPARTURE_BUFFER_HOURS` | 4.0      | Filter sleep targets near departure    |
-| `constraint_filter.py:187`   | Early morning threshold               | 6h       | Arrival filtering                      |
-| `scheduler_v2.py:203`        | Past intervention buffer              | 30min    | Grace period for filtering             |
+#### Phase Generation (`phase_generator.py`)
+
+| Line    | Constant                     | Value | Purpose                                |
+| ------- | ---------------------------- | ----- | -------------------------------------- |
+| 33      | `PRE_DEPARTURE_BUFFER_HOURS` | 3.0   | Airport arrival buffer                 |
+| 34      | `ULR_FLIGHT_THRESHOLD_HOURS` | 12.0  | Ultra-long-range flight classification |
+| 181     | Layover threshold (short)    | 48h   | Aim-through strategy                   |
+| 183     | Layover threshold (medium)   | 96h   | Partial adaptation                     |
+| 369-374 | In-flight sleep windows      | 2h/4h | Window offsets and max durations       |
+
+#### Shift Calculator (`shift_calculator.py`)
+
+| Line  | Intensity  | Advance Rate | Delay Rate | Purpose                 |
+| ----- | ---------- | ------------ | ---------- | ----------------------- |
+| 54-55 | Gentle     | 0.75h/day    | 1.0h/day   | Conservative shifting   |
+| 58-59 | Balanced   | 1.0h/day     | 1.5h/day   | Good trade-off          |
+| 62-63 | Aggressive | 1.25h/day    | 2.0h/day   | Fastest adaptation      |
+| 196   | Full day   | 16h          | -          | Hours for full target   |
+| 198   | Min day    | 8h           | -          | Hours for scaled target |
+
+#### Constraint Filter (`constraint_filter.py`)
+
+| Line | Constant                              | Value | Purpose                             |
+| ---- | ------------------------------------- | ----- | ----------------------------------- |
+| 20   | `SLEEP_TARGET_DEPARTURE_BUFFER_HOURS` | 4.0   | Filter sleep targets near departure |
+| 219  | Early morning threshold               | 6:00  | Exception for early interventions   |
+
+#### Scheduler (`scheduler_v2.py`)
+
+| Line | Constant                 | Value | Purpose                    |
+| ---- | ------------------------ | ----- | -------------------------- |
+| 112  | Short flight threshold   | 6h    | Skip in-transit < 6h       |
+| 198  | Past intervention buffer | 30min | Grace period for filtering |
 
 ### Category 3: User Preference Candidates
 
 **Priority items for future user settings:**
 
-#### Light Exposure Duration
+#### Light Exposure Duration (`intervention_planner.py`)
 
-| File                          | Value                | Current | Range      | Notes                      |
-| ----------------------------- | -------------------- | ------- | ---------- | -------------------------- |
-| `prc.py:46`                   | Default duration     | 60 min  | 30-120 min | Research supports variable |
-| `intervention_planner.py:251` | Short phase duration | 30 min  | 15-60 min  | Quick interventions        |
-| `intervention_planner.py:347` | Standard duration    | 60 min  | 30-120 min | Main light exposure        |
+| Line | Context     | Current | Range      | Notes                      |
+| ---- | ----------- | ------- | ---------- | -------------------------- |
+| 431  | Optimal     | 60 min  | 30-120 min | Research supports variable |
+| 338  | Short phase | 30 min  | 15-60 min  | Quick interventions        |
+| 376  | Short phase | 30 min  | 15-60 min  | Quick interventions        |
 
-#### Caffeine Cutoff
+#### Caffeine Cutoff (`intervention_planner.py`)
 
-| File                          | Value               | Current       | Range               | Notes         |
-| ----------------------------- | ------------------- | ------------- | ------------------- | ------------- |
-| `intervention_planner.py:502` | Cutoff before sleep | 600 min (10h) | 480-720 min (8-12h) | Half-life ~6h |
+| Line | Value               | Current       | Range               | Notes         |
+| ---- | ------------------- | ------------- | ------------------- | ------------- |
+| 593  | Cutoff before sleep | 600 min (10h) | 480-720 min (8-12h) | Half-life ~6h |
 
-#### Nap Settings
+#### Nap Settings (`sleep_pressure.py`)
 
-| File                          | Value                   | Current         | Range      | Notes                 |
-| ----------------------------- | ----------------------- | --------------- | ---------- | --------------------- |
-| `sleep_pressure.py:34-37`     | Nap window start/end    | 30-50% into day | 25-60%     | When naps are allowed |
-| `sleep_pressure.py:144`       | Max nap (high debt)     | 90 min          | 60-120 min | One sleep cycle       |
-| `sleep_pressure.py:149`       | Max nap (standard)      | 30 min          | 20-45 min  | Avoid inertia         |
-| `sleep_pressure.py:194`       | Arrival nap cutoff      | 13:00           | Flexible   | Hard limit time       |
-| `sleep_pressure.py:208`       | Settle-in after arrival | 45 min          | 30-90 min  | Rest before nap       |
-| `sleep_pressure.py:219-221`   | Debt thresholds         | 5h/3h           | Adjustable | Nap urgency triggers  |
-| `intervention_planner.py:538` | Default sleep debt      | 4.0h            | 2-6h       | Red-eye assumption    |
+| Line    | Value                   | Current         | Range      | Notes                 |
+| ------- | ----------------------- | --------------- | ---------- | --------------------- |
+| 33-34   | Standard nap window     | 30-50% into day | 25-60%     | When naps are allowed |
+| 35-36   | High debt nap window    | 25-55% into day | 20-60%     | Wider when deprived   |
+| 145     | Max nap (high debt)     | 90 min          | 60-120 min | One sleep cycle       |
+| 150     | Max nap (standard)      | 30 min          | 20-45 min  | Avoid inertia         |
+| 192     | Arrival nap cutoff      | 13:00           | Flexible   | Hard limit time       |
+| 206     | Settle-in after arrival | 45 min          | 30-90 min  | Rest before nap       |
+| 218-220 | Debt thresholds         | 5h/3h           | Adjustable | Nap urgency triggers  |
 
-#### Melatonin Dose
+#### Default Sleep Debt (`intervention_planner.py`)
 
-| File                              | Value | Current | Range   | Notes                    |
-| --------------------------------- | ----- | ------- | ------- | ------------------------ |
-| `intervention_planner.py:447,470` | Dose  | 0.5mg   | 0.3-3mg | Burgess recommends 0.5mg |
+| Line | Value        | Current | Range | Notes              |
+| ---- | ------------ | ------- | ----- | ------------------ |
+| 628  | Post-arrival | 4.0h    | 2-6h  | Red-eye assumption |
+
+#### Melatonin Dose (`intervention_planner.py`)
+
+| Line | Value | Current | Range   | Notes                    |
+| ---- | ----- | ------- | ------- | ------------------------ |
+| 447  | Dose  | 0.5mg   | 0.3-3mg | Burgess recommends 0.5mg |
 
 ---
 
@@ -82,57 +145,157 @@ System behavior that could move to a config file.
 
 ### Already Centralized
 
-**File:** `src/types/trip-form.ts:39-51`
+**File:** `src/types/trip-form.ts:49-62`
 
 ```typescript
 export const defaultFormState: TripFormState = {
-  wakeTime: "07:00", // User preference
-  sleepTime: "22:00", // User preference
-  prepDays: 3, // User preference
   useMelatonin: true, // User preference
   useCaffeine: true, // User preference
   useExercise: false, // User preference
   napPreference: "flight_only", // User preference
+  scheduleIntensity: "balanced", // User preference
+  wakeTime: "07:00", // User preference
+  sleepTime: "22:00", // User preference
+  prepDays: 3, // User preference
 };
 ```
 
-### Could Centralize
+### Time & Date Configuration
 
-| File                  | Value      | Purpose                    |
-| --------------------- | ---------- | -------------------------- |
-| `time-select.tsx:32`  | 15 min     | Time picker increment      |
-| `trip-form.tsx:74-79` | +2/+3 days | Demo date offsets          |
-| `route.ts:179`        | 30000ms    | API timeout                |
-| `route.ts:82`         | 1-7        | Prep days validation range |
-| `day-section.tsx:48`  | 6h         | Late-night sleep threshold |
+| File                   | Line  | Value   | Purpose                     |
+| ---------------------- | ----- | ------- | --------------------------- |
+| `time-select.tsx`      | 32    | 15 min  | Time picker increment       |
+| `datetime-select.tsx`  | 31    | "12:00" | Default time when date-only |
+| `prep-days-slider.tsx` | 19-20 | 1-7     | Prep days min/max           |
+| `prep-days-slider.tsx` | 47    | 1       | Slider step value           |
 
-### Design System (Intervention Colors)
+### API & Validation
 
-Already well-organized in `intervention-utils.ts:11-107` with `getInterventionStyle()`.
+| File                  | Line | Value   | Purpose                    |
+| --------------------- | ---- | ------- | -------------------------- |
+| `route.ts` (generate) | 47   | 1-7     | Prep days validation range |
+| `route.ts` (generate) | 168  | 30000ms | Python process timeout     |
+
+### Time Period Boundaries (`time-utils.ts`)
+
+| Line   | Period    | Hours | Purpose            |
+| ------ | --------- | ----- | ------------------ |
+| 117    | Morning   | 5-12  | 5:00 AM - 11:59 AM |
+| 118    | Afternoon | 12-17 | 12:00 PM - 4:59 PM |
+| 119    | Evening   | 17-21 | 5:00 PM - 8:59 PM  |
+| (else) | Night     | 21-5  | 9:00 PM - 4:59 AM  |
+
+### Phase Ordering (`schedule-utils.ts:36-43`)
+
+```typescript
+const PHASE_ORDER: Record<Phase, number> = {
+  preparation: 0,
+  pre_departure: 1,
+  in_transit: 2,
+  post_arrival: 3,
+  adaptation: 4,
+};
+```
+
+### Search Configuration (`airport-search.ts`)
+
+| Line | Constant         | Value | Purpose                     |
+| ---- | ---------------- | ----- | --------------------------- |
+| 37   | Code weight      | 3     | Fuse.js airport code weight |
+| 38   | City weight      | 2     | Fuse.js city name weight    |
+| 39   | Name weight      | 1     | Fuse.js airport name weight |
+| 41   | Fuse threshold   | 0.3   | Fuzzy search strictness     |
+| 44   | Min match length | 2     | Minimum chars to search     |
+| 61   | Default limit    | 10    | Max search results          |
+
+### Demo/Example Values (`trip-form.tsx`)
+
+| Line | Value   | Purpose                    |
+| ---- | ------- | -------------------------- |
+| 86   | +2 days | "Show me" departure offset |
+| 87   | "20:45" | "Show me" departure time   |
+| 90   | +3 days | "Show me" arrival offset   |
+| 91   | "15:15" | "Show me" arrival time     |
+| 103  | 500ms   | Scroll timeout             |
+
+### Color Schemes (`preference-colors.ts`)
+
+| Scheme    | Usage              | Primary Color |
+| --------- | ------------------ | ------------- |
+| `emerald` | Melatonin          | emerald-500   |
+| `orange`  | Caffeine           | orange-500    |
+| `sky`     | Exercise/Intensity | sky-500       |
+| `purple`  | Nap/Prep days      | purple-500    |
+
+### Design System (`intervention-utils.ts`)
+
+Already well-organized with `getInterventionStyle()` function providing semantic colors for all intervention types.
 
 ---
 
 ## Database Schema (Existing User Preferences)
 
-From `prisma/schema.prisma`, users table already has:
+From `prisma/schema.prisma`, the User model has:
 
 ```prisma
-default_prep_days     Int       @default(3)
-default_wake_time     String    @default("07:00")
-default_sleep_time    String    @default("23:00")
-uses_melatonin        Boolean   @default(true)
-uses_caffeine         Boolean   @default(true)
-nap_preference        String    @default("flight_only")
+// Implemented and functional (8 fields)
+defaultPrepDays     Int     @default(3)
+defaultWakeTime     String  @default("07:00")
+defaultSleepTime    String  @default("23:00")
+usesMelatonin       Boolean @default(true)
+usesCaffeine        Boolean @default(true)
+usesExercise        Boolean @default(false)
+napPreference       String  @default("flight_only")
+scheduleIntensity   String  @default("balanced")
+
+// ⚠️ ORPHANED FIELD - in schema but NOT in types, API, or UI
+caffeineCutoffHours Int     @default(6)
 ```
 
-**Missing from schema (future additions):**
+### Implementation Status
 
-- `light_exposure_minutes` (default 60)
-- `caffeine_cutoff_hours` (default 10)
-- `max_nap_minutes` (default 30)
-- `max_nap_with_debt_minutes` (default 90)
-- `arrival_nap_cutoff_time` (default "13:00")
-- `melatonin_dose_mg` (default 0.5)
+| Field               | Schema | Types | API | UI  | Status       |
+| ------------------- | ------ | ----- | --- | --- | ------------ |
+| defaultWakeTime     | ✅     | ✅    | ✅  | ✅  | Working      |
+| defaultSleepTime    | ✅     | ✅    | ✅  | ✅  | Working      |
+| defaultPrepDays     | ✅     | ✅    | ✅  | ✅  | Working      |
+| usesMelatonin       | ✅     | ✅    | ✅  | ✅  | Working      |
+| usesCaffeine        | ✅     | ✅    | ✅  | ✅  | Working      |
+| usesExercise        | ✅     | ✅    | ✅  | ✅  | Working      |
+| napPreference       | ✅     | ✅    | ✅  | ✅  | Working      |
+| scheduleIntensity   | ✅     | ✅    | ✅  | ✅  | Working      |
+| caffeineCutoffHours | ✅     | ❌    | ❌  | ❌  | **Orphaned** |
+
+### Future Preference Candidates (Not Yet Implemented)
+
+| Field                   | Default | Purpose                 |
+| ----------------------- | ------- | ----------------------- |
+| `lightExposureMinutes`  | 60      | Light session duration  |
+| `maxNapMinutes`         | 30      | Standard nap cap        |
+| `maxNapWithDebtMinutes` | 90      | High-debt nap cap       |
+| `arrivalNapCutoffTime`  | "13:00" | Latest arrival nap time |
+| `melatoninDoseMg`       | 0.5     | Melatonin dose          |
+
+**Note:** `caffeineCutoffHours` already exists in schema but needs types/API/UI implementation, OR should be removed if not planned.
+
+---
+
+## Configuration Duplication Issues
+
+### Intensity Rates (Soft Duplication)
+
+The schedule intensity rates are defined in `shift_calculator.py` but documented/hardcoded in multiple other locations:
+
+| Location                    | Type             | Content                                        |
+| --------------------------- | ---------------- | ---------------------------------------------- |
+| `shift_calculator.py:51-64` | Code (canonical) | `INTENSITY_CONFIGS` dict - **source of truth** |
+| `types.py:86-90`            | Comments         | Duplicated rate values in docstring            |
+| `test_shift_rates.py:36-38` | Test comments    | Same rates documented                          |
+| `test_shift_rates.py:44-57` | Test assertions  | Hardcoded values (expected - validates code)   |
+
+**Risk:** If rates in `INTENSITY_CONFIGS` change, comments become stale. Test assertions would fail (good), but comments would not (bad).
+
+**Recommended fix:** Remove inline rate values from comments in `types.py`, add cross-reference to canonical source.
 
 ---
 
@@ -158,48 +321,23 @@ config/
 
 ---
 
-## Configuration Duplication Issues
+## Summary
 
-### Intensity Rates (Soft Duplication)
+| Category          | Count | Action                                          |
+| ----------------- | ----- | ----------------------------------------------- |
+| Immutable Science | ~30   | Leave as-is, document sources                   |
+| Algorithm Config  | ~35   | Could centralize (low priority)                 |
+| User Preferences  | 8+1   | 8 working, 1 orphaned, 5 candidates             |
+| Frontend Defaults | ~25   | Mostly centralized, well-organized              |
+| Duplication       | 1     | Fix soft duplication in intensity rate comments |
 
-The schedule intensity rates are defined in `shift_calculator.py` but documented/hardcoded in multiple other locations:
+### Priority Actions
 
-| Location                           | Type             | Content                                                |
-| ---------------------------------- | ---------------- | ------------------------------------------------------ |
-| `shift_calculator.py:51-64`        | Code (canonical) | `INTENSITY_CONFIGS` dict - **source of truth**         |
-| `types.py:86-90`                   | Comments         | `# - gentle: 0.75h/day advance, 1.0h/day delay`        |
-| `test_shift_rates.py:36-38`        | Test comments    | Same rates documented in docstring                     |
-| `test_shift_rates.py:44-57`        | Test assertions  | Hardcoded values: `assert config.advance_rate == 0.75` |
-| `test_shift_rates.py:66-74`        | Test parameters  | Hardcoded values in `@pytest.mark.parametrize`         |
-| `test_realistic_flights.py:1427-9` | Test comments    | Same rates documented in docstring                     |
-
-**Risk:** If rates in `INTENSITY_CONFIGS` change, the comments in `types.py` and tests will become stale. The test assertions would fail (good), but the comments would not (bad).
-
-**Recommended fix:**
-
-1. **`types.py`**: Remove inline rate values from comments, add cross-reference:
-   ```python
-   # Schedule intensity controls circadian shift rates (direction-specific)
-   # See INTENSITY_CONFIGS in science/shift_calculator.py for current values
-   ScheduleIntensity = Literal["gentle", "balanced", "aggressive"]
-   ```
-2. **Tests**: Keep assertion values (they validate correctness) but remove duplicated comments that document the rates
+1. **Fix orphaned field:** Either implement `caffeineCutoffHours` fully (types, API, UI) or remove from schema
+2. **Light exposure duration** (30-120 min) - high user value
+3. **Nap settings** (duration, windows, cutoff) - moderate user value
+4. **Melatonin dose** (0.3-3mg) - low priority, safety consideration
 
 ---
 
-## Summary
-
-| Category          | Count | Action                                         |
-| ----------------- | ----- | ---------------------------------------------- |
-| Immutable Science | ~28   | Leave as-is, document sources                  |
-| Algorithm Config  | ~10   | Could centralize (low priority)                |
-| User Preferences  | ~15   | Add to DB schema + settings UI (high priority) |
-| Frontend Defaults | ~7    | Already mostly centralized                     |
-| Duplication       | 1     | Fix soft duplication in intensity rates        |
-
-**Priority User Preferences to Add:**
-
-1. Light exposure duration (30-120 min)
-2. Caffeine cutoff (8-12h before sleep)
-3. Nap settings (duration, windows, cutoff)
-4. Melatonin dose (0.3-3mg)
+_Last updated: January 2025_
