@@ -63,6 +63,12 @@ class ConstraintFilter:
         """
         filtered = interventions.copy()
 
+        # Skip most filtering for ULR in-transit phases - their interventions are
+        # positioned by flight_offset_hours, not timezone-local times.
+        # Just sort and return.
+        if phase.phase_type == "in_transit_ulr":
+            return self._sort_interventions(filtered)
+
         # 1. Remove interventions outside phase bounds
         filtered = self._filter_phase_bounds(filtered, phase, departure_datetime)
 

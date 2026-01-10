@@ -356,6 +356,136 @@ class TestUlrFlightDetection:
             assert phase.timezone is None, "ULR phase should also have timezone=None"
 
 
+class TestUlrSleepWindows:
+    """Test ULR sleep window generation and offset calculation."""
+
+    def test_ulr_sleep_windows_have_flight_offset_hours(self):
+        """ULR sleep windows should have flight_offset_hours in final schedule."""
+        from circadian.scheduler_v2 import ScheduleGeneratorV2
+        from circadian.types import ScheduleRequest
+
+        # SFO → SIN: 17h flight
+        request = ScheduleRequest(
+            legs=[
+                TripLeg(
+                    origin_tz="America/Los_Angeles",
+                    dest_tz="Asia/Singapore",
+                    departure_datetime="2026-01-11T09:45",
+                    arrival_datetime="2026-01-12T19:10",
+                )
+            ],
+            prep_days=3,
+            wake_time="07:00",
+            sleep_time="23:00",
+        )
+
+        scheduler = ScheduleGeneratorV2()
+        response = scheduler.generate_schedule(request)
+
+        # Find in-transit schedule
+        in_transit = [d for d in response.interventions if d.is_in_transit]
+        assert len(in_transit) >= 1, "Should have in-transit schedule for ULR flight"
+
+        # Check nap_window interventions have flight_offset_hours
+        ulr_schedule = in_transit[0]
+        nap_windows = [i for i in ulr_schedule.items if i.type == "nap_window"]
+        assert len(nap_windows) == 2, "ULR flight should have 2 sleep windows"
+
+        for nap in nap_windows:
+            assert nap.flight_offset_hours is not None, (
+                f"nap_window at {nap.time} should have flight_offset_hours"
+            )
+            assert nap.flight_offset_hours >= 0, "flight_offset_hours should be non-negative"
+
+    def test_ulr_flight_duration_calculated_in_utc(self):
+        """Flight duration should be calculated in UTC, not naive local times."""
+        from circadian.circadian_math import calculate_timezone_shift
+
+        # SFO (PST, UTC-8) → SIN (SGT, UTC+8) = 16h difference
+        # Departure: 9:45 AM PST = 5:45 PM UTC
+        # Arrival: 7:10 PM SGT = 11:10 AM UTC (next day)
+        # Flight duration: 17h 25m
+        leg = TripLeg(
+            origin_tz="America/Los_Angeles",
+            dest_tz="Asia/Singapore",
+            departure_datetime="2026-01-11T09:45",
+            arrival_datetime="2026-01-12T19:10",
+        )
+
+        dep_dt = datetime.fromisoformat(leg.departure_datetime)
+        total_shift, direction = calculate_timezone_shift(leg.origin_tz, leg.dest_tz, dep_dt)
+
+        generator = PhaseGenerator(
+            legs=[leg],
+            prep_days=1,
+            wake_time="07:00",
+            sleep_time="23:00",
+            total_shift=total_shift,
+            direction=direction,
+        )
+
+        phases = generator.generate_phases()
+        ulr_phase = next(p for p in phases if p.phase_type == "in_transit_ulr")
+
+        # Naive calculation would give: (Jan 12 19:10) - (Jan 11 09:45) = 33h 25m
+        # Correct UTC calculation should give: ~17h 25m
+        assert ulr_phase.flight_duration_hours < 20, (
+            f"Flight duration {ulr_phase.flight_duration_hours:.1f}h seems too long; "
+            "should be ~17h, not ~33h (naive local time difference)"
+        )
+        assert ulr_phase.flight_duration_hours > 15, (
+            f"Flight duration {ulr_phase.flight_duration_hours:.1f}h seems too short"
+        )
+
+
+class TestWakeTargetCapping:
+    """Test that wake_target is capped for pre_departure phases."""
+
+    def test_wake_target_capped_3h_before_departure(self):
+        """Wake target should be capped to 3h before departure on flight day."""
+        from circadian.scheduler_v2 import ScheduleGeneratorV2
+        from circadian.types import ScheduleRequest
+
+        # Early morning departure where circadian wake would be after flight
+        # SFO → SIN: 9:45 AM departure
+        request = ScheduleRequest(
+            legs=[
+                TripLeg(
+                    origin_tz="America/Los_Angeles",
+                    dest_tz="Asia/Singapore",
+                    departure_datetime="2026-01-11T09:45",
+                    arrival_datetime="2026-01-12T19:10",
+                )
+            ],
+            prep_days=3,
+            wake_time="07:00",
+            sleep_time="23:00",
+        )
+
+        scheduler = ScheduleGeneratorV2()
+        response = scheduler.generate_schedule(request)
+
+        # Find pre_departure schedule
+        pre_departure = [d for d in response.interventions if d.phase_type == "pre_departure"]
+        assert len(pre_departure) >= 1, "Should have pre_departure schedule"
+
+        # Find wake_target intervention
+        wake_targets = [i for i in pre_departure[0].items if i.type == "wake_target"]
+        assert len(wake_targets) == 1, "Should have exactly one wake_target"
+
+        wake_time = wake_targets[0].time
+        hour, minute = map(int, wake_time.split(":"))
+        wake_minutes = hour * 60 + minute
+
+        # Departure is 9:45 = 585 minutes
+        # Max wake should be 9:45 - 3:00 = 6:45 = 405 minutes
+        max_wake_minutes = (9 * 60 + 45) - (3 * 60)
+
+        assert wake_minutes <= max_wake_minutes, (
+            f"wake_target at {wake_time} should be <= 06:45 (3h before 09:45 departure)"
+        )
+
+
 class TestPhaseSequenceTimezones:
     """Test that timezone progression through phases is correct."""
 

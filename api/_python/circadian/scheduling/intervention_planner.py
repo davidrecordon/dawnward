@@ -123,6 +123,11 @@ class InterventionPlanner:
         wake_target = day_markers["wake_target"]
         sleep_target = day_markers["sleep_target"]
 
+        # For pre_departure phases, cap wake_target to allow time for airport transit
+        # User needs ~3h before departure to get ready and travel to airport
+        if phase.phase_type == "pre_departure":
+            wake_target = self._cap_wake_target_for_departure(wake_target)
+
         # 1. Sleep/wake targets (always included)
         interventions.extend(self._plan_sleep_wake(phase, wake_target, sleep_target))
 
@@ -146,6 +151,39 @@ class InterventionPlanner:
 
         return interventions
 
+    def _cap_wake_target_for_departure(self, wake_target: time) -> time:
+        """
+        Cap wake_target to allow sufficient time before departure.
+
+        For pre_departure phases, the user needs time to get ready and travel
+        to the airport. If the circadian-optimal wake time is too late, cap it
+        to 3 hours before departure.
+
+        Args:
+            wake_target: Circadian-optimal wake time
+
+        Returns:
+            Wake time capped to at most 3h before departure
+        """
+        AIRPORT_BUFFER_HOURS = 3
+
+        first_leg = self.request.legs[0]
+        departure = parse_iso_datetime(first_leg.departure_datetime)
+        departure_minutes = time_to_minutes(departure.time())
+
+        max_wake_minutes = departure_minutes - (AIRPORT_BUFFER_HOURS * 60)
+
+        # If max_wake_minutes wrapped overnight (departure before 3 AM), don't cap
+        if max_wake_minutes < 0:
+            return wake_target
+
+        wake_minutes = time_to_minutes(wake_target)
+
+        if wake_minutes > max_wake_minutes:
+            return minutes_to_time(max_wake_minutes)
+
+        return wake_target
+
     def _parse_utc_timestamp(self, iso_str: str) -> datetime | None:
         """Parse an ISO timestamp string to a timezone-aware UTC datetime."""
         if "T" not in iso_str:
@@ -166,67 +204,77 @@ class InterventionPlanner:
         Sleep window times are converted from UTC to destination timezone for display,
         with flight_offset_hours indicating how many hours into the flight.
         """
-        interventions = []
-
         if phase.is_ulr_flight and phase.sleep_windows:
-            dest_tz_str = self.request.legs[0].dest_tz if self.request.legs else "UTC"
-            dest_tz = ZoneInfo(dest_tz_str)
+            return self._plan_ulr_sleep_windows(phase)
 
-            for window in phase.sleep_windows:
-                start_iso = window.get("start", "")
-                display_time = "00:00"
-                flight_offset = None
+        if phase.flight_duration_hours and phase.flight_duration_hours >= 8:
+            return self._plan_regular_flight_nap(phase)
 
-                utc_time = self._parse_utc_timestamp(start_iso)
-                if utc_time:
-                    # Convert to destination timezone for display
-                    local_time = utc_time.astimezone(dest_tz)
-                    display_time = local_time.strftime("%H:%M")
+        return []
 
-                    # Calculate hours into flight from departure
-                    departure_utc = phase.start_datetime
-                    if departure_utc.tzinfo is None:
-                        origin_tz_name = self.request.legs[0].origin_tz
-                        departure_utc = departure_utc.replace(tzinfo=ZoneInfo(origin_tz_name))
-                    departure_utc = departure_utc.astimezone(UTC)
+    def _plan_ulr_sleep_windows(self, phase: TravelPhase) -> list[Intervention]:
+        """Plan sleep window interventions for ultra-long-range flights."""
+        dest_tz_str = self.request.legs[0].dest_tz if self.request.legs else "UTC"
+        dest_tz = ZoneInfo(dest_tz_str)
 
-                    flight_offset = (utc_time - departure_utc).total_seconds() / 3600
-                    flight_offset = max(0, round(flight_offset, 1))
-                elif "T" in start_iso:
-                    # Fallback: extract HH:MM from ISO string
-                    display_time = start_iso.split("T")[1][:5]
+        interventions = []
+        for window in phase.sleep_windows or []:
+            start_iso = window.get("start", "")
+            display_time = "00:00"
+            flight_offset = None
 
-                duration_hours = window.get("duration_hours", 4)
-                interventions.append(
-                    Intervention(
-                        time=display_time,
-                        type="nap_window",
-                        title=window.get("label", "Sleep opportunity"),
-                        description=(
-                            f"Your body clock makes sleep easier during this window. "
-                            f"Aim for ~{duration_hours:.0f} hours if possible."
-                        ),
-                        duration_min=int(duration_hours * 60),
-                        flight_offset_hours=flight_offset,
-                    )
-                )
-        elif phase.flight_duration_hours and phase.flight_duration_hours >= 8:
-            # Regular overnight flight: single nap suggestion
+            utc_time = self._parse_utc_timestamp(start_iso)
+            if utc_time:
+                local_time = utc_time.astimezone(dest_tz)
+                display_time = local_time.strftime("%H:%M")
+                flight_offset = self._calculate_flight_offset(phase, utc_time)
+            elif "T" in start_iso:
+                display_time = start_iso.split("T")[1][:5]
+
+            duration_hours = window.get("duration_hours", 4)
             interventions.append(
                 Intervention(
-                    time="00:00",  # Placeholder - will be filtered/adjusted
+                    time=display_time,
                     type="nap_window",
-                    title="In-flight sleep",
+                    title=window.get("label", "Sleep opportunity"),
                     description=(
-                        "Try to sleep on the plane to arrive more rested. "
-                        "Use an eye mask and earplugs to improve sleep quality."
+                        f"Your body clock makes sleep easier during this window. "
+                        f"Aim for ~{duration_hours:.0f} hours if possible."
                     ),
-                    duration_min=int(phase.flight_duration_hours * 0.5 * 60),  # ~50% of flight
-                    flight_offset_hours=None,
+                    duration_min=int(duration_hours * 60),
+                    flight_offset_hours=flight_offset,
                 )
             )
 
         return interventions
+
+    def _calculate_flight_offset(self, phase: TravelPhase, utc_time: datetime) -> float:
+        """Calculate hours into flight from departure for a given UTC time."""
+        departure_utc = phase.start_datetime
+        if departure_utc.tzinfo is None:
+            origin_tz_name = self.request.legs[0].origin_tz
+            departure_utc = departure_utc.replace(tzinfo=ZoneInfo(origin_tz_name))
+        departure_utc = departure_utc.astimezone(UTC)
+
+        offset_hours = (utc_time - departure_utc).total_seconds() / 3600
+        return max(0, round(offset_hours, 1))
+
+    def _plan_regular_flight_nap(self, phase: TravelPhase) -> list[Intervention]:
+        """Plan a single nap suggestion for regular overnight flights (8+ hours)."""
+        flight_hours = phase.flight_duration_hours or 8
+        return [
+            Intervention(
+                time="00:00",  # Placeholder - will be filtered/adjusted
+                type="nap_window",
+                title="In-flight sleep",
+                description=(
+                    "Try to sleep on the plane to arrive more rested. "
+                    "Use an eye mask and earplugs to improve sleep quality."
+                ),
+                duration_min=int(flight_hours * 0.5 * 60),  # ~50% of flight
+                flight_offset_hours=None,
+            )
+        ]
 
     def _plan_single_recommendation(
         self, phase: TravelPhase, include_sleep_wake: bool = False
@@ -261,10 +309,12 @@ class InterventionPlanner:
         # and phase ends before departure, not at sleep time)
         if include_sleep_wake:
             if phase.phase_type == "pre_departure":
+                # Cap wake_target for pre_departure phases (need time for airport)
+                capped_wake = self._cap_wake_target_for_departure(wake_target)
                 # Only include wake_target for departure day
                 interventions.append(
                     Intervention(
-                        time=format_time(wake_target),
+                        time=format_time(capped_wake),
                         type="wake_target",
                         title="Target wake time",
                         description=(

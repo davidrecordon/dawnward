@@ -51,6 +51,12 @@ bun run typecheck:python  # mypy
 bun run test:python  # pytest
 ```
 
+**For significant code changes**, use the code-simplifier skill to refine code for clarity and maintainability:
+- Extracts magic numbers into named constants
+- Simplifies logic and reduces nesting
+- Improves naming consistency
+- Removes redundancy
+
 ## Linting & Type Checking
 
 | Language   | Linter   | Formatter   | Type Checker | Config                             |

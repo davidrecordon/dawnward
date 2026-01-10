@@ -8,7 +8,7 @@ and calculates timezone shifts.
 from datetime import UTC, datetime, time
 from zoneinfo import ZoneInfo
 
-from dateutil.parser import isoparse
+from dateutil.parser import isoparse  # type: ignore[import-untyped]
 
 
 def parse_time(time_str: str) -> time:
@@ -30,7 +30,8 @@ def parse_iso_datetime(iso_str: str) -> datetime:
     Returns:
         Parsed datetime object (timezone-aware if offset present)
     """
-    return isoparse(iso_str)
+    result: datetime = isoparse(iso_str)
+    return result
 
 
 def time_to_minutes(t: time) -> int:

@@ -15,8 +15,9 @@ Scientific basis for multi-leg strategy:
 - Opposite directions: Always restart
 """
 
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Literal
+from zoneinfo import ZoneInfo
 
 from ..circadian_math import (
     calculate_timezone_shift,
@@ -309,34 +310,50 @@ class PhaseGenerator:
         - 12+h: IN_TRANSIT_ULR with two sleep windows
         """
         leg = self.legs[0]
-        departure = parse_iso_datetime(leg.departure_datetime)
-        arrival = parse_iso_datetime(leg.arrival_datetime)
-        flight_hours = (arrival - departure).total_seconds() / 3600
+        departure_local = parse_iso_datetime(leg.departure_datetime)
+        arrival_local = parse_iso_datetime(leg.arrival_datetime)
 
-        cumulative = self._get_cumulative_shift_at_day(0)
+        # Convert to UTC for accurate flight duration calculation
+        # (departure is in origin timezone, arrival in destination timezone)
+        departure_utc = departure_local.replace(tzinfo=ZoneInfo(leg.origin_tz)).astimezone(UTC)
+        arrival_utc = arrival_local.replace(tzinfo=ZoneInfo(leg.dest_tz)).astimezone(UTC)
+        flight_hours = (arrival_utc - departure_utc).total_seconds() / 3600
+
+        cumulative_shift = self._get_cumulative_shift_at_day(0)
 
         if flight_hours >= ULR_FLIGHT_THRESHOLD_HOURS:
-            # Ultra-long-range: model two sleep windows
-            return self._generate_ulr_transit_phase(departure, arrival, cumulative, flight_hours)
-        else:
-            # Standard flight: single phase
-            return [
-                TravelPhase(
-                    phase_type="in_transit",
-                    start_datetime=departure,
-                    end_datetime=arrival,
-                    timezone=None,
-                    cumulative_shift=cumulative,
-                    remaining_shift=self.total_shift - cumulative,
-                    day_number=0,
-                    available_for_interventions=False,
-                    flight_duration_hours=flight_hours,
-                    sleep_windows=[{"recommended": flight_hours >= 8}],
-                )
-            ]
+            return self._generate_ulr_transit_phase(
+                departure_local,
+                arrival_local,
+                departure_utc,
+                arrival_utc,
+                cumulative_shift,
+                flight_hours,
+            )
+
+        return [
+            TravelPhase(
+                phase_type="in_transit",
+                start_datetime=departure_local,
+                end_datetime=arrival_local,
+                timezone=None,
+                cumulative_shift=cumulative_shift,
+                remaining_shift=self.total_shift - cumulative_shift,
+                day_number=0,
+                available_for_interventions=False,
+                flight_duration_hours=flight_hours,
+                sleep_windows=[{"recommended": flight_hours >= 8}],
+            )
+        ]
 
     def _generate_ulr_transit_phase(
-        self, departure: datetime, arrival: datetime, cumulative_shift: float, flight_hours: float
+        self,
+        departure: datetime,
+        arrival: datetime,
+        departure_utc: datetime,
+        arrival_utc: datetime,
+        cumulative_shift: float,
+        flight_hours: float,
     ) -> list[TravelPhase]:
         """
         Generate in-transit phase for ultra-long-range flights (12+ hours).
@@ -344,25 +361,27 @@ class PhaseGenerator:
         Models two sleep windows timed to user's circadian position:
         1. Early sleep: ~2h after departure
         2. Late sleep: ~4h before arrival
+
+        Sleep window times are stored in UTC for consistent offset calculation.
         """
-        # Calculate sleep windows
+        # Calculate sleep windows in UTC (avoids timezone confusion)
         # Window 1: Early in flight (after initial meal service)
-        window1_start = departure + timedelta(hours=2)
+        window1_start_utc = departure_utc + timedelta(hours=2)
         window1_duration = min(4.0, flight_hours / 3)
 
         # Window 2: Later in flight (before descent)
-        window2_end = arrival - timedelta(hours=2)
+        window2_end_utc = arrival_utc - timedelta(hours=2)
         window2_duration = min(4.0, flight_hours / 3)
-        window2_start = window2_end - timedelta(hours=window2_duration)
+        window2_start_utc = window2_end_utc - timedelta(hours=window2_duration)
 
         sleep_windows = [
             {
-                "start": window1_start.isoformat(),
+                "start": window1_start_utc.isoformat(),
                 "duration_hours": window1_duration,
                 "label": "Sleep opportunity",
             },
             {
-                "start": window2_start.isoformat(),
+                "start": window2_start_utc.isoformat(),
                 "duration_hours": window2_duration,
                 "label": "Sleep opportunity",
             },
