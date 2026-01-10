@@ -23,6 +23,22 @@ Phase 1 authentication is fully implemented with Google OAuth.
 - Split architecture: `auth.config.ts` (Edge-compatible) + `auth.ts` (with Prisma adapter)
 - Database: **Prisma Postgres** with `@prisma/adapter-pg` driver adapter
 - SessionProvider wrapper via `Providers` component for client-side hooks
+- **Vercel Deployment**: Requires explicit `vercel.json` config to coexist with Python functions (see `vercel-design.md`)
+
+**Prisma 7.x Compatibility:**
+
+The `@auth/prisma-adapter` package has a type mismatch with Prisma 7.x. The adapter is cast to `any` as a workaround:
+
+```typescript
+// src/auth.ts
+export const { handlers, auth, signIn, signOut } = NextAuth({
+  ...authConfig,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  adapter: PrismaAdapter(prisma as any),
+});
+```
+
+This is a known issue. Track the upstream adapter for updates.
 
 ### What's Built
 
@@ -726,14 +742,15 @@ declare module "next-auth" {
 Add to `.env.local`:
 
 ```bash
-# NextAuth
-NEXTAUTH_URL=http://localhost:3000  # https://dawnward.app in production
-NEXTAUTH_SECRET=  # Generate with: openssl rand -base64 32
+# NextAuth (Auth.js v5)
+AUTH_SECRET=  # Generate with: openssl rand -base64 32
 
 # Google OAuth
 GOOGLE_CLIENT_ID=      # From Google Cloud Console
 GOOGLE_CLIENT_SECRET=  # From Google Cloud Console
 ```
+
+**Note:** Auth.js v5 uses `AUTH_SECRET` instead of the legacy `NEXTAUTH_SECRET`. The `NEXTAUTH_URL` variable is no longer required—Auth.js automatically infers the URL from request headers.
 
 ---
 
