@@ -41,7 +41,7 @@ The app generates a day-by-day schedule starting several days before your flight
 | Framework       | Next.js 16 (App Router)         |
 | Styling         | Tailwind CSS v4, shadcn/ui      |
 | Circadian Model | Python (Forger99 via Arcascope) |
-| Database        | PostgreSQL via Prisma           |
+| Database        | Prisma Postgres                 |
 | Auth            | NextAuth.js v5 (Google)         |
 | Hosting         | Vercel                          |
 
@@ -53,7 +53,6 @@ The app generates a day-by-day schedule starting several days before your flight
 
 - [Bun](https://bun.sh/) (or Node.js 20+)
 - Python 3.9+
-- PostgreSQL (optional, for auth features)
 
 ### Setup
 
@@ -67,6 +66,35 @@ bun dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000).
+
+### Environment Variables
+
+For auth features, create `.env.development.local` with:
+
+```bash
+# Database (Prisma Postgres)
+DATABASE_URL="postgres://..."
+
+# NextAuth.js
+NEXTAUTH_SECRET="<generate with: openssl rand -base64 32>"
+NEXTAUTH_URL="http://localhost:3000"
+
+# Google OAuth
+GOOGLE_CLIENT_ID="<from Google Cloud Console>"
+GOOGLE_CLIENT_SECRET="<from Google Cloud Console>"
+```
+
+To set up Google OAuth:
+
+1. Go to [Google Cloud Console](https://console.cloud.google.com/)
+2. Create OAuth 2.0 credentials (Web application)
+3. Add redirect URI: `http://localhost:3000/api/auth/callback/google`
+
+Then run migrations:
+
+```bash
+bun prisma migrate dev
+```
 
 ### Project Structure
 

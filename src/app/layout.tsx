@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import { Analytics } from "@/components/analytics";
+import { Providers } from "@/components/providers";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -21,12 +22,14 @@ export default function RootLayout({
         className="bg-dawnward-gradient min-h-screen text-slate-800 antialiased"
         style={{ fontFamily: "system-ui, -apple-system, sans-serif" }}
       >
-        <div className="flex min-h-screen flex-col">
-          <Header />
-          <main className="flex-1">{children}</main>
-          <Footer />
-        </div>
-        <Analytics />
+        <Providers>
+          <div className="flex min-h-screen flex-col">
+            <Header />
+            <main className="flex-1">{children}</main>
+            <Footer />
+          </div>
+          <Analytics />
+        </Providers>
       </body>
     </html>
   );

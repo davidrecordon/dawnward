@@ -76,8 +76,8 @@ bun run test:python  # pytest
 ## Tech Stack
 
 - **Framework**: Next.js 16+ (App Router, React 19)
-- **Auth**: NextAuth.js v5 with Google provider (includes Calendar scope)
-- **Database**: PostgreSQL via Prisma (Vercel Postgres in prod)
+- **Auth**: NextAuth.js v5 with Google provider, JWT sessions (Phase 1 complete, Phase 2 adds Calendar)
+- **Database**: Prisma Postgres with `@prisma/adapter-pg` driver adapter
 - **Styling**: Tailwind CSS v4 with shadcn/ui components
 - **Python Runtime**: Vercel Python Functions for circadian model (Arcascope library)
 - **Analytics**: Vercel Analytics (respects GPC and DNT privacy signals)
@@ -91,10 +91,16 @@ bun run test:python  # pytest
 ```
 src/
 ├── app/              # Next.js App Router pages and API routes
-├── components/ui/    # shadcn/ui components (Button, Card, Input, etc.)
+│   ├── auth/         # Sign-in and error pages
+│   └── api/auth/     # NextAuth route handlers
+├── components/
+│   ├── ui/           # shadcn/ui components (Button, Card, Input, etc.)
+│   ├── auth/         # Auth components (SignInButton, UserMenu, etc.)
+│   └── schedule/     # Schedule display components
 ├── lib/              # Shared utilities (cn() for Tailwind class merging)
 │   └── __tests__/    # Vitest unit tests for utilities
 ├── test/             # Test setup and configuration
+├── types/            # TypeScript type definitions
 └── generated/prisma/ # Prisma client (generated, do not edit)
 
 api/_python/
@@ -107,7 +113,7 @@ api/_python/
 └── tests/                  # Python pytest tests
 
 prisma/
-├── schema.prisma     # Database schema
+├── schema.prisma     # Database schema (User, Account, Session models)
 └── migrations/       # Database migrations
 
 design_docs/
@@ -123,11 +129,19 @@ design_docs/
 
 **UI Components**: Using shadcn/ui with Radix primitives. Components use `class-variance-authority` for variants and the `cn()` helper for class merging. Add new components with `bunx shadcn@latest add <component>` (use bunx, not npx).
 
-**Auth Flow**: Progressive signup - anonymous users can generate one schedule (stored in localStorage), then sign in with Google to save trips to database and sync to Google Calendar.
+**Auth Flow**: Progressive signup - anonymous users can generate schedules (stored in localStorage), then sign in with Google to save trips and preferences. Auth uses JWT sessions for Edge Runtime compatibility. Config is split: `auth.config.ts` (Edge-compatible) and `auth.ts` (with Prisma adapter).
 
 ### Database Schema (Key Tables)
 
-- `users` - Google ID, email, default preferences (prep_days, wake/sleep times, melatonin/caffeine prefs)
+**Implemented (Phase 1 Auth):**
+
+- `User` - id, email, name, image, preferences (wake/sleep times, melatonin/caffeine, intensity)
+- `Account` - OAuth provider accounts (Google tokens, scopes)
+- `Session` - Database sessions (though JWT strategy is used)
+- `VerificationToken` - For email verification (future use)
+
+**Planned (Trip Persistence):**
+
 - `trips` - Container for legs with status (planned/active/completed) and prep_days
 - `legs` - Individual flight segments with origin/destination timezones and datetimes
 - `schedules` - Generated plans with model_version and inputs_hash for cache invalidation
@@ -218,7 +232,7 @@ This project uses Claude Code plugins that should be invoked for significant wor
 
 ## Testing
 
-**TypeScript (Vitest)**: ~170 tests covering utility functions
+**TypeScript (Vitest)**: ~180 tests covering utility functions and components
 
 - `src/lib/__tests__/time-utils.test.ts` - Date/time formatting, timezone-aware operations
 - `src/lib/__tests__/timezone-utils.test.ts` - Flight duration calculation, timezone shifts
@@ -228,6 +242,9 @@ This project uses Claude Code plugins that should be invoked for significant wor
 - `src/lib/__tests__/error-utils.test.ts` - Error message extraction
 - `src/lib/schedule-utils.test.ts` - Schedule merging and sorting logic
 - `src/app/api/schedule/generate/__tests__/route.test.ts` - API route data construction
+- `src/components/__tests__/header.test.tsx` - Session-aware header rendering
+- `src/components/auth/__tests__/sign-in-button.test.tsx` - Sign-in button variants
+- `src/components/auth/__tests__/user-menu.test.tsx` - User menu, avatar initials
 
 **Python (pytest)**: ~135 tests covering schedule generation (6-layer validation strategy)
 

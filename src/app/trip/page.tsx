@@ -2,8 +2,10 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useSession } from "next-auth/react";
 import { ArrowLeft, Calendar, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { SignInPrompt } from "@/components/auth/sign-in-prompt";
 import { getFormState } from "@/lib/schedule-storage";
 import {
   getCurrentDayNumber,
@@ -37,6 +39,7 @@ interface GeneratedSchedule {
 }
 
 export default function TripPage() {
+  const { data: session } = useSession();
   const [data, setData] = useState<GeneratedSchedule | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -178,28 +181,8 @@ export default function TripPage() {
           Back Home
         </Link>
 
-        {/* Sign-in prompt banner */}
-        <div className="relative overflow-hidden rounded-xl bg-gradient-to-r from-sky-500 via-indigo-500 to-violet-500 p-4 text-white shadow-lg shadow-indigo-500/20">
-          {/* Decorative shapes */}
-          <div className="absolute top-0 right-0 h-32 w-32 translate-x-1/2 -translate-y-1/2 rounded-full bg-white/10" />
-          <div className="absolute bottom-0 left-0 h-24 w-24 -translate-x-1/2 translate-y-1/2 rounded-full bg-white/5" />
-
-          <div className="relative flex items-center justify-between">
-            <div>
-              <p className="font-semibold">Save your schedule</p>
-              <p className="text-sm text-white/80">
-                Sign in to sync to Google Calendar and access from any device
-              </p>
-            </div>
-            <Button
-              variant="secondary"
-              size="sm"
-              className="border-0 bg-white/20 text-white backdrop-blur-sm hover:bg-white/30"
-            >
-              Sign in
-            </Button>
-          </div>
-        </div>
+        {/* Sign-in prompt banner (only for unauthenticated users) */}
+        {!session?.user && <SignInPrompt callbackUrl="/trip" />}
 
         {/* Trip header */}
         <ScheduleHeader
@@ -275,9 +258,15 @@ export default function TripPage() {
             <Calendar className="mr-2 h-4 w-4" />
             Add to Calendar
           </Button>
-          <Button className="flex-1 bg-sky-500 shadow-lg shadow-sky-500/20 hover:bg-sky-600">
-            Sign in to Save
-          </Button>
+          {session?.user ? (
+            <Button className="flex-1 bg-sky-500 shadow-lg shadow-sky-500/20 hover:bg-sky-600">
+              Save Trip
+            </Button>
+          ) : (
+            <Button className="flex-1 bg-sky-500 shadow-lg shadow-sky-500/20 hover:bg-sky-600">
+              Sign in to Save
+            </Button>
+          )}
         </div>
       </div>
     </div>

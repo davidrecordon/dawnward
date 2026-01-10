@@ -13,7 +13,7 @@
 | Framework       | Next.js 16+ (App Router)                     |
 | Hosting         | Vercel                                       |
 | Auth            | NextAuth.js v5, Google only                  |
-| Database        | Vercel Postgres (free tier)                  |
+| Database        | Prisma Postgres                              |
 | Python Runtime  | Vercel Python functions (accept cold starts) |
 | Circadian Model | Arcascope library, Forger99 model            |
 | Analytics       | Vercel Analytics                             |
@@ -47,9 +47,12 @@
 ### Authentication
 
 - **Google only** via NextAuth.js v5
-- **Progressive signup:** Anonymous users can generate one schedule, then sign in to save
+- **Phase 1 complete:** Sign-in, protected routes (`/history`, `/settings`), user preferences
+- **Session strategy:** JWT (for Edge Runtime compatibility with Next.js middleware)
+- **Progressive signup:** Anonymous users can generate schedules, then sign in to save
 - **localStorage:** Used only as OAuth bridge (holds one trip during redirect, clears after login or 24h)
-- **OAuth scopes:** `openid`, `email`, `profile`, `calendar.events`
+- **OAuth scopes (Phase 1):** `openid`, `email`, `profile`
+- **OAuth scopes (Phase 2):** Add `calendar.events` for Google Calendar sync
 
 ### Calendar Integration
 
@@ -149,9 +152,12 @@ Key tables (full SQL in backend design doc):
 
 ## Open Items
 
-| Item                | Status                                             |
-| ------------------- | -------------------------------------------------- |
-| Curate airport JSON | DONE — 7,168 airports in public/data/airports.json |
+| Item                          | Status                                             |
+| ----------------------------- | -------------------------------------------------- |
+| Curate airport JSON           | DONE — 7,168 airports in public/data/airports.json |
+| Phase 1 Auth (Google sign-in) | DONE — JWT sessions, protected routes, user prefs  |
+| Set up hello@dawnward.app     | TODO — Used for Google OAuth consent screen        |
+| Phase 2 Auth (Calendar sync)  | TODO — Add calendar.events scope, sync API         |
 
 ---
 

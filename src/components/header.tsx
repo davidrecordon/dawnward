@@ -1,7 +1,11 @@
 import Link from "next/link";
 import { Plane } from "lucide-react";
+import { auth, signIn } from "@/auth";
+import { UserMenu } from "./auth/user-menu";
 
-export function Header() {
+export async function Header() {
+  const session = await auth();
+
   return (
     <header className="sticky top-0 z-50 w-full border-b border-white/20 bg-white/70 backdrop-blur-sm">
       <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-4 sm:px-6">
@@ -12,9 +16,23 @@ export function Header() {
           <span className="text-lg font-semibold tracking-tight">Dawnward</span>
         </Link>
 
-        <button className="rounded-md px-3 py-1.5 text-sm text-slate-500 hover:bg-slate-100">
-          Sign in
-        </button>
+        {session?.user ? (
+          <UserMenu user={session.user} />
+        ) : (
+          <form
+            action={async () => {
+              "use server";
+              await signIn("google");
+            }}
+          >
+            <button
+              type="submit"
+              className="rounded-md px-3 py-1.5 text-sm text-slate-500 hover:bg-slate-100"
+            >
+              Sign in
+            </button>
+          </form>
+        )}
       </div>
     </header>
   );

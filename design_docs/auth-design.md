@@ -13,29 +13,27 @@ Dawnward uses a progressive sign-up model: users can generate jet lag plans with
 
 ## Current State
 
-### What Exists
+### Phase 1: Complete ✓
 
-- `next-auth@5.0.0-beta.30` and `@auth/prisma-adapter` installed
-- Placeholder UI elements:
-  - `src/components/header.tsx` (line 15-17): Static "Sign in" button
-  - `src/app/settings/page.tsx` (lines 83, 104): "Sign in with Google" stub
-  - `src/app/trip/page.tsx` (lines 191, 199, 279): Sign-in prompt banners
-- Prisma schema is empty (only generator/datasource configured)
-- localStorage key: `dawnward_form_state` (form inputs only)
+Phase 1 authentication is fully implemented with Google OAuth.
 
-### What Needs Building
+**Key Implementation Notes:**
 
-**Phase 1 (This Spec):**
+- Uses **JWT sessions** (not database sessions) for Edge Runtime compatibility with Next.js middleware
+- Split architecture: `auth.config.ts` (Edge-compatible) + `auth.ts` (with Prisma adapter)
+- Database: **Prisma Postgres** with `@prisma/adapter-pg` driver adapter
+- SessionProvider wrapper via `Providers` component for client-side hooks
 
-- Prisma schema with NextAuth models
-- NextAuth configuration (database sessions)
-- Auth route handlers
-- Auth helper functions
-- Middleware for protected routes
-- UI components for sign-in flow
-- Update existing placeholder elements
+### What's Built
 
-**Phase 2 (Calendar - Later):**
+- Prisma schema with User, Account, Session, VerificationToken models
+- NextAuth v5 configuration with JWT strategy
+- Edge-compatible middleware for route protection
+- Auth UI components (SignInButton, SignInPrompt, UserMenu)
+- Protected routes: `/history`, `/settings`
+- Tests for auth components
+
+### Phase 2 (Calendar - Later)
 
 - Add `calendar.events` scope
 - Google Calendar API client
@@ -183,21 +181,19 @@ bun prisma generate
 
 ### Files to Create
 
-#### 1. `src/auth.ts` - NextAuth Configuration
+#### 1. `src/auth.config.ts` - Edge-Compatible Auth Configuration
+
+This config is used by middleware and doesn't include database adapters (which aren't Edge-compatible).
 
 ```typescript
-import NextAuth from "next-auth";
+import type { NextAuthConfig } from "next-auth";
 import Google from "next-auth/providers/google";
-import { PrismaAdapter } from "@auth/prisma-adapter";
-import { prisma } from "@/lib/prisma";
 
-export const { handlers, auth, signIn, signOut } = NextAuth({
-  adapter: PrismaAdapter(prisma),
+export const authConfig: NextAuthConfig = {
   providers: [
     Google({
       clientId: process.env.GOOGLE_CLIENT_ID!,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-      // Phase 1: Basic scopes only (no calendar)
       authorization: {
         params: {
           scope: "openid email profile",
@@ -206,41 +202,89 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     }),
   ],
   session: {
-    strategy: "database", // Use database sessions, not JWT
+    strategy: "jwt", // JWT for Edge Runtime compatibility
   },
   pages: {
     signIn: "/auth/signin",
     error: "/auth/error",
   },
   callbacks: {
-    async session({ session, user }) {
-      // Add user ID to session
-      if (session.user) {
-        session.user.id = user.id;
+    authorized({ auth, request: { nextUrl } }) {
+      const isLoggedIn = !!auth?.user;
+      const isProtectedRoute =
+        nextUrl.pathname.startsWith("/history") ||
+        nextUrl.pathname.startsWith("/settings");
+      if (isProtectedRoute && !isLoggedIn) {
+        const signInUrl = new URL("/auth/signin", nextUrl);
+        signInUrl.searchParams.set("callbackUrl", nextUrl.pathname);
+        return Response.redirect(signInUrl);
+      }
+      return true;
+    },
+    async jwt({ token, user }) {
+      if (user) {
+        token.id = user.id;
+      }
+      return token;
+    },
+    async session({ session, token }) {
+      if (session.user && token.id) {
+        session.user.id = token.id as string;
       }
       return session;
     },
   },
+};
+```
+
+#### 2. `src/auth.ts` - Full NextAuth Configuration
+
+Extends the Edge-compatible config with the Prisma adapter for server-side use.
+
+```typescript
+import NextAuth from "next-auth";
+import { PrismaAdapter } from "@auth/prisma-adapter";
+import { prisma } from "@/lib/prisma";
+import { authConfig } from "@/auth.config";
+
+export const { handlers, auth, signIn, signOut } = NextAuth({
+  ...authConfig,
+  adapter: PrismaAdapter(prisma),
 });
 ```
 
-#### 2. `src/lib/prisma.ts` - Prisma Client
+#### 3. `src/lib/prisma.ts` - Prisma Client
+
+Uses `@prisma/adapter-pg` driver adapter for Prisma Postgres with SSL configuration.
 
 ```typescript
-import { PrismaClient } from "@/generated/prisma";
+import { PrismaPg } from "@prisma/adapter-pg";
+import { PrismaClient } from "@/generated/prisma/client";
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
 };
 
-export const prisma = globalForPrisma.prisma ?? new PrismaClient();
+function createPrismaClient() {
+  const connectionString = process.env.DATABASE_URL;
+  if (!connectionString) {
+    throw new Error("DATABASE_URL environment variable is not set");
+  }
+  const adapter = new PrismaPg({
+    connectionString,
+    ssl: { rejectUnauthorized: false },
+  });
+  return new PrismaClient({ adapter });
+}
+
+export const prisma = globalForPrisma.prisma ?? createPrismaClient();
 
 if (process.env.NODE_ENV !== "production") {
   globalForPrisma.prisma = prisma;
 }
 ```
 
-#### 3. `src/app/api/auth/[...nextauth]/route.ts` - Auth Route Handler
+#### 4. `src/app/api/auth/[...nextauth]/route.ts` - Auth Route Handler
 
 ```typescript
 import { handlers } from "@/auth";
@@ -248,62 +292,15 @@ import { handlers } from "@/auth";
 export const { GET, POST } = handlers;
 ```
 
-#### 4. `src/lib/auth.ts` - Auth Helpers
-
-```typescript
-import { auth } from "@/auth";
-import { redirect } from "next/navigation";
-
-/**
- * Get the current user or redirect to sign-in (for protected routes)
- */
-export async function getRequiredUser() {
-  const session = await auth();
-  if (!session?.user?.id) {
-    redirect("/auth/signin");
-  }
-  return session.user;
-}
-
-/**
- * Get the current user or null (for optional auth)
- */
-export async function getOptionalUser() {
-  const session = await auth();
-  return session?.user ?? null;
-}
-
-/**
- * Check if user is authenticated
- */
-export async function isAuthenticated() {
-  const session = await auth();
-  return !!session?.user;
-}
-```
-
 #### 5. `src/middleware.ts` - Route Protection
 
+Uses the Edge-compatible auth config. Route protection is handled via the `authorized` callback in `auth.config.ts`.
+
 ```typescript
-import { auth } from "@/auth";
-import { NextResponse } from "next/server";
+import NextAuth from "next-auth";
+import { authConfig } from "@/auth.config";
 
-// Routes that require authentication
-const protectedRoutes = ["/history", "/settings"];
-
-export default auth((req) => {
-  const isProtected = protectedRoutes.some((route) =>
-    req.nextUrl.pathname.startsWith(route)
-  );
-
-  if (isProtected && !req.auth) {
-    const signInUrl = new URL("/auth/signin", req.url);
-    signInUrl.searchParams.set("callbackUrl", req.nextUrl.pathname);
-    return NextResponse.redirect(signInUrl);
-  }
-
-  return NextResponse.next();
-});
+export default NextAuth(authConfig).auth;
 
 export const config = {
   matcher: ["/history/:path*", "/settings/:path*"],
@@ -485,8 +482,12 @@ export function SignInButton({
 
 #### 10. `src/components/auth/sign-in-prompt.tsx`
 
+Client component using `next-auth/react` for the sign-in action.
+
 ```tsx
-import { signIn } from "@/auth";
+"use client";
+
+import { signIn } from "next-auth/react";
 import { SignInButton } from "./sign-in-button";
 
 interface SignInPromptProps {
@@ -500,13 +501,7 @@ export function SignInPrompt({ callbackUrl = "/" }: SignInPromptProps) {
       <p className="mt-1 text-sm text-slate-600">
         Sign in to save this trip and access it from any device.
       </p>
-      <form
-        action={async () => {
-          "use server";
-          await signIn("google", { redirectTo: callbackUrl });
-        }}
-        className="mt-4"
-      >
+      <form action={() => signIn("google", { callbackUrl })} className="mt-4">
         <SignInButton />
       </form>
     </div>
@@ -514,7 +509,42 @@ export function SignInPrompt({ callbackUrl = "/" }: SignInPromptProps) {
 }
 ```
 
-#### 11. `src/components/auth/user-menu.tsx`
+#### 11. `src/components/providers.tsx` - SessionProvider Wrapper
+
+Required for client components that use `useSession` hook.
+
+```tsx
+"use client";
+
+import { SessionProvider } from "next-auth/react";
+
+interface ProvidersProps {
+  children: React.ReactNode;
+}
+
+export function Providers({ children }: ProvidersProps) {
+  return <SessionProvider>{children}</SessionProvider>;
+}
+```
+
+**Note:** Wrap your root layout with this provider:
+
+```tsx
+// src/app/layout.tsx
+import { Providers } from "@/components/providers";
+
+export default function RootLayout({ children }) {
+  return (
+    <html>
+      <body>
+        <Providers>{children}</Providers>
+      </body>
+    </html>
+  );
+}
+```
+
+#### 12. `src/components/auth/user-menu.tsx`
 
 ```tsx
 "use client";
@@ -949,22 +979,24 @@ bun run build          # Production build succeeds
 
 ## Files Summary
 
-### Create (12 files)
+### Create (14 files)
 
-| File                                      | Purpose                  |
-| ----------------------------------------- | ------------------------ |
-| `src/auth.ts`                             | NextAuth configuration   |
-| `src/lib/prisma.ts`                       | Prisma client singleton  |
-| `src/lib/auth.ts`                         | Auth helper functions    |
-| `src/app/api/auth/[...nextauth]/route.ts` | Auth API handler         |
-| `src/middleware.ts`                       | Route protection         |
-| `src/app/auth/signin/page.tsx`            | Sign-in page             |
-| `src/app/auth/error/page.tsx`             | Auth error page          |
-| `src/components/auth/google-icon.tsx`     | Google logo SVG          |
-| `src/components/auth/sign-in-button.tsx`  | Sign-in button component |
-| `src/components/auth/sign-in-prompt.tsx`  | Sign-in prompt card      |
-| `src/components/auth/user-menu.tsx`       | User dropdown menu       |
-| `src/types/next-auth.d.ts`                | TypeScript declarations  |
+| File                                      | Purpose                            |
+| ----------------------------------------- | ---------------------------------- |
+| `src/auth.config.ts`                      | Edge-compatible NextAuth config    |
+| `src/auth.ts`                             | Full NextAuth config with Prisma   |
+| `src/lib/prisma.ts`                       | Prisma client with driver adapter  |
+| `src/app/api/auth/[...nextauth]/route.ts` | Auth API handler                   |
+| `src/middleware.ts`                       | Route protection (Edge-compatible) |
+| `src/app/auth/signin/page.tsx`            | Sign-in page                       |
+| `src/app/auth/error/page.tsx`             | Auth error page                    |
+| `src/components/providers.tsx`            | SessionProvider wrapper            |
+| `src/components/auth/google-icon.tsx`     | Google logo SVG                    |
+| `src/components/auth/sign-in-button.tsx`  | Sign-in button component           |
+| `src/components/auth/sign-in-prompt.tsx`  | Sign-in prompt card (client)       |
+| `src/components/auth/user-menu.tsx`       | User dropdown menu                 |
+| `src/types/next-auth.d.ts`                | TypeScript declarations            |
+| `src/app/history/page.tsx`                | Trip history page (auth-protected) |
 
 ### Modify (4 files)
 
@@ -973,12 +1005,16 @@ bun run build          # Production build succeeds
 | `prisma/schema.prisma`      | Add User, Account, Session, VerificationToken |
 | `src/components/header.tsx` | Add session-aware rendering                   |
 | `src/app/trip/page.tsx`     | Replace sign-in placeholder with SignInPrompt |
-| `src/app/settings/page.tsx` | Add auth check, show preferences form         |
+| `src/app/layout.tsx`        | Wrap with Providers component                 |
 
 ### Add Dependencies
 
 ```bash
+# shadcn/ui components
 bunx shadcn@latest add dropdown-menu avatar
+
+# Prisma driver adapter for Prisma Postgres
+bun add @prisma/adapter-pg
 ```
 
 ---
@@ -1004,13 +1040,17 @@ bunx shadcn@latest add dropdown-menu avatar
 
 1. **CSRF Protection**: NextAuth handles this automatically with `csrfToken`.
 
-2. **Session Storage**: Using database sessions (not JWT) for better security and revocation capability.
+2. **Session Storage**: Using JWT sessions for Edge Runtime compatibility with Next.js middleware. JWTs are signed with `NEXTAUTH_SECRET`.
 
-3. **Token Storage**: Access and refresh tokens stored in database via Prisma adapter.
+3. **Token Storage**: OAuth access and refresh tokens stored in database via Prisma adapter (Account model).
 
-4. **Scope Minimization**: Phase 1 only requests basic profile scopes. Calendar scope added only in Phase 2 when needed.
+4. **Edge Compatibility**: Auth config split into two files—`auth.config.ts` (Edge-compatible, no Prisma) and `auth.ts` (full config with Prisma adapter). Middleware uses the Edge-compatible config.
 
-5. **Trip Ownership**: All trip queries must filter by `userId` to prevent accessing others' data.
+5. **Scope Minimization**: Phase 1 only requests basic profile scopes. Calendar scope added only in Phase 2 when needed.
+
+6. **Trip Ownership**: All trip queries must filter by `userId` to prevent accessing others' data.
+
+7. **SSL Configuration**: Prisma Postgres requires SSL connections. The adapter is configured with `ssl: { rejectUnauthorized: false }` for compatibility.
 
 ---
 
