@@ -157,17 +157,17 @@ Key tables (full SQL in backend design doc):
 
 ## Artifacts Reference
 
-| Artifact           | Location                                |
-| ------------------ | --------------------------------------- |
-| Science research   | `science-methodology.md`                |
-| Backend design doc | `backend-design.md`                     |
-| Auth design doc    | `auth-design.md`                        |
-| Frontend design    | `frontend-design.md`                    |
-| Brand guidelines   | `brand.md`                              |
-| UI mockup          | `ui-v2.html`                            |
-| Testing design doc | `testing-design.md`                     |
-| This decisions doc | `decisions-overview.md`                 |
-| Eight Sleep spec   | `exploration/eight-sleep-integration.md`|
-| Config audit       | `exploration/configuration-audit.md`    |
-| Shovel-ready specs | `shovel_ready/*.md`                     |
-| Completed designs  | `completed/*.md`                        |
+| Artifact           | Location                                 |
+| ------------------ | ---------------------------------------- |
+| Science research   | `science-methodology.md`                 |
+| Backend design doc | `backend-design.md`                      |
+| Auth design doc    | `auth-design.md`                         |
+| Frontend design    | `frontend-design.md`                     |
+| Brand guidelines   | `brand.md`                               |
+| UI mockup          | `ui-v2.html`                             |
+| Testing design doc | `testing-design.md`                      |
+| This decisions doc | `decisions-overview.md`                  |
+| Eight Sleep spec   | `exploration/eight-sleep-integration.md` |
+| Config audit       | `exploration/configuration-audit.md`     |
+| Shovel-ready specs | `shovel_ready/*.md`                      |
+| Completed designs  | `completed/*.md`                         |

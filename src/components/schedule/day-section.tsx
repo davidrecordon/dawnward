@@ -162,10 +162,18 @@ export function DaySection({
     // Flight events: departure comes before in-transit items
     const isInterventionLike = (kind: string) =>
       kind === "intervention" || kind === "wake_target_group";
-    if (a.kind === "departure" && isInterventionLike(b.kind) && tzB !== origin.tz) {
+    if (
+      a.kind === "departure" &&
+      isInterventionLike(b.kind) &&
+      tzB !== origin.tz
+    ) {
       return -1; // Departure before in-transit interventions
     }
-    if (b.kind === "departure" && isInterventionLike(a.kind) && tzA !== origin.tz) {
+    if (
+      b.kind === "departure" &&
+      isInterventionLike(a.kind) &&
+      tzA !== origin.tz
+    ) {
       return 1; // Departure before in-transit interventions
     }
 

@@ -7,6 +7,7 @@ Enhance the schedule display page (`/trip/[id]`) with interactive checkboxes and
 ## Current State (What Exists)
 
 **Fully Working:**
+
 - Complete timeline rendering with day sections
 - All intervention card types (light, caffeine, melatonin, sleep, exercise)
 - Flight event cards (departure/arrival)
@@ -20,6 +21,7 @@ Enhance the schedule display page (`/trip/[id]`) with interactive checkboxes and
 - Phase-aware timezone display
 
 **Components Built:**
+
 - `schedule-header.tsx` - Trip summary with route/shift
 - `day-section.tsx` - Timeline with vertical line
 - `intervention-card.tsx` - Individual intervention display
@@ -32,64 +34,83 @@ Enhance the schedule display page (`/trip/[id]`) with interactive checkboxes and
 ## What Needs to Be Built
 
 ### 1. Interactive Checkboxes (30% of work)
+
 - Circular checkbox on left of each intervention card
 - Completed state: checkmark, strikethrough, reduced opacity
 - Persist in localStorage (keyed by schedule ID)
 - Works with nested wake_target children
 
 ### 2. Progress Bar (30% of work)
+
 - Shows "Today's progress • X / Y"
 - Green fill bar proportional to completion
 - Only visible during active trip (not pre/post)
 - Positioned below day navigation buttons
 
 ### 3. Missing shadcn/ui Components (10% of work)
+
 ```bash
 bunx shadcn@latest add checkbox progress tooltip
 ```
 
 ### 4. Footer Button Functionality (20% of work)
+
 - "Add to Calendar" - Show tooltip "Coming soon" (blocked by auth)
 - "Sign in to Save" - Blocked by auth (keep as placeholder)
 
 ### 5. Save Banner Functionality (10% of work)
+
 - Blue gradient banner "Sign in" button - Blocked by auth
 
 ## Implementation Plan
 
 ### Phase 1: Add UI Primitives (~15 min)
+
 ```bash
 bunx shadcn@latest add checkbox progress tooltip
 ```
 
 ### Phase 2: State Management (~30 min)
+
 **File:** `src/lib/schedule-storage.ts`
 
 Add completion tracking functions:
+
 ```typescript
 // Key format: dawnward_completion_{departure_datetime}
 // Store: {day}-{time}-{type} → boolean
 
-export function getCompletionState(scheduleKey: string): Record<string, boolean>;
-export function setInterventionComplete(scheduleKey: string, interventionId: string, complete: boolean): void;
+export function getCompletionState(
+  scheduleKey: string
+): Record<string, boolean>;
+export function setInterventionComplete(
+  scheduleKey: string,
+  interventionId: string,
+  complete: boolean
+): void;
 export function clearCompletionState(scheduleKey: string): void;
 ```
 
 ### Phase 3: Interactive Checkboxes (~45 min)
+
 **Files to modify:**
+
 - `src/components/schedule/intervention-card.tsx` - Add checkbox + completed styling
 - `src/components/schedule/day-section.tsx` - Pass completion state
 - `src/app/trip/page.tsx` - Manage completion state
 
 ### Phase 4: Progress Bar (~45 min)
+
 **File to create:** `src/components/schedule/progress-bar.tsx`
 
 Calculate completion for current day only, render between day navigation and timeline.
 
 ### Phase 5: Footer Improvements (~20 min)
+
 Add tooltips to disabled buttons, document auth integration points.
 
 ### Phase 6: Testing (~30 min)
+
 - Verify persistence across reloads
 - Test nested checkboxes
 - Mobile layout verification
@@ -109,14 +130,14 @@ Add tooltips to disabled buttons, document auth integration points.
 
 ## Files to Create/Modify
 
-| File | Action | Description |
-|------|--------|-------------|
-| `src/lib/schedule-storage.ts` | Modify | Add completion tracking functions |
-| `src/components/schedule/progress-bar.tsx` | Create | New progress bar component |
-| `src/components/schedule/intervention-card.tsx` | Modify | Add checkbox + completed state |
-| `src/components/schedule/day-section.tsx` | Modify | Wire completion state |
-| `src/app/trip/page.tsx` | Modify | Manage completion state |
-| `src/lib/__tests__/schedule-storage.test.ts` | Modify | Add completion tests |
+| File                                            | Action | Description                       |
+| ----------------------------------------------- | ------ | --------------------------------- |
+| `src/lib/schedule-storage.ts`                   | Modify | Add completion tracking functions |
+| `src/components/schedule/progress-bar.tsx`      | Create | New progress bar component        |
+| `src/components/schedule/intervention-card.tsx` | Modify | Add checkbox + completed state    |
+| `src/components/schedule/day-section.tsx`       | Modify | Wire completion state             |
+| `src/app/trip/page.tsx`                         | Modify | Manage completion state           |
+| `src/lib/__tests__/schedule-storage.test.ts`    | Modify | Add completion tests              |
 
 ## Verification Steps
 

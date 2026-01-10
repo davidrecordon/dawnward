@@ -549,7 +549,7 @@ export function UserMenu({ user }: UserMenuProps) {
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger className="rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2">
+      <DropdownMenuTrigger className="rounded-full focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2 focus-visible:outline-none">
         <Avatar className="h-8 w-8">
           <AvatarImage src={user.image ?? undefined} alt={user.name ?? ""} />
           <AvatarFallback className="bg-sky-100 text-xs text-sky-700">
@@ -708,15 +708,15 @@ GOOGLE_CLIENT_SECRET=  # From Google Cloud Console
 
 ### Protected Routes
 
-| Route                      | Auth Required | Notes                                   |
-| -------------------------- | ------------- | --------------------------------------- |
-| `/`                        | No            | Landing / new trip form                 |
-| `/trip`                    | No            | Schedule view (works with localStorage) |
-| `/history`                 | Yes           | Trip history                            |
-| `/settings`                | Yes           | User preferences                        |
-| `/api/auth/*`              | No            | NextAuth handlers                       |
-| `/api/schedule/generate`   | No            | Generate schedule (stateless)           |
-| `/api/mcp/*`               | No            | Public MCP interface                    |
+| Route                    | Auth Required | Notes                                   |
+| ------------------------ | ------------- | --------------------------------------- |
+| `/`                      | No            | Landing / new trip form                 |
+| `/trip`                  | No            | Schedule view (works with localStorage) |
+| `/history`               | Yes           | Trip history                            |
+| `/settings`              | Yes           | User preferences                        |
+| `/api/auth/*`            | No            | NextAuth handlers                       |
+| `/api/schedule/generate` | No            | Generate schedule (stateless)           |
+| `/api/mcp/*`             | No            | Public MCP interface                    |
 
 ---
 
@@ -872,29 +872,24 @@ model CalendarSync {
 ### Phase 1 Sequence
 
 1. **Database Setup**
-
    - Update `prisma/schema.prisma` with User, Account, Session, VerificationToken
    - Run migration: `bun prisma migrate dev --name add-auth-tables`
    - Create `src/lib/prisma.ts`
 
 2. **NextAuth Core**
-
    - Create `src/auth.ts`
    - Create `src/app/api/auth/[...nextauth]/route.ts`
    - Create `src/lib/auth.ts` helpers
    - Create `src/types/next-auth.d.ts`
 
 3. **Middleware**
-
    - Create `src/middleware.ts`
 
 4. **Auth Pages**
-
    - Create `src/app/auth/signin/page.tsx`
    - Create `src/app/auth/error/page.tsx`
 
 5. **UI Components**
-
    - Add shadcn: `bunx shadcn@latest add dropdown-menu avatar`
    - Create `src/components/auth/google-icon.tsx`
    - Create `src/components/auth/sign-in-button.tsx`
@@ -923,23 +918,19 @@ model CalendarSync {
 ### Phase 1 Testing
 
 1. **Sign-in Flow**
-
    - Visit `/auth/signin` → See sign-in page
    - Click "Sign in with Google" → OAuth redirect
    - Complete OAuth → Redirect back, session created
    - Header shows user avatar menu
 
 2. **Protected Routes**
-
    - Visit `/history` while logged out → Redirect to sign-in
    - Visit `/history` while logged in → See page
 
 3. **Session Persistence**
-
    - Sign in, close browser, reopen → Still signed in
 
 4. **Sign-out**
-
    - Click sign out in user menu → Session cleared, redirect home
 
 5. **Error Handling**
@@ -960,29 +951,29 @@ bun run build          # Production build succeeds
 
 ### Create (12 files)
 
-| File                                     | Purpose                  |
-| ---------------------------------------- | ------------------------ |
-| `src/auth.ts`                            | NextAuth configuration   |
-| `src/lib/prisma.ts`                      | Prisma client singleton  |
-| `src/lib/auth.ts`                        | Auth helper functions    |
-| `src/app/api/auth/[...nextauth]/route.ts`| Auth API handler         |
-| `src/middleware.ts`                      | Route protection         |
-| `src/app/auth/signin/page.tsx`           | Sign-in page             |
-| `src/app/auth/error/page.tsx`            | Auth error page          |
-| `src/components/auth/google-icon.tsx`    | Google logo SVG          |
-| `src/components/auth/sign-in-button.tsx` | Sign-in button component |
-| `src/components/auth/sign-in-prompt.tsx` | Sign-in prompt card      |
-| `src/components/auth/user-menu.tsx`      | User dropdown menu       |
-| `src/types/next-auth.d.ts`               | TypeScript declarations  |
+| File                                      | Purpose                  |
+| ----------------------------------------- | ------------------------ |
+| `src/auth.ts`                             | NextAuth configuration   |
+| `src/lib/prisma.ts`                       | Prisma client singleton  |
+| `src/lib/auth.ts`                         | Auth helper functions    |
+| `src/app/api/auth/[...nextauth]/route.ts` | Auth API handler         |
+| `src/middleware.ts`                       | Route protection         |
+| `src/app/auth/signin/page.tsx`            | Sign-in page             |
+| `src/app/auth/error/page.tsx`             | Auth error page          |
+| `src/components/auth/google-icon.tsx`     | Google logo SVG          |
+| `src/components/auth/sign-in-button.tsx`  | Sign-in button component |
+| `src/components/auth/sign-in-prompt.tsx`  | Sign-in prompt card      |
+| `src/components/auth/user-menu.tsx`       | User dropdown menu       |
+| `src/types/next-auth.d.ts`                | TypeScript declarations  |
 
 ### Modify (4 files)
 
-| File                        | Changes                                    |
-| --------------------------- | ------------------------------------------ |
+| File                        | Changes                                       |
+| --------------------------- | --------------------------------------------- |
 | `prisma/schema.prisma`      | Add User, Account, Session, VerificationToken |
-| `src/components/header.tsx` | Add session-aware rendering                |
+| `src/components/header.tsx` | Add session-aware rendering                   |
 | `src/app/trip/page.tsx`     | Replace sign-in placeholder with SignInPrompt |
-| `src/app/settings/page.tsx` | Add auth check, show preferences form      |
+| `src/app/settings/page.tsx` | Add auth check, show preferences form         |
 
 ### Add Dependencies
 

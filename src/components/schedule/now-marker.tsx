@@ -10,7 +10,10 @@ interface NowMarkerProps {
   timezone?: string;
 }
 
-export function NowMarker({ time, timezone }: NowMarkerProps): React.JSX.Element {
+export function NowMarker({
+  time,
+  timezone,
+}: NowMarkerProps): React.JSX.Element {
   return (
     <Card
       id="now-marker"

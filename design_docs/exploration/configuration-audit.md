@@ -164,18 +164,19 @@ config/
 
 The schedule intensity rates are defined in `shift_calculator.py` but documented/hardcoded in multiple other locations:
 
-| Location                           | Type             | Content                                                 |
-| ---------------------------------- | ---------------- | ------------------------------------------------------- |
-| `shift_calculator.py:51-64`        | Code (canonical) | `INTENSITY_CONFIGS` dict - **source of truth**          |
-| `types.py:86-90`                   | Comments         | `# - gentle: 0.75h/day advance, 1.0h/day delay`         |
-| `test_shift_rates.py:36-38`        | Test comments    | Same rates documented in docstring                      |
-| `test_shift_rates.py:44-57`        | Test assertions  | Hardcoded values: `assert config.advance_rate == 0.75`  |
-| `test_shift_rates.py:66-74`        | Test parameters  | Hardcoded values in `@pytest.mark.parametrize`          |
-| `test_realistic_flights.py:1427-9` | Test comments    | Same rates documented in docstring                      |
+| Location                           | Type             | Content                                                |
+| ---------------------------------- | ---------------- | ------------------------------------------------------ |
+| `shift_calculator.py:51-64`        | Code (canonical) | `INTENSITY_CONFIGS` dict - **source of truth**         |
+| `types.py:86-90`                   | Comments         | `# - gentle: 0.75h/day advance, 1.0h/day delay`        |
+| `test_shift_rates.py:36-38`        | Test comments    | Same rates documented in docstring                     |
+| `test_shift_rates.py:44-57`        | Test assertions  | Hardcoded values: `assert config.advance_rate == 0.75` |
+| `test_shift_rates.py:66-74`        | Test parameters  | Hardcoded values in `@pytest.mark.parametrize`         |
+| `test_realistic_flights.py:1427-9` | Test comments    | Same rates documented in docstring                     |
 
 **Risk:** If rates in `INTENSITY_CONFIGS` change, the comments in `types.py` and tests will become stale. The test assertions would fail (good), but the comments would not (bad).
 
 **Recommended fix:**
+
 1. **`types.py`**: Remove inline rate values from comments, add cross-reference:
    ```python
    # Schedule intensity controls circadian shift rates (direction-specific)

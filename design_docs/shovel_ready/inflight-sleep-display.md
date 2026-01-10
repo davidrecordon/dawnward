@@ -13,10 +13,12 @@ Enhance the display of in-flight sleep windows for ultra-long-haul flights (12+ 
 **Location:** `api/_python/circadian/scheduling/phase_generator.py`
 
 For flights ≥12 hours, generates two sleep windows:
+
 - **Window 1:** ~2 hours after departure, up to 4h duration
 - **Window 2:** Ends ~2 hours before arrival, up to 4h duration
 
 Each sleep window includes:
+
 - `start`: UTC timestamp
 - `duration_hours`: Sleep duration
 - `flight_offset_hours`: Hours into flight (e.g., 4.5)
@@ -25,11 +27,13 @@ Each sleep window includes:
 ### Frontend (Partial ✅❌)
 
 **Current display:** Standard intervention card with:
+
 - Purple moon icon (same as regular naps)
 - Small sky-blue text: "~4.5 hours into flight"
 - Time badge shows destination timezone
 
 **What's missing:**
+
 - No visual distinction from ground-based naps
 - Flight offset text is easy to miss (small, bottom of card)
 - No flight timeline context
@@ -40,6 +44,7 @@ Each sleep window includes:
 ### Enhanced In-Flight Card
 
 **Visual concept:**
+
 ```
 ┌──────────────────────────────────────────────────────┐
 │ ✈️ In-Flight Sleep Window          [~4.5h into ✈️]  │
@@ -59,6 +64,7 @@ Each sleep window includes:
 ```
 
 **Key design elements:**
+
 1. **Sky-blue gradient background** - Distinguishes from purple ground-based naps
 2. **Plane icon** in title - Immediate "this is in-flight" recognition
 3. **Prominent time display box** - Both flight offset AND destination time equally visible
@@ -66,6 +72,7 @@ Each sleep window includes:
 5. **Flight offset badge** - Top-right corner for quick scanning
 
 **Brand alignment:**
+
 - Sky blue (`#3B9CC9`) = travel/flights
 - Purple (`#6B5BA3`) = sleep
 - Gradient blends both concepts
@@ -80,10 +87,14 @@ Each sleep window includes:
 interface InFlightSleepCardProps {
   intervention: Intervention;
   timezone?: string;
-  totalFlightHours?: number;  // For progress bar
+  totalFlightHours?: number; // For progress bar
 }
 
-export function InFlightSleepCard({ intervention, timezone, totalFlightHours }: InFlightSleepCardProps) {
+export function InFlightSleepCard({
+  intervention,
+  timezone,
+  totalFlightHours,
+}: InFlightSleepCardProps) {
   // Sky-blue gradient background
   // Plane icon in header
   // Prominent time display box
@@ -94,6 +105,7 @@ export function InFlightSleepCard({ intervention, timezone, totalFlightHours }: 
 **File to modify:** `src/components/schedule/day-section.tsx`
 
 Add conditional rendering:
+
 ```typescript
 {item.data.type === "nap_window" && item.data.flight_offset_hours !== undefined ? (
   <InFlightSleepCard intervention={item.data} timezone={item.timezone} />
@@ -117,7 +129,10 @@ export function getInFlightSleepStyle() {
   };
 }
 
-export function formatFlightPhase(offsetHours: number, totalHours: number): string {
+export function formatFlightPhase(
+  offsetHours: number,
+  totalHours: number
+): string {
   const progress = offsetHours / totalHours;
   if (progress < 0.33) return "Early in flight";
   if (progress < 0.66) return "Mid-flight";
@@ -159,7 +174,9 @@ describe("formatFlightPhase", () => {
 
 ```typescript
 // src/lib/inflight-utils.ts
-export function synthesizeStayAwakePeriods(inFlightInterventions: Intervention[]): Intervention[] {
+export function synthesizeStayAwakePeriods(
+  inFlightInterventions: Intervention[]
+): Intervention[] {
   // Detect gaps between sleep windows
   // Generate "stay awake" guidance cards
   // Return as additional interventions to display
@@ -187,22 +204,24 @@ export function synthesizeStayAwakePeriods(inFlightInterventions: Intervention[]
 
 ## Files to Create/Modify
 
-| File | Action | Description |
-|------|--------|-------------|
-| `src/components/schedule/inflight-sleep-card.tsx` | Create | New enhanced card component |
-| `src/components/schedule/day-section.tsx` | Modify | Conditional rendering |
-| `src/lib/intervention-utils.ts` | Modify | Add in-flight styling utilities |
-| `src/lib/__tests__/inflight-utils.test.ts` | Create | Unit tests |
+| File                                              | Action | Description                     |
+| ------------------------------------------------- | ------ | ------------------------------- |
+| `src/components/schedule/inflight-sleep-card.tsx` | Create | New enhanced card component     |
+| `src/components/schedule/day-section.tsx`         | Modify | Conditional rendering           |
+| `src/lib/intervention-utils.ts`                   | Modify | Add in-flight styling utilities |
+| `src/lib/__tests__/inflight-utils.test.ts`        | Create | Unit tests                      |
 
 ## Verification Steps
 
 ### Test Flight Routes
+
 - **SQ31 SFO→SIN:** 17h (should show ULR enhanced cards)
 - **CX871 SFO→HKG:** 15h (should show ULR enhanced cards)
 - **QF93 LAX→SYD:** 15h (should show ULR enhanced cards)
 - **VS25 SFO→LHR:** 10.5h (should NOT show ULR, standard display)
 
 ### Manual Testing
+
 1. Generate schedule for SFO → SIN (17h flight)
 2. Navigate to Flight day in timeline
 3. Verify two sleep windows appear with enhanced styling
@@ -212,6 +231,7 @@ export function synthesizeStayAwakePeriods(inFlightInterventions: Intervention[]
 7. Verify responsive on mobile (375px)
 
 ### Automated Testing
+
 ```bash
 bun run typecheck
 bun run test:run

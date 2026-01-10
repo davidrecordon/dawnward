@@ -5,6 +5,7 @@
 Expose 6 read-only tools via MCP (Model Context Protocol) that allow AI assistants like Claude to use Dawnward's circadian science for answering jet lag questions.
 
 **Key Requirements:**
+
 - JSON-RPC 2.0 compliant (MCP standard)
 - Rate limited: 100 requests/hour per IP
 - No authentication required
@@ -13,18 +14,21 @@ Expose 6 read-only tools via MCP (Model Context Protocol) that allow AI assistan
 ## MCP Tools Specification
 
 ### 1. calculate_phase_shift
+
 Calculate timezone shift and adaptation difficulty.
 
 **Input:**
+
 ```json
 {
   "origin_timezone": "America/Los_Angeles",
   "destination_timezone": "Asia/Tokyo",
-  "travel_date": "2026-02-15"  // Optional, for DST handling
+  "travel_date": "2026-02-15" // Optional, for DST handling
 }
 ```
 
 **Output:**
+
 ```json
 {
   "shift_hours": 17,
@@ -37,9 +41,11 @@ Calculate timezone shift and adaptation difficulty.
 ```
 
 ### 2. get_adaptation_plan
+
 Generate full intervention schedule for a trip.
 
 **Input:**
+
 ```json
 {
   "origin_timezone": "America/Los_Angeles",
@@ -57,9 +63,11 @@ Generate full intervention schedule for a trip.
 **Output:** Full schedule response (same as `/api/schedule/generate`)
 
 ### 3. get_light_windows
+
 Optimal light exposure/avoidance times for a specific day.
 
 **Input:**
+
 ```json
 {
   "current_cbtmin": "04:30",
@@ -69,18 +77,21 @@ Optimal light exposure/avoidance times for a specific day.
 ```
 
 **Output:**
+
 ```json
 {
-  "light_seek": {"start": "04:30", "end": "08:30", "importance": "critical"},
-  "light_avoid": {"start": "00:30", "end": "04:30", "importance": "high"},
+  "light_seek": { "start": "04:30", "end": "08:30", "importance": "critical" },
+  "light_avoid": { "start": "00:30", "end": "04:30", "importance": "high" },
   "explanation": "Light before CBTmin delays; light after CBTmin advances."
 }
 ```
 
 ### 4. get_melatonin_timing
+
 When to take melatonin for phase shifting.
 
 **Input:**
+
 ```json
 {
   "current_dlmo": "21:00",
@@ -90,19 +101,22 @@ When to take melatonin for phase shifting.
 ```
 
 **Output:**
+
 ```json
 {
   "optimal_time": "17:00",
   "dose_mg": 0.5,
-  "window": {"earliest": "16:00", "latest": "18:00"},
+  "window": { "earliest": "16:00", "latest": "18:00" },
   "explanation": "Take 4-5 hours before target sleep for advances."
 }
 ```
 
 ### 5. get_caffeine_strategy
+
 Caffeine timing for alertness without disrupting sleep.
 
 **Input:**
+
 ```json
 {
   "target_sleep_time": "23:00",
@@ -112,18 +126,21 @@ Caffeine timing for alertness without disrupting sleep.
 ```
 
 **Output:**
+
 ```json
 {
   "cutoff_time": "14:00",
-  "boost_window": {"start": "07:00", "end": "10:00"},
+  "boost_window": { "start": "07:00", "end": "10:00" },
   "explanation": "Caffeine half-life ~6h. Cut off 9h before sleep."
 }
 ```
 
 ### 6. estimate_adaptation_days
+
 How long until fully adapted.
 
 **Input:**
+
 ```json
 {
   "shift_hours": 8,
@@ -134,6 +151,7 @@ How long until fully adapted.
 ```
 
 **Output:**
+
 ```json
 {
   "days_with_interventions": 5,
@@ -148,12 +166,14 @@ How long until fully adapted.
 ### Phase 1: Core Infrastructure (~4 hours)
 
 **Files to create:**
+
 - `src/lib/rate-limiter.ts` - In-memory sliding window rate limiter
 - `src/lib/ip-utils.ts` - IP extraction from request headers
 - `src/lib/mcp/types.ts` - TypeScript types for MCP messages
 - `src/lib/mcp/tool-definitions.ts` - JSON Schema for each tool
 
 **Rate limiter design:**
+
 ```typescript
 // In-memory Map with sliding window
 // Key: IP address
@@ -202,13 +222,16 @@ def invoke_tool(tool_name: str, arguments: dict) -> dict:
 **File to create:** `src/app/api/mcp/route.ts`
 
 **Endpoints:**
+
 - `POST /api/mcp` - JSON-RPC 2.0 handler
 
 **Methods:**
+
 - `tools/list` - Return tool definitions
 - `tools/call` - Execute tool with arguments
 
 **Request format:**
+
 ```json
 {
   "jsonrpc": "2.0",
@@ -225,6 +248,7 @@ def invoke_tool(tool_name: str, arguments: dict) -> dict:
 ```
 
 **Response format:**
+
 ```json
 {
   "jsonrpc": "2.0",
@@ -265,15 +289,15 @@ def invoke_tool(tool_name: str, arguments: dict) -> dict:
 
 ## Files to Create/Modify
 
-| File | Action | Description |
-|------|--------|-------------|
-| `src/lib/rate-limiter.ts` | Create | Rate limiting logic |
-| `src/lib/ip-utils.ts` | Create | IP extraction utility |
-| `src/lib/mcp/types.ts` | Create | TypeScript types |
-| `src/lib/mcp/tool-definitions.ts` | Create | JSON Schema definitions |
-| `src/app/api/mcp/route.ts` | Create | Main MCP endpoint |
-| `api/_python/mcp_tools.py` | Create | Python tool implementations |
-| `api/_python/tests/test_mcp_tools.py` | Create | Python tests |
+| File                                  | Action | Description                 |
+| ------------------------------------- | ------ | --------------------------- |
+| `src/lib/rate-limiter.ts`             | Create | Rate limiting logic         |
+| `src/lib/ip-utils.ts`                 | Create | IP extraction utility       |
+| `src/lib/mcp/types.ts`                | Create | TypeScript types            |
+| `src/lib/mcp/tool-definitions.ts`     | Create | JSON Schema definitions     |
+| `src/app/api/mcp/route.ts`            | Create | Main MCP endpoint           |
+| `api/_python/mcp_tools.py`            | Create | Python tool implementations |
+| `api/_python/tests/test_mcp_tools.py` | Create | Python tests                |
 
 ## Verification Steps
 

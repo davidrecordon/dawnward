@@ -34,18 +34,32 @@ const scheduleRequestSchema = z.object({
   dest_tz: timezoneSchema,
   departure_datetime: z
     .string()
-    .regex(DATETIME_PATTERN, "Invalid datetime format (expected YYYY-MM-DDTHH:MM)"),
+    .regex(
+      DATETIME_PATTERN,
+      "Invalid datetime format (expected YYYY-MM-DDTHH:MM)"
+    ),
   arrival_datetime: z
     .string()
-    .regex(DATETIME_PATTERN, "Invalid datetime format (expected YYYY-MM-DDTHH:MM)"),
+    .regex(
+      DATETIME_PATTERN,
+      "Invalid datetime format (expected YYYY-MM-DDTHH:MM)"
+    ),
   prep_days: z.number().int().min(1).max(7),
-  wake_time: z.string().regex(TIME_PATTERN, "Invalid time format (expected HH:MM)"),
-  sleep_time: z.string().regex(TIME_PATTERN, "Invalid time format (expected HH:MM)"),
+  wake_time: z
+    .string()
+    .regex(TIME_PATTERN, "Invalid time format (expected HH:MM)"),
+  sleep_time: z
+    .string()
+    .regex(TIME_PATTERN, "Invalid time format (expected HH:MM)"),
   uses_melatonin: z.boolean().default(true),
   uses_caffeine: z.boolean().default(true),
   uses_exercise: z.boolean().default(false),
-  nap_preference: z.enum(["no", "flight_only", "all_days"]).default("flight_only"),
-  schedule_intensity: z.enum(["gentle", "balanced", "aggressive"]).default("balanced"),
+  nap_preference: z
+    .enum(["no", "flight_only", "all_days"])
+    .default("flight_only"),
+  schedule_intensity: z
+    .enum(["gentle", "balanced", "aggressive"])
+    .default("balanced"),
 });
 
 export async function POST(request: Request) {

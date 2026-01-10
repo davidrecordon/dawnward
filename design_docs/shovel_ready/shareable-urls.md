@@ -2,155 +2,368 @@
 
 ## Overview
 
-Enable users to share their jet lag optimization schedules via URL without requiring authentication. This supports viral growth and allows sharing with travel companions.
+Enable logged-in users to share their jet lag optimization schedules via short URLs. This creates an upsell moment for anonymous users and enables viral growth.
 
 **Key Requirements:**
-- Works for anonymous users (no sign-in required)
-- URLs are copyable/pasteable across all platforms
-- Shared schedules viewable by anyone with the link
-- No database dependency for core functionality
 
-## Design Decision: URL-Encoded Parameters
+- Login required to create share links (upsell feature)
+- Short, clean URLs (`dawnward.app/s/abc123`)
+- Anyone can view shared schedules (no login to view)
+- User attribution on shared schedules
+- Database-backed for reliability and analytics
 
-**Chosen Approach:** Encode form inputs in URL query parameter, regenerate schedule on load.
+**Depends On:** Auth Phase 1 (Google sign-in)
+
+## Design Decision: Database-Backed Short URLs
+
+**Chosen Approach:** Store schedule inputs in database, generate short URL codes.
 
 **Why This Approach:**
-- ✅ No database required - works immediately for anonymous users
-- ✅ Stateless - no need to persist shared schedules
-- ✅ Deterministic - same inputs always produce same schedule
-- ✅ Privacy-friendly - no tracking of who shares what
-- ✅ Simple implementation - reuse existing schedule generation API
+
+- Short, memorable URLs (21 chars total vs ~330 for URL-encoded)
+- User attribution ("Schedule by David")
+- Analytics: track shares, views, conversions
+- Upsell moment: "Sign in to share this schedule"
+- Can revoke/edit shares later if needed
 
 **Trade-offs:**
-- URLs are ~330 chars (well under 2000 char browser limit)
-- 2s latency on load (schedule regeneration) - acceptable
 
-**URL Format:** `https://dawnward.app/share?d=v1:eyJvcmlnaW4iOnsiY29kZSI6IlNGTyI...`
+- Requires database (but we have it for auth)
+- Requires login to share (intentional - upsell feature)
 
-**Future Path:** Can layer database caching on top later if needed for shorter URLs.
+**URL Format:** `https://dawnward.app/s/abc123` (6-char code, base62)
+
+## Database Schema
+
+**Add to `prisma/schema.prisma`:**
+
+```prisma
+model SharedSchedule {
+  id        String   @id @default(cuid())
+  code      String   @unique @db.VarChar(8)  // Base62 short code
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Schedule inputs (denormalized for fast regeneration)
+  originTz          String
+  destTz            String
+  departureDatetime String
+  arrivalDatetime   String
+  prepDays          Int
+  wakeTime          String
+  sleepTime         String
+  usesMelatonin     Boolean
+  usesCaffeine      Boolean
+  usesExercise      Boolean
+  napPreference     String   @default("flight_only")
+  scheduleIntensity String   @default("balanced")
+
+  // Metadata
+  routeLabel   String?  // e.g., "SFO → NRT" for display
+  viewCount    Int      @default(0)
+  createdAt    DateTime @default(now())
+  lastViewedAt DateTime?
+
+  @@index([userId])
+  @@index([code])
+}
+```
+
+**Update User model:**
+
+```prisma
+model User {
+  // ... existing fields
+  sharedSchedules SharedSchedule[]
+}
+```
 
 ## Implementation Plan
 
-### Phase 1: URL Encoding Utilities (~4 hours)
+### Phase 1: Database & API (~4 hours)
 
-**Files to create:**
-- `src/lib/share-utils.ts`
-- `src/lib/__tests__/share-utils.test.ts`
+**File:** `prisma/schema.prisma`
+
+- Add `SharedSchedule` model (schema above)
+- Run `bun prisma migrate dev`
+
+**File:** `src/app/api/share/route.ts` (Create)
 
 ```typescript
-// Encode TripFormState to URL-safe base64 with version prefix
-export function encodeScheduleParams(formState: TripFormState): string;
+// POST /api/share - Create share link (requires auth)
+export async function POST(request: Request) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Sign in to share" }, { status: 401 });
+  }
 
-// Decode URL parameter back to TripFormState, with validation
-export function decodeScheduleParams(encoded: string): TripFormState | null;
+  const body = await request.json();
+  // Validate inputs...
 
-// Generate full shareable URL
-export function generateShareUrl(formState: TripFormState): string;
+  const code = generateShortCode(); // 6-char base62
+
+  const shared = await prisma.sharedSchedule.create({
+    data: {
+      code,
+      userId: session.user.id,
+      originTz: body.origin_tz,
+      destTz: body.dest_tz,
+      // ... rest of fields
+    },
+  });
+
+  return NextResponse.json({
+    url: `${process.env.NEXTAUTH_URL}/s/${shared.code}`,
+    code: shared.code,
+  });
+}
 ```
 
-**Encoding format:**
-- Version prefix: `v1:` (for future format changes)
-- Abbreviated keys to reduce URL length
-- URL-safe base64 (replace +/= with -_)
-- Validation on decode (timezones, datetime formats, enums)
+**File:** `src/lib/short-code.ts` (Create)
+
+```typescript
+const BASE62 = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+
+export function generateShortCode(length = 6): string {
+  let code = "";
+  for (let i = 0; i < length; i++) {
+    code += BASE62[Math.floor(Math.random() * 62)];
+  }
+  return code;
+}
+```
 
 ### Phase 2: Share Page Route (~6 hours)
 
-**Files to create:**
-- `src/app/share/page.tsx` - Public schedule viewer
-- `src/app/share/layout.tsx` - Minimal layout without auth navigation
-- `src/app/share/loading.tsx` - Loading state during generation
+**File:** `src/app/s/[code]/page.tsx` (Create)
 
-**Page behavior:**
-1. Extract `?d=` parameter from URL
-2. Decode and validate parameters
-3. Call existing `/api/schedule/generate` endpoint
-4. Display schedule using existing components
-5. Show CTA banner: "Like this schedule? Create your own on Dawnward"
+```typescript
+export default async function SharedSchedulePage({
+  params,
+}: {
+  params: Promise<{ code: string }>;
+}) {
+  const { code } = await params;
 
-**Error states:**
-- No `?d=` parameter → "Share link not found"
-- Invalid base64 → "Corrupted or malformed share link"
-- Invalid timezone/datetime → "Invalid schedule parameters"
-- API failure → "Unable to generate schedule. Please try again."
+  // Lookup share in database
+  const shared = await prisma.sharedSchedule.findUnique({
+    where: { code },
+    include: { user: { select: { name: true } } },
+  });
+
+  if (!shared) {
+    notFound();
+  }
+
+  // Increment view count (fire and forget)
+  prisma.sharedSchedule
+    .update({
+      where: { id: shared.id },
+      data: { viewCount: { increment: 1 }, lastViewedAt: new Date() },
+    })
+    .catch(() => {});
+
+  // Generate schedule from stored inputs
+  const schedule = await generateSchedule({
+    origin_tz: shared.originTz,
+    dest_tz: shared.destTz,
+    // ... rest
+  });
+
+  return (
+    <div>
+      {/* Attribution banner */}
+      <div className="bg-sky-50 border-b border-sky-100 px-4 py-2 text-sm text-sky-700">
+        Schedule shared by {shared.user.name || "a Dawnward user"}
+      </div>
+
+      {/* Existing schedule display components */}
+      <ScheduleTimeline schedule={schedule} />
+
+      {/* CTA banner */}
+      <div className="bg-gradient-to-r from-amber-50 to-orange-50 p-4 rounded-lg mt-6">
+        <p className="font-medium">Planning your own trip?</p>
+        <a href="/" className="text-amber-700 underline">
+          Create your free jet lag schedule
+        </a>
+      </div>
+    </div>
+  );
+}
+```
+
+**File:** `src/app/s/[code]/not-found.tsx` (Create)
+
+```typescript
+export default function SharedNotFound() {
+  return (
+    <div className="text-center py-16">
+      <h1 className="text-2xl font-bold">Schedule not found</h1>
+      <p className="text-slate-600 mt-2">
+        This share link may have expired or been removed.
+      </p>
+      <a href="/" className="text-sky-600 underline mt-4 block">
+        Create your own schedule
+      </a>
+    </div>
+  );
+}
+```
 
 ### Phase 3: Share Button UI (~4 hours)
 
-**Files to create:**
-- `src/components/share-button.tsx`
+**File:** `src/components/share-button.tsx` (Create)
 
-**Behavior:**
-- On mobile: Use `navigator.share()` (opens native share sheet)
-- On desktop: Copy URL to clipboard
-- Visual feedback: Checkmark + toast notification
+```typescript
+interface ShareButtonProps {
+  formState: TripFormState;
+  disabled?: boolean;
+}
 
-**Integration:** Add to `/trip/page.tsx` footer alongside "Add to Calendar"
+export function ShareButton({ formState, disabled }: ShareButtonProps) {
+  const { data: session } = useSession();
+  const [status, setStatus] = useState<"idle" | "loading" | "copied">("idle");
 
-### Phase 4: Testing & Polish (~4 hours)
+  async function handleShare() {
+    // If not logged in, prompt to sign in
+    if (!session) {
+      // Could open sign-in modal or redirect
+      signIn("google", { callbackUrl: window.location.href });
+      return;
+    }
 
-**Unit tests:**
-- Round-trip encoding preserves all fields
-- URL length stays under 500 chars
-- Malformed input returns null
-- Invalid timezones/datetimes rejected
-- Version mismatch returns null
+    setStatus("loading");
+    try {
+      const res = await fetch("/api/share", {
+        method: "POST",
+        body: JSON.stringify(formStateToApiRequest(formState)),
+      });
+      const { url } = await res.json();
+
+      // Copy to clipboard or use share sheet
+      if (navigator.share) {
+        await navigator.share({ url, title: "My Jet Lag Schedule" });
+      } else {
+        await navigator.clipboard.writeText(url);
+        setStatus("copied");
+        setTimeout(() => setStatus("idle"), 2000);
+      }
+    } catch {
+      setStatus("idle");
+    }
+  }
+
+  return (
+    <Button onClick={handleShare} disabled={disabled || status === "loading"}>
+      {status === "copied" ? (
+        <>
+          <Check className="w-4 h-4 mr-2" /> Copied!
+        </>
+      ) : status === "loading" ? (
+        <>
+          <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Sharing...
+        </>
+      ) : (
+        <>
+          <Share2 className="w-4 h-4 mr-2" />
+          {session ? "Share Schedule" : "Sign in to Share"}
+        </>
+      )}
+    </Button>
+  );
+}
+```
+
+**File:** `src/app/trip/page.tsx` (Modify)
+
+- Add `<ShareButton />` to footer alongside existing actions
+
+### Phase 4: Testing (~4 hours)
+
+**File:** `src/lib/__tests__/short-code.test.ts` (Create)
+
+```typescript
+describe("generateShortCode", () => {
+  it("generates 6-char code by default", () => {
+    expect(generateShortCode()).toHaveLength(6);
+  });
+
+  it("uses only base62 characters", () => {
+    const code = generateShortCode();
+    expect(code).toMatch(/^[0-9A-Za-z]+$/);
+  });
+
+  it("generates unique codes", () => {
+    const codes = new Set(
+      Array.from({ length: 100 }, () => generateShortCode())
+    );
+    expect(codes.size).toBe(100);
+  });
+});
+```
 
 **Manual testing:**
-- Generate schedule, click Share, verify URL copied
-- Open URL in incognito, verify schedule displays
-- Test with all preferences enabled
-- Test with edge cases (same-day arrival, max-length names)
-- Test on mobile (share sheet)
+
+1. Anonymous user: Click Share, prompted to sign in
+2. Signed-in user: Click Share, URL copied/shared
+3. Open shared URL in incognito, verify schedule displays
+4. Verify attribution banner shows sharer's name
+5. Verify CTA banner links to homepage
+6. Verify 404 page for invalid codes
 
 **Total Estimate:** ~18 hours (2-3 days)
 
 ## Questions to Answer
 
-1. **Attribution banner:** Should shared schedules show a "Create your own" CTA banner?
-   - **Recommendation:** Yes - helpful for recipients, drives growth
+1. **Code length:** 6 chars = 56B combinations. Sufficient for years.
+   - **Decision:** 6 characters
 
-2. **Algorithm updates:** If we update the scheduler, should old share URLs show new or original schedule?
-   - **Current behavior:** New schedule (URL encodes inputs, not outputs)
-   - **Recommendation:** Keep this - users get best advice
+2. **Expiration:** Should share links expire?
+   - **Recommendation:** No expiration for MVP. Can add later if abuse.
 
-3. **Analytics:** Track share usage?
-   - **Recommendation:** Yes, use Vercel Analytics custom events:
-     - `share_schedule_clicked` with route
-     - `share_schedule_viewed`
+3. **Edit/delete:** Can users manage their shares?
+   - **Recommendation:** Defer to v2. Low priority.
 
-4. **Shorter URLs:** Add database caching for shorter URLs?
-   - **Recommendation:** Defer to v2 - URL encoding works fine for MVP
+4. **Rate limit:** Limit shares per user?
+   - **Recommendation:** 100 shares/day (generous, prevents abuse)
+
+5. **Analytics events:**
+   - `share_created` - User creates share link
+   - `share_viewed` - Someone views shared schedule
+   - `share_to_signup` - Viewer signs up after viewing share
 
 ## Files to Create/Modify
 
-| File | Action | Description |
-|------|--------|-------------|
-| `src/lib/share-utils.ts` | Create | Encoding/decoding logic |
-| `src/lib/__tests__/share-utils.test.ts` | Create | Unit tests |
-| `src/components/share-button.tsx` | Create | Copy link button |
-| `src/app/share/page.tsx` | Create | Public schedule viewer |
-| `src/app/share/layout.tsx` | Create | Minimal layout |
-| `src/app/share/loading.tsx` | Create | Loading state |
-| `src/app/trip/page.tsx` | Modify | Add ShareButton |
+| File                                   | Action | Description                 |
+| -------------------------------------- | ------ | --------------------------- |
+| `prisma/schema.prisma`                 | Modify | Add SharedSchedule model    |
+| `src/lib/short-code.ts`                | Create | Short code generation       |
+| `src/lib/__tests__/short-code.test.ts` | Create | Unit tests                  |
+| `src/app/api/share/route.ts`           | Create | Create share API (auth req) |
+| `src/app/s/[code]/page.tsx`            | Create | Public schedule viewer      |
+| `src/app/s/[code]/not-found.tsx`       | Create | 404 for invalid codes       |
+| `src/components/share-button.tsx`      | Create | Share button with auth gate |
+| `src/app/trip/page.tsx`                | Modify | Add ShareButton             |
 
 ## Verification Steps
 
-1. `bun run typecheck` - No type errors
-2. `bun run test:run` - All tests pass
-3. Manual: Generate schedule for SFO → NRT
-4. Manual: Click "Share Schedule", verify URL copied
-5. Manual: Open URL in incognito window
-6. Manual: Verify schedule matches original
-7. Manual: Test error states (invalid URL, missing parameter)
-8. Manual: Test on mobile (share sheet)
+1. `bun prisma migrate dev` - Migration runs successfully
+2. `bun run typecheck` - No type errors
+3. `bun run test:run` - All tests pass
+4. Manual: Anonymous user clicks Share, redirected to sign in
+5. Manual: Signed-in user clicks Share, short URL copied
+6. Manual: Open shared URL in incognito, schedule displays
+7. Manual: Verify attribution banner shows correct name
+8. Manual: Invalid code shows 404 page
+9. Manual: Test on mobile (share sheet)
 
 ## Success Criteria
 
-- [ ] Share URL copies to clipboard on desktop
-- [ ] Share sheet opens on mobile
-- [ ] Share page displays schedule correctly
-- [ ] Invalid URLs show user-friendly errors
-- [ ] Works for anonymous users (no auth)
-- [ ] URL length < 500 chars
-- [ ] Share page load < 2.5s
+- [ ] Login required to create share links
+- [ ] Short URLs work (`/s/abc123`)
+- [ ] Anyone can view shared schedules
+- [ ] Attribution banner shows sharer's name
+- [ ] CTA banner links to homepage
+- [ ] Share button prompts sign-in for anonymous users
+- [ ] Invalid codes show friendly 404
 - [ ] All tests pass

@@ -36,14 +36,14 @@ The app generates a day-by-day schedule starting several days before your flight
 
 ## Tech Stack
 
-| Layer           | Technology                         |
-| --------------- | ---------------------------------- |
-| Framework       | Next.js 16 (App Router)            |
-| Styling         | Tailwind CSS v4, shadcn/ui         |
-| Circadian Model | Python (Forger99 via Arcascope)    |
-| Database        | PostgreSQL via Prisma              |
-| Auth            | NextAuth.js v5 (Google)            |
-| Hosting         | Vercel                             |
+| Layer           | Technology                      |
+| --------------- | ------------------------------- |
+| Framework       | Next.js 16 (App Router)         |
+| Styling         | Tailwind CSS v4, shadcn/ui      |
+| Circadian Model | Python (Forger99 via Arcascope) |
+| Database        | PostgreSQL via Prisma           |
+| Auth            | NextAuth.js v5 (Google)         |
+| Hosting         | Vercel                          |
 
 ---
 

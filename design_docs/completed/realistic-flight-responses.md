@@ -335,6 +335,7 @@ All intensity modes use different rates for advances (eastward) vs delays (westw
 #### Why Direction Matters
 
 The human circadian period averages ~24.2h, meaning we naturally drift later each day. This makes:
+
 - **Delays (westward)** easier — we're going with our natural drift
 - **Advances (eastward)** harder — we're fighting against it
 
@@ -359,30 +360,30 @@ Helper text (updates based on selection):
 
 #### Example: SFO → London (8h advance), 3 prep days, normal wake 7:00 AM
 
-| Day                      | Gentle   | Balanced | Aggressive |
-| ------------------------ | -------- | -------- | ---------- |
-| Day -3                   | 6:15 AM  | 6:00 AM  | 5:45 AM    |
-| Day -2                   | 5:30 AM  | 5:00 AM  | 4:30 AM    |
-| Day -1                   | 4:45 AM  | 4:00 AM  | 3:15 AM    |
-| Day 0                    | 4:00 AM  | 3:00 AM  | 2:00 AM    |
-| **Daily shift**          | 0.75h    | 1.0h     | 1.25h      |
-| **Total shifted**        | 3h       | 4h       | 5h         |
-| **Remaining at arrival** | 5h       | 4h       | 3h         |
+| Day                      | Gentle  | Balanced | Aggressive |
+| ------------------------ | ------- | -------- | ---------- |
+| Day -3                   | 6:15 AM | 6:00 AM  | 5:45 AM    |
+| Day -2                   | 5:30 AM | 5:00 AM  | 4:30 AM    |
+| Day -1                   | 4:45 AM | 4:00 AM  | 3:15 AM    |
+| Day 0                    | 4:00 AM | 3:00 AM  | 2:00 AM    |
+| **Daily shift**          | 0.75h   | 1.0h     | 1.25h      |
+| **Total shifted**        | 3h      | 4h       | 5h         |
+| **Remaining at arrival** | 5h      | 4h       | 3h         |
 
-*Note: All modes will continue shifting post-arrival until fully adapted.*
+_Note: All modes will continue shifting post-arrival until fully adapted._
 
 #### Example: SFO → Tokyo (8h delay), 3 prep days, normal sleep 10:00 PM
 
-| Day                      | Gentle   | Balanced | Aggressive |
-| ------------------------ | -------- | -------- | ---------- |
-| Day -3                   | 11:00 PM | 11:30 PM | 12:00 AM   |
-| Day -2                   | 12:00 AM | 1:00 AM  | 2:00 AM    |
-| Day -1                   | 1:00 AM  | 2:30 AM  | 4:00 AM    |
-| Day 0                    | 2:00 AM  | 4:00 AM  | 6:00 AM    |
-| **Daily shift**          | 1.0h     | 1.5h     | 2.0h       |
-| **Total shifted**        | 4h       | 6h       | 8h         |
+| Day               | Gentle   | Balanced | Aggressive |
+| ----------------- | -------- | -------- | ---------- |
+| Day -3            | 11:00 PM | 11:30 PM | 12:00 AM   |
+| Day -2            | 12:00 AM | 1:00 AM  | 2:00 AM    |
+| Day -1            | 1:00 AM  | 2:30 AM  | 4:00 AM    |
+| Day 0             | 2:00 AM  | 4:00 AM  | 6:00 AM    |
+| **Daily shift**   | 1.0h     | 1.5h     | 2.0h       |
+| **Total shifted** | 4h       | 6h       | 8h         |
 
-*Note: Delays shift faster because they align with natural circadian drift.*
+_Note: Delays shift faster because they align with natural circadian drift._
 
 ---
 
@@ -517,16 +518,16 @@ The card design is unified; the copy does the work.
 
 ## Summary of Required Changes
 
-| #   | Type    | Change                                                               | Status    |
-| --- | ------- | -------------------------------------------------------------------- | --------- |
-| 1   | Science | None — don't expose phase windows to UI                              | Done      |
-| 2   | Science | Build in-flight intervention generator (see detailed spec above)     | Pending   |
-| 3   | Science | Update adaptation rate: 1.5h/day delay, 1.0h/day advance             | Done      |
-| 4   | Science | Fix light window to use wake_target, not normal_wake                 | Done      |
-| 5   | Science | Update melatonin description copy                                    | Done      |
-| 6/7 | Product | Add schedule intensity with direction-specific rates (see table)     | Done      |
-| 8   | Product | Implement 5-tier system with differentiated UI per tier              | Pending   |
-| 9   | Product | No changes needed                                                    | N/A       |
+| #   | Type    | Change                                                           | Status  |
+| --- | ------- | ---------------------------------------------------------------- | ------- |
+| 1   | Science | None — don't expose phase windows to UI                          | Done    |
+| 2   | Science | Build in-flight intervention generator (see detailed spec above) | Pending |
+| 3   | Science | Update adaptation rate: 1.5h/day delay, 1.0h/day advance         | Done    |
+| 4   | Science | Fix light window to use wake_target, not normal_wake             | Done    |
+| 5   | Science | Update melatonin description copy                                | Done    |
+| 6/7 | Product | Add schedule intensity with direction-specific rates (see table) | Done    |
+| 8   | Product | Implement 5-tier system with differentiated UI per tier          | Pending |
+| 9   | Product | No changes needed                                                | N/A     |
 
 ---
 

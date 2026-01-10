@@ -22,6 +22,7 @@ Implement a 5-tier system that provides differentiated UI treatment based on tim
 ## Architecture Decision
 
 **Hybrid approach:**
+
 - **Backend**: Calculate tier, include in `ScheduleResponse`, filter interventions per tier
 - **Frontend**: Read `shift_tier` from API response, render appropriate UI components
 
@@ -48,6 +49,7 @@ class ScheduleResponse:
 **File:** `api/_python/circadian/scheduler_v2.py`
 
 Add tier detection method:
+
 ```python
 def _determine_shift_tier(self, total_shift: float) -> ShiftTier:
     abs_shift = abs(total_shift)
@@ -73,7 +75,12 @@ Update to skip caffeine logic when `tier == "light"`.
 **File:** `src/types/schedule.ts`
 
 ```typescript
-export type ShiftTier = "minimal" | "light" | "moderate" | "significant" | "severe";
+export type ShiftTier =
+  | "minimal"
+  | "light"
+  | "moderate"
+  | "significant"
+  | "severe";
 
 export interface ScheduleResponse {
   // ... existing fields
@@ -85,13 +92,13 @@ export interface ScheduleResponse {
 
 **New components to create:**
 
-| Component | Tier | Purpose |
-|-----------|------|---------|
-| `minimal-shift-card.tsx` | Minimal | Tips card with "No prep needed" |
-| `light-shift-footer.tsx` | Light | "Skip prep? That's fine" reassurance |
-| `prep-warning-card.tsx` | Significant/Severe | Warning when under-prepared |
-| `arrival-adaptation-card.tsx` | Significant/Severe | Post-arrival expectations |
-| `direction-choice-card.tsx` | Severe | Advance vs delay explanation |
+| Component                     | Tier               | Purpose                              |
+| ----------------------------- | ------------------ | ------------------------------------ |
+| `minimal-shift-card.tsx`      | Minimal            | Tips card with "No prep needed"      |
+| `light-shift-footer.tsx`      | Light              | "Skip prep? That's fine" reassurance |
+| `prep-warning-card.tsx`       | Significant/Severe | Warning when under-prepared          |
+| `arrival-adaptation-card.tsx` | Significant/Severe | Post-arrival expectations            |
+| `direction-choice-card.tsx`   | Severe             | Advance vs delay explanation         |
 
 ### Phase 5: Frontend Trip Page Integration (~3 hours)
 
@@ -132,37 +139,37 @@ Show recommended prep days based on detected shift tier.
 
 ### Backend (Python)
 
-| File | Action | Description |
-|------|--------|-------------|
-| `api/_python/circadian/types.py` | Modify | Add `ShiftTier`, update `ScheduleResponse` |
-| `api/_python/circadian/scheduler_v2.py` | Modify | Add `_determine_shift_tier()` |
-| `api/_python/circadian/scheduling/intervention_planner.py` | Modify | Filter caffeine for light tier |
-| `api/_python/tests/test_shift_tiering.py` | Create | Tier boundary tests |
+| File                                                       | Action | Description                                |
+| ---------------------------------------------------------- | ------ | ------------------------------------------ |
+| `api/_python/circadian/types.py`                           | Modify | Add `ShiftTier`, update `ScheduleResponse` |
+| `api/_python/circadian/scheduler_v2.py`                    | Modify | Add `_determine_shift_tier()`              |
+| `api/_python/circadian/scheduling/intervention_planner.py` | Modify | Filter caffeine for light tier             |
+| `api/_python/tests/test_shift_tiering.py`                  | Create | Tier boundary tests                        |
 
 ### Frontend (TypeScript)
 
-| File | Action | Description |
-|------|--------|-------------|
-| `src/types/schedule.ts` | Modify | Add `ShiftTier` type |
-| `src/components/schedule/minimal-shift-card.tsx` | Create | Tips card for 0-2h |
-| `src/components/schedule/light-shift-footer.tsx` | Create | Reassurance for 3h |
-| `src/components/schedule/prep-warning-card.tsx` | Create | Under-preparation warning |
-| `src/components/schedule/arrival-adaptation-card.tsx` | Create | Post-arrival expectations |
-| `src/components/schedule/direction-choice-card.tsx` | Create | 10-12h direction info |
-| `src/app/trip/page.tsx` | Modify | Tier-aware rendering (major) |
+| File                                                  | Action | Description                  |
+| ----------------------------------------------------- | ------ | ---------------------------- |
+| `src/types/schedule.ts`                               | Modify | Add `ShiftTier` type         |
+| `src/components/schedule/minimal-shift-card.tsx`      | Create | Tips card for 0-2h           |
+| `src/components/schedule/light-shift-footer.tsx`      | Create | Reassurance for 3h           |
+| `src/components/schedule/prep-warning-card.tsx`       | Create | Under-preparation warning    |
+| `src/components/schedule/arrival-adaptation-card.tsx` | Create | Post-arrival expectations    |
+| `src/components/schedule/direction-choice-card.tsx`   | Create | 10-12h direction info        |
+| `src/app/trip/page.tsx`                               | Modify | Tier-aware rendering (major) |
 
 ## Verification Steps
 
 ### Test Scenarios
 
-| Route | Shift | Tier | Expected UI |
-|-------|-------|------|-------------|
-| DEN → ORD | 1h | Minimal | Tips card only |
-| LAX → JFK | 3h | Light | Schedule + reassurance footer |
-| JFK → LHR | 5h | Moderate | Full schedule, no extras |
-| SFO → LHR (3 prep) | 8h | Significant | Schedule + prep warning + adaptation card |
-| SFO → LHR (5 prep) | 8h | Significant | Schedule + adaptation card (no warning) |
-| SFO → SIN | 16h | Severe | Schedule + direction choice + all warnings |
+| Route              | Shift | Tier        | Expected UI                                |
+| ------------------ | ----- | ----------- | ------------------------------------------ |
+| DEN → ORD          | 1h    | Minimal     | Tips card only                             |
+| LAX → JFK          | 3h    | Light       | Schedule + reassurance footer              |
+| JFK → LHR          | 5h    | Moderate    | Full schedule, no extras                   |
+| SFO → LHR (3 prep) | 8h    | Significant | Schedule + prep warning + adaptation card  |
+| SFO → LHR (5 prep) | 8h    | Significant | Schedule + adaptation card (no warning)    |
+| SFO → SIN          | 16h   | Severe      | Schedule + direction choice + all warnings |
 
 ### Commands
 
