@@ -370,12 +370,14 @@ export function DaySection({
                     <InFlightSleepCard
                       intervention={item.data}
                       timezone={item.timezone}
+                      originTimezone={origin.tz}
                       totalFlightHours={totalFlightHours}
                     />
                   ) : (
                     <InterventionCard
                       intervention={item.data}
                       timezone={item.timezone}
+                      originTimezone={origin.tz}
                     />
                   ))}
                 {item.kind === "timed_item_group" && (

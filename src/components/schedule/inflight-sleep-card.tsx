@@ -7,6 +7,7 @@ import {
   formatTimeWithTimezone,
   formatFlightOffset,
   formatFlightPhase,
+  getTimezoneAbbr,
 } from "@/lib/intervention-utils";
 import type { Intervention } from "@/types/schedule";
 
@@ -14,6 +15,8 @@ interface InFlightSleepCardProps {
   intervention: Intervention;
   /** Optional timezone to display (destination timezone) */
   timezone?: string;
+  /** Origin timezone for dual-timezone display */
+  originTimezone?: string;
   /** Total flight duration in hours (for flight phase label) */
   totalFlightHours?: number;
 }
@@ -25,12 +28,17 @@ interface InFlightSleepCardProps {
 export function InFlightSleepCard({
   intervention,
   timezone,
+  originTimezone,
   totalFlightHours,
 }: InFlightSleepCardProps): React.JSX.Element {
   const flightOffset = intervention.flight_offset_hours ?? 0;
   const durationHours = intervention.duration_min
     ? intervention.duration_min / 60
     : undefined;
+
+  // Show both timezones if origin and destination differ
+  const showDualTimezone =
+    originTimezone && timezone && originTimezone !== timezone;
 
   return (
     <Card className="overflow-hidden border-violet-200/40 bg-gradient-to-r from-violet-50/80 via-slate-50 to-violet-50/60 shadow-sm backdrop-blur-sm transition-all duration-300 hover:translate-x-1 hover:shadow-md">
@@ -72,6 +80,11 @@ export function InFlightSleepCard({
           {totalFlightHours && (
             <p className="text-xs text-slate-500">
               {formatFlightPhase(flightOffset, totalFlightHours)}
+            </p>
+          )}
+          {showDualTimezone && (
+            <p className="mt-1 text-xs text-slate-400">
+              {getTimezoneAbbr(originTimezone)} → {getTimezoneAbbr(timezone)}
             </p>
           )}
         </div>
