@@ -1,0 +1,9 @@
+{
+  "name": "Dawnward Jet Lag API",
+  "description": "Circadian science tools for jet lag optimization",
+  "url": "https://dawnward.app/api/mcp",
+  "transport": {
+    "type": "http",
+    "url": "https://dawnward.app/api/mcp"
+  }
+}
