@@ -17,6 +17,8 @@ describe("mapSharedScheduleToTripData", () => {
     scheduleIntensity: "balanced",
     routeLabel: "SFO → LHR",
     code: "abc123",
+    initialScheduleJson: null,
+    currentScheduleJson: null,
   };
 
   it("maps all fields correctly", () => {

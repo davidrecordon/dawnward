@@ -6,6 +6,7 @@ import {
   formatShortDate,
   formatFlightOffset,
   formatFlightPhase,
+  isEditableIntervention,
 } from "../intervention-utils";
 
 describe("getInterventionStyle", () => {
@@ -252,5 +253,47 @@ describe("formatFlightPhase", () => {
     // At 66% and above, should be "Later in flight"
     // 11.22/17 = 0.66 which is >= 0.66
     expect(formatFlightPhase(11.22, 17)).toBe("Later in flight");
+  });
+});
+
+describe("isEditableIntervention", () => {
+  describe("editable types (discrete timed events)", () => {
+    it("returns true for wake_target", () => {
+      expect(isEditableIntervention("wake_target")).toBe(true);
+    });
+
+    it("returns true for sleep_target", () => {
+      expect(isEditableIntervention("sleep_target")).toBe(true);
+    });
+
+    it("returns true for melatonin", () => {
+      expect(isEditableIntervention("melatonin")).toBe(true);
+    });
+
+    it("returns true for exercise", () => {
+      expect(isEditableIntervention("exercise")).toBe(true);
+    });
+
+    it("returns true for nap_window", () => {
+      expect(isEditableIntervention("nap_window")).toBe(true);
+    });
+  });
+
+  describe("non-editable types (advisory)", () => {
+    it("returns false for light_seek", () => {
+      expect(isEditableIntervention("light_seek")).toBe(false);
+    });
+
+    it("returns false for light_avoid", () => {
+      expect(isEditableIntervention("light_avoid")).toBe(false);
+    });
+
+    it("returns false for caffeine_ok", () => {
+      expect(isEditableIntervention("caffeine_ok")).toBe(false);
+    });
+
+    it("returns false for caffeine_cutoff", () => {
+      expect(isEditableIntervention("caffeine_cutoff")).toBe(false);
+    });
   });
 });

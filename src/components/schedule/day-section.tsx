@@ -1,6 +1,11 @@
 "use client";
 
-import { getDayLabel } from "@/lib/intervention-utils";
+import {
+  getDayLabel,
+  isEditableIntervention,
+  FLIGHT_DAY,
+  ARRIVAL_DAY,
+} from "@/lib/intervention-utils";
 import {
   dayHasMultipleTimezones,
   groupTimedItems,
@@ -35,6 +40,12 @@ interface DaySectionProps {
   arrivalDate: string;
   arrivalTime: string;
   isCurrentDay: boolean;
+  /** Optional callback when an intervention card is clicked (for recording actuals) */
+  onInterventionClick?: (
+    intervention: Intervention,
+    dayOffset: number,
+    date: string
+  ) => void;
 }
 
 /** Items with time (used during sorting) */
@@ -87,12 +98,14 @@ export function DaySection({
   arrivalDate,
   arrivalTime,
   isCurrentDay,
+  onInterventionClick,
 }: DaySectionProps) {
   // Build combined items array (TimedItem before transitions are inserted)
   const items: TimedItem[] = [];
 
-  // Only show timezone on Flight Day (0) and Arrival day (1)
-  const showTimezone = daySchedule.day === 0 || daySchedule.day === 1;
+  // Only show timezone on Flight Day and Arrival day
+  const showTimezone =
+    daySchedule.day === FLIGHT_DAY || daySchedule.day === ARRIVAL_DAY;
 
   // Calculate flight duration for in-flight sleep card progress bar
   const flightDuration = calculateFlightDuration(
@@ -290,9 +303,9 @@ export function DaySection({
   // Day label color based on phase
   function getDayLabelStyle(): string {
     const { day } = daySchedule;
-    if (day < 0) return "text-sky-600"; // Pre-departure
-    if (day === 0) return "text-sky-700"; // Flight day
-    if (day === 1) return "text-emerald-600"; // Arrival
+    if (day < FLIGHT_DAY) return "text-sky-600"; // Pre-departure
+    if (day === FLIGHT_DAY) return "text-sky-700"; // Flight day
+    if (day === ARRIVAL_DAY) return "text-emerald-600"; // Arrival
     return "text-violet-600"; // Post-arrival adaptation
   }
 
@@ -376,6 +389,17 @@ export function DaySection({
                     <InterventionCard
                       intervention={item.data}
                       timezone={item.timezone}
+                      onClick={
+                        onInterventionClick &&
+                        isEditableIntervention(item.data.type)
+                          ? () =>
+                              onInterventionClick(
+                                item.data,
+                                daySchedule.day,
+                                daySchedule.date
+                              )
+                          : undefined
+                      }
                     />
                   ))}
                 {item.kind === "timed_item_group" && (
@@ -384,6 +408,9 @@ export function DaySection({
                     timezone={item.timezone}
                     origin={origin}
                     destination={destination}
+                    onInterventionClick={onInterventionClick}
+                    dayOffset={daySchedule.day}
+                    date={daySchedule.date}
                   />
                 )}
                 {item.kind === "departure" && (

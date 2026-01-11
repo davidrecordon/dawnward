@@ -1,4 +1,6 @@
 import type { TripData } from "@/types/trip-data";
+import type { ScheduleResponse } from "@/types/schedule";
+import type { JsonValue } from "@prisma/client/runtime/client";
 
 /**
  * Database record shape from Prisma sharedSchedule
@@ -18,6 +20,8 @@ interface SharedScheduleRecord {
   scheduleIntensity: string;
   routeLabel: string | null;
   code: string | null;
+  initialScheduleJson: JsonValue | null;
+  currentScheduleJson: JsonValue | null;
 }
 
 /**
@@ -41,5 +45,7 @@ export function mapSharedScheduleToTripData(
     scheduleIntensity: record.scheduleIntensity,
     routeLabel: record.routeLabel,
     code: record.code,
+    initialScheduleJson: record.initialScheduleJson as ScheduleResponse | null,
+    currentScheduleJson: record.currentScheduleJson as ScheduleResponse | null,
   };
 }

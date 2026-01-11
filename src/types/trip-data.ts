@@ -1,3 +1,5 @@
+import type { ScheduleResponse } from "./schedule";
+
 /**
  * Trip data as stored in the database and used by TripScheduleView.
  * Maps directly to SharedSchedule model fields.
@@ -17,4 +19,7 @@ export interface TripData {
   scheduleIntensity: string;
   routeLabel: string | null;
   code: string | null;
+  // Schedule storage (for editing/recalculation)
+  initialScheduleJson: ScheduleResponse | null;
+  currentScheduleJson: ScheduleResponse | null;
 }

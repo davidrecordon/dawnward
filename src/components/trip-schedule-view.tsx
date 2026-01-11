@@ -2,7 +2,14 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, ArrowRight, Calendar, Loader2, User } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  Calendar,
+  Loader2,
+  Settings2,
+  User,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DaySection } from "@/components/schedule/day-section";
 import { ScheduleHeader } from "@/components/schedule/schedule-header";
@@ -13,6 +20,10 @@ import {
 import { SignInPrompt } from "@/components/auth/sign-in-prompt";
 import { ShareButton } from "@/components/share-button";
 import { CalendarComingSoonModal } from "@/components/calendar-coming-soon-modal";
+import { EditPreferencesModal } from "@/components/trip/edit-preferences-modal";
+import { RecordActualSheet } from "@/components/trip/record-actual-sheet";
+import { RecalculationBanner } from "@/components/trip/recalculation-banner";
+import { ScheduleDiffModal } from "@/components/trip/schedule-diff-modal";
 import { getDayLabel, formatShortDate } from "@/lib/intervention-utils";
 import { mergePhasesByDate } from "@/lib/schedule-utils";
 import {
@@ -20,7 +31,7 @@ import {
   isBeforeSchedule,
   isAfterSchedule,
 } from "@/lib/time-utils";
-import type { ScheduleResponse } from "@/types/schedule";
+import type { Intervention, ScheduleResponse } from "@/types/schedule";
 import type { TripData } from "@/types/trip-data";
 
 interface TripScheduleViewProps {
@@ -82,10 +93,104 @@ export function TripScheduleView({
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showCalendarModal, setShowCalendarModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+
+  // Track current preferences (can change after edits)
+  const [currentPreferences, setCurrentPreferences] = useState({
+    usesCaffeine: tripData.usesCaffeine,
+    usesMelatonin: tripData.usesMelatonin,
+    scheduleIntensity: tripData.scheduleIntensity,
+  });
+
+  // State for recording actuals
+  const [selectedIntervention, setSelectedIntervention] = useState<{
+    intervention: Intervention;
+    dayOffset: number;
+    date: string;
+  } | null>(null);
+
+  // State for recalculation
+  const [recalculationData, setRecalculationData] = useState<{
+    newSchedule: ScheduleResponse;
+    changes: Array<{
+      day: number;
+      type: string;
+      old_time: string | null;
+      new_time: string;
+      description: string;
+    }>;
+    restoredFromDay: number;
+  } | null>(null);
+  const [showDiffModal, setShowDiffModal] = useState(false);
+  const [isApplyingRecalc, setIsApplyingRecalc] = useState(false);
+
+  // Check for recalculation after recording an actual
+  const checkRecalculation = async () => {
+    if (!isOwner || !isLoggedIn) return;
+
+    try {
+      const response = await fetch(`/api/trips/${tripId}/recalculate`, {
+        method: "POST",
+      });
+
+      if (!response.ok) return;
+
+      const result = await response.json();
+      if (result.needsRecalculation) {
+        setRecalculationData({
+          newSchedule: result.newSchedule,
+          changes: result.changes,
+          restoredFromDay: result.restoredFromDay,
+        });
+      }
+    } catch (err) {
+      console.error("Recalculation check failed:", err);
+    }
+  };
+
+  // Apply recalculated schedule
+  const applyRecalculation = async () => {
+    if (!recalculationData) return;
+
+    setIsApplyingRecalc(true);
+    try {
+      const response = await fetch(`/api/trips/${tripId}/recalculate`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ newSchedule: recalculationData.newSchedule }),
+      });
+
+      if (response.ok) {
+        setSchedule(recalculationData.newSchedule);
+        setRecalculationData(null);
+        setShowDiffModal(false);
+      }
+    } catch (err) {
+      console.error("Failed to apply recalculation:", err);
+    } finally {
+      setIsApplyingRecalc(false);
+    }
+  };
+
+  // Dismiss recalculation without applying
+  const dismissRecalculation = () => {
+    setRecalculationData(null);
+    setShowDiffModal(false);
+  };
 
   useEffect(() => {
-    async function generateSchedule() {
+    async function loadOrGenerateSchedule() {
       try {
+        // Use stored schedule if available (prefer currentScheduleJson over initialScheduleJson)
+        const storedSchedule =
+          tripData.currentScheduleJson || tripData.initialScheduleJson;
+        if (storedSchedule) {
+          setSchedule(storedSchedule);
+          setIsLoading(false);
+          return;
+        }
+
+        // Generate schedule if not stored
         const response = await fetch("/api/schedule/generate", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -112,6 +217,23 @@ export function TripScheduleView({
 
         const result = await response.json();
         setSchedule(result.schedule);
+
+        // Save the initial schedule and snapshots for authenticated owners
+        if (isOwner && isLoggedIn) {
+          try {
+            await fetch(`/api/trips/${tripId}`, {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                initialScheduleJson: result.schedule,
+                snapshots: result.snapshots,
+              }),
+            });
+          } catch (saveErr) {
+            // Don't fail the view if save fails - just log it
+            console.error("Failed to save initial schedule:", saveErr);
+          }
+        }
       } catch (err) {
         console.error("Schedule generation error:", err);
         setError(
@@ -122,8 +244,8 @@ export function TripScheduleView({
       }
     }
 
-    generateSchedule();
-  }, [tripData]);
+    loadOrGenerateSchedule();
+  }, [tripData, tripId, isOwner, isLoggedIn]);
 
   // Auto-scroll to "now" marker
   useEffect(() => {
@@ -178,10 +300,8 @@ export function TripScheduleView({
     "dest"
   );
 
-  const departureDate = tripData.departureDatetime.split("T")[0];
-  const departureTime = tripData.departureDatetime.split("T")[1];
-  const arrivalDate = tripData.arrivalDatetime.split("T")[0];
-  const arrivalTime = tripData.arrivalDatetime.split("T")[1];
+  const [departureDate, departureTime] = tripData.departureDatetime.split("T");
+  const [arrivalDate, arrivalTime] = tripData.arrivalDatetime.split("T");
 
   const data = {
     request: {
@@ -274,6 +394,14 @@ export function TripScheduleView({
           scheduleStartDate={firstDayDate}
         />
 
+        {/* Recalculation banner - shows when schedule has pending changes */}
+        {recalculationData && !showDiffModal && (
+          <RecalculationBanner
+            changesCount={recalculationData.changes.length}
+            onReview={() => setShowDiffModal(true)}
+          />
+        )}
+
         {/* Day navigation */}
         <div className="-mb-4 flex flex-wrap justify-center gap-2 pb-2">
           {mergedDays.map((daySchedule) => {
@@ -328,6 +456,12 @@ export function TripScheduleView({
               arrivalDate={arrivalDate}
               arrivalTime={arrivalTime}
               isCurrentDay={daySchedule.day === currentDayNumber}
+              onInterventionClick={
+                isOwner && isLoggedIn
+                  ? (intervention, dayOffset, date) =>
+                      setSelectedIntervention({ intervention, dayOffset, date })
+                  : undefined
+              }
             />
           ))}
         </div>
@@ -347,6 +481,15 @@ export function TripScheduleView({
               <Calendar className="mr-2 h-4 w-4" />
               Add to Calendar
             </Button>
+            {isLoggedIn && (
+              <Button
+                variant="outline"
+                className="bg-white/70"
+                onClick={() => setShowEditModal(true)}
+              >
+                <Settings2 className="h-4 w-4" />
+              </Button>
+            )}
           </div>
         )}
 
@@ -374,6 +517,49 @@ export function TripScheduleView({
           onClose={() => setShowCalendarModal(false)}
           isSignedIn={isLoggedIn}
         />
+
+        {/* Edit Preferences Modal - only for authenticated owners */}
+        {isOwner && isLoggedIn && (
+          <EditPreferencesModal
+            open={showEditModal}
+            onClose={() => setShowEditModal(false)}
+            tripId={tripId}
+            currentPreferences={currentPreferences}
+            onPreferencesUpdated={(newSchedule, updatedPreferences) => {
+              setSchedule(newSchedule);
+              setCurrentPreferences(updatedPreferences);
+            }}
+          />
+        )}
+
+        {/* Record Actual Sheet - only for authenticated owners */}
+        {isOwner && isLoggedIn && selectedIntervention && (
+          <RecordActualSheet
+            open={!!selectedIntervention}
+            onClose={() => {
+              setSelectedIntervention(null);
+              // Check for recalculation after recording
+              checkRecalculation();
+            }}
+            tripId={tripId}
+            intervention={selectedIntervention.intervention}
+            dayOffset={selectedIntervention.dayOffset}
+            date={selectedIntervention.date}
+          />
+        )}
+
+        {/* Schedule Diff Modal - shows recalculation changes */}
+        {recalculationData && (
+          <ScheduleDiffModal
+            open={showDiffModal}
+            onClose={() => setShowDiffModal(false)}
+            changes={recalculationData.changes}
+            restoredFromDay={recalculationData.restoredFromDay}
+            onAccept={applyRecalculation}
+            onDismiss={dismissRecalculation}
+            isApplying={isApplyingRecalc}
+          />
+        )}
       </div>
     </div>
   );

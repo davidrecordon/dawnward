@@ -17,6 +17,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "_python"))
 
 from circadian.types import TripLeg, ScheduleRequest
 from circadian.scheduler_v2 import ScheduleGeneratorV2
+from circadian.recalculation import capture_daily_snapshots, snapshots_to_dict
 
 
 # Validation patterns
@@ -132,6 +133,14 @@ class handler(BaseHTTPRequestHandler):
                 )
                 return
 
+            # Validate schedule_intensity if provided
+            schedule_intensity = data.get("schedule_intensity", "balanced")
+            if schedule_intensity not in ("gentle", "balanced", "aggressive"):
+                self._send_json_response(
+                    400, {"error": f"Invalid schedule_intensity: {schedule_intensity}"}
+                )
+                return
+
             # Build schedule request
             request = ScheduleRequest(
                 legs=[
@@ -149,16 +158,21 @@ class handler(BaseHTTPRequestHandler):
                 uses_caffeine=data.get("uses_caffeine", True),
                 uses_exercise=data.get("uses_exercise", False),
                 nap_preference=nap_preference,
+                schedule_intensity=schedule_intensity,
             )
 
             # Generate schedule
             generator = ScheduleGeneratorV2()
             response = generator.generate_schedule(request)
 
+            # Capture marker snapshots for recalculation support
+            snapshots = capture_daily_snapshots(request, response)
+
             # Convert to JSON response
             result = {
                 "id": str(uuid4()),
                 "schedule": asdict(response),
+                "snapshots": snapshots_to_dict(snapshots),
             }
 
             self._send_json_response(200, result)

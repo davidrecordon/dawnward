@@ -1,7 +1,8 @@
 "use client";
 
-import type { TimedItemGroup } from "@/types/schedule";
+import type { TimedItemGroup, Intervention } from "@/types/schedule";
 import type { Airport } from "@/types/airport";
+import { isEditableIntervention } from "@/lib/intervention-utils";
 import { InterventionCard } from "./intervention-card";
 import { FlightCard } from "./flight-card";
 
@@ -13,6 +14,16 @@ interface GroupedItemCardProps {
   origin: Airport;
   /** Destination airport (for arrival parent's FlightCard) */
   destination: Airport;
+  /** Callback when an intervention card is clicked (for recording actuals) */
+  onInterventionClick?: (
+    intervention: Intervention,
+    dayOffset: number,
+    date: string
+  ) => void;
+  /** Day offset for this group */
+  dayOffset: number;
+  /** Date string (YYYY-MM-DD) for this group */
+  date: string;
 }
 
 /**
@@ -28,6 +39,9 @@ export function GroupedItemCard({
   timezone,
   origin,
   destination,
+  onInterventionClick,
+  dayOffset,
+  date,
 }: GroupedItemCardProps): React.JSX.Element {
   const { parent, children, time } = group;
   const isArrival = parent.kind === "arrival";
@@ -45,7 +59,15 @@ export function GroupedItemCard({
           timezone={parent.timezone}
         />
       ) : (
-        <InterventionCard intervention={parent.data} timezone={timezone} />
+        <InterventionCard
+          intervention={parent.data}
+          timezone={timezone}
+          onClick={
+            onInterventionClick && isEditableIntervention(parent.data.type)
+              ? () => onInterventionClick(parent.data, dayOffset, date)
+              : undefined
+          }
+        />
       )}
 
       {/* Children container with connecting lines */}
@@ -86,7 +108,16 @@ export function GroupedItemCard({
 
                   {/* Child card */}
                   <div className="pl-8">
-                    <InterventionCard intervention={child} variant="nested" />
+                    <InterventionCard
+                      intervention={child}
+                      variant="nested"
+                      onClick={
+                        onInterventionClick &&
+                        isEditableIntervention(child.type)
+                          ? () => onInterventionClick(child, dayOffset, date)
+                          : undefined
+                      }
+                    />
                   </div>
                 </div>
               );

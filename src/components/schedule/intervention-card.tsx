@@ -1,5 +1,6 @@
 "use client";
 
+import { Pencil } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -15,12 +16,15 @@ interface InterventionCardProps {
   timezone?: string;
   /** Card variant: default shows full card, nested shows compact version without time */
   variant?: "default" | "nested";
+  /** Optional click handler for recording actuals */
+  onClick?: () => void;
 }
 
 export function InterventionCard({
   intervention,
   timezone,
   variant = "default",
+  onClick,
 }: InterventionCardProps): React.JSX.Element {
   const style = getInterventionStyle(intervention.type);
   const Icon = style.icon;
@@ -31,10 +35,23 @@ export function InterventionCard({
 
   return (
     <Card
+      onClick={onClick}
+      role={onClick ? "button" : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      onKeyDown={
+        onClick
+          ? (e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                onClick();
+              }
+            }
+          : undefined
+      }
       className={
         isNested
-          ? "border-white/50 bg-white/70 shadow-sm backdrop-blur-sm"
-          : "border-white/50 bg-white/80 shadow-sm backdrop-blur-sm transition-all duration-300 hover:translate-x-1 hover:shadow-md"
+          ? `group border-white/50 bg-white/70 shadow-sm backdrop-blur-sm ${onClick ? "cursor-pointer" : ""}`
+          : `group border-white/50 bg-white/80 shadow-sm backdrop-blur-sm transition-all duration-300 hover:translate-x-1 hover:shadow-md ${onClick ? "cursor-pointer" : ""}`
       }
     >
       <CardContent
@@ -73,6 +90,14 @@ export function InterventionCard({
           >
             {formatTimeWithTimezone(intervention.time, timezone)}
           </Badge>
+        )}
+        {/* Edit indicator for clickable cards */}
+        {onClick && (
+          <div
+            className={`flex shrink-0 items-center justify-center rounded-md text-slate-400 transition-colors group-hover:bg-slate-100 group-hover:text-slate-500 ${isNested ? "h-7 w-7" : "h-8 w-8"}`}
+          >
+            <Pencil className={isNested ? "h-3.5 w-3.5" : "h-4 w-4"} />
+          </div>
         )}
       </CardContent>
     </Card>
