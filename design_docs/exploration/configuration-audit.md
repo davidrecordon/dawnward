@@ -59,6 +59,17 @@ These are from peer-reviewed circadian research. Changing breaks the Forger99 mo
 | 251  | Wake maintenance zone start | 3h    | Before sleep |
 | 252  | Wake maintenance zone end   | 1h    | Before sleep |
 
+#### Nap Windows (`sleep_pressure.py`)
+
+| Line | Constant                     | Value | Purpose                         |
+| ---- | ---------------------------- | ----- | ------------------------------- |
+| 33   | `STANDARD_NAP_START_PERCENT` | 0.30  | 30% into wake period            |
+| 34   | `STANDARD_NAP_END_PERCENT`   | 0.50  | 50% into wake period            |
+| 35   | `HIGH_DEBT_NAP_START_PERCENT`| 0.25  | Earlier window when sleep-deprived |
+| 36   | `HIGH_DEBT_NAP_END_PERCENT`  | 0.55  | Wider window when sleep-deprived |
+| 192  | Arrival nap cutoff           | 13:00 | 1:00 PM hard cutoff             |
+| 206  | Settle-in time               | 45min | Buffer after arrival            |
+
 ### Category 2: Algorithm Configuration (Could Centralize)
 
 System behavior that could move to a config file.
@@ -150,6 +161,7 @@ const PHASE_ORDER: Record<Phase, number> = {
   preparation: 0,
   pre_departure: 1,
   in_transit: 2,
+  in_transit_ulr: 2,  // Ultra-long-range flights (12+ hours)
   post_arrival: 3,
   adaptation: 4,
 };
@@ -189,6 +201,60 @@ const PHASE_ORDER: Record<Phase, number> = {
 ### Design System (`intervention-utils.ts`)
 
 Already well-organized with `getInterventionStyle()` function providing semantic colors for all intervention types.
+
+---
+
+## MCP (Model Context Protocol) Constants
+
+### API Route (`src/app/api/mcp/route.ts`)
+
+| Line | Constant        | Value | Purpose                  |
+| ---- | --------------- | ----- | ------------------------ |
+| 32   | `RATE_LIMIT`    | 100   | Requests per hour per IP |
+| 33   | `MAX_BODY_SIZE` | 64KB  | Request body limit       |
+
+### Python Tools Endpoint (`api/mcp/tools.py`)
+
+| Line | Constant          | Value   | Purpose                           |
+| ---- | ----------------- | ------- | --------------------------------- |
+| 24   | `MAX_BODY_SIZE`   | 64KB    | Request body limit                |
+| 25   | `INTERNAL_SECRET` | env var | Internal auth (MCP_INTERNAL_SECRET) |
+
+### Type Definitions (`src/lib/mcp/types.ts`)
+
+| Line  | Constant              | Value | Purpose                      |
+| ----- | --------------------- | ----- | ---------------------------- |
+| 35-43 | `JSON_RPC_ERRORS`     | object | Standard JSON-RPC 2.0 codes |
+| 132   | `MAX_TIMEZONE_LENGTH` | 64    | IANA timezone validation     |
+
+**JSON_RPC_ERRORS values:**
+```typescript
+PARSE_ERROR: -32700,
+INVALID_REQUEST: -32600,
+METHOD_NOT_FOUND: -32601,
+INVALID_PARAMS: -32602,
+INTERNAL_ERROR: -32603,
+RATE_LIMIT_EXCEEDED: -32001,  // Custom
+```
+
+---
+
+## Rate Limiting Constants
+
+### Rate Limiter (`src/lib/rate-limiter.ts`)
+
+| Line | Constant           | Value    | Purpose                      |
+| ---- | ------------------ | -------- | ---------------------------- |
+| 9    | `ONE_HOUR_MS`      | 3600000  | 1 hour in milliseconds       |
+| 16   | `CLEANUP_INTERVAL` | 1000     | Requests before cleanup runs |
+| 19   | `MAX_TRACKED_IPS`  | 10000    | Memory protection limit      |
+
+### IP Utilities (`src/lib/ip-utils.ts`)
+
+| Line | Constant       | Value  | Purpose         |
+| ---- | -------------- | ------ | --------------- |
+| 8    | `IPV4_PATTERN` | regex  | IPv4 validation |
+| 9    | `IPV6_PATTERN` | regex  | IPv6 validation |
 
 ---
 
@@ -281,10 +347,12 @@ config/
 
 | Category          | Count | Action                                          |
 | ----------------- | ----- | ----------------------------------------------- |
-| Immutable Science | ~30   | Leave as-is, document sources                   |
+| Immutable Science | ~36   | Leave as-is, document sources                   |
 | Algorithm Config  | ~35   | Could centralize (low priority)                 |
 | User Preferences  | 10    | All working, 4 future candidates                |
-| Frontend Defaults | ~25   | Mostly centralized, well-organized              |
+| Frontend Defaults | ~26   | Mostly centralized, well-organized              |
+| MCP Constants     | ~12   | New endpoint for AI integrations                |
+| Rate Limiting     | ~5    | Memory-safe sliding window implementation       |
 | Duplication       | 1     | Fix soft duplication in intensity rate comments |
 
 ### Priority Actions
@@ -294,4 +362,4 @@ config/
 
 ---
 
-_Last updated: January 2025_
+_Last updated: January 2026_
