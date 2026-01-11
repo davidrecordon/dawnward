@@ -14,6 +14,7 @@ interface TripHistoryCardProps {
   destTz: string;
   departureDatetime: string;
   code: string | null;
+  differences?: string[];
   onDelete: (id: string) => Promise<void>;
 }
 
@@ -24,6 +25,7 @@ export function TripHistoryCard({
   destTz,
   departureDatetime,
   code,
+  differences = [],
   onDelete,
 }: TripHistoryCardProps) {
   const [confirmingDelete, setConfirmingDelete] = useState(false);
@@ -87,7 +89,7 @@ export function TripHistoryCard({
             <div className="font-medium text-slate-900">
               {routeLabel || `${originTz} → ${destTz}`}
             </div>
-            <div className="flex items-center gap-2 text-sm text-slate-500">
+            <div className="flex items-center gap-2 text-sm text-slate-500 flex-wrap">
               <span>{formattedDate}</span>
               <span className="text-slate-300">·</span>
               <span
@@ -107,6 +109,14 @@ export function TripHistoryCard({
                   </span>
                 </>
               )}
+              {differences.map((diff) => (
+                <span key={diff} className="inline-flex items-center gap-1">
+                  <span className="text-slate-300">·</span>
+                  <span className="rounded bg-amber-50 px-1.5 py-0.5 text-xs text-amber-700">
+                    {diff}
+                  </span>
+                </span>
+              ))}
             </div>
           </div>
         </div>

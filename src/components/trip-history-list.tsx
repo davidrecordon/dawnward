@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { TripHistoryCard } from "@/components/trip-history-card";
+import { detectTripDuplicates } from "@/lib/trip-duplicate-detection";
 
 interface Trip {
   id: string;
@@ -9,7 +10,17 @@ interface Trip {
   originTz: string;
   destTz: string;
   departureDatetime: string;
+  arrivalDatetime: string;
   code: string | null;
+  // Preference fields for duplicate detection
+  prepDays: number;
+  wakeTime: string;
+  sleepTime: string;
+  usesMelatonin: boolean;
+  usesCaffeine: boolean;
+  usesExercise: boolean;
+  napPreference: string;
+  scheduleIntensity: string;
 }
 
 interface TripHistoryListProps {
@@ -26,7 +37,7 @@ function isUpcoming(departureDatetime: string): boolean {
 export function TripHistoryList({ initialTrips }: TripHistoryListProps) {
   const [trips, setTrips] = useState(initialTrips);
 
-  const { upcoming, past } = useMemo(() => {
+  const { upcoming, past, duplicateDiffs } = useMemo(() => {
     const upcomingTrips: Trip[] = [];
     const pastTrips: Trip[] = [];
 
@@ -52,7 +63,10 @@ export function TripHistoryList({ initialTrips }: TripHistoryListProps) {
         new Date(a.departureDatetime).getTime()
     );
 
-    return { upcoming: upcomingTrips, past: pastTrips };
+    // Detect duplicate trips with different preferences
+    const diffs = detectTripDuplicates(trips);
+
+    return { upcoming: upcomingTrips, past: pastTrips, duplicateDiffs: diffs };
   }, [trips]);
 
   const handleDelete = async (id: string) => {
@@ -77,6 +91,7 @@ export function TripHistoryList({ initialTrips }: TripHistoryListProps) {
       destTz={trip.destTz}
       departureDatetime={trip.departureDatetime}
       code={trip.code}
+      differences={duplicateDiffs.get(trip.id)}
       onDelete={handleDelete}
     />
   );

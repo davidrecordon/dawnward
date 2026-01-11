@@ -23,7 +23,17 @@ export default async function TripsPage() {
       originTz: true,
       destTz: true,
       departureDatetime: true,
+      arrivalDatetime: true,
       code: true,
+      // Preference fields for duplicate detection
+      prepDays: true,
+      wakeTime: true,
+      sleepTime: true,
+      usesMelatonin: true,
+      usesCaffeine: true,
+      usesExercise: true,
+      napPreference: true,
+      scheduleIntensity: true,
     },
   });
 
