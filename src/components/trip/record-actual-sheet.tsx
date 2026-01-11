@@ -125,6 +125,16 @@ export function RecordActualSheet({
   const formattedTime = formatTime(intervention.time);
   const formattedDate = formatShortDate(date);
 
+  // Check if this intervention is in the past (for tense-aware copy)
+  const isPast = (() => {
+    const interventionDateTime = new Date(`${date}T${intervention.time}`);
+    return interventionDateTime < new Date();
+  })();
+
+  // Wake and sleep targets can't be skipped - they're anchors for the schedule
+  const canBeSkipped =
+    intervention.type !== "wake_target" && intervention.type !== "sleep_target";
+
   const handleSave = async () => {
     setIsSaving(true);
     setError(null);
@@ -204,7 +214,7 @@ export function RecordActualSheet({
     </div>
   );
 
-  // Shared form content (radio options)
+  // Shared form content (radio options) with tense-aware copy
   const formContent = (
     <RadioGroup
       value={status}
@@ -215,9 +225,11 @@ export function RecordActualSheet({
       <div className="flex items-center space-x-3 rounded-lg border border-slate-200 bg-white p-3">
         <RadioGroupItem value="as_planned" id="as_planned" />
         <Label htmlFor="as_planned" className="flex-1 cursor-pointer">
-          <span className="font-medium">Done as planned</span>
-          <span className="block text-sm text-slate-500">
-            Completed at {formattedTime}
+          <span className="font-medium">
+            {isPast ? "Done as planned" : "Will do as planned"}
+          </span>
+          <span className="text-sm text-slate-500">
+            {isPast ? `completed at ${formattedTime}` : `at ${formattedTime}`}
           </span>
         </Label>
       </div>
@@ -233,13 +245,15 @@ export function RecordActualSheet({
         <div className="flex items-center space-x-3">
           <RadioGroupItem value="modified" id="modified" />
           <Label htmlFor="modified" className="flex-1 cursor-pointer">
-            <span className="font-medium">Done at different time</span>
+            <span className="font-medium">
+              {isPast ? "Done at different time" : "Will do at different time"}
+            </span>
           </Label>
         </div>
         {status === "modified" && (
           <div className="mt-3 pl-7">
             <Label htmlFor="actual-time" className="text-sm text-slate-600">
-              Actual time
+              {isPast ? "Actual time" : "Planned time"}
             </Label>
             <Input
               id="actual-time"
@@ -252,16 +266,20 @@ export function RecordActualSheet({
         )}
       </div>
 
-      {/* Skipped */}
-      <div className="flex items-center space-x-3 rounded-lg border border-slate-200 bg-white p-3">
-        <RadioGroupItem value="skipped" id="skipped" />
-        <Label htmlFor="skipped" className="flex-1 cursor-pointer">
-          <span className="font-medium">Skipped</span>
-          <span className="block text-sm text-slate-500">
-            Didn&apos;t complete this intervention
-          </span>
-        </Label>
-      </div>
+      {/* Skipped - not available for wake/sleep targets */}
+      {canBeSkipped && (
+        <div className="flex items-center space-x-3 rounded-lg border border-slate-200 bg-white p-3">
+          <RadioGroupItem value="skipped" id="skipped" />
+          <Label htmlFor="skipped" className="flex-1 cursor-pointer">
+            <span className="font-medium">
+              {isPast ? "Skipped" : "Will skip"}
+            </span>
+            <span className="block text-sm text-slate-500">
+              {isPast ? "Didn't" : "Won't"} complete this
+            </span>
+          </Label>
+        </div>
+      )}
     </RadioGroup>
   );
 
