@@ -44,11 +44,20 @@ function createJsonRpcResponse(
   id: string | number | null,
   result: unknown
 ): NextResponse<JsonRpcResponse> {
-  return NextResponse.json({
-    jsonrpc: "2.0",
-    id,
-    result,
-  });
+  return NextResponse.json(
+    {
+      jsonrpc: "2.0",
+      id,
+      result,
+    },
+    {
+      headers: {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type",
+      },
+    }
+  );
 }
 
 /**
@@ -60,11 +69,20 @@ function createJsonRpcError(
   message: string,
   data?: unknown
 ): NextResponse<JsonRpcResponse> {
-  return NextResponse.json({
-    jsonrpc: "2.0",
-    id,
-    error: { code, message, data },
-  });
+  return NextResponse.json(
+    {
+      jsonrpc: "2.0",
+      id,
+      error: { code, message, data },
+    },
+    {
+      headers: {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type",
+      },
+    }
+  );
 }
 
 /**
@@ -221,6 +239,42 @@ async function handleToolCall(params: unknown): Promise<ToolResult> {
         `Unknown tool: ${name}`
       );
   }
+}
+
+/**
+ * CORS headers for MCP clients
+ */
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type",
+};
+
+/**
+ * OPTIONS /api/mcp - CORS preflight
+ */
+export async function OPTIONS() {
+  return new NextResponse(null, {
+    status: 204,
+    headers: corsHeaders,
+  });
+}
+
+/**
+ * GET /api/mcp - Server info for discovery
+ */
+export async function GET() {
+  return NextResponse.json(
+    {
+      name: "Dawnward Jet Lag API",
+      version: "1.0.0",
+      description: "Circadian science tools for jet lag optimization",
+      endpoints: {
+        mcp: "/api/mcp",
+      },
+    },
+    { headers: corsHeaders }
+  );
 }
 
 /**
