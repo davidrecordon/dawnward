@@ -151,6 +151,10 @@ class ConstraintFilter:
             # Light interventions are important even if slightly suboptimal timing
             clamp_to_start = {"light_seek", "light_avoid"}
 
+            # Types that should be clamped to phase end for pre_departure phases
+            # Caffeine cutoff is useful even if clamped to departure buffer
+            clamp_to_end = {"caffeine_cutoff"}
+
             if in_bounds:
                 result.append(intervention)
             elif intervention.type in clamp_to_start and i_minutes < phase_start_minutes:
@@ -170,6 +174,30 @@ class ConstraintFilter:
                         action_taken="moved",
                         reason=f"Clamped from {intervention.time} to phase start {format_time(phase.start_datetime.time())}",
                         science_impact="Slightly suboptimal timing, but still beneficial",
+                    )
+                )
+            elif (
+                intervention.type in clamp_to_end
+                and phase.phase_type == "pre_departure"
+                and i_minutes > phase_end_minutes
+            ):
+                # Clamp late caffeine_cutoff to phase end for pre_departure phases
+                # User gets actionable advice: "stop coffee by X before your flight"
+                clamped = Intervention(
+                    time=format_time(phase.end_datetime.time()),
+                    type=intervention.type,
+                    title=intervention.title,
+                    description=intervention.description,
+                    duration_min=intervention.duration_min,
+                )
+                result.append(clamped)
+                self.violations.append(
+                    ConstraintViolation(
+                        intervention_type=intervention.type,
+                        original_time=intervention.time,
+                        action_taken="moved",
+                        reason=f"Clamped from {intervention.time} to phase end {format_time(phase.end_datetime.time())}",
+                        science_impact="Caffeine cutoff adjusted to departure day constraints",
                     )
                 )
             else:
