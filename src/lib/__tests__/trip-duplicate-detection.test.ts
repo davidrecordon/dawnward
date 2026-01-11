@@ -4,7 +4,9 @@ import {
   TripWithPreferences,
 } from "../trip-duplicate-detection";
 
-function createTrip(overrides: Partial<TripWithPreferences> = {}): TripWithPreferences {
+function createTrip(
+  overrides: Partial<TripWithPreferences> = {}
+): TripWithPreferences {
   return {
     id: "trip-1",
     originTz: "America/Los_Angeles",
@@ -37,7 +39,10 @@ describe("detectTripDuplicates", () => {
     });
 
     it("returns empty arrays for trips with different routes", () => {
-      const trip1 = createTrip({ id: "trip-1", originTz: "America/Los_Angeles" });
+      const trip1 = createTrip({
+        id: "trip-1",
+        originTz: "America/Los_Angeles",
+      });
       const trip2 = createTrip({ id: "trip-2", originTz: "America/New_York" });
       const result = detectTripDuplicates([trip1, trip2]);
       expect(result.get("trip-1")).toEqual([]);
@@ -45,24 +50,42 @@ describe("detectTripDuplicates", () => {
     });
 
     it("returns empty arrays for trips with different departure dates", () => {
-      const trip1 = createTrip({ id: "trip-1", departureDatetime: "2025-01-15T10:00" });
-      const trip2 = createTrip({ id: "trip-2", departureDatetime: "2025-01-16T10:00" });
+      const trip1 = createTrip({
+        id: "trip-1",
+        departureDatetime: "2025-01-15T10:00",
+      });
+      const trip2 = createTrip({
+        id: "trip-2",
+        departureDatetime: "2025-01-16T10:00",
+      });
       const result = detectTripDuplicates([trip1, trip2]);
       expect(result.get("trip-1")).toEqual([]);
       expect(result.get("trip-2")).toEqual([]);
     });
 
     it("returns empty arrays for trips with different departure times", () => {
-      const trip1 = createTrip({ id: "trip-1", departureDatetime: "2025-01-15T10:00" });
-      const trip2 = createTrip({ id: "trip-2", departureDatetime: "2025-01-15T14:00" });
+      const trip1 = createTrip({
+        id: "trip-1",
+        departureDatetime: "2025-01-15T10:00",
+      });
+      const trip2 = createTrip({
+        id: "trip-2",
+        departureDatetime: "2025-01-15T14:00",
+      });
       const result = detectTripDuplicates([trip1, trip2]);
       expect(result.get("trip-1")).toEqual([]);
       expect(result.get("trip-2")).toEqual([]);
     });
 
     it("returns empty arrays for trips with different arrival times", () => {
-      const trip1 = createTrip({ id: "trip-1", arrivalDatetime: "2025-01-15T22:00" });
-      const trip2 = createTrip({ id: "trip-2", arrivalDatetime: "2025-01-16T02:00" });
+      const trip1 = createTrip({
+        id: "trip-1",
+        arrivalDatetime: "2025-01-15T22:00",
+      });
+      const trip2 = createTrip({
+        id: "trip-2",
+        arrivalDatetime: "2025-01-16T02:00",
+      });
       const result = detectTripDuplicates([trip1, trip2]);
       expect(result.get("trip-1")).toEqual([]);
       expect(result.get("trip-2")).toEqual([]);
@@ -138,7 +161,10 @@ describe("detectTripDuplicates", () => {
 
     it("detects scheduleIntensity differences", () => {
       const trip1 = createTrip({ id: "trip-1", scheduleIntensity: "gentle" });
-      const trip2 = createTrip({ id: "trip-2", scheduleIntensity: "aggressive" });
+      const trip2 = createTrip({
+        id: "trip-2",
+        scheduleIntensity: "aggressive",
+      });
       const result = detectTripDuplicates([trip1, trip2]);
       expect(result.get("trip-1")).toEqual(["gentle"]);
       expect(result.get("trip-2")).toEqual(["aggressive"]);
@@ -160,8 +186,16 @@ describe("detectTripDuplicates", () => {
         scheduleIntensity: "aggressive",
       });
       const result = detectTripDuplicates([trip1, trip2]);
-      expect(result.get("trip-1")).toEqual(["3 days prep", "melatonin", "gentle"]);
-      expect(result.get("trip-2")).toEqual(["5 days prep", "no melatonin", "aggressive"]);
+      expect(result.get("trip-1")).toEqual([
+        "3 days prep",
+        "melatonin",
+        "gentle",
+      ]);
+      expect(result.get("trip-2")).toEqual([
+        "5 days prep",
+        "no melatonin",
+        "aggressive",
+      ]);
     });
 
     it("orders fields consistently", () => {
@@ -179,8 +213,16 @@ describe("detectTripDuplicates", () => {
       });
       const result = detectTripDuplicates([trip1, trip2]);
       // Order should be: prepDays, usesCaffeine, scheduleIntensity
-      expect(result.get("trip-1")).toEqual(["3 days prep", "caffeine", "gentle"]);
-      expect(result.get("trip-2")).toEqual(["5 days prep", "no caffeine", "aggressive"]);
+      expect(result.get("trip-1")).toEqual([
+        "3 days prep",
+        "caffeine",
+        "gentle",
+      ]);
+      expect(result.get("trip-2")).toEqual([
+        "5 days prep",
+        "no caffeine",
+        "aggressive",
+      ]);
     });
   });
 
@@ -196,9 +238,21 @@ describe("detectTripDuplicates", () => {
     });
 
     it("handles mixed values (some same, some different)", () => {
-      const trip1 = createTrip({ id: "trip-1", prepDays: 3, usesMelatonin: true });
-      const trip2 = createTrip({ id: "trip-2", prepDays: 3, usesMelatonin: false });
-      const trip3 = createTrip({ id: "trip-3", prepDays: 5, usesMelatonin: true });
+      const trip1 = createTrip({
+        id: "trip-1",
+        prepDays: 3,
+        usesMelatonin: true,
+      });
+      const trip2 = createTrip({
+        id: "trip-2",
+        prepDays: 3,
+        usesMelatonin: false,
+      });
+      const trip3 = createTrip({
+        id: "trip-3",
+        prepDays: 5,
+        usesMelatonin: true,
+      });
       const result = detectTripDuplicates([trip1, trip2, trip3]);
       // Both prepDays and usesMelatonin vary across the group
       expect(result.get("trip-1")).toEqual(["3 days prep", "melatonin"]);

@@ -50,9 +50,7 @@ export default async function TripsPage() {
 
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">My Trips</h1>
-          <p className="text-muted-foreground">
-            Your upcoming and past trips
-          </p>
+          <p className="text-muted-foreground">Your upcoming and past trips</p>
         </div>
 
         {trips.length === 0 ? (

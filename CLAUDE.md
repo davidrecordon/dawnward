@@ -181,9 +181,30 @@ Key intervention types:
 - `sleep_target` / `wake_target` - Target sleep schedule
 - `sleep_window` - In-flight sleep opportunities (for ultra-long-haul flights)
 
-### MCP Interface (Planned)
+### MCP Interface
 
-Future: Public read-only endpoint at `/api/mcp` for Claude to answer jet lag questions. Not yet implemented.
+Public read-only JSON-RPC 2.0 endpoint at `POST /api/mcp` for AI assistants to query circadian science tools.
+
+**Tools:**
+
+- `calculate_phase_shift` - Quick timezone shift calculation (~100ms)
+- `get_adaptation_plan` - Full schedule generation (~1-2s)
+
+**Rate limited:** 100 requests/hour per IP. No auth required.
+
+**Methods:**
+
+- `tools/list` - Return available tool definitions
+- `tools/call` - Execute a tool with arguments
+
+**Files:**
+
+- `src/app/api/mcp/route.ts` - JSON-RPC handler
+- `src/lib/mcp/types.ts` - Types and Zod schemas
+- `src/lib/mcp/tool-definitions.ts` - Tool JSON schemas
+- `src/lib/rate-limiter.ts` - Sliding window rate limiter
+- `src/lib/ip-utils.ts` - IP extraction from headers
+- `api/_python/mcp_tools.py` - Python tool implementations
 
 ## Security Considerations
 
@@ -269,7 +290,7 @@ This project uses Claude Code plugins that should be invoked for significant wor
 
 ## Testing
 
-**TypeScript (Vitest)**: ~300 tests covering utility functions and components
+**TypeScript (Vitest)**: ~340 tests covering utility functions and components
 
 - `src/lib/__tests__/time-utils.test.ts` - Date/time formatting, timezone-aware operations
 - `src/lib/__tests__/timezone-utils.test.ts` - Flight duration calculation, timezone shifts
@@ -282,6 +303,7 @@ This project uses Claude Code plugins that should be invoked for significant wor
 - `src/lib/__tests__/trip-utils.test.ts` - Trip data mapping utilities
 - `src/lib/__tests__/auth-utils.test.ts` - Callback URL validation, auth utilities
 - `src/lib/__tests__/form-defaults.test.ts` - Form default value handling
+- `src/lib/__tests__/rate-limiter.test.ts` - Sliding window rate limiting
 - `src/lib/schedule-utils.test.ts` - Schedule merging and sorting logic
 - `src/app/api/schedule/generate/__tests__/route.test.ts` - API route data construction
 - `src/app/api/user/preferences/__tests__/route.test.ts` - User preferences API
@@ -293,7 +315,7 @@ This project uses Claude Code plugins that should be invoked for significant wor
 - `src/components/schedule/__tests__/day-section.test.tsx` - Schedule day section rendering
 - `src/types/__tests__/user-preferences.test.ts` - User preference type validation
 
-**Python (pytest)**: ~135 tests covering schedule generation (6-layer validation strategy)
+**Python (pytest)**: ~290 tests covering schedule generation (6-layer validation strategy)
 
 - `test_model_parity.py` - CBTmin trajectory, phase shift magnitude, daily shift targets
 - `test_physiological_bounds.py` - Max shift rates, antidromic risk, sleep duration, melatonin timing
@@ -303,6 +325,7 @@ This project uses Claude Code plugins that should be invoked for significant wor
 - `test_realistic_flights.py` - Real airline routes (VS, BA, AF, SQ, CX) with actual departure/arrival times
 - `test_sorting.py` - Intervention sorting, late-night handling, sleep_target near departure filtering
 - `test_timezone_handling.py` - Phase timezone handling, is_in_transit flag
+- `test_mcp_tools.py` - MCP tool implementations (phase shift, adaptation plan)
 
 ## Design Documents
 

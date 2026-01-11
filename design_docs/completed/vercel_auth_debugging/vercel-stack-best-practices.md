@@ -2,7 +2,7 @@
 
 A reference guide for deploying a Next.js application on Vercel with Bun runtime, NextAuth v5, Prisma ORM, Vercel Postgres, and Python serverless functions.
 
-This should serve as a solid reference for Dawnward's stack. The main architectural decision you'll want to make early is whether your Python circadian endpoints live at /api/circadian/* (sharing the /api/ namespace) or at a separate prefix like /api/python/* to keep them clearly separated from any Node.js API routes you might add later.
+This should serve as a solid reference for Dawnward's stack. The main architectural decision you'll want to make early is whether your Python circadian endpoints live at /api/circadian/_ (sharing the /api/ namespace) or at a separate prefix like /api/python/_ to keep them clearly separated from any Node.js API routes you might add later.
 
 **Last updated:** January 2025
 
@@ -27,6 +27,7 @@ Bun is available as a runtime option for Vercel Functions (Public Beta). It prov
 ### Configuration
 
 **vercel.json:**
+
 ```json
 {
   "bunVersion": "1.x"
@@ -53,14 +54,14 @@ The `--bun` flag ensures the Next.js CLI runs under Bun runtime while bundling (
 
 ### Limitations
 
-| Feature | Bun | Node.js |
-|---------|-----|---------|
-| Automatic source maps | ❌ | ✅ |
-| Bytecode caching | ❌ | ✅ |
-| Request metrics (node:http/https) | ❌ | ✅ |
-| Request metrics (fetch) | ✅ | ✅ |
-| Fluid compute | ✅ | ✅ |
-| Streaming | ✅ | ✅ |
+| Feature                           | Bun | Node.js |
+| --------------------------------- | --- | ------- |
+| Automatic source maps             | ❌  | ✅      |
+| Bytecode caching                  | ❌  | ✅      |
+| Request metrics (node:http/https) | ❌  | ✅      |
+| Request metrics (fetch)           | ✅  | ✅      |
+| Fluid compute                     | ✅  | ✅      |
+| Streaming                         | ✅  | ✅      |
 
 **Note:** `Bun.serve` is not supported on Vercel Functions. Use supported frameworks: Next.js, Express, Hono, or Nitro.
 
@@ -92,6 +93,7 @@ AUTH_GOOGLE_SECRET=...
 ```
 
 Generate the secret:
+
 ```bash
 npx auth secret
 # or
@@ -103,9 +105,10 @@ openssl rand -base64 32
 ### Configuration
 
 **auth.config.ts** (edge-compatible, for middleware):
+
 ```typescript
-import type { NextAuthConfig } from "next-auth"
-import Google from "next-auth/providers/google"
+import type { NextAuthConfig } from "next-auth";
+import Google from "next-auth/providers/google";
 
 export const authConfig: NextAuthConfig = {
   providers: [Google],
@@ -114,44 +117,47 @@ export const authConfig: NextAuthConfig = {
   },
   callbacks: {
     authorized({ auth, request: { nextUrl } }) {
-      const isLoggedIn = !!auth?.user
+      const isLoggedIn = !!auth?.user;
       // Add your authorization logic
-      return isLoggedIn
+      return isLoggedIn;
     },
   },
-}
+};
 ```
 
 **auth.ts** (full config with Prisma adapter):
+
 ```typescript
-import NextAuth from "next-auth"
-import { PrismaAdapter } from "@auth/prisma-adapter"
-import { prisma } from "@/lib/prisma"
-import { authConfig } from "./auth.config"
+import NextAuth from "next-auth";
+import { PrismaAdapter } from "@auth/prisma-adapter";
+import { prisma } from "@/lib/prisma";
+import { authConfig } from "./auth.config";
 
 export const { auth, handlers, signIn, signOut } = NextAuth({
   adapter: PrismaAdapter(prisma),
   session: { strategy: "jwt" },
   ...authConfig,
-})
+});
 ```
 
 **app/api/auth/[...nextauth]/route.ts:**
+
 ```typescript
-import { handlers } from "@/auth"
-export const { GET, POST } = handlers
+import { handlers } from "@/auth";
+export const { GET, POST } = handlers;
 ```
 
 **middleware.ts:**
-```typescript
-import NextAuth from "next-auth"
-import { authConfig } from "./auth.config"
 
-export default NextAuth(authConfig).auth
+```typescript
+import NextAuth from "next-auth";
+import { authConfig } from "./auth.config";
+
+export default NextAuth(authConfig).auth;
 
 export const config = {
   matcher: ["/((?!api|_next/static|_next/image|favicon.ico).*)"],
-}
+};
 ```
 
 ### Key Changes from v4
@@ -177,6 +183,7 @@ npm install -D prisma @types/ws
 ### Schema Configuration
 
 **prisma/schema.prisma:**
+
 ```prisma
 generator client {
   provider        = "prisma-client-js"
@@ -248,36 +255,38 @@ DIRECT_URL="postgres://user:password@host.region.postgres.vercel-storage.com:543
 ### Prisma Client Setup
 
 **lib/prisma.ts:**
+
 ```typescript
-import { PrismaClient } from "@prisma/client"
-import { PrismaNeon } from "@prisma/adapter-neon"
-import { neonConfig } from "@neondatabase/serverless"
-import ws from "ws"
+import { PrismaClient } from "@prisma/client";
+import { PrismaNeon } from "@prisma/adapter-neon";
+import { neonConfig } from "@neondatabase/serverless";
+import ws from "ws";
 
 // Required for Node.js environments
-neonConfig.webSocketConstructor = ws
+neonConfig.webSocketConstructor = ws;
 
 // For edge environments, enable:
 // neonConfig.poolQueryViaFetch = true
 
-const globalForPrisma = global as unknown as { prisma: PrismaClient }
+const globalForPrisma = global as unknown as { prisma: PrismaClient };
 
 const adapter = new PrismaNeon({
   connectionString: process.env.DATABASE_URL!,
-})
+});
 
-const prisma = globalForPrisma.prisma || new PrismaClient({ adapter })
+const prisma = globalForPrisma.prisma || new PrismaClient({ adapter });
 
 if (process.env.NODE_ENV !== "production") {
-  globalForPrisma.prisma = prisma
+  globalForPrisma.prisma = prisma;
 }
 
-export default prisma
+export default prisma;
 ```
 
 ### Build Configuration
 
 Add to **package.json**:
+
 ```json
 {
   "scripts": {
@@ -322,6 +331,7 @@ Python functions coexist with Next.js but require special handling due to path c
 ### Flask Setup
 
 **api/index.py:**
+
 ```python
 from flask import Flask, jsonify
 
@@ -338,6 +348,7 @@ def calculate_circadian():
 ```
 
 **requirements.txt:**
+
 ```
 Flask==3.0.3
 # Add your Python dependencies
@@ -346,6 +357,7 @@ Flask==3.0.3
 ### Next.js Configuration
 
 **next.config.js:**
+
 ```javascript
 /** @type {import('next').NextConfig} */
 const nextConfig = {
@@ -358,14 +370,15 @@ const nextConfig = {
             ? "http://127.0.0.1:5328/api/python/:path*"
             : "/api/python/:path*",
       },
-    ]
+    ];
   },
-}
+};
 
-module.exports = nextConfig
+module.exports = nextConfig;
 ```
 
 **Alternative:** If all `/api/*` routes are Python:
+
 ```javascript
 async rewrites() {
   return [
@@ -383,6 +396,7 @@ async rewrites() {
 ### Development Scripts
 
 **package.json:**
+
 ```json
 {
   "scripts": {
@@ -458,6 +472,7 @@ DIRECT_URL="postgres://user:pass@host.region.postgres.vercel-storage.com:5432/db
 ### Vercel Environment Variables
 
 Set these in Vercel Dashboard → Project → Settings → Environment Variables:
+
 - `AUTH_SECRET` (all environments)
 - `AUTH_GOOGLE_ID` / `AUTH_GOOGLE_SECRET`
 - `DATABASE_URL` / `DIRECT_URL` (auto-populated if using Vercel Postgres integration)
@@ -467,16 +482,19 @@ Set these in Vercel Dashboard → Project → Settings → Environment Variables
 ## Common Gotchas
 
 ### 1. Path Conflicts (Python + Next.js)
+
 - `/app/api/` is for Next.js (Node.js only)
 - `/api/` is for Python serverless functions
 - Use distinct prefixes to avoid conflicts
 
 ### 2. Edge Runtime + Prisma
+
 - `node-postgres` (pg) is **not** supported on Vercel Edge Functions
 - Use `@prisma/adapter-neon` with the Neon serverless driver
 - Split auth config to keep edge-incompatible code out of middleware
 
 ### 3. Function Size Limits
+
 - Vercel serverless functions have a 250MB limit
 - Heavy Python packages (NumPy, SciPy) can exceed this
 - Use `excludeFiles` in vercel.json if needed:
@@ -491,16 +509,19 @@ Set these in Vercel Dashboard → Project → Settings → Environment Variables
   ```
 
 ### 4. Bun Compatibility
+
 - Bun runtime is in Public Beta
 - Some Prisma operations may have quirks with Bun
 - Test locally with Bun before deploying
 
 ### 5. NextAuth v5 Migration
+
 - `next-auth@beta` is still in beta as of Jan 2025
 - Schema is compatible with v4 (no database migration needed)
 - OAuth 1.0 support is deprecated
 
 ### 6. Local Development
+
 - Flask runs on port 5328 by default
 - Next.js rewrites proxy to Flask in development
 - In production, Vercel handles routing natively

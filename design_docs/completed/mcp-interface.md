@@ -2,7 +2,7 @@
 
 ## Overview
 
-Expose 6 read-only tools via MCP (Model Context Protocol) that allow AI assistants like Claude to use Dawnward's circadian science for answering jet lag questions.
+Expose 2 read-only tools via MCP (Model Context Protocol) that allow AI assistants like Claude to use Dawnward's circadian science for answering jet lag questions.
 
 **Key Requirements:**
 
@@ -11,11 +11,24 @@ Expose 6 read-only tools via MCP (Model Context Protocol) that allow AI assistan
 - No authentication required
 - All calculations reuse existing Python circadian module
 
+## Design Rationale
+
+The original spec proposed six tools. Four were cut:
+
+| Tool                       | Why It's Gone                                           |
+| -------------------------- | ------------------------------------------------------- |
+| `get_light_windows`        | Requires CBTmin. User doesn't know it.                  |
+| `get_melatonin_timing`     | Requires DLMO. User doesn't know it.                    |
+| `get_caffeine_strategy`    | It's just "stop 9 hours before bed." Claude knows this. |
+| `estimate_adaptation_days` | Now folded into `calculate_phase_shift` output.         |
+
+Tools 3–6 required circadian markers (CBTmin, DLMO) that no traveler knows about themselves. Claude would have to call `get_adaptation_plan` first to derive those values, then call the granular tools to get information already in the plan. Pointless round-trips.
+
 ## MCP Tools Specification
 
 ### 1. calculate_phase_shift
 
-Calculate timezone shift and adaptation difficulty.
+Calculate timezone shift and adaptation difficulty. Answers "is this trip going to suck?" without requiring flight times or preferences.
 
 **Input:**
 
@@ -23,26 +36,34 @@ Calculate timezone shift and adaptation difficulty.
 {
   "origin_timezone": "America/Los_Angeles",
   "destination_timezone": "Asia/Tokyo",
-  "travel_date": "2026-02-15" // Optional, for DST handling
+  "travel_date": "2026-02-15"
 }
 ```
+
+`travel_date` is optional but recommended—DST boundaries matter.
 
 **Output:**
 
 ```json
 {
-  "shift_hours": 17,
-  "direction": "advance",
-  "difficulty": "hard",
+  "raw_shift_hours": 17,
+  "raw_direction": "advance",
+  "optimal_shift_hours": 7,
   "optimal_direction": "delay",
-  "optimal_shift_hours": -7,
-  "explanation": "17-hour advance is equivalent to 7-hour delay. Delays are easier."
+  "difficulty": "hard",
+  "estimated_days": {
+    "with_interventions": 5,
+    "without_interventions": 8
+  },
+  "explanation": "A 17-hour advance equals a 7-hour delay. Delays are physiologically easier, so the plan will shift your clock westward."
 }
 ```
 
+The `estimated_days` field lets Claude answer "how long will jet lag last?" directly from this lightweight call instead of generating a full plan. The estimates use typical adaptation rates (1.5 hr/day with interventions, 1 hr/day without).
+
 ### 2. get_adaptation_plan
 
-Generate full intervention schedule for a trip.
+Generate a complete, actionable schedule.
 
 **Input:**
 
@@ -53,117 +74,42 @@ Generate full intervention schedule for a trip.
   "departure_datetime": "2026-02-15T11:30",
   "arrival_datetime": "2026-02-16T15:45",
   "prep_days": 3,
-  "wake_time": "07:00",
-  "sleep_time": "23:00",
-  "use_melatonin": true,
-  "use_caffeine": true
+  "usual_wake_time": "07:00",
+  "usual_sleep_time": "23:00",
+  "interventions": {
+    "melatonin": true,
+    "caffeine": true
+  }
 }
 ```
 
-**Output:** Full schedule response (same as `/api/schedule/generate`)
+**Input notes:**
 
-### 3. get_light_windows
-
-Optimal light exposure/avoidance times for a specific day.
-
-**Input:**
-
-```json
-{
-  "current_cbtmin": "04:30",
-  "target_cbtmin": "03:00",
-  "direction": "advance"
-}
-```
+- `usual_wake_time`/`usual_sleep_time` are baseline habits in origin timezone, not targets
+- `interventions` is extensible for future additions like `exercise`
+- `prep_days` defaults to 3 if omitted
 
 **Output:**
 
 ```json
 {
-  "light_seek": { "start": "04:30", "end": "08:30", "importance": "critical" },
-  "light_avoid": { "start": "00:30", "end": "04:30", "importance": "high" },
-  "explanation": "Light before CBTmin delays; light after CBTmin advances."
+  "summary": {
+    "total_days": 8,
+    "prep_days": 3,
+    "post_arrival_days": 5,
+    "shift_direction": "delay",
+    "shift_hours": 7,
+    "key_advice": "Start sleeping 1 hour later each night beginning Feb 12. Avoid bright light before 10am until adapted."
+  },
+  "days": [...]
 }
 ```
 
-### 4. get_melatonin_timing
-
-When to take melatonin for phase shifting.
-
-**Input:**
-
-```json
-{
-  "current_dlmo": "21:00",
-  "direction": "advance",
-  "target_sleep_time": "22:00"
-}
-```
-
-**Output:**
-
-```json
-{
-  "optimal_time": "17:00",
-  "dose_mg": 0.5,
-  "window": { "earliest": "16:00", "latest": "18:00" },
-  "explanation": "Take 4-5 hours before target sleep for advances."
-}
-```
-
-### 5. get_caffeine_strategy
-
-Caffeine timing for alertness without disrupting sleep.
-
-**Input:**
-
-```json
-{
-  "target_sleep_time": "23:00",
-  "wake_time": "07:00",
-  "needs_alertness_boost": true
-}
-```
-
-**Output:**
-
-```json
-{
-  "cutoff_time": "14:00",
-  "boost_window": { "start": "07:00", "end": "10:00" },
-  "explanation": "Caffeine half-life ~6h. Cut off 9h before sleep."
-}
-```
-
-### 6. estimate_adaptation_days
-
-How long until fully adapted.
-
-**Input:**
-
-```json
-{
-  "shift_hours": 8,
-  "direction": "advance",
-  "intensity": "balanced",
-  "use_interventions": true
-}
-```
-
-**Output:**
-
-```json
-{
-  "days_with_interventions": 5,
-  "days_without_interventions": 8,
-  "daily_shift_rate": 1.5,
-  "explanation": "With light/melatonin, expect ~1.5h/day advance."
-}
-```
+The `summary.key_advice` field gives Claude a one-liner to lead with before diving into schedule details.
 
 ## Implementation Plan
 
-### Phase 1: Core Infrastructure (~4 hours)
+### Phase 1: Core Infrastructure (~2 hours)
 
 **Files to create:**
 
@@ -181,33 +127,19 @@ How long until fully adapted.
 // Cleanup: Remove timestamps older than 1 hour
 ```
 
-### Phase 2: Python Tool Functions (~6 hours)
+### Phase 2: Python Tool Functions (~4 hours)
 
 **File to create:** `api/_python/mcp_tools.py`
 
 ```python
 def calculate_phase_shift(origin_tz: str, dest_tz: str, travel_date: str | None) -> dict:
     # Uses: calculate_timezone_shift() from circadian_math
+    # Returns: raw/optimal shift, difficulty, estimated_days
     pass
 
 def get_adaptation_plan(params: dict) -> dict:
     # Uses: ScheduleGeneratorV2.generate_schedule()
-    pass
-
-def get_light_windows(current_cbtmin: str, target_cbtmin: str, direction: str) -> dict:
-    # Uses: CircadianMarkerTracker + LightPRC
-    pass
-
-def get_melatonin_timing(current_dlmo: str, direction: str, target_sleep: str) -> dict:
-    # Uses: CircadianMarkerTracker + MelatoninPRC
-    pass
-
-def get_caffeine_strategy(target_sleep: str, wake_time: str, needs_boost: bool) -> dict:
-    # Uses: Time math from circadian_math
-    pass
-
-def estimate_adaptation_days(shift_hours: float, direction: str, intensity: str, use_interventions: bool) -> dict:
-    # Uses: ShiftCalculator with intensity settings
+    # Adds: summary block with key_advice
     pass
 
 def invoke_tool(tool_name: str, arguments: dict) -> dict:
@@ -217,7 +149,7 @@ def invoke_tool(tool_name: str, arguments: dict) -> dict:
 
 **File to create:** `api/_python/tests/test_mcp_tools.py`
 
-### Phase 3: API Route (~4 hours)
+### Phase 3: API Route (~2 hours)
 
 **File to create:** `src/app/api/mcp/route.ts`
 
@@ -257,21 +189,38 @@ def invoke_tool(tool_name: str, arguments: dict) -> dict:
     "content": [
       {
         "type": "text",
-        "text": "{\"shift_hours\": 17, ...}"
+        "text": "{\"raw_shift_hours\": 17, ...}"
       }
     ]
   }
 }
 ```
 
-### Phase 4: Testing & Documentation (~3 hours)
+### Phase 4: Testing & Documentation (~2 hours)
 
-- Integration tests for all 6 tools
+- Integration tests for both tools
 - Manual curl testing
 - Rate limiting stress test (101 requests)
 - Error case testing
 
-**Total Estimate:** ~17 hours (2-3 days)
+**Total Estimate:** ~8-10 hours
+
+| Metric           | Original | Revised                |
+| ---------------- | -------- | ---------------------- |
+| Tools            | 6        | 2                      |
+| Python functions | 7        | 3 (two tools + router) |
+| Test cases       | ~30      | ~12                    |
+| Estimated hours  | 17       | 8–10                   |
+
+## Open Question
+
+Should `calculate_phase_shift` exist at all, or should `get_adaptation_plan` be the only tool?
+
+**Argument for keeping both:** Phase shift calculation is pure math (sub-10ms). Plan generation runs a simulation (potentially 1–2 seconds). For quick "is this trip hard?" questions, the lightweight tool is noticeably snappier and doesn't require flight details.
+
+**Argument for one tool:** Simpler mental model. Claude almost always wants to give _some_ advice, not just "yeah, that's a hard trip, good luck."
+
+**Recommendation:** Keep both. The phase-shift tool handles the "I'm considering two different routings, which is easier?" use case cleanly without over-fetching.
 
 ## Questions to Answer
 
@@ -305,16 +254,17 @@ def invoke_tool(tool_name: str, arguments: dict) -> dict:
 2. `bun run test:run` - TypeScript tests pass
 3. `bun run test:python` - Python tests pass
 4. Manual: `curl -X POST /api/mcp -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'`
-5. Manual: Test each of 6 tools with valid inputs
+5. Manual: Test both tools with valid inputs
 6. Manual: Test rate limiting (send 101 requests)
 7. Manual: Test with Claude Desktop MCP integration
 
 ## Success Criteria
 
-- [ ] All 6 tools callable via MCP interface
+- [ ] Both tools callable via MCP interface
 - [ ] Rate limiting enforces 100 req/hour per IP
 - [ ] All tests passing (Python + TypeScript)
 - [ ] MCP JSON-RPC 2.0 spec compliance
-- [ ] Response time < 500ms (except get_adaptation_plan < 2.5s)
+- [ ] Response time < 500ms for calculate_phase_shift
+- [ ] Response time < 2.5s for get_adaptation_plan
 - [ ] Error messages are helpful but don't expose internals
 - [ ] Works with Claude Desktop

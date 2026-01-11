@@ -47,7 +47,7 @@ export function CalendarComingSoonModal({
               <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-50 to-orange-100">
                 <Calendar className="h-8 w-8 text-orange-500" />
               </div>
-              <div className="absolute -right-1 -top-1 flex h-6 w-6 items-center justify-center rounded-full bg-amber-400 shadow-sm">
+              <div className="absolute -top-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full bg-amber-400 shadow-sm">
                 <Sparkles className="h-3.5 w-3.5 text-white" />
               </div>
             </div>

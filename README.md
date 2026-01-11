@@ -125,6 +125,69 @@ design_docs/          # Specifications and design decisions
 
 ---
 
+## MCP Interface (for AI Assistants)
+
+Dawnward exposes a [Model Context Protocol](https://modelcontextprotocol.io/) (MCP) endpoint that allows AI assistants like Claude to answer jet lag questions using real circadian science.
+
+**Endpoint:** `POST https://dawnward.app/api/mcp`
+
+### Available Tools
+
+| Tool                    | Description                                                |
+| ----------------------- | ---------------------------------------------------------- |
+| `calculate_phase_shift` | Quick timezone shift calculation and difficulty assessment |
+| `get_adaptation_plan`   | Full day-by-day adaptation schedule with interventions     |
+
+### Example: Calculate Phase Shift
+
+```bash
+curl -X POST https://dawnward.app/api/mcp \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "tools/call",
+    "params": {
+      "name": "calculate_phase_shift",
+      "arguments": {
+        "origin_timezone": "America/Los_Angeles",
+        "destination_timezone": "Asia/Tokyo"
+      }
+    }
+  }'
+```
+
+### Example: Get Adaptation Plan
+
+```bash
+curl -X POST https://dawnward.app/api/mcp \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 2,
+    "method": "tools/call",
+    "params": {
+      "name": "get_adaptation_plan",
+      "arguments": {
+        "origin_timezone": "America/Los_Angeles",
+        "destination_timezone": "Asia/Tokyo",
+        "departure_datetime": "2026-02-15T11:30",
+        "arrival_datetime": "2026-02-16T15:45",
+        "prep_days": 3,
+        "usual_wake_time": "07:00",
+        "usual_sleep_time": "23:00"
+      }
+    }
+  }'
+```
+
+### Rate Limiting
+
+- 100 requests per hour per IP address
+- No authentication required
+
+---
+
 ## The Science
 
 Dawnward's approach is based on published circadian research:

@@ -51,14 +51,14 @@ Production auth routes at `https://dawnward.app/api/auth/*` return 404 errors. T
 
 ## Key Dependency Versions
 
-| Package                | Version            | Notes                             |
-| ---------------------- | ------------------ | --------------------------------- |
-| `next`                 | `16.1.1`           | App Router, React 19              |
-| `next-auth`            | `^5.0.0-beta.30`   | v5 beta with Edge Runtime support |
-| `react`                | `19.2.3`           | React 19                          |
-| `prisma`               | `^7.2.0`           | ORM                               |
-| `@prisma/adapter-pg`   | `^7.2.0`           | Native PostgreSQL driver adapter  |
-| `@auth/prisma-adapter` | `^2.11.1`          | NextAuth Prisma adapter           |
+| Package                | Version          | Notes                             |
+| ---------------------- | ---------------- | --------------------------------- |
+| `next`                 | `16.1.1`         | App Router, React 19              |
+| `next-auth`            | `^5.0.0-beta.30` | v5 beta with Edge Runtime support |
+| `react`                | `19.2.3`         | React 19                          |
+| `prisma`               | `^7.2.0`         | ORM                               |
+| `@prisma/adapter-pg`   | `^7.2.0`         | Native PostgreSQL driver adapter  |
+| `@auth/prisma-adapter` | `^2.11.1`        | NextAuth Prisma adapter           |
 
 ---
 

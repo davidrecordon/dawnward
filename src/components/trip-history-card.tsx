@@ -89,7 +89,7 @@ export function TripHistoryCard({
             <div className="font-medium text-slate-900">
               {routeLabel || `${originTz} → ${destTz}`}
             </div>
-            <div className="flex items-center gap-2 text-sm text-slate-500 flex-wrap">
+            <div className="flex flex-wrap items-center gap-2 text-sm text-slate-500">
               <span>{formattedDate}</span>
               <span className="text-slate-300">·</span>
               <span

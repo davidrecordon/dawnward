@@ -3,6 +3,7 @@
 ## Hypothesis
 
 Vercel routes requests based on path matching:
+
 - `/api/schedule/*` → matches `api/schedule/generate.py` → Python runtime
 - `/api/auth/*` → no match in `api/` dir → falls through to Next.js `src/app/api/auth/`
 
@@ -27,11 +28,13 @@ Replace your current `vercel.json` with the absolute minimum:
 ```
 
 **What we removed:**
-- Any `rewrites` 
+
+- Any `rewrites`
 - Any `routes` (legacy)
 - Any `builds` (legacy - this was breaking things in your Fix Attempt B)
 
 **What we kept:**
+
 - Just the `functions` config to bundle your Python library files
 
 ---
@@ -61,6 +64,7 @@ dawnward/
 ```
 
 **Critical:** The paths must NOT overlap:
+
 - `api/schedule/` handles `/api/schedule/*`
 - `src/app/api/auth/` handles `/api/auth/*`
 - No file at `api/auth/` (this would shadow Next.js)
@@ -74,14 +78,14 @@ Create a simple test endpoint in Next.js to verify routing:
 **File: `src/app/api/health/route.ts`**
 
 ```typescript
-export const runtime = 'nodejs';
+export const runtime = "nodejs";
 
 export async function GET() {
   return Response.json({
     ok: true,
-    runtime: 'nodejs',
+    runtime: "nodejs",
     timestamp: new Date().toISOString(),
-    message: 'Next.js API route is working'
+    message: "Next.js API route is working",
   });
 }
 ```
@@ -131,13 +135,13 @@ curl -I https://dawnward.app/api/auth/signin
 
 ## Expected Results
 
-| Endpoint | Expected Status | Expected Response |
-|----------|-----------------|-------------------|
-| `/api/schedule/generate` | 200 or 400 | Python response (schedule or validation error) |
-| `/api/health` | 200 | `{"ok": true, "runtime": "nodejs", ...}` |
-| `/api/auth/session` | 200 | `{}` or `{"user": ...}` |
-| `/api/auth/providers` | 200 | `{"google": {...}}` |
-| `/api/auth/signin` | 200 or 302 | HTML page or redirect |
+| Endpoint                 | Expected Status | Expected Response                              |
+| ------------------------ | --------------- | ---------------------------------------------- |
+| `/api/schedule/generate` | 200 or 400      | Python response (schedule or validation error) |
+| `/api/health`            | 200             | `{"ok": true, "runtime": "nodejs", ...}`       |
+| `/api/auth/session`      | 200             | `{}` or `{"user": ...}`                        |
+| `/api/auth/providers`    | 200             | `{"google": {...}}`                            |
+| `/api/auth/signin`       | 200 or 302      | HTML page or redirect                          |
 
 ---
 

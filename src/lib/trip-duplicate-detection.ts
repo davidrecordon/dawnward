@@ -98,9 +98,7 @@ export function detectTripDuplicates(
   return result;
 }
 
-function findVaryingFields(
-  trips: TripWithPreferences[]
-): Set<PreferenceField> {
+function findVaryingFields(trips: TripWithPreferences[]): Set<PreferenceField> {
   const varying = new Set<PreferenceField>();
   const first = trips[0];
 
