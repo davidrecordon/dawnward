@@ -7,6 +7,7 @@ import { type ColorScheme, colorSchemes } from "@/lib/preference-colors";
 interface Option<T extends string> {
   value: T;
   label: string;
+  description?: string;
 }
 
 interface PreferenceSelectorProps<T extends string> {
@@ -29,6 +30,9 @@ export function PreferenceSelector<T extends string>({
   colorScheme,
 }: PreferenceSelectorProps<T>): React.JSX.Element {
   const colors = colorSchemes[colorScheme];
+  const selectedOption = options.find((opt) => opt.value === value);
+  // Use dynamic description from selected option if available, otherwise use static description
+  const displayDescription = selectedOption?.description || description;
 
   return (
     <div
@@ -48,7 +52,9 @@ export function PreferenceSelector<T extends string>({
         </div>
         <div>
           <p className="text-sm font-medium">{title}</p>
-          <p className="text-xs text-slate-500">{description}</p>
+          {displayDescription && (
+            <p className="text-xs text-slate-500">{displayDescription}</p>
+          )}
         </div>
       </div>
       <div className="flex rounded-lg bg-white/80 p-1 shadow-sm">

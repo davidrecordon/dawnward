@@ -101,6 +101,8 @@ class ScheduleRequest:
     uses_melatonin: bool = True
     uses_caffeine: bool = True
     uses_exercise: bool = False
+    caffeine_cutoff_hours: int = 8  # Hours before sleep to stop caffeine (6/8/10/12)
+    light_exposure_minutes: int = 60  # Duration per light session (30/45/60/90)
     nap_preference: NapPreference = "flight_only"
     schedule_intensity: ScheduleIntensity = "balanced"
 

@@ -97,48 +97,6 @@ System behavior that could move to a config file.
 | 112  | Short flight threshold   | 6h    | Skip in-transit < 6h       |
 | 198  | Past intervention buffer | 30min | Grace period for filtering |
 
-### Category 3: User Preference Candidates
-
-**Priority items for future user settings:**
-
-#### Light Exposure Duration (`intervention_planner.py`)
-
-| Line | Context     | Current | Range      | Notes                      |
-| ---- | ----------- | ------- | ---------- | -------------------------- |
-| 431  | Optimal     | 60 min  | 30-120 min | Research supports variable |
-| 338  | Short phase | 30 min  | 15-60 min  | Quick interventions        |
-| 376  | Short phase | 30 min  | 15-60 min  | Quick interventions        |
-
-#### Caffeine Cutoff (`intervention_planner.py`)
-
-| Line | Value               | Current       | Range               | Notes         |
-| ---- | ------------------- | ------------- | ------------------- | ------------- |
-| 593  | Cutoff before sleep | 600 min (10h) | 480-720 min (8-12h) | Half-life ~6h |
-
-#### Nap Settings (`sleep_pressure.py`)
-
-| Line    | Value                   | Current         | Range      | Notes                 |
-| ------- | ----------------------- | --------------- | ---------- | --------------------- |
-| 33-34   | Standard nap window     | 30-50% into day | 25-60%     | When naps are allowed |
-| 35-36   | High debt nap window    | 25-55% into day | 20-60%     | Wider when deprived   |
-| 145     | Max nap (high debt)     | 90 min          | 60-120 min | One sleep cycle       |
-| 150     | Max nap (standard)      | 30 min          | 20-45 min  | Avoid inertia         |
-| 192     | Arrival nap cutoff      | 13:00           | Flexible   | Hard limit time       |
-| 206     | Settle-in after arrival | 45 min          | 30-90 min  | Rest before nap       |
-| 218-220 | Debt thresholds         | 5h/3h           | Adjustable | Nap urgency triggers  |
-
-#### Default Sleep Debt (`intervention_planner.py`)
-
-| Line | Value        | Current | Range | Notes              |
-| ---- | ------------ | ------- | ----- | ------------------ |
-| 628  | Post-arrival | 4.0h    | 2-6h  | Red-eye assumption |
-
-#### Melatonin Dose (`intervention_planner.py`)
-
-| Line | Value | Current | Range   | Notes                    |
-| ---- | ----- | ------- | ------- | ------------------------ |
-| 447  | Dose  | 0.5mg   | 0.3-3mg | Burgess recommends 0.5mg |
-
 ---
 
 ## TypeScript Frontend Constants
@@ -226,6 +184,7 @@ const PHASE_ORDER: Record<Phase, number> = {
 | `orange`  | Caffeine           | orange-500    |
 | `sky`     | Exercise/Intensity | sky-500       |
 | `purple`  | Nap/Prep days      | purple-500    |
+| `amber`   | Light exposure     | amber-500     |
 
 ### Design System (`intervention-utils.ts`)
 
@@ -238,45 +197,42 @@ Already well-organized with `getInterventionStyle()` function providing semantic
 From `prisma/schema.prisma`, the User model has:
 
 ```prisma
-// Implemented and functional (8 fields)
-defaultPrepDays     Int     @default(3)
-defaultWakeTime     String  @default("07:00")
-defaultSleepTime    String  @default("23:00")
-usesMelatonin       Boolean @default(true)
-usesCaffeine        Boolean @default(true)
-usesExercise        Boolean @default(false)
-napPreference       String  @default("flight_only")
-scheduleIntensity   String  @default("balanced")
-
-// ⚠️ ORPHANED FIELD - in schema but NOT in types, API, or UI
-caffeineCutoffHours Int     @default(6)
+// Implemented and functional (10 fields)
+defaultPrepDays      Int     @default(3)
+defaultWakeTime      String  @default("07:00")
+defaultSleepTime     String  @default("23:00")
+usesMelatonin        Boolean @default(true)
+usesCaffeine         Boolean @default(true)
+usesExercise         Boolean @default(false)
+napPreference        String  @default("flight_only")
+scheduleIntensity    String  @default("balanced")
+caffeineCutoffHours  Int     @default(8)
+lightExposureMinutes Int     @default(60)
 ```
 
 ### Implementation Status
 
-| Field               | Schema | Types | API | UI  | Status       |
-| ------------------- | ------ | ----- | --- | --- | ------------ |
-| defaultWakeTime     | ✅     | ✅    | ✅  | ✅  | Working      |
-| defaultSleepTime    | ✅     | ✅    | ✅  | ✅  | Working      |
-| defaultPrepDays     | ✅     | ✅    | ✅  | ✅  | Working      |
-| usesMelatonin       | ✅     | ✅    | ✅  | ✅  | Working      |
-| usesCaffeine        | ✅     | ✅    | ✅  | ✅  | Working      |
-| usesExercise        | ✅     | ✅    | ✅  | ✅  | Working      |
-| napPreference       | ✅     | ✅    | ✅  | ✅  | Working      |
-| scheduleIntensity   | ✅     | ✅    | ✅  | ✅  | Working      |
-| caffeineCutoffHours | ✅     | ❌    | ❌  | ❌  | **Orphaned** |
+| Field                | Schema | Types | API | UI  | Status  |
+| -------------------- | ------ | ----- | --- | --- | ------- |
+| defaultWakeTime      | ✅     | ✅    | ✅  | ✅  | Working |
+| defaultSleepTime     | ✅     | ✅    | ✅  | ✅  | Working |
+| defaultPrepDays      | ✅     | ✅    | ✅  | ✅  | Working |
+| usesMelatonin        | ✅     | ✅    | ✅  | ✅  | Working |
+| usesCaffeine         | ✅     | ✅    | ✅  | ✅  | Working |
+| usesExercise         | ✅     | ✅    | ✅  | ✅  | Working |
+| napPreference        | ✅     | ✅    | ✅  | ✅  | Working |
+| scheduleIntensity    | ✅     | ✅    | ✅  | ✅  | Working |
+| caffeineCutoffHours  | ✅     | ✅    | ✅  | ✅  | Working |
+| lightExposureMinutes | ✅     | ✅    | ✅  | ✅  | Working |
 
 ### Future Preference Candidates (Not Yet Implemented)
 
 | Field                   | Default | Purpose                 |
 | ----------------------- | ------- | ----------------------- |
-| `lightExposureMinutes`  | 60      | Light session duration  |
 | `maxNapMinutes`         | 30      | Standard nap cap        |
 | `maxNapWithDebtMinutes` | 90      | High-debt nap cap       |
 | `arrivalNapCutoffTime`  | "13:00" | Latest arrival nap time |
 | `melatoninDoseMg`       | 0.5     | Melatonin dose          |
-
-**Note:** `caffeineCutoffHours` already exists in schema but needs types/API/UI implementation, OR should be removed if not planned.
 
 ---
 
@@ -327,16 +283,14 @@ config/
 | ----------------- | ----- | ----------------------------------------------- |
 | Immutable Science | ~30   | Leave as-is, document sources                   |
 | Algorithm Config  | ~35   | Could centralize (low priority)                 |
-| User Preferences  | 8+1   | 8 working, 1 orphaned, 5 candidates             |
+| User Preferences  | 10    | All working, 4 future candidates                |
 | Frontend Defaults | ~25   | Mostly centralized, well-organized              |
 | Duplication       | 1     | Fix soft duplication in intensity rate comments |
 
 ### Priority Actions
 
-1. **Fix orphaned field:** Either implement `caffeineCutoffHours` fully (types, API, UI) or remove from schema
-2. **Light exposure duration** (30-120 min) - high user value
-3. **Nap settings** (duration, windows, cutoff) - moderate user value
-4. **Melatonin dose** (0.3-3mg) - low priority, safety consideration
+1. **Nap settings** (duration, windows, cutoff) - moderate user value
+2. **Melatonin dose** (0.3-3mg) - low priority, safety consideration
 
 ---
 

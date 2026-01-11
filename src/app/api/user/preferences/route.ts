@@ -16,6 +16,20 @@ const preferencesSchema = z.object({
   usesMelatonin: z.boolean().optional(),
   usesCaffeine: z.boolean().optional(),
   usesExercise: z.boolean().optional(),
+  caffeineCutoffHours: z
+    .number()
+    .int()
+    .refine((v) => [6, 8, 10, 12].includes(v), {
+      message: "Must be 6, 8, 10, or 12",
+    })
+    .optional(),
+  lightExposureMinutes: z
+    .number()
+    .int()
+    .refine((v) => [30, 45, 60, 90].includes(v), {
+      message: "Must be 30, 45, 60, or 90",
+    })
+    .optional(),
   napPreference: z.enum(["no", "flight_only", "all_days"]).optional(),
   scheduleIntensity: z.enum(["gentle", "balanced", "aggressive"]).optional(),
 });
@@ -40,6 +54,8 @@ export async function GET() {
       usesMelatonin: true,
       usesCaffeine: true,
       usesExercise: true,
+      caffeineCutoffHours: true,
+      lightExposureMinutes: true,
       napPreference: true,
       scheduleIntensity: true,
     },
@@ -98,6 +114,8 @@ export async function PATCH(request: Request) {
       usesMelatonin: true,
       usesCaffeine: true,
       usesExercise: true,
+      caffeineCutoffHours: true,
+      lightExposureMinutes: true,
       napPreference: true,
       scheduleIntensity: true,
     },

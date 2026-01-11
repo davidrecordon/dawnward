@@ -48,6 +48,8 @@ const mockUserPreferences = {
   usesMelatonin: true,
   usesCaffeine: true,
   usesExercise: false,
+  caffeineCutoffHours: 8,
+  lightExposureMinutes: 60,
   napPreference: "flight_only",
   scheduleIntensity: "balanced",
 };
@@ -258,6 +260,20 @@ const preferencesSchema = z.object({
   usesMelatonin: z.boolean().optional(),
   usesCaffeine: z.boolean().optional(),
   usesExercise: z.boolean().optional(),
+  caffeineCutoffHours: z
+    .number()
+    .int()
+    .refine((v) => [6, 8, 10, 12].includes(v), {
+      message: "Must be 6, 8, 10, or 12",
+    })
+    .optional(),
+  lightExposureMinutes: z
+    .number()
+    .int()
+    .refine((v) => [30, 45, 60, 90].includes(v), {
+      message: "Must be 30, 45, 60, or 90",
+    })
+    .optional(),
   napPreference: z.enum(["no", "flight_only", "all_days"]).optional(),
   scheduleIntensity: z.enum(["gentle", "balanced", "aggressive"]).optional(),
 });
@@ -383,6 +399,64 @@ describe("User Preferences Schema Validation", () => {
     });
   });
 
+  describe("caffeineCutoffHours validation", () => {
+    it("accepts valid caffeine cutoff hours", () => {
+      expect(
+        preferencesSchema.safeParse({ caffeineCutoffHours: 6 }).success
+      ).toBe(true);
+      expect(
+        preferencesSchema.safeParse({ caffeineCutoffHours: 8 }).success
+      ).toBe(true);
+      expect(
+        preferencesSchema.safeParse({ caffeineCutoffHours: 10 }).success
+      ).toBe(true);
+      expect(
+        preferencesSchema.safeParse({ caffeineCutoffHours: 12 }).success
+      ).toBe(true);
+    });
+
+    it("rejects invalid caffeine cutoff hours", () => {
+      expect(
+        preferencesSchema.safeParse({ caffeineCutoffHours: 5 }).success
+      ).toBe(false);
+      expect(
+        preferencesSchema.safeParse({ caffeineCutoffHours: 7 }).success
+      ).toBe(false);
+      expect(
+        preferencesSchema.safeParse({ caffeineCutoffHours: 14 }).success
+      ).toBe(false);
+    });
+  });
+
+  describe("lightExposureMinutes validation", () => {
+    it("accepts valid light exposure minutes", () => {
+      expect(
+        preferencesSchema.safeParse({ lightExposureMinutes: 30 }).success
+      ).toBe(true);
+      expect(
+        preferencesSchema.safeParse({ lightExposureMinutes: 45 }).success
+      ).toBe(true);
+      expect(
+        preferencesSchema.safeParse({ lightExposureMinutes: 60 }).success
+      ).toBe(true);
+      expect(
+        preferencesSchema.safeParse({ lightExposureMinutes: 90 }).success
+      ).toBe(true);
+    });
+
+    it("rejects invalid light exposure minutes", () => {
+      expect(
+        preferencesSchema.safeParse({ lightExposureMinutes: 15 }).success
+      ).toBe(false);
+      expect(
+        preferencesSchema.safeParse({ lightExposureMinutes: 50 }).success
+      ).toBe(false);
+      expect(
+        preferencesSchema.safeParse({ lightExposureMinutes: 120 }).success
+      ).toBe(false);
+    });
+  });
+
   describe("partial updates", () => {
     it("allows updating only some fields", () => {
       const result = preferencesSchema.safeParse({
@@ -407,6 +481,8 @@ describe("User Preferences Schema Validation", () => {
         usesMelatonin: true,
         usesCaffeine: true,
         usesExercise: false,
+        caffeineCutoffHours: 8,
+        lightExposureMinutes: 60,
         napPreference: "flight_only",
         scheduleIntensity: "balanced",
       });

@@ -54,6 +54,8 @@ const scheduleRequestSchema = z.object({
   uses_melatonin: z.boolean().default(true),
   uses_caffeine: z.boolean().default(true),
   uses_exercise: z.boolean().default(false),
+  caffeine_cutoff_hours: z.number().int().min(6).max(12).default(8),
+  light_exposure_minutes: z.number().int().min(30).max(90).default(60),
   nap_preference: z
     .enum(["no", "flight_only", "all_days"])
     .default("flight_only"),
@@ -101,6 +103,8 @@ export async function POST(request: Request) {
       uses_melatonin: body.uses_melatonin,
       uses_caffeine: body.uses_caffeine,
       uses_exercise: body.uses_exercise,
+      caffeine_cutoff_hours: body.caffeine_cutoff_hours,
+      light_exposure_minutes: body.light_exposure_minutes,
       nap_preference: body.nap_preference,
       schedule_intensity: body.schedule_intensity,
     };
@@ -140,6 +144,8 @@ request = ScheduleRequest(
     uses_melatonin=data['uses_melatonin'],
     uses_caffeine=data['uses_caffeine'],
     uses_exercise=data['uses_exercise'],
+    caffeine_cutoff_hours=data.get('caffeine_cutoff_hours', 8),
+    light_exposure_minutes=data.get('light_exposure_minutes', 60),
     nap_preference=data.get('nap_preference', 'flight_only'),
     schedule_intensity=data.get('schedule_intensity', 'balanced'),
 )

@@ -36,6 +36,8 @@ export default async function SettingsPage() {
       usesMelatonin: true,
       usesCaffeine: true,
       usesExercise: true,
+      caffeineCutoffHours: true,
+      lightExposureMinutes: true,
       napPreference: true,
       scheduleIntensity: true,
     },
@@ -63,6 +65,8 @@ export default async function SettingsPage() {
             usesMelatonin: user.usesMelatonin,
             usesCaffeine: user.usesCaffeine,
             usesExercise: user.usesExercise,
+            caffeineCutoffHours: user.caffeineCutoffHours,
+            lightExposureMinutes: user.lightExposureMinutes,
             napPreference: user.napPreference,
             scheduleIntensity: user.scheduleIntensity,
           }}

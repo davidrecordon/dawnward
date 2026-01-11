@@ -427,8 +427,10 @@ class InterventionPlanner:
         """Plan light seek and avoid interventions using PRC."""
         interventions = []
 
-        # Get optimal light seek window
-        seek_start, seek_end = LightPRC.optimal_light_window(cbtmin, self.context.direction, 60)
+        # Get optimal light seek window using user's preferred duration
+        seek_start, seek_end = LightPRC.optimal_light_window(
+            cbtmin, self.context.direction, self.request.light_exposure_minutes
+        )
 
         # Get light avoid window
         avoid_start, avoid_end = LightPRC.light_avoid_window(cbtmin, self.context.direction)
@@ -453,7 +455,7 @@ class InterventionPlanner:
                         "Get bright outdoor light or use a 10,000 lux lightbox. "
                         "This helps advance your circadian clock for eastward travel."
                     ),
-                    duration_min=60,
+                    duration_min=self.request.light_exposure_minutes,
                 )
             )
 
@@ -492,7 +494,7 @@ class InterventionPlanner:
                         "Get bright outdoor light or use a 10,000 lux lightbox. "
                         "Evening light helps delay your circadian clock for westward travel."
                     ),
-                    duration_min=60,
+                    duration_min=self.request.light_exposure_minutes,
                 )
             )
 
@@ -589,8 +591,8 @@ class InterventionPlanner:
             )
         )
 
-        # Caffeine cutoff: ~10h before sleep (caffeine half-life ~5-6h)
-        cutoff_minutes = sleep_minutes - 600  # 10 hours before sleep
+        # Caffeine cutoff: user-configurable hours before sleep
+        cutoff_minutes = sleep_minutes - (self.request.caffeine_cutoff_hours * 60)
         if cutoff_minutes < 0:
             cutoff_minutes += 24 * 60
 

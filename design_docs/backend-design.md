@@ -53,9 +53,13 @@ CREATE TABLE users (
   default_prep_days INTEGER DEFAULT 3 CHECK (default_prep_days BETWEEN 1 AND 7),
   default_wake_time TIME DEFAULT '07:00',
   default_sleep_time TIME DEFAULT '23:00',
-  uses_melatonin BOOLEAN DEFAULT false,
+  uses_melatonin BOOLEAN DEFAULT true,
   uses_caffeine BOOLEAN DEFAULT true,
-  caffeine_cutoff_hours INTEGER DEFAULT 6,
+  uses_exercise BOOLEAN DEFAULT false,
+  caffeine_cutoff_hours INTEGER DEFAULT 8,
+  light_exposure_minutes INTEGER DEFAULT 60,
+  nap_preference VARCHAR(20) DEFAULT 'flight_only',
+  schedule_intensity VARCHAR(20) DEFAULT 'balanced',
 
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()

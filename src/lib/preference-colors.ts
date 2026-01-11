@@ -5,7 +5,7 @@
  * to maintain consistent styling across the preferences section.
  */
 
-export type ColorScheme = "emerald" | "orange" | "sky" | "purple";
+export type ColorScheme = "emerald" | "orange" | "sky" | "purple" | "amber";
 
 export interface ColorSchemeStyles {
   bg: string;
@@ -38,5 +38,11 @@ export const colorSchemes: Record<ColorScheme, ColorSchemeStyles> = {
     iconBg: "bg-purple-100",
     iconColor: "text-purple-600",
     buttonActive: "bg-purple-500 text-white",
+  },
+  amber: {
+    bg: "bg-amber-50/80",
+    iconBg: "bg-amber-100",
+    iconColor: "text-amber-600",
+    buttonActive: "bg-amber-500 text-white",
   },
 };

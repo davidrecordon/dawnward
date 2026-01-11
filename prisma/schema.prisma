@@ -32,7 +32,8 @@ model User {
   usesMelatonin       Boolean @default(true)
   usesCaffeine        Boolean @default(true)
   usesExercise        Boolean @default(false)
-  caffeineCutoffHours Int     @default(6)
+  caffeineCutoffHours  Int     @default(8)
+  lightExposureMinutes Int     @default(60)
   napPreference       String  @default("flight_only") // no, flight_only, all_days
   scheduleIntensity   String  @default("balanced")    // gentle, balanced, aggressive
 }

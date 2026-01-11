@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Activity, Coffee, Gauge, Moon, Pill, Clock } from "lucide-react";
+import { Activity, Coffee, Gauge, Moon, Pill, Clock, Sun } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PreferenceToggle } from "@/components/preference-toggle";
@@ -17,6 +17,8 @@ interface UserPreferences {
   usesMelatonin: boolean;
   usesCaffeine: boolean;
   usesExercise: boolean;
+  caffeineCutoffHours: number;
+  lightExposureMinutes: number;
   napPreference: string;
   scheduleIntensity: string;
 }
@@ -111,14 +113,14 @@ export function SettingsForm({ initialPreferences }: SettingsFormProps) {
         <CardContent className="space-y-4">
           <PreferenceSelector
             icon={<Moon className="h-4 w-4" />}
-            title="Nap preference"
-            description="Strategic napping in your schedule"
+            title="Recommend naps"
+            description="Strategic napping to reduce sleep debt"
             value={preferences.napPreference}
             onValueChange={(val) => updateField("napPreference", val)}
             options={[
               { value: "no", label: "No" },
-              { value: "flight_only", label: "On flight" },
-              { value: "all_days", label: "All days" },
+              { value: "flight_only", label: "On the flight" },
+              { value: "all_days", label: "On all days" },
             ]}
             colorScheme="purple"
           />
@@ -161,8 +163,8 @@ export function SettingsForm({ initialPreferences }: SettingsFormProps) {
 
           <PreferenceToggle
             icon={<Coffee className="h-4 w-4" />}
-            title="Strategic caffeine"
-            description="Optimal coffee and tea timing"
+            title="Include caffeine"
+            description="Coffee or tea to stay sharp while you adjust"
             checked={preferences.usesCaffeine}
             onCheckedChange={(val) => updateField("usesCaffeine", val)}
             colorScheme="orange"
@@ -176,6 +178,68 @@ export function SettingsForm({ initialPreferences }: SettingsFormProps) {
             onCheckedChange={(val) => updateField("usesExercise", val)}
             colorScheme="sky"
           />
+        </CardContent>
+      </Card>
+
+      {/* Fine-Tune */}
+      <Card className="bg-white/90 backdrop-blur-sm">
+        <CardHeader>
+          <CardTitle className="text-lg">Fine-Tune</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <PreferenceSelector
+            icon={<Sun className="h-4 w-4" />}
+            title="Light exposure per session"
+            description="Duration of each bright light session"
+            value={String(preferences.lightExposureMinutes)}
+            onValueChange={(val) =>
+              updateField("lightExposureMinutes", Number(val))
+            }
+            options={[
+              { value: "30", label: "30 min" },
+              { value: "45", label: "45 min" },
+              { value: "60", label: "60 min" },
+              { value: "90", label: "90 min" },
+            ]}
+            colorScheme="amber"
+          />
+
+          {preferences.usesCaffeine && (
+            <PreferenceSelector
+              icon={<Coffee className="h-4 w-4" />}
+              title="Caffeine cutoff before bed"
+              description=""
+              value={String(preferences.caffeineCutoffHours)}
+              onValueChange={(val) =>
+                updateField("caffeineCutoffHours", Number(val))
+              }
+              options={[
+                {
+                  value: "6",
+                  label: "6h",
+                  description:
+                    "Fast metabolizer — coffee rarely affects my sleep",
+                },
+                {
+                  value: "8",
+                  label: "8h",
+                  description: "Average — I'm moderately sensitive",
+                },
+                {
+                  value: "10",
+                  label: "10h",
+                  description: "Sensitive — evening coffee keeps me up",
+                },
+                {
+                  value: "12",
+                  label: "12h",
+                  description:
+                    "Very sensitive — I avoid caffeine after morning",
+                },
+              ]}
+              colorScheme="orange"
+            />
+          )}
         </CardContent>
       </Card>
     </div>
