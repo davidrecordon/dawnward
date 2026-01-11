@@ -77,7 +77,7 @@ export function InterventionCard({
           )}
           {/* Show dual timezone indicator for in-flight items */}
           {showDualTimezone && (
-            <p className="mt-0.5 text-xs text-slate-400">
+            <p className="mt-0.5 text-xs font-medium text-sky-500">
               {getTimezoneAbbr(originTimezone)} → {getTimezoneAbbr(timezone)}
             </p>
           )}

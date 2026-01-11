@@ -83,7 +83,7 @@ export function InFlightSleepCard({
             </p>
           )}
           {showDualTimezone && (
-            <p className="mt-1 text-xs text-slate-400">
+            <p className="mt-1.5 text-xs font-medium text-violet-500">
               {getTimezoneAbbr(originTimezone)} → {getTimezoneAbbr(timezone)}
             </p>
           )}
