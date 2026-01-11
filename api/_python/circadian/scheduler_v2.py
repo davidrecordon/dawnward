@@ -30,6 +30,10 @@ from .types import (
     TripLeg,
 )
 
+# Scheduler thresholds
+SHORT_FLIGHT_THRESHOLD_HOURS = 6  # Flights under this have no actionable interventions
+PAST_INTERVENTION_BUFFER_MINUTES = 30  # Include interventions within this buffer of now
+
 
 class ScheduleGeneratorV2:
     """
@@ -105,11 +109,11 @@ class ScheduleGeneratorV2:
         day_schedules = []
 
         for phase in phases:
-            # Skip short in-transit phases (< 6h) - no actionable interventions
-            # Keep ULR flights (12h+) and regular flights 6h+ that have sleep suggestions
+            # Skip short in-transit phases - no actionable interventions
+            # Keep ULR flights (12h+) and regular flights that have sleep suggestions
             if phase.phase_type == "in_transit" and not phase.is_ulr_flight:
                 flight_hours = phase.flight_duration_hours or 0
-                if flight_hours < 6:
+                if flight_hours < SHORT_FLIGHT_THRESHOLD_HOURS:
                     continue
 
             # Get science-optimal interventions
@@ -195,7 +199,7 @@ class ScheduleGeneratorV2:
         interventions: list,
         day_date: str,
         current_datetime: datetime,
-        buffer_minutes: int = 30,
+        buffer_minutes: int = PAST_INTERVENTION_BUFFER_MINUTES,
     ) -> list:
         """
         Filter out interventions that are past the current time (for today only).
@@ -204,7 +208,7 @@ class ScheduleGeneratorV2:
             interventions: List of interventions for the day
             day_date: The date of this day schedule (YYYY-MM-DD)
             current_datetime: Current datetime when generating
-            buffer_minutes: Include interventions within this buffer
+            buffer_minutes: Include interventions within this buffer (default from constant)
 
         Returns:
             Filtered list with past interventions removed (for today only)

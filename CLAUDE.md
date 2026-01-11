@@ -199,11 +199,12 @@ Public read-only JSON-RPC 2.0 endpoint at `POST /api/mcp` for AI assistants to q
 
 **Files:**
 
-- `src/app/api/mcp/route.ts` - JSON-RPC handler
+- `src/app/api/mcp/route.ts` - JSON-RPC handler (TypeScript)
 - `src/lib/mcp/types.ts` - Types and Zod schemas
 - `src/lib/mcp/tool-definitions.ts` - Tool JSON schemas
 - `src/lib/rate-limiter.ts` - Sliding window rate limiter
 - `src/lib/ip-utils.ts` - IP extraction from headers
+- `api/mcp/tools.py` - Vercel Python endpoint (internal, called by route.ts)
 - `api/_python/mcp_tools.py` - Python tool implementations
 
 ## Security Considerations
