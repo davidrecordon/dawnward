@@ -272,6 +272,25 @@ export async function POST(request: Request) {
     let result: unknown;
 
     switch (rpcRequest.method) {
+      case "initialize":
+        // MCP handshake - return server capabilities
+        result = {
+          protocolVersion: "2024-11-05",
+          capabilities: {
+            tools: {},
+          },
+          serverInfo: {
+            name: "Dawnward Jet Lag API",
+            version: "1.0.0",
+          },
+        };
+        break;
+
+      case "notifications/initialized":
+        // Client acknowledgment - no response needed but we return success
+        result = {};
+        break;
+
       case "tools/list":
         result = { tools: toolDefinitions };
         break;
