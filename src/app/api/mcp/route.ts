@@ -12,11 +12,6 @@
  */
 
 import { NextResponse } from "next/server";
-import { spawn } from "child_process";
-import path from "path";
-import { writeFile, unlink, mkdir } from "fs/promises";
-import { randomUUID } from "crypto";
-import os from "os";
 
 import { checkRateLimit, getRateLimitStatus } from "@/lib/rate-limiter";
 import { getClientIP } from "@/lib/ip-utils";
@@ -140,76 +135,38 @@ async function executeGetAdaptationPlan(
 }
 
 /**
- * Call a Python MCP tool via subprocess.
+ * Get the base URL for internal API calls.
+ * Uses VERCEL_URL in production, localhost in development.
+ */
+function getBaseUrl(): string {
+  if (process.env.VERCEL_URL) {
+    return `https://${process.env.VERCEL_URL}`;
+  }
+  return "http://localhost:3000";
+}
+
+/**
+ * Call a Python MCP tool via internal HTTP endpoint.
  */
 async function callPythonTool(
   toolName: string,
   args: unknown
 ): Promise<unknown> {
-  const tempDir = path.join(os.tmpdir(), "dawnward");
-  await mkdir(tempDir, { recursive: true });
+  const baseUrl = getBaseUrl();
+  const response = await fetch(`${baseUrl}/api/mcp/tools`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ tool_name: toolName, arguments: args }),
+  });
 
-  const requestId = randomUUID();
-  const tempFilePath = path.join(tempDir, `mcp-${requestId}.json`);
-
-  try {
-    await writeFile(tempFilePath, JSON.stringify({ tool: toolName, args }));
-
-    const pythonPath = path.resolve(process.cwd(), "api/_python");
-
-    const pythonScript = `
-import sys
-import json
-
-sys.path.insert(0, sys.argv[1])
-
-from mcp_tools import invoke_tool
-
-with open(sys.argv[2], 'r') as f:
-    data = json.load(f)
-
-result = invoke_tool(data['tool'], data['args'])
-print(json.dumps(result))
-`;
-
-    const output = await new Promise<string>((resolve, reject) => {
-      const python = spawn(
-        "python3",
-        ["-c", pythonScript, pythonPath, tempFilePath],
-        { timeout: 10000 }
-      );
-
-      let stdout = "";
-      let stderr = "";
-
-      python.stdout.on("data", (data) => {
-        stdout += data.toString();
-      });
-
-      python.stderr.on("data", (data) => {
-        stderr += data.toString();
-      });
-
-      python.on("close", (code) => {
-        if (code !== 0) {
-          console.error("[MCP] Python error:", stderr);
-          reject(new Error(`Python exited with code ${code}`));
-        } else {
-          resolve(stdout.trim());
-        }
-      });
-
-      python.on("error", reject);
-    });
-
-    return JSON.parse(output);
-  } finally {
-    try {
-      await unlink(tempFilePath);
-    } catch (e) {
-      console.error("[MCP] Cleanup failed:", e);
-    }
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    console.error("[MCP] Python tool error:", error);
+    throw new Error(error.error || `Tool execution failed: ${response.status}`);
   }
+
+  const data = await response.json();
+  return data.result;
 }
 
 /**
