@@ -10,9 +10,17 @@
       "config": {
         "includeFiles": "api/_python/**"
       }
+    },
+    {
+      "src": "api/mcp/tools.py",
+      "use": "@vercel/python@5.0.2",
+      "config": {
+        "includeFiles": "api/_python/**"
+      }
     }
   ],
   "routes": [
-    { "src": "/api/schedule/generate", "dest": "api/schedule/generate.py" }
+    { "src": "/api/schedule/generate", "dest": "api/schedule/generate.py" },
+    { "src": "/api/mcp/tools", "dest": "api/mcp/tools.py" }
   ]
 }
