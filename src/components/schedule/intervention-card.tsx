@@ -1,6 +1,6 @@
 "use client";
 
-import { Pencil } from "lucide-react";
+import { Check, Pencil } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -8,7 +8,7 @@ import {
   formatTimeWithTimezone,
   formatFlightOffset,
 } from "@/lib/intervention-utils";
-import type { Intervention } from "@/types/schedule";
+import type { Intervention, InterventionActual } from "@/types/schedule";
 
 interface InterventionCardProps {
   intervention: Intervention;
@@ -18,6 +18,8 @@ interface InterventionCardProps {
   variant?: "default" | "nested";
   /** Optional click handler for recording actuals */
   onClick?: () => void;
+  /** Recorded actual for this intervention (shows inline changes) */
+  actual?: InterventionActual;
 }
 
 export function InterventionCard({
@@ -25,6 +27,7 @@ export function InterventionCard({
   timezone,
   variant = "default",
   onClick,
+  actual,
 }: InterventionCardProps): React.JSX.Element {
   const style = getInterventionStyle(intervention.type);
   const Icon = style.icon;
@@ -82,14 +85,45 @@ export function InterventionCard({
             </p>
           )}
         </div>
-        {/* Hide time badge for nested variant */}
+        {/* Time display with inline actuals */}
         {!isNested && (
-          <Badge
-            variant="secondary"
-            className="shrink-0 bg-white/70 font-medium text-slate-600"
-          >
-            {formatTimeWithTimezone(intervention.time, timezone)}
-          </Badge>
+          <div className="flex flex-col items-end gap-0.5">
+            {actual?.status === "modified" && actual.actualTime ? (
+              <>
+                <span className="text-xs text-slate-400 line-through">
+                  {formatTimeWithTimezone(intervention.time, timezone)}
+                </span>
+                <Badge
+                  variant="secondary"
+                  className="shrink-0 bg-sky-100 font-medium text-sky-600"
+                >
+                  {formatTimeWithTimezone(actual.actualTime, timezone)}
+                </Badge>
+              </>
+            ) : actual?.status === "skipped" ? (
+              <Badge
+                variant="secondary"
+                className="shrink-0 bg-slate-100 font-medium text-slate-400"
+              >
+                Skipped
+              </Badge>
+            ) : actual?.status === "as_planned" ? (
+              <Badge
+                variant="secondary"
+                className="shrink-0 bg-emerald-50 font-medium text-emerald-600"
+              >
+                {formatTimeWithTimezone(intervention.time, timezone)}
+                <Check className="ml-1 h-3 w-3" />
+              </Badge>
+            ) : (
+              <Badge
+                variant="secondary"
+                className="shrink-0 bg-white/70 font-medium text-slate-600"
+              >
+                {formatTimeWithTimezone(intervention.time, timezone)}
+              </Badge>
+            )}
+          </div>
         )}
         {/* Edit indicator for clickable cards */}
         {onClick && (

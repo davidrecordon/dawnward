@@ -24,10 +24,12 @@ import { GroupedItemCard } from "./grouped-item-card";
 import { NowMarker } from "./now-marker";
 import { TimezoneTransition } from "./timezone-transition";
 import { calculateFlightDuration } from "@/lib/timezone-utils";
+import { getActualKey } from "@/lib/actuals-utils";
 import type {
   DaySchedule,
   Intervention,
   TimedItemGroup,
+  ActualsMap,
 } from "@/types/schedule";
 import type { Airport } from "@/types/airport";
 
@@ -40,6 +42,8 @@ interface DaySectionProps {
   arrivalDate: string;
   arrivalTime: string;
   isCurrentDay: boolean;
+  /** Recorded actuals map for displaying inline changes */
+  actuals?: ActualsMap;
   /** Optional callback when an intervention card is clicked (for recording actuals) */
   onInterventionClick?: (
     intervention: Intervention,
@@ -98,6 +102,7 @@ export function DaySection({
   arrivalDate,
   arrivalTime,
   isCurrentDay,
+  actuals,
   onInterventionClick,
 }: DaySectionProps) {
   // Build combined items array (TimedItem before transitions are inserted)
@@ -389,6 +394,9 @@ export function DaySection({
                     <InterventionCard
                       intervention={item.data}
                       timezone={item.timezone}
+                      actual={actuals?.get(
+                        getActualKey(daySchedule.day, item.data.type)
+                      )}
                       onClick={
                         onInterventionClick &&
                         isEditableIntervention(item.data.type)
@@ -408,6 +416,7 @@ export function DaySection({
                     timezone={item.timezone}
                     origin={origin}
                     destination={destination}
+                    actuals={actuals}
                     onInterventionClick={onInterventionClick}
                     dayOffset={daySchedule.day}
                     date={daySchedule.date}

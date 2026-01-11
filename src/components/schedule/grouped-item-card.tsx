@@ -1,8 +1,9 @@
 "use client";
 
-import type { TimedItemGroup, Intervention } from "@/types/schedule";
+import type { TimedItemGroup, Intervention, ActualsMap } from "@/types/schedule";
 import type { Airport } from "@/types/airport";
 import { isEditableIntervention } from "@/lib/intervention-utils";
+import { getActualKey } from "@/lib/actuals-utils";
 import { InterventionCard } from "./intervention-card";
 import { FlightCard } from "./flight-card";
 
@@ -14,6 +15,8 @@ interface GroupedItemCardProps {
   origin: Airport;
   /** Destination airport (for arrival parent's FlightCard) */
   destination: Airport;
+  /** Recorded actuals map for displaying inline changes */
+  actuals?: ActualsMap;
   /** Callback when an intervention card is clicked (for recording actuals) */
   onInterventionClick?: (
     intervention: Intervention,
@@ -39,6 +42,7 @@ export function GroupedItemCard({
   timezone,
   origin,
   destination,
+  actuals,
   onInterventionClick,
   dayOffset,
   date,
@@ -62,6 +66,7 @@ export function GroupedItemCard({
         <InterventionCard
           intervention={parent.data}
           timezone={timezone}
+          actual={actuals?.get(getActualKey(dayOffset, parent.data.type))}
           onClick={
             onInterventionClick && isEditableIntervention(parent.data.type)
               ? () => onInterventionClick(parent.data, dayOffset, date)
@@ -111,6 +116,7 @@ export function GroupedItemCard({
                     <InterventionCard
                       intervention={child}
                       variant="nested"
+                      actual={actuals?.get(getActualKey(dayOffset, child.type))}
                       onClick={
                         onInterventionClick &&
                         isEditableIntervention(child.type)

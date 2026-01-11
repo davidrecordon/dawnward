@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -9,6 +9,7 @@ import {
   Loader2,
   Settings2,
   User,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DaySection } from "@/components/schedule/day-section";
@@ -22,16 +23,20 @@ import { ShareButton } from "@/components/share-button";
 import { CalendarComingSoonModal } from "@/components/calendar-coming-soon-modal";
 import { EditPreferencesModal } from "@/components/trip/edit-preferences-modal";
 import { RecordActualSheet } from "@/components/trip/record-actual-sheet";
-import { RecalculationBanner } from "@/components/trip/recalculation-banner";
-import { ScheduleDiffModal } from "@/components/trip/schedule-diff-modal";
 import { getDayLabel, formatShortDate } from "@/lib/intervention-utils";
 import { mergePhasesByDate } from "@/lib/schedule-utils";
+import { getActualKey, buildActualsMap } from "@/lib/actuals-utils";
 import {
   getCurrentDayNumber,
   isBeforeSchedule,
   isAfterSchedule,
 } from "@/lib/time-utils";
-import type { Intervention, ScheduleResponse } from "@/types/schedule";
+import type {
+  Intervention,
+  ScheduleResponse,
+  InterventionActual,
+  ActualsMap,
+} from "@/types/schedule";
 import type { TripData } from "@/types/trip-data";
 
 interface TripScheduleViewProps {
@@ -109,25 +114,41 @@ export function TripScheduleView({
     date: string;
   } | null>(null);
 
-  // State for recalculation
-  const [recalculationData, setRecalculationData] = useState<{
-    newSchedule: ScheduleResponse;
-    changes: Array<{
-      day: number;
-      type: string;
-      old_time: string | null;
-      new_time: string;
-      description: string;
-    }>;
-    restoredFromDay: number;
-  } | null>(null);
-  const [showDiffModal, setShowDiffModal] = useState(false);
-  const [isApplyingRecalc, setIsApplyingRecalc] = useState(false);
+  // State for actuals (recorded user data)
+  const [actuals, setActuals] = useState<ActualsMap>(new Map());
+  const [summaryMessage, setSummaryMessage] = useState<string | null>(null);
 
-  // Check for recalculation after recording an actual
-  const checkRecalculation = async () => {
+  // Fetch actuals on mount for authenticated owners
+  const fetchActuals = useCallback(async () => {
     if (!isOwner || !isLoggedIn) return;
 
+    try {
+      const response = await fetch(`/api/trips/${tripId}/actuals`);
+      if (response.ok) {
+        const { actuals: fetchedActuals } = await response.json();
+        setActuals(buildActualsMap(fetchedActuals));
+      }
+    } catch (err) {
+      console.error("Failed to fetch actuals:", err);
+    }
+  }, [isOwner, isLoggedIn, tripId]);
+
+  // Handle when an actual is saved - update state and check for recalculation
+  const handleActualSaved = async (savedActual: InterventionActual) => {
+    // 1. Update actuals map immediately for instant UI feedback
+    setActuals((prev) => {
+      const next = new Map(prev);
+      next.set(
+        getActualKey(savedActual.dayOffset, savedActual.interventionType),
+        savedActual
+      );
+      return next;
+    });
+
+    // 2. Close the modal
+    setSelectedIntervention(null);
+
+    // 3. Check for and auto-apply recalculation
     try {
       const response = await fetch(`/api/trips/${tripId}/recalculate`, {
         method: "POST",
@@ -137,46 +158,29 @@ export function TripScheduleView({
 
       const result = await response.json();
       if (result.needsRecalculation) {
-        setRecalculationData({
-          newSchedule: result.newSchedule,
-          changes: result.changes,
-          restoredFromDay: result.restoredFromDay,
+        // Auto-apply the recalculation
+        const applyResponse = await fetch(`/api/trips/${tripId}/recalculate`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ newSchedule: result.newSchedule }),
         });
+
+        if (applyResponse.ok) {
+          setSchedule(result.newSchedule);
+          setSummaryMessage(
+            `Schedule updated: ${result.changes.length} intervention(s) adjusted`
+          );
+        }
       }
     } catch (err) {
-      console.error("Recalculation check failed:", err);
+      console.error("Recalculation failed:", err);
     }
   };
 
-  // Apply recalculated schedule
-  const applyRecalculation = async () => {
-    if (!recalculationData) return;
-
-    setIsApplyingRecalc(true);
-    try {
-      const response = await fetch(`/api/trips/${tripId}/recalculate`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ newSchedule: recalculationData.newSchedule }),
-      });
-
-      if (response.ok) {
-        setSchedule(recalculationData.newSchedule);
-        setRecalculationData(null);
-        setShowDiffModal(false);
-      }
-    } catch (err) {
-      console.error("Failed to apply recalculation:", err);
-    } finally {
-      setIsApplyingRecalc(false);
-    }
-  };
-
-  // Dismiss recalculation without applying
-  const dismissRecalculation = () => {
-    setRecalculationData(null);
-    setShowDiffModal(false);
-  };
+  // Dismiss the summary banner
+  const dismissSummary = useCallback(() => {
+    setSummaryMessage(null);
+  }, []);
 
   useEffect(() => {
     async function loadOrGenerateSchedule() {
@@ -246,6 +250,21 @@ export function TripScheduleView({
 
     loadOrGenerateSchedule();
   }, [tripData, tripId, isOwner, isLoggedIn]);
+
+  // Fetch actuals once schedule is loaded (for owners)
+  useEffect(() => {
+    if (schedule && !isLoading && isOwner && isLoggedIn) {
+      fetchActuals();
+    }
+  }, [schedule, isLoading, isOwner, isLoggedIn, fetchActuals]);
+
+  // Auto-dismiss summary message after 5 seconds
+  useEffect(() => {
+    if (!summaryMessage) return;
+
+    const timer = setTimeout(dismissSummary, 5000);
+    return () => clearTimeout(timer);
+  }, [summaryMessage, dismissSummary]);
 
   // Auto-scroll to "now" marker
   useEffect(() => {
@@ -394,12 +413,18 @@ export function TripScheduleView({
           scheduleStartDate={firstDayDate}
         />
 
-        {/* Recalculation banner - shows when schedule has pending changes */}
-        {recalculationData && !showDiffModal && (
-          <RecalculationBanner
-            changesCount={recalculationData.changes.length}
-            onReview={() => setShowDiffModal(true)}
-          />
+        {/* Summary banner - shows after actuals are saved and schedule is updated */}
+        {summaryMessage && (
+          <div className="flex items-center justify-between rounded-lg bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+            <span>{summaryMessage}</span>
+            <button
+              onClick={dismissSummary}
+              className="text-emerald-500 hover:text-emerald-700"
+              aria-label="Dismiss"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
         )}
 
         {/* Day navigation */}
@@ -456,6 +481,7 @@ export function TripScheduleView({
               arrivalDate={arrivalDate}
               arrivalTime={arrivalTime}
               isCurrentDay={daySchedule.day === currentDayNumber}
+              actuals={actuals}
               onInterventionClick={
                 isOwner && isLoggedIn
                   ? (intervention, dayOffset, date) =>
@@ -536,28 +562,18 @@ export function TripScheduleView({
         {isOwner && isLoggedIn && selectedIntervention && (
           <RecordActualSheet
             open={!!selectedIntervention}
-            onClose={() => {
-              setSelectedIntervention(null);
-              // Check for recalculation after recording
-              checkRecalculation();
-            }}
+            onSave={handleActualSaved}
+            onCancel={() => setSelectedIntervention(null)}
             tripId={tripId}
             intervention={selectedIntervention.intervention}
             dayOffset={selectedIntervention.dayOffset}
             date={selectedIntervention.date}
-          />
-        )}
-
-        {/* Schedule Diff Modal - shows recalculation changes */}
-        {recalculationData && (
-          <ScheduleDiffModal
-            open={showDiffModal}
-            onClose={() => setShowDiffModal(false)}
-            changes={recalculationData.changes}
-            restoredFromDay={recalculationData.restoredFromDay}
-            onAccept={applyRecalculation}
-            onDismiss={dismissRecalculation}
-            isApplying={isApplyingRecalc}
+            actual={actuals.get(
+              getActualKey(
+                selectedIntervention.dayOffset,
+                selectedIntervention.intervention.type
+              )
+            )}
           />
         )}
       </div>

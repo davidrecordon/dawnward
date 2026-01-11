@@ -28,28 +28,35 @@ import {
   formatShortDate,
 } from "@/lib/intervention-utils";
 import { useMediaQuery, MD_BREAKPOINT_QUERY } from "@/hooks/use-media-query";
-import type { Intervention } from "@/types/schedule";
+import type { Intervention, InterventionActual } from "@/types/schedule";
 
 type ActualStatus = "as_planned" | "modified" | "skipped";
 
 interface RecordActualSheetProps {
   open: boolean;
-  onClose: () => void;
+  /** Called when an actual is saved successfully, with the saved data */
+  onSave: (actual: InterventionActual) => void;
+  /** Called when the user cancels without saving */
+  onCancel: () => void;
   tripId: string;
   intervention: Intervention;
   dayOffset: number;
   date: string;
   legIndex?: number;
+  /** Existing actual data (for editing previously recorded actuals) */
+  actual?: InterventionActual;
 }
 
 export function RecordActualSheet({
   open,
-  onClose,
+  onSave,
+  onCancel,
   tripId,
   intervention,
   dayOffset,
   date,
   legIndex = 0,
+  actual,
 }: RecordActualSheetProps) {
   const [status, setStatus] = React.useState<ActualStatus>("as_planned");
   const [actualTime, setActualTime] = React.useState(intervention.time);
@@ -59,14 +66,14 @@ export function RecordActualSheet({
   // Use Dialog on desktop (md+), Drawer on mobile
   const isDesktop = useMediaQuery(MD_BREAKPOINT_QUERY);
 
-  // Reset state when opened with new intervention
+  // Initialize state from existing actual (if editing) or reset to defaults
   React.useEffect(() => {
     if (open) {
-      setStatus("as_planned");
-      setActualTime(intervention.time);
+      setStatus(actual?.status ?? "as_planned");
+      setActualTime(actual?.actualTime ?? intervention.time);
       setError(null);
     }
-  }, [open, intervention]);
+  }, [open, intervention, actual]);
 
   const style = getInterventionStyle(intervention.type);
   const Icon = style.icon;
@@ -96,7 +103,15 @@ export function RecordActualSheet({
         throw new Error(data.error || "Failed to save");
       }
 
-      onClose();
+      const { actual } = await response.json();
+      // Return the saved actual to the parent
+      onSave({
+        dayOffset: actual.dayOffset,
+        interventionType: actual.interventionType,
+        plannedTime: actual.plannedTime,
+        actualTime: actual.actualTime,
+        status: actual.status,
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to save");
     } finally {
@@ -187,7 +202,7 @@ export function RecordActualSheet({
     <div className="flex gap-3">
       <Button
         variant="ghost"
-        onClick={onClose}
+        onClick={onCancel}
         disabled={isSaving}
         className="flex-1"
       >
@@ -213,7 +228,7 @@ export function RecordActualSheet({
   // Desktop: Centered Dialog modal
   if (isDesktop) {
     return (
-      <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
+      <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onCancel()}>
         <DialogContent
           showCloseButton={false}
           className="overflow-hidden border-0 bg-white p-0 shadow-xl sm:max-w-md"
@@ -253,7 +268,7 @@ export function RecordActualSheet({
 
   // Mobile: Bottom sheet Drawer
   return (
-    <Drawer open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
+    <Drawer open={open} onOpenChange={(isOpen) => !isOpen && onCancel()}>
       <DrawerContent>
         <DrawerHeader>
           {headerContent}
