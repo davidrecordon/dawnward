@@ -33,6 +33,16 @@ const RATE_LIMIT = 100; // Requests per hour
 const MAX_BODY_SIZE = 64 * 1024; // 64KB max request body
 
 /**
+ * CORS headers for MCP clients.
+ * Using * because MCP protocol requires cross-origin access from AI assistants.
+ */
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type",
+};
+
+/**
  * Create a JSON-RPC 2.0 success response.
  */
 function createJsonRpcResponse(
@@ -40,18 +50,8 @@ function createJsonRpcResponse(
   result: unknown
 ): NextResponse<JsonRpcResponse> {
   return NextResponse.json(
-    {
-      jsonrpc: "2.0",
-      id,
-      result,
-    },
-    {
-      headers: {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type",
-      },
-    }
+    { jsonrpc: "2.0", id, result },
+    { headers: corsHeaders }
   );
 }
 
@@ -65,18 +65,8 @@ function createJsonRpcError(
   data?: unknown
 ): NextResponse<JsonRpcResponse> {
   return NextResponse.json(
-    {
-      jsonrpc: "2.0",
-      id,
-      error: { code, message, data },
-    },
-    {
-      headers: {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type",
-      },
-    }
+    { jsonrpc: "2.0", id, error: { code, message, data } },
+    { headers: corsHeaders }
   );
 }
 
@@ -155,7 +145,10 @@ async function callPythonTool(
   const baseUrl = getBaseUrl();
   const response = await fetch(`${baseUrl}/api/mcp/tools`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      "X-MCP-Internal": process.env.MCP_INTERNAL_SECRET || "",
+    },
     body: JSON.stringify({ tool_name: toolName, arguments: args }),
   });
 
@@ -197,15 +190,6 @@ async function handleToolCall(params: unknown): Promise<ToolResult> {
       );
   }
 }
-
-/**
- * CORS headers for MCP clients
- */
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type",
-};
 
 /**
  * OPTIONS /api/mcp - CORS preflight

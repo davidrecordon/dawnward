@@ -5,6 +5,9 @@
  * Resets on deployment (acceptable for public read-only endpoint).
  */
 
+// Time constants
+const ONE_HOUR_MS = 3600000; // 1 hour in milliseconds
+
 // Store request timestamps per IP
 const requestLog = new Map<string, number[]>();
 
@@ -24,7 +27,7 @@ const MAX_TRACKED_IPS = 10000;
  */
 export function checkRateLimit(ip: string, limit = 100): boolean {
   const now = Date.now();
-  const hourAgo = now - 3600000; // 1 hour in milliseconds
+  const hourAgo = now - ONE_HOUR_MS; // 1 hour in milliseconds
 
   // Get existing timestamps and filter to last hour
   const timestamps = (requestLog.get(ip) || []).filter((ts) => ts > hourAgo);
@@ -69,7 +72,7 @@ export function getRateLimitStatus(
   resetAt: Date;
 } {
   const now = Date.now();
-  const hourAgo = now - 3600000;
+  const hourAgo = now - ONE_HOUR_MS;
 
   const timestamps = (requestLog.get(ip) || []).filter((ts) => ts > hourAgo);
   const oldestTimestamp = timestamps.length > 0 ? timestamps[0] : now;
@@ -77,7 +80,7 @@ export function getRateLimitStatus(
   return {
     used: timestamps.length,
     limit,
-    resetAt: new Date(oldestTimestamp + 3600000),
+    resetAt: new Date(oldestTimestamp + ONE_HOUR_MS),
   };
 }
 
@@ -86,7 +89,7 @@ export function getRateLimitStatus(
  * Called periodically to prevent memory leaks.
  */
 function cleanupExpiredEntries(): void {
-  const hourAgo = Date.now() - 3600000;
+  const hourAgo = Date.now() - ONE_HOUR_MS;
 
   for (const [ip, timestamps] of requestLog.entries()) {
     const valid = timestamps.filter((ts) => ts > hourAgo);
