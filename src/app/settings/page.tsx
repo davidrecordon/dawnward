@@ -1,6 +1,8 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
+import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { SettingsForm } from "@/components/settings-form";
@@ -50,6 +52,14 @@ export default async function SettingsPage() {
   return (
     <div className="mx-auto max-w-2xl px-4 py-8">
       <div className="space-y-6">
+        <Link
+          href="/"
+          className="inline-flex items-center gap-1.5 text-sm text-slate-500 transition-colors hover:text-slate-700"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back Home
+        </Link>
+
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Settings</h1>
           <p className="text-muted-foreground">

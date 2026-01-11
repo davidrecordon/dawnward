@@ -1,10 +1,10 @@
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plane } from "lucide-react";
-import Link from "next/link";
+import { ArrowLeft, Plane } from "lucide-react";
 import { TripHistoryList } from "@/components/trip-history-list";
 
 export default async function TripsPage() {
@@ -40,6 +40,14 @@ export default async function TripsPage() {
   return (
     <div className="mx-auto max-w-3xl px-4 py-8">
       <div className="space-y-6">
+        <Link
+          href="/"
+          className="inline-flex items-center gap-1.5 text-sm text-slate-500 transition-colors hover:text-slate-700"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back Home
+        </Link>
+
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">My Trips</h1>
           <p className="text-muted-foreground">

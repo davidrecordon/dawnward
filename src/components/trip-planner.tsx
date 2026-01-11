@@ -248,6 +248,7 @@ export function TripPlanner() {
           onFormChange={setFormState}
           onSubmit={handleSubmit}
           isSubmitting={isSubmitting}
+          isSignedIn={status === "authenticated"}
         />
 
         {/* Right column: Preview cards */}

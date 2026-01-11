@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   Activity,
@@ -11,6 +12,7 @@ import {
   MapPin,
   Moon,
   Pill,
+  Settings,
 } from "lucide-react";
 import { formatDateTimeLocal } from "@/lib/time-utils";
 import type { Airport } from "@/types/airport";
@@ -32,6 +34,7 @@ interface TripFormProps {
   onFormChange: (state: TripFormState) => void;
   onSubmit?: () => void;
   isSubmitting?: boolean;
+  isSignedIn?: boolean;
 }
 
 interface FormErrors {
@@ -56,6 +59,7 @@ export function TripForm({
   onFormChange,
   onSubmit,
   isSubmitting,
+  isSignedIn = false,
 }: TripFormProps) {
   const router = useRouter();
   const [errors, setErrors] = React.useState<FormErrors>({});
@@ -287,25 +291,61 @@ export function TripForm({
           </h3>
 
           <div className="space-y-3">
-            <PreferenceToggle
-              icon={<Pill className="h-4 w-4" />}
-              title="Use melatonin"
-              description="Low-dose timed supplements"
-              checked={formState.useMelatonin}
-              onCheckedChange={(checked) =>
-                updateField("useMelatonin", checked)
-              }
-              colorScheme="emerald"
-            />
+            {/* Settings link for signed-in users */}
+            {isSignedIn && (
+              <Link
+                href="/settings"
+                className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2.5 transition-colors hover:bg-slate-100"
+              >
+                <div className="flex items-center gap-2">
+                  <Settings className="h-4 w-4 text-slate-400" />
+                  <span className="text-sm text-slate-600">
+                    Using your saved preferences
+                  </span>
+                </div>
+                <span className="text-sm font-medium text-sky-600">
+                  Edit in Settings →
+                </span>
+              </Link>
+            )}
 
-            <PreferenceToggle
-              icon={<Coffee className="h-4 w-4" />}
-              title="Strategic caffeine"
-              description="Coffee or tea timing recommendations"
-              checked={formState.useCaffeine}
-              onCheckedChange={(checked) => updateField("useCaffeine", checked)}
-              colorScheme="orange"
-            />
+            {/* Only show melatonin/caffeine/exercise toggles for signed-out users */}
+            {!isSignedIn && (
+              <>
+                <PreferenceToggle
+                  icon={<Pill className="h-4 w-4" />}
+                  title="Use melatonin"
+                  description="Low-dose timed supplements"
+                  checked={formState.useMelatonin}
+                  onCheckedChange={(checked) =>
+                    updateField("useMelatonin", checked)
+                  }
+                  colorScheme="emerald"
+                />
+
+                <PreferenceToggle
+                  icon={<Coffee className="h-4 w-4" />}
+                  title="Strategic caffeine"
+                  description="Coffee or tea timing recommendations"
+                  checked={formState.useCaffeine}
+                  onCheckedChange={(checked) =>
+                    updateField("useCaffeine", checked)
+                  }
+                  colorScheme="orange"
+                />
+
+                <PreferenceToggle
+                  icon={<Activity className="h-4 w-4" />}
+                  title="Include exercise"
+                  description="Physical activity can help shift rhythms"
+                  checked={formState.useExercise}
+                  onCheckedChange={(checked) =>
+                    updateField("useExercise", checked)
+                  }
+                  colorScheme="sky"
+                />
+              </>
+            )}
 
             <PreferenceSelector
               icon={<Moon className="h-4 w-4" />}
@@ -341,42 +381,37 @@ export function TripForm({
               colorScheme="sky"
             />
 
-            <PreferenceToggle
-              icon={<Activity className="h-4 w-4" />}
-              title="Include exercise"
-              description="Physical activity can help shift rhythms"
-              checked={formState.useExercise}
-              onCheckedChange={(checked) => updateField("useExercise", checked)}
-              colorScheme="sky"
-            />
-
             <PrepDaysSlider
               value={formState.prepDays}
               onValueChange={(value) => updateField("prepDays", value)}
             />
           </div>
 
-          <hr className="border-slate-200" />
+          {/* Only show wake/sleep times for signed-out users */}
+          {!isSignedIn && (
+            <>
+              <hr className="border-slate-200" />
 
-          {/* Wake/Sleep times */}
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label>Usual wake time</Label>
-              <TimeSelect
-                value={formState.wakeTime}
-                onChange={(value) => updateField("wakeTime", value)}
-                placeholder="Select wake time"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Usual sleep time</Label>
-              <TimeSelect
-                value={formState.sleepTime}
-                onChange={(value) => updateField("sleepTime", value)}
-                placeholder="Select sleep time"
-              />
-            </div>
-          </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label>Usual wake time</Label>
+                  <TimeSelect
+                    value={formState.wakeTime}
+                    onChange={(value) => updateField("wakeTime", value)}
+                    placeholder="Select wake time"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Usual sleep time</Label>
+                  <TimeSelect
+                    value={formState.sleepTime}
+                    onChange={(value) => updateField("sleepTime", value)}
+                    placeholder="Select sleep time"
+                  />
+                </div>
+              </div>
+            </>
+          )}
         </div>
 
         <Button

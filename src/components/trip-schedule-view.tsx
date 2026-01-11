@@ -154,11 +154,11 @@ export function TripScheduleView({
       <div className="mx-auto max-w-3xl px-4 py-8">
         <div className="space-y-6">
           <Link
-            href="/"
+            href={isLoggedIn ? "/trips" : "/"}
             className="inline-flex items-center gap-1.5 text-sm text-slate-500 transition-colors hover:text-slate-700"
           >
             <ArrowLeft className="h-4 w-4" />
-            Back Home
+            {isLoggedIn ? "My Trips" : "Back Home"}
           </Link>
           <ScheduleNotFoundCard message={error} />
         </div>
@@ -228,11 +228,11 @@ export function TripScheduleView({
       <div className="space-y-6">
         {/* Back button */}
         <Link
-          href="/"
+          href={isLoggedIn ? "/trips" : "/"}
           className="inline-flex items-center gap-1.5 text-sm text-slate-500 transition-colors hover:text-slate-700"
         >
           <ArrowLeft className="h-4 w-4" />
-          Back Home
+          {isLoggedIn ? "My Trips" : "Back Home"}
         </Link>
 
         {/* Attribution banner - only for non-owners viewing shared trips */}
