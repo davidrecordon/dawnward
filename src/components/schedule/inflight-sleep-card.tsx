@@ -43,7 +43,7 @@ export function InFlightSleepCard({
   return (
     <Card className="overflow-hidden border-violet-200/40 bg-gradient-to-r from-violet-50/80 via-slate-50 to-violet-50/60 shadow-sm backdrop-blur-sm transition-all duration-300 hover:translate-x-1 hover:shadow-md">
       <CardContent className="py-4">
-        {/* Header with sleep icon and flight offset badge */}
+        {/* Header with sleep icon and badges */}
         <div className="mb-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-violet-100/80 ring-2 ring-white/50">
@@ -51,12 +51,22 @@ export function InFlightSleepCard({
             </div>
             <span className="font-medium text-slate-800">In-Flight Sleep</span>
           </div>
-          <Badge
-            variant="secondary"
-            className="shrink-0 bg-violet-100/70 font-medium text-violet-600"
-          >
-            {formatFlightOffset(flightOffset)}
-          </Badge>
+          <div className="flex items-center gap-2">
+            {showDualTimezone && (
+              <Badge
+                variant="secondary"
+                className="shrink-0 bg-slate-100 font-medium text-slate-600"
+              >
+                {getTimezoneAbbr(originTimezone)} → {getTimezoneAbbr(timezone)}
+              </Badge>
+            )}
+            <Badge
+              variant="secondary"
+              className="shrink-0 bg-violet-100/70 font-medium text-violet-600"
+            >
+              {formatFlightOffset(flightOffset)}
+            </Badge>
+          </div>
         </div>
 
         {/* Description */}
@@ -80,11 +90,6 @@ export function InFlightSleepCard({
           {totalFlightHours && (
             <p className="text-xs text-slate-500">
               {formatFlightPhase(flightOffset, totalFlightHours)}
-            </p>
-          )}
-          {showDualTimezone && (
-            <p className="mt-1.5 text-xs font-medium text-violet-500">
-              {getTimezoneAbbr(originTimezone)} → {getTimezoneAbbr(timezone)}
             </p>
           )}
         </div>
