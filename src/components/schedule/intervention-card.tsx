@@ -20,6 +20,8 @@ interface InterventionCardProps {
   onClick?: () => void;
   /** Recorded actual for this intervention (shows inline changes) */
   actual?: InterventionActual;
+  /** Date of the intervention (YYYY-MM-DD) - used to determine if "as_planned" should show completed styling */
+  date?: string;
 }
 
 export function InterventionCard({
@@ -28,6 +30,7 @@ export function InterventionCard({
   variant = "default",
   onClick,
   actual,
+  date,
 }: InterventionCardProps): React.JSX.Element {
   const style = getInterventionStyle(intervention.type);
   const Icon = style.icon;
@@ -35,6 +38,14 @@ export function InterventionCard({
 
   // Check if this is an in-flight item with offset info
   const hasFlightOffset = intervention.flight_offset_hours != null;
+
+  // Determine if the intervention is in the past (for "as_planned" completed styling)
+  // Only show "completed" green styling if the intervention's datetime has passed
+  const isPast = (() => {
+    if (!date) return false;
+    const interventionDateTime = new Date(`${date}T${intervention.time}`);
+    return interventionDateTime < new Date();
+  })();
 
   return (
     <Card
@@ -107,7 +118,7 @@ export function InterventionCard({
               >
                 Skipped
               </Badge>
-            ) : actual?.status === "as_planned" ? (
+            ) : actual?.status === "as_planned" && isPast ? (
               <Badge
                 variant="secondary"
                 className="shrink-0 bg-emerald-50 font-medium text-emerald-600"

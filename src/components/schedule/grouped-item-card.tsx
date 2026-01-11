@@ -21,7 +21,8 @@ interface GroupedItemCardProps {
   onInterventionClick?: (
     intervention: Intervention,
     dayOffset: number,
-    date: string
+    date: string,
+    nestedChildren?: Intervention[]
   ) => void;
   /** Day offset for this group */
   dayOffset: number;
@@ -66,10 +67,11 @@ export function GroupedItemCard({
         <InterventionCard
           intervention={parent.data}
           timezone={timezone}
+          date={date}
           actual={actuals?.get(getActualKey(dayOffset, parent.data.type))}
           onClick={
             onInterventionClick && isEditableIntervention(parent.data.type)
-              ? () => onInterventionClick(parent.data, dayOffset, date)
+              ? () => onInterventionClick(parent.data, dayOffset, date, children)
               : undefined
           }
         />
@@ -116,6 +118,7 @@ export function GroupedItemCard({
                     <InterventionCard
                       intervention={child}
                       variant="nested"
+                      date={date}
                       actual={actuals?.get(getActualKey(dayOffset, child.type))}
                       onClick={
                         onInterventionClick &&

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -112,11 +112,15 @@ export function TripScheduleView({
     intervention: Intervention;
     dayOffset: number;
     date: string;
+    nestedChildren?: Intervention[];
   } | null>(null);
 
   // State for actuals (recorded user data)
   const [actuals, setActuals] = useState<ActualsMap>(new Map());
   const [summaryMessage, setSummaryMessage] = useState<string | null>(null);
+
+  // Ref to prevent race conditions during recalculation
+  const isRecalculatingRef = useRef(false);
 
   // Fetch actuals on mount for authenticated owners
   const fetchActuals = useCallback(async () => {
@@ -133,23 +137,31 @@ export function TripScheduleView({
     }
   }, [isOwner, isLoggedIn, tripId]);
 
-  // Handle when an actual is saved - update state and check for recalculation
-  const handleActualSaved = async (savedActual: InterventionActual) => {
+  // Handle when actuals are saved - update state and check for recalculation
+  // Accepts array to support parent cascade (parent + children saved together)
+  const handleActualSaved = async (savedActuals: InterventionActual[]) => {
     // 1. Update actuals map immediately for instant UI feedback
     setActuals((prev) => {
       const next = new Map(prev);
-      next.set(
-        getActualKey(savedActual.dayOffset, savedActual.interventionType),
-        savedActual
-      );
+      for (const actual of savedActuals) {
+        next.set(getActualKey(actual.dayOffset, actual.interventionType), actual);
+      }
       return next;
     });
 
     // 2. Close the modal
     setSelectedIntervention(null);
 
-    // 3. Check for and auto-apply recalculation
+    // 3. Check for and auto-apply recalculation (with race condition protection)
+    // Skip if another recalculation is already in progress
+    if (isRecalculatingRef.current) {
+      console.log("Skipping recalculation - another is in progress");
+      return;
+    }
+
     try {
+      isRecalculatingRef.current = true;
+
       const response = await fetch(`/api/trips/${tripId}/recalculate`, {
         method: "POST",
       });
@@ -174,6 +186,8 @@ export function TripScheduleView({
       }
     } catch (err) {
       console.error("Recalculation failed:", err);
+    } finally {
+      isRecalculatingRef.current = false;
     }
   };
 
@@ -484,8 +498,13 @@ export function TripScheduleView({
               actuals={actuals}
               onInterventionClick={
                 isOwner && isLoggedIn
-                  ? (intervention, dayOffset, date) =>
-                      setSelectedIntervention({ intervention, dayOffset, date })
+                  ? (intervention, dayOffset, date, nestedChildren) =>
+                      setSelectedIntervention({
+                        intervention,
+                        dayOffset,
+                        date,
+                        nestedChildren,
+                      })
                   : undefined
               }
             />
@@ -574,6 +593,7 @@ export function TripScheduleView({
                 selectedIntervention.intervention.type
               )
             )}
+            nestedChildren={selectedIntervention.nestedChildren}
           />
         )}
       </div>

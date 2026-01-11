@@ -48,7 +48,8 @@ interface DaySectionProps {
   onInterventionClick?: (
     intervention: Intervention,
     dayOffset: number,
-    date: string
+    date: string,
+    nestedChildren?: Intervention[]
   ) => void;
 }
 
@@ -172,8 +173,13 @@ export function DaySection({
     preGroupItems.push({ kind: "now", time: nowTime, timezone: nowTz });
   }
 
-  // Group items by parent (wake_target or arrival) with same-time children
-  const { groups, ungrouped } = groupTimedItems(preGroupItems);
+  // Group items by parent (wake_target or arrival) with same-effective-time children
+  // Pass actuals so grouping considers modified times (children with different actual times unnest)
+  const { groups, ungrouped } = groupTimedItems(
+    preGroupItems,
+    actuals,
+    daySchedule.day
+  );
 
   // Add groups as timed_item_group
   groups.forEach((group) => {
@@ -394,6 +400,7 @@ export function DaySection({
                     <InterventionCard
                       intervention={item.data}
                       timezone={item.timezone}
+                      date={daySchedule.date}
                       actual={actuals?.get(
                         getActualKey(daySchedule.day, item.data.type)
                       )}

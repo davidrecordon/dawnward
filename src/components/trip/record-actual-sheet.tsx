@@ -26,16 +26,58 @@ import {
   getInterventionStyle,
   formatTime,
   formatShortDate,
+  isEditableIntervention,
 } from "@/lib/intervention-utils";
 import { useMediaQuery, MD_BREAKPOINT_QUERY } from "@/hooks/use-media-query";
 import type { Intervention, InterventionActual } from "@/types/schedule";
 
 type ActualStatus = "as_planned" | "modified" | "skipped";
 
+/**
+ * Save an actual to the API and return the saved data.
+ * Extracted to avoid duplication between main save and child cascade.
+ */
+async function saveActualToApi(
+  tripId: string,
+  legIndex: number,
+  dayOffset: number,
+  interventionType: string,
+  plannedTime: string,
+  actualTime: string | null,
+  status: ActualStatus
+): Promise<InterventionActual> {
+  const response = await fetch(`/api/trips/${tripId}/actuals`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      legIndex,
+      dayOffset,
+      interventionType,
+      plannedTime,
+      actualTime,
+      status,
+    }),
+  });
+
+  if (!response.ok) {
+    const data = await response.json();
+    throw new Error(data.error || "Failed to save");
+  }
+
+  const { actual } = await response.json();
+  return {
+    dayOffset: actual.dayOffset,
+    interventionType: actual.interventionType,
+    plannedTime: actual.plannedTime,
+    actualTime: actual.actualTime,
+    status: actual.status,
+  };
+}
+
 interface RecordActualSheetProps {
   open: boolean;
-  /** Called when an actual is saved successfully, with the saved data */
-  onSave: (actual: InterventionActual) => void;
+  /** Called when actuals are saved successfully (array supports parent cascade) */
+  onSave: (actuals: InterventionActual[]) => void;
   /** Called when the user cancels without saving */
   onCancel: () => void;
   tripId: string;
@@ -45,6 +87,8 @@ interface RecordActualSheetProps {
   legIndex?: number;
   /** Existing actual data (for editing previously recorded actuals) */
   actual?: InterventionActual;
+  /** Nested children interventions (for parent cascade when editing parent) */
+  nestedChildren?: Intervention[];
 }
 
 export function RecordActualSheet({
@@ -57,6 +101,7 @@ export function RecordActualSheet({
   date,
   legIndex = 0,
   actual,
+  nestedChildren,
 }: RecordActualSheetProps) {
   const [status, setStatus] = React.useState<ActualStatus>("as_planned");
   const [actualTime, setActualTime] = React.useState(intervention.time);
@@ -85,33 +130,56 @@ export function RecordActualSheet({
     setError(null);
 
     try {
-      const response = await fetch(`/api/trips/${tripId}/actuals`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          legIndex,
-          dayOffset,
-          interventionType: intervention.type,
-          plannedTime: intervention.time,
-          actualTime: status === "modified" ? actualTime : null,
-          status,
-        }),
-      });
+      const savedActuals: InterventionActual[] = [];
 
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || "Failed to save");
+      // Save the main intervention's actual
+      const mainActual = await saveActualToApi(
+        tripId,
+        legIndex,
+        dayOffset,
+        intervention.type,
+        intervention.time,
+        status === "modified" ? actualTime : null,
+        status
+      );
+      savedActuals.push(mainActual);
+
+      // If this is a parent with children and status is "modified",
+      // cascade the time change to editable children
+      if (status === "modified" && nestedChildren && nestedChildren.length > 0) {
+        const cascadeErrors: string[] = [];
+
+        for (const child of nestedChildren) {
+          // Only cascade to editable children
+          if (!isEditableIntervention(child.type)) continue;
+
+          try {
+            const childActual = await saveActualToApi(
+              tripId,
+              legIndex,
+              dayOffset,
+              child.type,
+              child.time,
+              actualTime,
+              "modified"
+            );
+            savedActuals.push(childActual);
+          } catch (err) {
+            // Log cascade failures but don't block the main save
+            const errorMsg = err instanceof Error ? err.message : "Failed";
+            cascadeErrors.push(`${child.title || child.type}: ${errorMsg}`);
+            console.warn(`Failed to cascade to ${child.type}:`, err);
+          }
+        }
+
+        // Show warning if some cascades failed (but main save succeeded)
+        if (cascadeErrors.length > 0) {
+          console.warn("Some nested items failed to save:", cascadeErrors);
+        }
       }
 
-      const { actual } = await response.json();
-      // Return the saved actual to the parent
-      onSave({
-        dayOffset: actual.dayOffset,
-        interventionType: actual.interventionType,
-        plannedTime: actual.plannedTime,
-        actualTime: actual.actualTime,
-        status: actual.status,
-      });
+      // Return all saved actuals to the parent
+      onSave(savedActuals);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to save");
     } finally {
