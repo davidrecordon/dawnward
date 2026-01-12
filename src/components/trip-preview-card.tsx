@@ -83,7 +83,7 @@ export function TripPreviewCard({
     const hours = Math.floor(diffMs / (1000 * 60 * 60));
     const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
     return { hours, minutes };
-  }, [arrivalDateTime, leg2?.departureDateTime, destination]);
+  }, [arrivalDateTime, leg2, destination]);
 
   // For display, use leg1 duration when no leg2, otherwise show total flight time
   const duration = React.useMemo(() => {
