@@ -17,37 +17,24 @@ function formatDateTime(d: Date): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}:00`;
 }
 
+/** Reminder time in minutes by intervention type */
+const REMINDER_MINUTES: Partial<Record<InterventionType, number>> = {
+  // Schedule anchors - 30 min to prepare
+  wake_target: 30,
+  sleep_target: 30,
+  exercise: 30,
+  // Caffeine cutoff - last chance reminder
+  caffeine_cutoff: 5,
+};
+
+const DEFAULT_REMINDER_MINUTES = 15;
+
 /**
  * Get reminder time in minutes based on intervention type.
  * Different interventions warrant different lead times.
  */
 export function getReminderMinutes(type: InterventionType): number {
-  switch (type) {
-    // Schedule anchors - 30 min to prepare
-    case "wake_target":
-    case "sleep_target":
-    case "exercise":
-      return 30;
-
-    // Light/activity interventions - 15 min heads up
-    case "light_seek":
-    case "light_avoid":
-    case "nap_window":
-    case "melatonin":
-      return 15;
-
-    // Caffeine cutoff - last chance reminder
-    case "caffeine_cutoff":
-      return 5;
-
-    // caffeine_ok is informational, but include for completeness
-    case "caffeine_ok":
-      return 15;
-
-    // Default for any new types
-    default:
-      return 15;
-  }
+  return REMINDER_MINUTES[type] ?? DEFAULT_REMINDER_MINUTES;
 }
 
 /**
@@ -59,56 +46,44 @@ export function isActionableIntervention(type: InterventionType): boolean {
   return type !== "caffeine_ok";
 }
 
+/** Emoji lookup for intervention types */
+const INTERVENTION_EMOJI: Record<InterventionType, string> = {
+  wake_target: "⏰",
+  sleep_target: "😴",
+  melatonin: "💊",
+  light_seek: "🌅",
+  light_avoid: "🕶️",
+  caffeine_ok: "☕",
+  caffeine_cutoff: "🚫",
+  exercise: "🏃",
+  nap_window: "💤",
+};
+
+const DEFAULT_EMOJI = "📋";
+
 /**
  * Get emoji for intervention type
  */
 function getEmoji(type: InterventionType): string {
-  switch (type) {
-    case "wake_target":
-      return "⏰";
-    case "sleep_target":
-      return "😴";
-    case "melatonin":
-      return "💊";
-    case "light_seek":
-      return "🌅";
-    case "light_avoid":
-      return "🕶️";
-    case "caffeine_ok":
-      return "☕";
-    case "caffeine_cutoff":
-      return "🚫";
-    case "exercise":
-      return "🏃";
-    case "nap_window":
-      return "💤";
-    default:
-      return "📋";
-  }
+  return INTERVENTION_EMOJI[type] ?? DEFAULT_EMOJI;
 }
+
+/** Short label lookup for grouped event titles */
+const SHORT_LABELS: Partial<Record<InterventionType, string>> = {
+  light_seek: "Light",
+  light_avoid: "Avoid light",
+  caffeine_ok: "Caffeine",
+  caffeine_cutoff: "No caffeine",
+  melatonin: "Melatonin",
+  exercise: "Exercise",
+  nap_window: "Nap",
+};
 
 /**
  * Get short label for grouped event titles
  */
 function getShortLabel(type: InterventionType): string {
-  switch (type) {
-    case "light_seek":
-      return "Light";
-    case "light_avoid":
-      return "Avoid light";
-    case "caffeine_ok":
-      return "Caffeine";
-    case "caffeine_cutoff":
-      return "No caffeine";
-    case "melatonin":
-      return "Melatonin";
-    case "exercise":
-      return "Exercise";
-    case "nap_window":
-      return "Nap";
-    default:
-      return "";
-  }
+  return SHORT_LABELS[type] ?? "";
 }
 
 /**
