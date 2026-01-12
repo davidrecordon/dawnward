@@ -2,9 +2,77 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import {
+  createEventsForSchedule,
+  deleteCalendarEvents,
+} from "@/lib/google-calendar";
+import type { ScheduleResponse } from "@/types/schedule";
 
 interface RouteContext {
   params: Promise<{ id: string }>;
+}
+
+/**
+ * Trigger a calendar re-sync if the trip is synced.
+ * Uses delete-and-replace strategy for simplicity with grouped events.
+ */
+async function triggerCalendarResync(
+  tripId: string,
+  userId: string,
+  accessToken: string | undefined
+): Promise<void> {
+  // Skip if no access token (calendar not authorized)
+  if (!accessToken) return;
+
+  // Check if trip has a calendar sync
+  const sync = await prisma.calendarSync.findUnique({
+    where: {
+      tripId_userId: { tripId, userId },
+    },
+    include: {
+      trip: {
+        select: {
+          currentScheduleJson: true,
+          initialScheduleJson: true,
+          destTz: true,
+        },
+      },
+    },
+  });
+
+  if (!sync) return; // Not synced, nothing to do
+
+  // Delete existing events
+  if (sync.googleEventIds.length > 0) {
+    try {
+      await deleteCalendarEvents(accessToken, sync.googleEventIds);
+    } catch (error) {
+      console.error("Error deleting old calendar events during resync:", error);
+    }
+  }
+
+  // Get schedule data
+  const scheduleJson =
+    sync.trip.currentScheduleJson ?? sync.trip.initialScheduleJson;
+  if (!scheduleJson) return;
+
+  const schedule = scheduleJson as unknown as ScheduleResponse;
+
+  // Recreate events using shared helper
+  const createdEventIds = await createEventsForSchedule(
+    accessToken,
+    schedule.interventions,
+    sync.trip.destTz
+  );
+
+  // Update sync record
+  await prisma.calendarSync.update({
+    where: { id: sync.id },
+    data: {
+      googleEventIds: createdEventIds,
+      lastSyncedAt: new Date(),
+    },
+  });
 }
 
 // Valid intervention types that can have actuals recorded
@@ -116,6 +184,13 @@ export async function POST(request: Request, context: RouteContext) {
         recordedAt: new Date(),
       },
     });
+
+    // Trigger calendar re-sync in background (don't await to avoid blocking response)
+    if (session.hasCalendarScope && session.accessToken) {
+      triggerCalendarResync(id, session.user.id, session.accessToken).catch(
+        (error) => console.error("Calendar resync error:", error)
+      );
+    }
 
     return NextResponse.json({
       recorded: true,

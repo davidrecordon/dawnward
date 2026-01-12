@@ -8,7 +8,6 @@ import { Calendar } from "lucide-react";
 import { TripForm } from "@/components/trip-form";
 import { TripPreviewCard } from "@/components/trip-preview-card";
 import { PreferencesSaveModal } from "@/components/preferences-save-modal";
-import { CalendarComingSoonModal } from "@/components/calendar-coming-soon-modal";
 import { defaultFormState, type TripFormState } from "@/types/trip-form";
 import { getFormState, saveFormState } from "@/lib/schedule-storage";
 import type { UserPreferences } from "@/types/user-preferences";
@@ -136,7 +135,6 @@ export function TripPlanner() {
     React.useState<TripFormState>(defaultFormState);
   const [isHydrated, setIsHydrated] = React.useState(false);
   const [showSaveModal, setShowSaveModal] = React.useState(false);
-  const [showCalendarModal, setShowCalendarModal] = React.useState(false);
   const [hasShownModal, setHasShownModal] = React.useState(false);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
 
@@ -262,21 +260,16 @@ export function TripPlanner() {
             prepDays={formState.prepDays}
           />
 
-          {/* Calendar Sync */}
+          {/* Calendar Sync Preview */}
           <div className="rounded-xl border-2 border-dashed border-slate-200 bg-white/50 p-6 text-center">
             <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-orange-100">
               <Calendar className="h-6 w-6 text-orange-500" />
             </div>
-            <p className="font-medium">Sync to Google Calendar</p>
-            <p className="mb-3 text-sm text-slate-500">
-              Get reminders pushed directly to your calendar
+            <p className="font-medium">Google Calendar Sync</p>
+            <p className="text-sm text-slate-500">
+              After generating your schedule, you can sync it to Google Calendar
+              for automatic reminders
             </p>
-            <button
-              onClick={() => setShowCalendarModal(true)}
-              className="rounded-lg border border-slate-300 px-4 py-1.5 text-sm hover:bg-slate-50"
-            >
-              Connect Calendar
-            </button>
           </div>
 
           {/* How it works */}
@@ -298,14 +291,6 @@ export function TripPlanner() {
         open={showSaveModal}
         onClose={handleModalClose}
         preferences={extractSaveablePreferences(formState)}
-      />
-
-      {/* Calendar Coming Soon Modal */}
-      <CalendarComingSoonModal
-        open={showCalendarModal}
-        onClose={() => setShowCalendarModal(false)}
-        isSignedIn={status === "authenticated"}
-        userEmail={session?.user?.email}
       />
     </>
   );

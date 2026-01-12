@@ -5,7 +5,6 @@ import Link from "next/link";
 import {
   ArrowLeft,
   ArrowRight,
-  Calendar,
   Loader2,
   Settings2,
   User,
@@ -20,7 +19,7 @@ import {
 } from "@/components/schedule/journey-states";
 import { SignInPrompt } from "@/components/auth/sign-in-prompt";
 import { ShareButton } from "@/components/share-button";
-import { CalendarComingSoonModal } from "@/components/calendar-coming-soon-modal";
+import { CalendarSyncButton } from "@/components/calendar-sync-button";
 import { EditPreferencesModal } from "@/components/trip/edit-preferences-modal";
 import { RecordActualSheet } from "@/components/trip/record-actual-sheet";
 import { getDayLabel, formatShortDate } from "@/lib/intervention-utils";
@@ -50,6 +49,7 @@ interface TripScheduleViewProps {
   tripData: TripData;
   isOwner: boolean;
   isLoggedIn: boolean;
+  hasCalendarScope: boolean;
   sharerName: string | null;
 }
 
@@ -98,12 +98,12 @@ export function TripScheduleView({
   tripData,
   isOwner,
   isLoggedIn,
+  hasCalendarScope,
   sharerName,
 }: TripScheduleViewProps) {
   const [schedule, setSchedule] = useState<ScheduleResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [showCalendarModal, setShowCalendarModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
 
   // Track current preferences (can change after edits)
@@ -524,14 +524,11 @@ export function TripScheduleView({
         {isOwner && (
           <div className="flex gap-3 pt-4">
             <ShareButton formState={formStateForShare} tripId={tripId} />
-            <Button
-              variant="outline"
-              className="flex-1 bg-white/70"
-              onClick={() => setShowCalendarModal(true)}
-            >
-              <Calendar className="mr-2 h-4 w-4" />
-              Add to Calendar
-            </Button>
+            <CalendarSyncButton
+              tripId={tripId}
+              isLoggedIn={isLoggedIn}
+              hasCalendarScope={hasCalendarScope}
+            />
             {isLoggedIn && (
               <Button
                 variant="outline"
@@ -561,13 +558,6 @@ export function TripScheduleView({
             </Link>
           </div>
         )}
-
-        {/* Calendar Coming Soon Modal */}
-        <CalendarComingSoonModal
-          open={showCalendarModal}
-          onClose={() => setShowCalendarModal(false)}
-          isSignedIn={isLoggedIn}
-        />
 
         {/* Edit Preferences Modal - only for authenticated owners */}
         {isOwner && isLoggedIn && (

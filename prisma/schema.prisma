@@ -24,6 +24,7 @@ model User {
   accounts         Account[]
   sessions         Session[]
   sharedSchedules  SharedSchedule[]
+  calendarSyncs    CalendarSync[]
 
   // User preferences
   defaultPrepDays     Int     @default(3)
@@ -111,6 +112,7 @@ model SharedSchedule {
   // Relationships
   actuals        InterventionActual[]
   stateSnapshots MarkerStateSnapshot[]
+  calendarSyncs  CalendarSync[]
 
   @@index([userId])
   @@index([code])
@@ -159,4 +161,18 @@ model MarkerStateSnapshot {
 
   @@unique([scheduleId, legIndex, dayOffset])
   @@index([scheduleId])
+}
+
+model CalendarSync {
+  id             String         @id @default(cuid())
+  tripId         String
+  trip           SharedSchedule @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  googleEventIds String[]       // Array of created Google Calendar event IDs
+  lastSyncedAt   DateTime       @default(now())
+
+  @@unique([tripId, userId])
+  @@index([tripId])
+  @@index([userId])
 }
