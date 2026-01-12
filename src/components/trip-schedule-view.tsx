@@ -39,6 +39,12 @@ import type {
 } from "@/types/schedule";
 import type { TripData } from "@/types/trip-data";
 
+/** How long to show the summary banner before auto-dismissing (ms) */
+const SUMMARY_BANNER_DISMISS_MS = 5000;
+
+/** Delay before scrolling to "now" marker to ensure DOM is rendered (ms) */
+const SCROLL_TO_NOW_DELAY_MS = 100;
+
 interface TripScheduleViewProps {
   tripId: string;
   tripData: TripData;
@@ -276,7 +282,7 @@ export function TripScheduleView({
   useEffect(() => {
     if (!summaryMessage) return;
 
-    const timer = setTimeout(dismissSummary, 5000);
+    const timer = setTimeout(dismissSummary, SUMMARY_BANNER_DISMISS_MS);
     return () => clearTimeout(timer);
   }, [summaryMessage, dismissSummary]);
 
@@ -289,7 +295,7 @@ export function TripScheduleView({
       if (nowMarker) {
         nowMarker.scrollIntoView({ behavior: "smooth", block: "center" });
       }
-    }, 100);
+    }, SCROLL_TO_NOW_DELAY_MS);
     return () => clearTimeout(timer);
   }, [schedule, isLoading]);
 

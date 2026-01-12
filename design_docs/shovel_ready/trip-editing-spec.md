@@ -529,20 +529,45 @@ Response:
 
 **Trigger**: Tap on any intervention card (authenticated users only)
 
-**Layout** (bottom sheet):
+**Layout** (bottom sheet on mobile, dialog on desktop):
 
 ```
 ┌─────────────────────────────────┐
-│  Wake at 6:00 AM                │
-│  Day -1 · Prep Day 2            │
+│  [Icon] Wake Target             │
+│         Jan 15 · 6:00 AM        │
 ├─────────────────────────────────┤
-│  ○ Done as planned              │
-│  ○ Done at different time       │
-│     └─ [Time Picker: 7:15 AM]   │
-│  ○ Skipped                      │
+│  ○ Done as planned              │  (or "Will do as planned" for future)
+│     completed at 6:00 AM        │  (or "at 6:00 AM" for future)
+│                                 │
+│  ○ Done at different time       │  (or "Will do at different time" for future)
+│     └─ [Time Select: 15-min]    │
+│                                 │
+│  ○ Skipped                      │  (hidden for wake_target/sleep_target)
+│     Didn't complete this        │  (or "Won't complete this" for future)
 ├─────────────────────────────────┤
 │  [Cancel]          [Save]       │
 └─────────────────────────────────┘
+```
+
+**Implementation details**:
+
+- **Tense-aware copy**: Uses `isPast` check to show "Done as planned" vs "Will do as planned"
+- **Skip restriction**: Wake and sleep targets cannot be skipped (they anchor the schedule)
+- **Time picker**: Uses `TimeSelect` component with 15-minute intervals only
+- **Parent cascade**: Editing a parent intervention cascades to its nested children
+
+**Smart deviation detection** (`calculateDeviation` in `actuals-utils.ts`):
+
+For sleep times that cross midnight, naive subtraction gives wrong results.
+The algorithm assumes the smallest reasonable deviation (<12 hours):
+
+```typescript
+// Sleep target 23:00, actual 02:00 (next day)
+// Naive: 02:00 - 23:00 = -21 hours (wrong!)
+// Smart: -21 + 24 = +3 hours late (correct!)
+
+// Wake target 07:00, actual 05:30 (early)
+// Result: -90 minutes (1.5 hours early)
 ```
 
 **On save**:
@@ -886,3 +911,27 @@ Compare recalculation outputs against:
 ---
 
 _Last updated: January 2026_
+
+---
+
+## Implementation Status
+
+### Completed (Phases 1-2)
+
+- ✅ Preference editing modal (caffeine, melatonin, intensity toggles)
+- ✅ Schedule storage (`initialScheduleJson`, `currentScheduleJson`)
+- ✅ `PATCH /api/trips/[id]/preferences` endpoint
+- ✅ Actuals recording (`InterventionActual` table)
+- ✅ `POST /api/trips/[id]/actuals` endpoint
+- ✅ Record Actual Sheet with tense-aware copy
+- ✅ Wake/sleep targets cannot be skipped
+- ✅ Smart deviation detection for cross-midnight times
+- ✅ 15-minute interval time picker
+- ✅ Parent-child cascade for nested interventions
+- ✅ Recalculation trigger and auto-apply flow
+
+### Pending
+
+- ⏳ Model state snapshots (Phase 3)
+- ⏳ Full model-based recalculation (Phase 4)
+- ⏳ Eight Sleep integration (Phase 5)

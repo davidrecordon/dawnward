@@ -20,8 +20,6 @@ const preferencesUpdateSchema = z
     usesExercise: z.boolean().optional(),
     napPreference: z.enum(["no", "flight_only", "all_days"]).optional(),
     scheduleIntensity: z.enum(["gentle", "balanced", "aggressive"]).optional(),
-    caffeineCutoffHours: z.number().int().min(6).max(12).optional(),
-    lightExposureMinutes: z.number().int().min(30).max(90).optional(),
   })
   .refine((data) => Object.keys(data).length > 0, {
     message: "At least one preference must be provided",
@@ -179,9 +177,10 @@ export async function PATCH(request: Request, context: RouteContext) {
       return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
     }
 
-    const message = error instanceof Error ? error.message : "Unknown error";
+    // Log detailed error server-side, return generic message to client
+    console.error("Failed to update preferences:", error);
     return NextResponse.json(
-      { error: `Failed to update preferences: ${message}` },
+      { error: "Failed to update preferences" },
       { status: 500 }
     );
   } finally {
