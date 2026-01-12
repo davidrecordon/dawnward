@@ -10,20 +10,8 @@ import { TripPreviewCard } from "@/components/trip-preview-card";
 import { PreferencesSaveModal } from "@/components/preferences-save-modal";
 import { defaultFormState, type TripFormState } from "@/types/trip-form";
 import { getFormState, saveFormState } from "@/lib/schedule-storage";
+import { buildRouteLabel } from "@/lib/trip-utils";
 import type { UserPreferences } from "@/types/user-preferences";
-
-/** Build route label from form state (e.g. "SFO → LAX → JFK") */
-function buildRouteLabel(formState: TripFormState): string | undefined {
-  const leg1Origin = formState.origin?.code;
-  const leg1Dest = formState.destination?.code;
-  const leg2Dest = formState.leg2?.destination?.code;
-
-  if (!leg1Origin || !leg1Dest) return undefined;
-  if (leg2Dest) {
-    return `${leg1Origin} → ${leg1Dest} → ${leg2Dest}`;
-  }
-  return `${leg1Origin} → ${leg1Dest}`;
-}
 
 /** Save trip to database and return the trip ID */
 async function saveTripToDb(formState: TripFormState): Promise<string> {
@@ -50,7 +38,11 @@ async function saveTripToDb(formState: TripFormState): Promise<string> {
       uses_exercise: formState.useExercise,
       nap_preference: formState.napPreference,
       schedule_intensity: formState.scheduleIntensity,
-      route_label: buildRouteLabel(formState),
+      route_label: buildRouteLabel(
+        formState.origin?.code,
+        formState.destination?.code,
+        formState.leg2?.destination?.code
+      ),
     }),
   });
 

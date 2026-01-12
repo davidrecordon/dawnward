@@ -1,5 +1,13 @@
 import { describe, it, expect } from "vitest";
-import { mapSharedScheduleToTripData } from "../trip-utils";
+import {
+  mapSharedScheduleToTripData,
+  buildRouteLabel,
+  calculateLayoverDuration,
+  calculateTotalFlightTime,
+  isValidLeg2Timing,
+  isLegComplete,
+} from "../trip-utils";
+import type { TripLeg } from "@/types/trip-form";
 
 describe("mapSharedScheduleToTripData", () => {
   const mockRecord = {
@@ -122,5 +130,184 @@ describe("mapSharedScheduleToTripData", () => {
 
     expect(mapSharedScheduleToTripData(noNaps).napPreference).toBe("no");
     expect(mapSharedScheduleToTripData(allDays).napPreference).toBe("all_days");
+  });
+});
+
+describe("buildRouteLabel", () => {
+  it("returns undefined when origin is missing", () => {
+    expect(buildRouteLabel(undefined, "LHR")).toBeUndefined();
+  });
+
+  it("returns undefined when destination is missing", () => {
+    expect(buildRouteLabel("SFO", undefined)).toBeUndefined();
+  });
+
+  it("returns undefined when both are missing", () => {
+    expect(buildRouteLabel(undefined, undefined)).toBeUndefined();
+  });
+
+  it("builds single-leg route label", () => {
+    expect(buildRouteLabel("SFO", "LHR")).toBe("SFO → LHR");
+  });
+
+  it("builds multi-leg route label", () => {
+    expect(buildRouteLabel("SFO", "LAX", "JFK")).toBe("SFO → LAX → JFK");
+  });
+
+  it("ignores undefined leg2 destination", () => {
+    expect(buildRouteLabel("SFO", "LHR", undefined)).toBe("SFO → LHR");
+  });
+});
+
+describe("calculateLayoverDuration", () => {
+  it("calculates layover duration correctly", () => {
+    const result = calculateLayoverDuration(
+      "2025-01-15T14:00",
+      "2025-01-15T18:30"
+    );
+    expect(result).toEqual({ hours: 4, minutes: 30 });
+  });
+
+  it("handles overnight layover", () => {
+    const result = calculateLayoverDuration(
+      "2025-01-15T22:00",
+      "2025-01-16T08:00"
+    );
+    expect(result).toEqual({ hours: 10, minutes: 0 });
+  });
+
+  it("returns null when leg2 departs before leg1 arrives", () => {
+    const result = calculateLayoverDuration(
+      "2025-01-15T18:00",
+      "2025-01-15T14:00"
+    );
+    expect(result).toBeNull();
+  });
+
+  it("returns null when times are equal", () => {
+    const result = calculateLayoverDuration(
+      "2025-01-15T14:00",
+      "2025-01-15T14:00"
+    );
+    expect(result).toBeNull();
+  });
+
+  it("handles long layover (18+ hours)", () => {
+    const result = calculateLayoverDuration(
+      "2025-01-15T10:00",
+      "2025-01-16T12:00"
+    );
+    expect(result).toEqual({ hours: 26, minutes: 0 });
+  });
+});
+
+describe("calculateTotalFlightTime", () => {
+  it("returns null when leg1 is null", () => {
+    expect(calculateTotalFlightTime(null, { hours: 5, minutes: 0 })).toBeNull();
+  });
+
+  it("returns leg1 duration when leg2 is null (single-leg trip)", () => {
+    const leg1 = { hours: 10, minutes: 30 };
+    expect(calculateTotalFlightTime(leg1, null)).toEqual({ hours: 10, minutes: 30 });
+  });
+
+  it("sums durations correctly", () => {
+    const leg1 = { hours: 5, minutes: 30 };
+    const leg2 = { hours: 3, minutes: 45 };
+    expect(calculateTotalFlightTime(leg1, leg2)).toEqual({ hours: 9, minutes: 15 });
+  });
+
+  it("handles minutes overflow into hours", () => {
+    const leg1 = { hours: 2, minutes: 45 };
+    const leg2 = { hours: 1, minutes: 30 };
+    expect(calculateTotalFlightTime(leg1, leg2)).toEqual({ hours: 4, minutes: 15 });
+  });
+
+  it("handles zero minutes", () => {
+    const leg1 = { hours: 6, minutes: 0 };
+    const leg2 = { hours: 4, minutes: 0 };
+    expect(calculateTotalFlightTime(leg1, leg2)).toEqual({ hours: 10, minutes: 0 });
+  });
+});
+
+describe("isValidLeg2Timing", () => {
+  it("returns true when leg2 departs after leg1 arrives", () => {
+    expect(isValidLeg2Timing("2025-01-15T14:00", "2025-01-15T18:00")).toBe(true);
+  });
+
+  it("returns false when leg2 departs before leg1 arrives", () => {
+    expect(isValidLeg2Timing("2025-01-15T18:00", "2025-01-15T14:00")).toBe(false);
+  });
+
+  it("returns false when times are equal", () => {
+    expect(isValidLeg2Timing("2025-01-15T14:00", "2025-01-15T14:00")).toBe(false);
+  });
+
+  it("handles different dates correctly", () => {
+    expect(isValidLeg2Timing("2025-01-15T23:00", "2025-01-16T08:00")).toBe(true);
+  });
+});
+
+describe("isLegComplete", () => {
+  const mockAirport = {
+    code: "SFO",
+    name: "San Francisco International",
+    city: "San Francisco",
+    country: "US",
+    tz: "America/Los_Angeles",
+  };
+
+  it("returns false for null leg", () => {
+    expect(isLegComplete(null)).toBe(false);
+  });
+
+  it("returns false when origin is missing", () => {
+    const leg: TripLeg = {
+      origin: null,
+      destination: mockAirport,
+      departureDateTime: "2025-01-15T10:00",
+      arrivalDateTime: "2025-01-15T18:00",
+    };
+    expect(isLegComplete(leg)).toBe(false);
+  });
+
+  it("returns false when destination is missing", () => {
+    const leg: TripLeg = {
+      origin: mockAirport,
+      destination: null,
+      departureDateTime: "2025-01-15T10:00",
+      arrivalDateTime: "2025-01-15T18:00",
+    };
+    expect(isLegComplete(leg)).toBe(false);
+  });
+
+  it("returns false when departureDateTime is empty", () => {
+    const leg: TripLeg = {
+      origin: mockAirport,
+      destination: mockAirport,
+      departureDateTime: "",
+      arrivalDateTime: "2025-01-15T18:00",
+    };
+    expect(isLegComplete(leg)).toBe(false);
+  });
+
+  it("returns false when arrivalDateTime is empty", () => {
+    const leg: TripLeg = {
+      origin: mockAirport,
+      destination: mockAirport,
+      departureDateTime: "2025-01-15T10:00",
+      arrivalDateTime: "",
+    };
+    expect(isLegComplete(leg)).toBe(false);
+  });
+
+  it("returns true when all fields are present", () => {
+    const leg: TripLeg = {
+      origin: mockAirport,
+      destination: { ...mockAirport, code: "LHR", tz: "Europe/London" },
+      departureDateTime: "2025-01-15T10:00",
+      arrivalDateTime: "2025-01-15T18:00",
+    };
+    expect(isLegComplete(leg)).toBe(true);
   });
 });
