@@ -20,6 +20,32 @@ export type InterventionType =
   | "nap_window";
 
 /**
+ * Status of a recorded actual
+ */
+export type ActualStatus = "as_planned" | "modified" | "skipped";
+
+/**
+ * Recorded actual for an intervention - what the user actually did
+ */
+export interface InterventionActual {
+  /** Day offset relative to departure */
+  dayOffset: number;
+  /** Type of intervention this actual is for */
+  interventionType: string;
+  /** Originally planned time in HH:MM format */
+  plannedTime: string;
+  /** Actual time in HH:MM format (null if skipped or as_planned) */
+  actualTime: string | null;
+  /** Status of the actual */
+  status: ActualStatus;
+}
+
+/**
+ * Map of actuals keyed by "dayOffset:interventionType"
+ */
+export type ActualsMap = Map<string, InterventionActual>;
+
+/**
  * Single scheduled intervention
  */
 export interface Intervention {

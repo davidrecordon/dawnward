@@ -14,6 +14,14 @@ import {
 } from "lucide-react";
 import type { InterventionType } from "@/types/schedule";
 
+// Day constants for schedule phases
+export const FLIGHT_DAY = 0;
+export const ARRIVAL_DAY = 1;
+
+// Flight phase thresholds (as fraction of total flight)
+const EARLY_FLIGHT_THRESHOLD = 0.33;
+const MID_FLIGHT_THRESHOLD = 0.66;
+
 interface InterventionStyle {
   icon: LucideIcon;
   bgColor: string;
@@ -120,24 +128,18 @@ export function formatTime(time: string): string {
  *                           (day 2 → "Day +1", day 3 → "Day +2", etc.)
  */
 export function getDayLabel(day: number, hasSameDayArrival?: boolean): string {
-  if (day < 0) {
+  if (day < FLIGHT_DAY) {
     return `Day ${day}`;
-  } else if (day === 0) {
-    // For westbound same-day arrivals, show combined label
-    if (hasSameDayArrival) {
-      return "Flight & Arrival Day";
-    }
-    return "Flight Day";
-  } else if (day === 1) {
-    // Day 1 is "Arrival" only if NOT same-day arrival
-    // (for same-day arrivals, day 1 doesn't exist - it's merged into day 0)
-    return "Arrival";
-  } else {
-    // For same-day arrivals, shift the day numbers down by 1
-    // (day 2 becomes "Day +1", day 3 becomes "Day +2", etc.)
-    const displayDay = hasSameDayArrival ? day - 1 : day;
-    return `Day +${displayDay}`;
   }
+  if (day === FLIGHT_DAY) {
+    return hasSameDayArrival ? "Flight & Arrival Day" : "Flight Day";
+  }
+  if (day === ARRIVAL_DAY) {
+    return "Arrival";
+  }
+  // For same-day arrivals, shift the day numbers down by 1
+  const displayDay = hasSameDayArrival ? day - 1 : day;
+  return `Day +${displayDay}`;
 }
 
 /**
@@ -229,7 +231,26 @@ export function formatFlightPhase(
   totalHours: number
 ): string {
   const progress = offsetHours / totalHours;
-  if (progress < 0.33) return "Early in flight";
-  if (progress < 0.66) return "Mid-flight";
+  if (progress < EARLY_FLIGHT_THRESHOLD) return "Early in flight";
+  if (progress < MID_FLIGHT_THRESHOLD) return "Mid-flight";
   return "Later in flight";
+}
+
+/** Intervention types that support recording actuals */
+const EDITABLE_INTERVENTION_TYPES: Set<InterventionType> = new Set([
+  "wake_target",
+  "sleep_target",
+  "melatonin",
+  "exercise",
+  "nap_window",
+]);
+
+/**
+ * Determines if an intervention type supports recording actuals.
+ *
+ * Editable types are discrete timed events (wake, sleep, melatonin, exercise, naps).
+ * Advisory types (light_seek, light_avoid, caffeine_*) are informational only.
+ */
+export function isEditableIntervention(type: InterventionType): boolean {
+  return EDITABLE_INTERVENTION_TYPES.has(type);
 }

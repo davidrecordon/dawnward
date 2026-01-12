@@ -1,7 +1,9 @@
 "use client";
 
-import type { TimedItemGroup } from "@/types/schedule";
+import type { TimedItemGroup, Intervention, ActualsMap } from "@/types/schedule";
 import type { Airport } from "@/types/airport";
+import { isEditableIntervention } from "@/lib/intervention-utils";
+import { getActualKey } from "@/lib/actuals-utils";
 import { InterventionCard } from "./intervention-card";
 import { FlightCard } from "./flight-card";
 
@@ -13,6 +15,19 @@ interface GroupedItemCardProps {
   origin: Airport;
   /** Destination airport (for arrival parent's FlightCard) */
   destination: Airport;
+  /** Recorded actuals map for displaying inline changes */
+  actuals?: ActualsMap;
+  /** Callback when an intervention card is clicked (for recording actuals) */
+  onInterventionClick?: (
+    intervention: Intervention,
+    dayOffset: number,
+    date: string,
+    nestedChildren?: Intervention[]
+  ) => void;
+  /** Day offset for this group */
+  dayOffset: number;
+  /** Date string (YYYY-MM-DD) for this group */
+  date: string;
 }
 
 /**
@@ -28,6 +43,10 @@ export function GroupedItemCard({
   timezone,
   origin,
   destination,
+  actuals,
+  onInterventionClick,
+  dayOffset,
+  date,
 }: GroupedItemCardProps): React.JSX.Element {
   const { parent, children, time } = group;
   const isArrival = parent.kind === "arrival";
@@ -45,7 +64,17 @@ export function GroupedItemCard({
           timezone={parent.timezone}
         />
       ) : (
-        <InterventionCard intervention={parent.data} timezone={timezone} />
+        <InterventionCard
+          intervention={parent.data}
+          timezone={timezone}
+          date={date}
+          actual={actuals?.get(getActualKey(dayOffset, parent.data.type))}
+          onClick={
+            onInterventionClick && isEditableIntervention(parent.data.type)
+              ? () => onInterventionClick(parent.data, dayOffset, date, children)
+              : undefined
+          }
+        />
       )}
 
       {/* Children container with connecting lines */}
@@ -86,7 +115,18 @@ export function GroupedItemCard({
 
                   {/* Child card */}
                   <div className="pl-8">
-                    <InterventionCard intervention={child} variant="nested" />
+                    <InterventionCard
+                      intervention={child}
+                      variant="nested"
+                      date={date}
+                      actual={actuals?.get(getActualKey(dayOffset, child.type))}
+                      onClick={
+                        onInterventionClick &&
+                        isEditableIntervention(child.type)
+                          ? () => onInterventionClick(child, dayOffset, date)
+                          : undefined
+                      }
+                    />
                   </div>
                 </div>
               );

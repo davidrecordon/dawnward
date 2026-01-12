@@ -3,12 +3,18 @@
  */
 
 import type {
+  ActualsMap,
   DaySchedule,
   GroupableParent,
   Intervention,
   PhaseType,
   TimedItemGroup,
 } from "@/types/schedule";
+import {
+  getEffectiveTimeForGroupable,
+  shouldChildStayNested,
+} from "./effective-time-utils";
+import { getActualKey } from "./actuals-utils";
 
 /**
  * Convert time string to sortable minutes.
@@ -216,23 +222,38 @@ function canBeParent(item: GroupableItem): boolean {
 }
 
 /**
- * Group timed items that share the same time as a groupable parent.
+ * Group timed items that share the same effective time as a groupable parent.
  *
  * Creates "parent + nested children" groups for UI rendering.
  * Groupable parents: wake_target interventions, arrival markers.
- * Children: interventions at same time+timezone (except other parents, in-transit items).
+ * Children: interventions whose effective time matches the parent's effective time.
+ *
+ * Effective time logic:
+ * - Editable interventions with modified actuals use actualTime
+ * - Non-editable interventions always use planned time (cascade with parent)
+ * - Skipped interventions stay nested (show "Skipped" label)
  *
  * @param items - Array of timed items for a single day (before sorting)
+ * @param actuals - Optional map of recorded actuals for dynamic grouping
+ * @param dayOffset - Day offset for looking up actuals (required if actuals provided)
  * @returns Groups (parent with children) and ungrouped items
  */
-export function groupTimedItems(items: GroupableItem[]): GroupedTimedItems {
+export function groupTimedItems(
+  items: GroupableItem[],
+  actuals?: ActualsMap,
+  dayOffset?: number
+): GroupedTimedItems {
   const groups: TimedItemGroup[] = [];
   const groupedIndices = new Set<number>();
 
-  // Build grouping key from time and timezone
-  const makeKey = (time: string, tz?: string): string => `${time}|${tz ?? ""}`;
-
-  // Check if an item can be a child (intervention, not in-transit, not a parent)
+  /**
+   * Check if an item can be a child in a nested group.
+   *
+   * Requirements:
+   * - Must be an intervention (not departure/arrival/now markers)
+   * - Cannot be in-transit (they have unique flight context)
+   * - Cannot also be a parent (prevents double-nesting of wake_target)
+   */
   const canBeChild = (
     item: GroupableItem
   ): item is GroupableItem & { kind: "intervention" } =>
@@ -240,23 +261,37 @@ export function groupTimedItems(items: GroupableItem[]): GroupedTimedItems {
     !item.data.is_in_transit &&
     !canBeParent(item);
 
-  // Find all parent items and group same-time items with them
+  // Find all parent items and group same-effective-time items with them
   for (let parentIdx = 0; parentIdx < items.length; parentIdx++) {
     const parentItem = items[parentIdx];
     if (!canBeParent(parentItem)) continue;
 
-    const parentKey = makeKey(parentItem.time, parentItem.timezone);
+    // Calculate parent's effective time for child nesting decisions
+    const parentEffectiveTime = getEffectiveTimeForGroupable(
+      parentItem,
+      actuals,
+      dayOffset
+    );
     const children: Intervention[] = [];
 
-    // Find children: same time+timezone interventions
+    // Find children whose effective time matches parent's effective time
     for (let childIdx = 0; childIdx < items.length; childIdx++) {
       if (childIdx === parentIdx) continue;
 
       const childItem = items[childIdx];
       if (!canBeChild(childItem)) continue;
 
-      const childKey = makeKey(childItem.time, childItem.timezone);
-      if (childKey === parentKey) {
+      // Get the child's actual (if any) to check nesting
+      const childActual =
+        actuals && dayOffset !== undefined
+          ? actuals.get(getActualKey(dayOffset, childItem.data.type))
+          : undefined;
+
+      // Use shouldChildStayNested for the nesting decision
+      // This handles: non-editable always nest, skipped stay nested, effective time comparison
+      if (
+        shouldChildStayNested(childItem.data, childActual, parentEffectiveTime)
+      ) {
         children.push(childItem.data);
         groupedIndices.add(childIdx);
       }

@@ -1,8 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, ArrowRight, Calendar, Loader2, User } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  Calendar,
+  Loader2,
+  Settings2,
+  User,
+  X,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DaySection } from "@/components/schedule/day-section";
 import { ScheduleHeader } from "@/components/schedule/schedule-header";
@@ -13,15 +21,29 @@ import {
 import { SignInPrompt } from "@/components/auth/sign-in-prompt";
 import { ShareButton } from "@/components/share-button";
 import { CalendarComingSoonModal } from "@/components/calendar-coming-soon-modal";
+import { EditPreferencesModal } from "@/components/trip/edit-preferences-modal";
+import { RecordActualSheet } from "@/components/trip/record-actual-sheet";
 import { getDayLabel, formatShortDate } from "@/lib/intervention-utils";
 import { mergePhasesByDate } from "@/lib/schedule-utils";
+import { getActualKey, buildActualsMap } from "@/lib/actuals-utils";
 import {
   getCurrentDayNumber,
   isBeforeSchedule,
   isAfterSchedule,
 } from "@/lib/time-utils";
-import type { ScheduleResponse } from "@/types/schedule";
+import type {
+  Intervention,
+  ScheduleResponse,
+  InterventionActual,
+  ActualsMap,
+} from "@/types/schedule";
 import type { TripData } from "@/types/trip-data";
+
+/** How long to show the summary banner before auto-dismissing (ms) */
+const SUMMARY_BANNER_DISMISS_MS = 5000;
+
+/** Delay before scrolling to "now" marker to ensure DOM is rendered (ms) */
+const SCROLL_TO_NOW_DELAY_MS = 100;
 
 interface TripScheduleViewProps {
   tripId: string;
@@ -82,10 +104,117 @@ export function TripScheduleView({
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showCalendarModal, setShowCalendarModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+
+  // Track current preferences (can change after edits)
+  const [currentPreferences, setCurrentPreferences] = useState({
+    usesCaffeine: tripData.usesCaffeine,
+    usesMelatonin: tripData.usesMelatonin,
+    scheduleIntensity: tripData.scheduleIntensity,
+  });
+
+  // State for recording actuals
+  const [selectedIntervention, setSelectedIntervention] = useState<{
+    intervention: Intervention;
+    dayOffset: number;
+    date: string;
+    nestedChildren?: Intervention[];
+  } | null>(null);
+
+  // State for actuals (recorded user data)
+  const [actuals, setActuals] = useState<ActualsMap>(new Map());
+  const [summaryMessage, setSummaryMessage] = useState<string | null>(null);
+
+  // Ref to prevent race conditions during recalculation
+  const isRecalculatingRef = useRef(false);
+
+  // Fetch actuals on mount for authenticated owners
+  const fetchActuals = useCallback(async () => {
+    if (!isOwner || !isLoggedIn) return;
+
+    try {
+      const response = await fetch(`/api/trips/${tripId}/actuals`);
+      if (response.ok) {
+        const { actuals: fetchedActuals } = await response.json();
+        setActuals(buildActualsMap(fetchedActuals));
+      }
+    } catch (err) {
+      console.error("Failed to fetch actuals:", err);
+    }
+  }, [isOwner, isLoggedIn, tripId]);
+
+  // Handle when actuals are saved - update state and check for recalculation
+  // Accepts array to support parent cascade (parent + children saved together)
+  const handleActualSaved = async (savedActuals: InterventionActual[]) => {
+    // 1. Update actuals map immediately for instant UI feedback
+    setActuals((prev) => {
+      const next = new Map(prev);
+      for (const actual of savedActuals) {
+        next.set(getActualKey(actual.dayOffset, actual.interventionType), actual);
+      }
+      return next;
+    });
+
+    // 2. Close the modal
+    setSelectedIntervention(null);
+
+    // 3. Check for and auto-apply recalculation (with race condition protection)
+    // Skip if another recalculation is already in progress
+    if (isRecalculatingRef.current) {
+      console.log("Skipping recalculation - another is in progress");
+      return;
+    }
+
+    try {
+      isRecalculatingRef.current = true;
+
+      const response = await fetch(`/api/trips/${tripId}/recalculate`, {
+        method: "POST",
+      });
+
+      if (!response.ok) return;
+
+      const result = await response.json();
+      if (result.needsRecalculation) {
+        // Auto-apply the recalculation
+        const applyResponse = await fetch(`/api/trips/${tripId}/recalculate`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ newSchedule: result.newSchedule }),
+        });
+
+        if (applyResponse.ok) {
+          setSchedule(result.newSchedule);
+          setSummaryMessage(
+            `Schedule updated: ${result.changes.length} intervention(s) adjusted`
+          );
+        }
+      }
+    } catch (err) {
+      console.error("Recalculation failed:", err);
+    } finally {
+      isRecalculatingRef.current = false;
+    }
+  };
+
+  // Dismiss the summary banner
+  const dismissSummary = useCallback(() => {
+    setSummaryMessage(null);
+  }, []);
 
   useEffect(() => {
-    async function generateSchedule() {
+    async function loadOrGenerateSchedule() {
       try {
+        // Use stored schedule if available (prefer currentScheduleJson over initialScheduleJson)
+        const storedSchedule =
+          tripData.currentScheduleJson || tripData.initialScheduleJson;
+        if (storedSchedule) {
+          setSchedule(storedSchedule);
+          setIsLoading(false);
+          return;
+        }
+
+        // Generate schedule if not stored
         const response = await fetch("/api/schedule/generate", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -112,6 +241,23 @@ export function TripScheduleView({
 
         const result = await response.json();
         setSchedule(result.schedule);
+
+        // Save the initial schedule and snapshots for authenticated owners
+        if (isOwner && isLoggedIn) {
+          try {
+            await fetch(`/api/trips/${tripId}`, {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                initialScheduleJson: result.schedule,
+                snapshots: result.snapshots,
+              }),
+            });
+          } catch (saveErr) {
+            // Don't fail the view if save fails - just log it
+            console.error("Failed to save initial schedule:", saveErr);
+          }
+        }
       } catch (err) {
         console.error("Schedule generation error:", err);
         setError(
@@ -122,8 +268,23 @@ export function TripScheduleView({
       }
     }
 
-    generateSchedule();
-  }, [tripData]);
+    loadOrGenerateSchedule();
+  }, [tripData, tripId, isOwner, isLoggedIn]);
+
+  // Fetch actuals once schedule is loaded (for owners)
+  useEffect(() => {
+    if (schedule && !isLoading && isOwner && isLoggedIn) {
+      fetchActuals();
+    }
+  }, [schedule, isLoading, isOwner, isLoggedIn, fetchActuals]);
+
+  // Auto-dismiss summary message after 5 seconds
+  useEffect(() => {
+    if (!summaryMessage) return;
+
+    const timer = setTimeout(dismissSummary, SUMMARY_BANNER_DISMISS_MS);
+    return () => clearTimeout(timer);
+  }, [summaryMessage, dismissSummary]);
 
   // Auto-scroll to "now" marker
   useEffect(() => {
@@ -134,7 +295,7 @@ export function TripScheduleView({
       if (nowMarker) {
         nowMarker.scrollIntoView({ behavior: "smooth", block: "center" });
       }
-    }, 100);
+    }, SCROLL_TO_NOW_DELAY_MS);
     return () => clearTimeout(timer);
   }, [schedule, isLoading]);
 
@@ -178,10 +339,8 @@ export function TripScheduleView({
     "dest"
   );
 
-  const departureDate = tripData.departureDatetime.split("T")[0];
-  const departureTime = tripData.departureDatetime.split("T")[1];
-  const arrivalDate = tripData.arrivalDatetime.split("T")[0];
-  const arrivalTime = tripData.arrivalDatetime.split("T")[1];
+  const [departureDate, departureTime] = tripData.departureDatetime.split("T");
+  const [arrivalDate, arrivalTime] = tripData.arrivalDatetime.split("T");
 
   const data = {
     request: {
@@ -274,6 +433,20 @@ export function TripScheduleView({
           scheduleStartDate={firstDayDate}
         />
 
+        {/* Summary banner - shows after actuals are saved and schedule is updated */}
+        {summaryMessage && (
+          <div className="flex items-center justify-between rounded-lg bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+            <span>{summaryMessage}</span>
+            <button
+              onClick={dismissSummary}
+              className="text-emerald-500 hover:text-emerald-700"
+              aria-label="Dismiss"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        )}
+
         {/* Day navigation */}
         <div className="-mb-4 flex flex-wrap justify-center gap-2 pb-2">
           {mergedDays.map((daySchedule) => {
@@ -328,6 +501,18 @@ export function TripScheduleView({
               arrivalDate={arrivalDate}
               arrivalTime={arrivalTime}
               isCurrentDay={daySchedule.day === currentDayNumber}
+              actuals={actuals}
+              onInterventionClick={
+                isOwner && isLoggedIn
+                  ? (intervention, dayOffset, date, nestedChildren) =>
+                      setSelectedIntervention({
+                        intervention,
+                        dayOffset,
+                        date,
+                        nestedChildren,
+                      })
+                  : undefined
+              }
             />
           ))}
         </div>
@@ -347,6 +532,15 @@ export function TripScheduleView({
               <Calendar className="mr-2 h-4 w-4" />
               Add to Calendar
             </Button>
+            {isLoggedIn && (
+              <Button
+                variant="outline"
+                className="bg-white/70"
+                onClick={() => setShowEditModal(true)}
+              >
+                <Settings2 className="h-4 w-4" />
+              </Button>
+            )}
           </div>
         )}
 
@@ -374,6 +568,40 @@ export function TripScheduleView({
           onClose={() => setShowCalendarModal(false)}
           isSignedIn={isLoggedIn}
         />
+
+        {/* Edit Preferences Modal - only for authenticated owners */}
+        {isOwner && isLoggedIn && (
+          <EditPreferencesModal
+            open={showEditModal}
+            onClose={() => setShowEditModal(false)}
+            tripId={tripId}
+            currentPreferences={currentPreferences}
+            onPreferencesUpdated={(newSchedule, updatedPreferences) => {
+              setSchedule(newSchedule);
+              setCurrentPreferences(updatedPreferences);
+            }}
+          />
+        )}
+
+        {/* Record Actual Sheet - only for authenticated owners */}
+        {isOwner && isLoggedIn && selectedIntervention && (
+          <RecordActualSheet
+            open={!!selectedIntervention}
+            onSave={handleActualSaved}
+            onCancel={() => setSelectedIntervention(null)}
+            tripId={tripId}
+            intervention={selectedIntervention.intervention}
+            dayOffset={selectedIntervention.dayOffset}
+            date={selectedIntervention.date}
+            actual={actuals.get(
+              getActualKey(
+                selectedIntervention.dayOffset,
+                selectedIntervention.intervention.type
+              )
+            )}
+            nestedChildren={selectedIntervention.nestedChildren}
+          />
+        )}
       </div>
     </div>
   );

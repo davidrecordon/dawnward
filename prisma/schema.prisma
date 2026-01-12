@@ -97,12 +97,66 @@ model SharedSchedule {
   napPreference     String @default("flight_only")
   scheduleIntensity String @default("balanced")
 
+  // Schedule storage (for editing/recalculation)
+  initialScheduleJson  Json?     // First generated schedule (frozen)
+  currentScheduleJson  Json?     // Latest schedule (after recalcs)
+  lastRecalculatedAt   DateTime?
+
   // Metadata
   routeLabel   String?
   viewCount    Int       @default(0)
   createdAt    DateTime  @default(now())
   lastViewedAt DateTime?
 
+  // Relationships
+  actuals        InterventionActual[]
+  stateSnapshots MarkerStateSnapshot[]
+
   @@index([userId])
   @@index([code])
+}
+
+model InterventionActual {
+  id         String         @id @default(cuid())
+  scheduleId String
+  schedule   SharedSchedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+
+  // Structured key (avoids string parsing)
+  legIndex         Int    @default(0) // For multi-leg trips
+  dayOffset        Int // -3, -2, -1, 0, 1, 2...
+  interventionType String // "wake", "sleep", "light_seek", "light_avoid", "melatonin", etc.
+
+  // Timing
+  plannedTime String  // "06:00" (HH:MM in relevant timezone)
+  actualTime  String? // null = as_planned or skipped
+
+  // Status
+  status String // "as_planned" | "modified" | "skipped"
+  source String @default("manual") // "manual" | "eight_sleep"
+
+  recordedAt DateTime @default(now())
+
+  @@unique([scheduleId, legIndex, dayOffset, interventionType])
+  @@index([scheduleId])
+}
+
+model MarkerStateSnapshot {
+  id         String         @id @default(cuid())
+  scheduleId String
+  schedule   SharedSchedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+
+  // Position in trip
+  legIndex  Int @default(0)
+  dayOffset Int // Snapshot taken at END of this day
+
+  // Marker-based state (NOT Forger99 ODE - matches CircadianMarkerTracker)
+  cumulativeShift Float  // Hours shifted by end of this day
+  cbtminMinutes   Int    // CBTmin in minutes from midnight
+  dlmoMinutes     Int    // DLMO in minutes from midnight
+  direction       String // "advance" | "delay"
+
+  capturedAt DateTime @default(now())
+
+  @@unique([scheduleId, legIndex, dayOffset])
+  @@index([scheduleId])
 }

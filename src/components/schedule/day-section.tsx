@@ -1,6 +1,11 @@
 "use client";
 
-import { getDayLabel } from "@/lib/intervention-utils";
+import {
+  getDayLabel,
+  isEditableIntervention,
+  FLIGHT_DAY,
+  ARRIVAL_DAY,
+} from "@/lib/intervention-utils";
 import {
   dayHasMultipleTimezones,
   groupTimedItems,
@@ -19,10 +24,12 @@ import { GroupedItemCard } from "./grouped-item-card";
 import { NowMarker } from "./now-marker";
 import { TimezoneTransition } from "./timezone-transition";
 import { calculateFlightDuration } from "@/lib/timezone-utils";
+import { getActualKey } from "@/lib/actuals-utils";
 import type {
   DaySchedule,
   Intervention,
   TimedItemGroup,
+  ActualsMap,
 } from "@/types/schedule";
 import type { Airport } from "@/types/airport";
 
@@ -35,6 +42,15 @@ interface DaySectionProps {
   arrivalDate: string;
   arrivalTime: string;
   isCurrentDay: boolean;
+  /** Recorded actuals map for displaying inline changes */
+  actuals?: ActualsMap;
+  /** Optional callback when an intervention card is clicked (for recording actuals) */
+  onInterventionClick?: (
+    intervention: Intervention,
+    dayOffset: number,
+    date: string,
+    nestedChildren?: Intervention[]
+  ) => void;
 }
 
 /** Items with time (used during sorting) */
@@ -87,12 +103,15 @@ export function DaySection({
   arrivalDate,
   arrivalTime,
   isCurrentDay,
+  actuals,
+  onInterventionClick,
 }: DaySectionProps) {
   // Build combined items array (TimedItem before transitions are inserted)
   const items: TimedItem[] = [];
 
-  // Only show timezone on Flight Day (0) and Arrival day (1)
-  const showTimezone = daySchedule.day === 0 || daySchedule.day === 1;
+  // Only show timezone on Flight Day and Arrival day
+  const showTimezone =
+    daySchedule.day === FLIGHT_DAY || daySchedule.day === ARRIVAL_DAY;
 
   // Calculate flight duration for in-flight sleep card progress bar
   const flightDuration = calculateFlightDuration(
@@ -154,8 +173,13 @@ export function DaySection({
     preGroupItems.push({ kind: "now", time: nowTime, timezone: nowTz });
   }
 
-  // Group items by parent (wake_target or arrival) with same-time children
-  const { groups, ungrouped } = groupTimedItems(preGroupItems);
+  // Group items by parent (wake_target or arrival) with same-effective-time children
+  // Pass actuals so grouping considers modified times (children with different actual times unnest)
+  const { groups, ungrouped } = groupTimedItems(
+    preGroupItems,
+    actuals,
+    daySchedule.day
+  );
 
   // Add groups as timed_item_group
   groups.forEach((group) => {
@@ -290,9 +314,9 @@ export function DaySection({
   // Day label color based on phase
   function getDayLabelStyle(): string {
     const { day } = daySchedule;
-    if (day < 0) return "text-sky-600"; // Pre-departure
-    if (day === 0) return "text-sky-700"; // Flight day
-    if (day === 1) return "text-emerald-600"; // Arrival
+    if (day < FLIGHT_DAY) return "text-sky-600"; // Pre-departure
+    if (day === FLIGHT_DAY) return "text-sky-700"; // Flight day
+    if (day === ARRIVAL_DAY) return "text-emerald-600"; // Arrival
     return "text-violet-600"; // Post-arrival adaptation
   }
 
@@ -376,6 +400,21 @@ export function DaySection({
                     <InterventionCard
                       intervention={item.data}
                       timezone={item.timezone}
+                      date={daySchedule.date}
+                      actual={actuals?.get(
+                        getActualKey(daySchedule.day, item.data.type)
+                      )}
+                      onClick={
+                        onInterventionClick &&
+                        isEditableIntervention(item.data.type)
+                          ? () =>
+                              onInterventionClick(
+                                item.data,
+                                daySchedule.day,
+                                daySchedule.date
+                              )
+                          : undefined
+                      }
                     />
                   ))}
                 {item.kind === "timed_item_group" && (
@@ -384,6 +423,10 @@ export function DaySection({
                     timezone={item.timezone}
                     origin={origin}
                     destination={destination}
+                    actuals={actuals}
+                    onInterventionClick={onInterventionClick}
+                    dayOffset={daySchedule.day}
+                    date={daySchedule.date}
                   />
                 )}
                 {item.kind === "departure" && (
