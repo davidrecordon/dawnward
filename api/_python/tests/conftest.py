@@ -1,5 +1,7 @@
 """
 Pytest fixtures for circadian schedule tests.
+
+Uses freezegun for deterministic, date-independent testing.
 """
 
 import sys
@@ -7,6 +9,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 
 import pytest
+import time_machine
 
 # Add parent directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -31,6 +34,30 @@ __all__ = [
     "estimate_cbtmin_time",
     "estimate_dlmo_time",
 ]
+
+# Standard frozen time: Jan 1, 2026 at noon UTC
+# This ensures tests with flight dates in Jan 2026+ work correctly
+FROZEN_TIME = "2026-01-01T12:00:00"
+
+
+@pytest.fixture
+def frozen_time():
+    """Freeze time to a consistent point for deterministic tests.
+
+    Use this fixture in tests that have hardcoded dates and need
+    consistent behavior regardless of when tests are run.
+    The frozen time is Jan 1, 2026 at noon, before most test dates.
+
+    Uses time-machine for C-level patching that catches all datetime
+    calls including in third-party libraries like Arcascope.
+
+    Usage:
+        def test_something(frozen_time):
+            # System time is now frozen to Jan 1, 2026
+            ...
+    """
+    with time_machine.travel(FROZEN_TIME, tick=False):
+        yield
 
 
 @pytest.fixture

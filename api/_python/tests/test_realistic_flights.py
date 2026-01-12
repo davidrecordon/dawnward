@@ -75,7 +75,7 @@ class TestMinimalJetLag:
         Minimal jet lag (3h west). Tests early morning departure handling.
         """
         generator = ScheduleGenerator()
-        base_date = datetime(2026, 1, 15)
+        base_date = datetime.now() + timedelta(days=7)
 
         # HA11: SFO 07:00 → HNL 09:35 same day
         departure = make_flight_datetime(base_date, "07:00")
@@ -126,7 +126,7 @@ class TestMinimalJetLag:
         Return flight, minimal jet lag (3h east). Same-day arrival.
         """
         generator = ScheduleGenerator()
-        base_date = datetime(2026, 1, 20)
+        base_date = datetime.now() + timedelta(days=10)
 
         # HA12: HNL 12:30 → SFO 20:30 same day
         departure = make_flight_datetime(base_date, "12:30")
@@ -176,7 +176,7 @@ class TestMinimalJetLag:
         Domestic transcontinental (3h east). Tests advance direction for US routes.
         """
         generator = ScheduleGenerator()
-        base_date = datetime(2026, 1, 15)
+        base_date = datetime.now() + timedelta(days=7)
 
         # AA16: SFO 11:00 → JFK 19:35 same day
         departure = make_flight_datetime(base_date, "11:00")
@@ -226,7 +226,7 @@ class TestMinimalJetLag:
         Return flight, evening departure (3h west). Tests evening departure handling.
         """
         generator = ScheduleGenerator()
-        base_date = datetime(2026, 1, 20)
+        base_date = datetime.now() + timedelta(days=10)
 
         # AA177: JFK 19:35 → SFO 23:21 same day
         departure = make_flight_datetime(base_date, "19:35")
@@ -295,7 +295,7 @@ class TestModerateJetLag:
         Afternoon departure, next-day morning arrival. Classic transatlantic pattern.
         """
         generator = ScheduleGenerator()
-        base_date = datetime(2026, 1, 15)
+        base_date = datetime.now() + timedelta(days=7)
 
         # VS20: SFO 16:30 → LHR 10:40+1
         departure = make_flight_datetime(base_date, "16:30")
@@ -345,7 +345,7 @@ class TestModerateJetLag:
         Westward return - same calendar day arrival due to timezone gain.
         """
         generator = ScheduleGenerator()
-        base_date = datetime(2026, 1, 20)
+        base_date = datetime.now() + timedelta(days=10)
 
         # VS19: LHR 11:40 → SFO 14:40 same day
         departure = make_flight_datetime(base_date, "11:40")
@@ -393,7 +393,7 @@ class TestModerateJetLag:
         Afternoon departure to Paris, next-day late morning arrival.
         """
         generator = ScheduleGenerator()
-        base_date = datetime(2026, 1, 15)
+        base_date = datetime.now() + timedelta(days=7)
 
         # AF83: SFO 15:40 → CDG 11:35+1
         departure = make_flight_datetime(base_date, "15:40")
@@ -443,7 +443,7 @@ class TestModerateJetLag:
         Early afternoon departure, same-day arrival due to westward travel.
         """
         generator = ScheduleGenerator()
-        base_date = datetime(2026, 1, 20)
+        base_date = datetime.now() + timedelta(days=10)
 
         # AF84: CDG 13:25 → SFO 15:55 same day
         departure = make_flight_datetime(base_date, "13:25")
@@ -491,7 +491,7 @@ class TestModerateJetLag:
         Boeing 747-8 route to Frankfurt, next-day morning arrival.
         """
         generator = ScheduleGenerator()
-        base_date = datetime(2026, 1, 15)
+        base_date = datetime.now() + timedelta(days=7)
 
         # LH455: SFO 14:40 → FRA 10:30+1
         departure = make_flight_datetime(base_date, "14:40")
@@ -541,7 +541,7 @@ class TestModerateJetLag:
         Return flight from Frankfurt, same-day arrival.
         """
         generator = ScheduleGenerator()
-        base_date = datetime(2026, 1, 20)
+        base_date = datetime.now() + timedelta(days=10)
 
         # LH454: FRA 13:20 → SFO 15:55 same day
         departure = make_flight_datetime(base_date, "13:20")
@@ -613,7 +613,7 @@ class TestSevereJetLag:
         Ultra-long-haul to Dubai. 12h timezone difference.
         """
         generator = ScheduleGenerator()
-        base_date = datetime(2026, 1, 15)
+        base_date = datetime.now() + timedelta(days=7)
 
         # EK226: SFO 15:40 → DXB 19:25+1
         departure = make_flight_datetime(base_date, "15:40")
@@ -663,7 +663,7 @@ class TestSevereJetLag:
         Return from Dubai, same-day arrival due to westward travel + long flight.
         """
         generator = ScheduleGenerator()
-        base_date = datetime(2026, 1, 20)
+        base_date = datetime.now() + timedelta(days=10)
 
         # EK225: DXB 08:50 → SFO 12:50 same day
         departure = make_flight_datetime(base_date, "08:50")
@@ -713,7 +713,7 @@ class TestSevereJetLag:
         Ultra-long-haul, 16h timezone difference → 8h delay (shorter path).
         """
         generator = ScheduleGenerator()
-        base_date = datetime(2026, 1, 15)
+        base_date = datetime.now() + timedelta(days=7)
 
         # SQ31: SFO 09:40 → SIN 19:05+1
         departure = make_flight_datetime(base_date, "09:40")
@@ -764,7 +764,7 @@ class TestSevereJetLag:
         Date line crossing - arrives same calendar day but earlier local time.
         """
         generator = ScheduleGenerator()
-        base_date = datetime(2026, 1, 20)
+        base_date = datetime.now() + timedelta(days=10)
 
         # SQ32: SIN 09:15 → SFO 07:50 same day (date line crossing)
         departure = make_flight_datetime(base_date, "09:15")
@@ -814,7 +814,7 @@ class TestSevereJetLag:
         Ultra-long-haul to Hong Kong, next-day evening arrival.
         """
         generator = ScheduleGenerator()
-        base_date = datetime(2026, 1, 15)
+        base_date = datetime.now() + timedelta(days=7)
 
         # CX879: SFO 11:25 → HKG 19:00+1
         departure = make_flight_datetime(base_date, "11:25")
@@ -863,7 +863,7 @@ class TestSevereJetLag:
         Early morning departure, previous evening arrival.
         """
         generator = ScheduleGenerator()
-        base_date = datetime(2026, 1, 20)
+        base_date = datetime.now() + timedelta(days=10)
 
         # CX872: HKG 01:00 → SFO 21:15-1 (arrives previous day!)
         departure = make_flight_datetime(base_date, "01:00")
@@ -913,7 +913,7 @@ class TestSevereJetLag:
         Tokyo Haneda, next-day late afternoon arrival.
         """
         generator = ScheduleGenerator()
-        base_date = datetime(2026, 1, 15)
+        base_date = datetime.now() + timedelta(days=7)
 
         # JL1: SFO 12:55 → HND 17:20+1
         departure = make_flight_datetime(base_date, "12:55")
@@ -964,7 +964,7 @@ class TestSevereJetLag:
         Date line crossing - arrives earlier on same calendar day.
         """
         generator = ScheduleGenerator()
-        base_date = datetime(2026, 1, 20)
+        base_date = datetime.now() + timedelta(days=10)
 
         # JL2: HND 18:05 → SFO 10:15 same day
         departure = make_flight_datetime(base_date, "18:05")
@@ -1021,7 +1021,7 @@ class TestSevereJetLag:
         This test validates both issues are resolved.
         """
         generator = ScheduleGenerator()
-        base_date = datetime(2026, 1, 15)
+        base_date = datetime.now() + timedelta(days=7)
 
         # QF74: SFO 20:15 → SYD 06:10+2 (arrives 2 days later!)
         departure = make_flight_datetime(base_date, "20:15")
@@ -1091,7 +1091,7 @@ class TestSevereJetLag:
         Evening departure, afternoon arrival.
         """
         generator = ScheduleGenerator()
-        base_date = datetime(2026, 1, 20)
+        base_date = datetime.now() + timedelta(days=10)
 
         # QF73: SYD 21:25 → SFO 15:55 same day
         departure = make_flight_datetime(base_date, "21:25")
@@ -1181,7 +1181,7 @@ class TestPracticalValidation:
         This is a cross-cutting test that checks all 20 flight scenarios.
         """
         generator = ScheduleGenerator()
-        base_date = datetime(2026, 1, 15)
+        base_date = datetime.now() + timedelta(days=7)
 
         departure = make_flight_datetime(base_date, depart_time)
         arrival = make_flight_datetime(base_date, arrive_time, day_offset=arrive_day)
@@ -1246,7 +1246,7 @@ class TestPracticalValidation:
         on the arrival day should not be scheduled before the arrival time.
         """
         generator = ScheduleGenerator()
-        base_date = datetime(2026, 1, 15)
+        base_date = datetime.now() + timedelta(days=7)
 
         departure = make_flight_datetime(base_date, depart_time)
         arrival = make_flight_datetime(base_date, arrive_time, day_offset=arrive_day)
@@ -1354,7 +1354,7 @@ class TestIntensityVariations:
         - No critical validation errors
         """
         generator = ScheduleGenerator()
-        base_date = datetime(2026, 1, 15)
+        base_date = datetime.now() + timedelta(days=7)
 
         departure = make_flight_datetime(base_date, depart_time)
         arrival = make_flight_datetime(base_date, arrive_time, day_offset=arrive_day)
@@ -1433,7 +1433,7 @@ class TestIntensityVariations:
         from circadian.science.shift_calculator import INTENSITY_CONFIGS, ShiftCalculator
 
         generator = ScheduleGenerator()
-        base_date = datetime(2026, 1, 15)
+        base_date = datetime.now() + timedelta(days=7)
 
         departure = make_flight_datetime(base_date, depart_time)
         arrival = make_flight_datetime(base_date, arrive_time, day_offset=arrive_day)
@@ -1514,7 +1514,7 @@ class TestInterventionPresence:
         from helpers import get_interventions_by_type
 
         generator = ScheduleGenerator()
-        base_date = datetime(2026, 1, 15)
+        base_date = datetime.now() + timedelta(days=7)
 
         departure = make_flight_datetime(base_date, depart_time)
         arrival = make_flight_datetime(base_date, arrive_time, day_offset=arrive_day)
@@ -1557,7 +1557,7 @@ class TestInterventionPresence:
         from helpers import get_interventions_by_type
 
         generator = ScheduleGenerator()
-        base_date = datetime(2026, 1, 15)
+        base_date = datetime.now() + timedelta(days=7)
 
         # SQ31: SFO 09:40 → SIN 19:05+1 (early morning departure)
         departure = make_flight_datetime(base_date, "09:40")
@@ -1614,7 +1614,7 @@ class TestInterventionPresence:
         from helpers import get_interventions_by_type
 
         generator = ScheduleGenerator()
-        base_date = datetime(2026, 1, 15)
+        base_date = datetime.now() + timedelta(days=7)
 
         departure = make_flight_datetime(base_date, depart_time)
         arrival = make_flight_datetime(base_date, arrive_time, day_offset=arrive_day)

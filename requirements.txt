@@ -5,3 +5,7 @@
 numpy>=1.24.0           # Numerical computations
 python-dateutil>=2.8.0  # Robust ISO 8601 datetime parsing
 # Note: zoneinfo is built-in since Python 3.9 (no pytz needed)
+
+# Testing
+time-machine>=2.10.0    # C-level time mocking (catches all datetime calls including in dependencies)
+pytest>=7.0.0           # Test framework
