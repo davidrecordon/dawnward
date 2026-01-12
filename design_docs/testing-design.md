@@ -487,6 +487,55 @@ When adding new test flights:
 
 ---
 
+## Time Mocking for Deterministic Tests
+
+**Problem:** Tests with hardcoded dates (e.g., `2026-01-15`) fail when the current date passes them, because the scheduler calculates prep days relative to "now" and may reject past dates.
+
+**Solution:** Use the `time-machine` library for C-level time mocking that catches ALL datetime calls, including in third-party dependencies like Arcascope.
+
+### Why time-machine over freezegun?
+
+- **C-level patching** - Catches `datetime.now()` calls in compiled C extensions and all dependencies
+- **Timezone/DST aware** - More reliable for timezone-heavy circadian calculations
+- **Serverless compatible** - Works on Vercel Python runtime without compilation issues
+
+### Fixtures
+
+The `frozen_time` fixture in `conftest.py` freezes time to January 1, 2026 at noon UTC:
+
+```python
+import time_machine
+
+FROZEN_TIME = "2026-01-01T12:00:00"
+
+@pytest.fixture
+def frozen_time():
+    """Freeze time for tests with hardcoded dates."""
+    with time_machine.travel(FROZEN_TIME, tick=False):
+        yield
+```
+
+### When to Use
+
+**Use `frozen_time` fixture** for tests with hardcoded dates that must be in the future:
+- Tests in `test_timezone_handling.py` with specific flight dates
+- Tests in `test_user_preferences.py` with hardcoded January 2026 dates
+
+**Use relative dates** for tests that don't need specific dates:
+- `test_realistic_flights.py` uses `datetime.now() + timedelta(days=7)`
+
+**No mocking needed** for tests using `_generate_phases()` helper:
+- The `PhaseGenerator` doesn't check current time
+- Only tests using `generate_schedule()` without `current_datetime` parameter are vulnerable
+
+### Adding New Tests
+
+1. If your test has hardcoded dates, add `frozen_time` as a fixture parameter
+2. Ensure hardcoded dates are **after** the frozen time (Jan 1, 2026)
+3. Or use relative dates: `datetime.now() + timedelta(days=N)`
+
+---
+
 ## Spot-Check Protocol
 
 For ongoing validation beyond automated tests, use this manual spot-check protocol:

@@ -291,7 +291,7 @@ This project uses Claude Code plugins that should be invoked for significant wor
 
 ## Testing
 
-**TypeScript (Vitest)**: ~340 tests covering utility functions and components
+**TypeScript (Vitest)**: ~360 tests covering utility functions and components
 
 - `src/lib/__tests__/time-utils.test.ts` - Date/time formatting, timezone-aware operations
 - `src/lib/__tests__/timezone-utils.test.ts` - Flight duration calculation, timezone shifts
@@ -327,6 +327,9 @@ This project uses Claude Code plugins that should be invoked for significant wor
 - `test_sorting.py` - Intervention sorting, late-night handling, sleep_target near departure filtering
 - `test_timezone_handling.py` - Phase timezone handling, is_in_transit flag
 - `test_mcp_tools.py` - MCP tool implementations (phase shift, adaptation plan)
+- `conftest.py` - Shared fixtures including `frozen_time` for deterministic date testing
+
+**Time Mocking (Python)**: Uses `time-machine` for C-level time mocking that catches all `datetime.now()` calls including in dependencies like Arcascope. Tests with hardcoded dates use the `frozen_time` fixture (freezes to Jan 1, 2026). Tests needing flexibility use relative dates (`datetime.now() + timedelta(days=N)`).
 
 ## Design Documents
 
