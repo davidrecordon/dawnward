@@ -21,7 +21,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
 import {
   getInterventionStyle,
   formatTime,
@@ -29,6 +28,7 @@ import {
   isEditableIntervention,
 } from "@/lib/intervention-utils";
 import { useMediaQuery, MD_BREAKPOINT_QUERY } from "@/hooks/use-media-query";
+import { TimeSelect } from "@/components/ui/time-select";
 import type { Intervention, InterventionActual } from "@/types/schedule";
 
 type ActualStatus = "as_planned" | "modified" | "skipped";
@@ -252,15 +252,13 @@ export function RecordActualSheet({
         </div>
         {status === "modified" && (
           <div className="mt-3 pl-7">
-            <Label htmlFor="actual-time" className="text-sm text-slate-600">
+            <Label className="text-sm text-slate-600">
               {isPast ? "Actual time" : "Planned time"}
             </Label>
-            <Input
-              id="actual-time"
-              type="time"
+            <TimeSelect
               value={actualTime}
-              onChange={(e) => setActualTime(e.target.value)}
-              className="mt-1 w-32"
+              onChange={setActualTime}
+              className="mt-1 w-36"
             />
           </div>
         )}
