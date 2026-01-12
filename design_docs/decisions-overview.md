@@ -78,6 +78,30 @@
 - Uses caffeine (boolean)
 - Caffeine cutoff hours before sleep
 
+### Trip Editing & Actuals Tracking
+
+Authenticated users can edit trip preferences and record what actually happened vs. planned.
+
+**Core Decisions:**
+
+- **Default compliance assumption** — Interventions are assumed completed as planned unless explicitly recorded otherwise. No check-offs required; silence = compliance.
+- **Wake/sleep anchors** — `wake_target` and `sleep_target` cannot be skipped. They anchor the schedule and must have a recorded time.
+- **Skippable interventions** — Melatonin, light seeking, and other interventions can be marked as skipped.
+- **Tense-aware UI** — Past interventions show "Done as planned" / "Done at different time" / "Skipped". Future interventions show "Will do as planned" / "Will do at different time" / "Will skip".
+- **Smart deviation detection** — Cross-midnight times handled correctly (e.g., sleep target 11 PM, actual 2 AM = 3 hours late, not 21 hours early).
+- **15-minute intervals** — Time picker uses 15-minute increments only.
+- **Parent-child cascade** — Editing a parent intervention (like wake time) cascades changes to nested children (like light seeking).
+
+**Editable Preferences:**
+
+- Caffeine strategy (on/off)
+- Melatonin (on/off)
+- Schedule intensity (gentle/balanced/aggressive)
+
+**Not Editable:** Origin, destination, flight times — changing these means creating a new trip.
+
+**Implementation:** Phases 1-2 complete (UI, recording, preference editing). Phases 3-4 pending (model state snapshots, full Forger99 recalculation). Phase 5 future (Eight Sleep auto-actuals).
+
 ---
 
 ## MCP Interface
@@ -165,24 +189,28 @@ Key tables (full SQL in backend design doc):
 | Curate airport JSON           | DONE — 7,168 airports in public/data/airports.json |
 | Phase 1 Auth (Google sign-in) | DONE — JWT sessions, protected routes, user prefs  |
 | Shareable URLs                | DONE — `/s/[code]` short links, trip history page  |
+| Trip Editing (Phases 1-2)     | DONE — Preference editing, actuals recording UI    |
 | Set up hello@dawnward.app     | TODO — Used for Google OAuth consent screen        |
 | Phase 2 Auth (Calendar sync)  | TODO — Add calendar.events scope, sync API         |
+| Trip Editing (Phases 3-4)     | TODO — Model state snapshots, Forger99 recalc      |
 
 ---
 
 ## Artifacts Reference
 
-| Artifact           | Location                                 |
-| ------------------ | ---------------------------------------- |
-| Science research   | `science-methodology.md`                 |
-| Backend design doc | `backend-design.md`                      |
-| Auth design doc    | `auth-design.md`                         |
-| Frontend design    | `frontend-design.md`                     |
-| Brand guidelines   | `brand.md`                               |
-| UI mockup          | `ui-v2.html`                             |
-| Testing design doc | `testing-design.md`                      |
-| This decisions doc | `decisions-overview.md`                  |
-| Eight Sleep spec   | `exploration/eight-sleep-integration.md` |
-| Config audit       | `exploration/configuration-audit.md`     |
-| Shovel-ready specs | `shovel_ready/*.md`                      |
-| Completed designs  | `completed/*.md`                         |
+| Artifact              | Location                                 |
+| --------------------- | ---------------------------------------- |
+| Science research      | `science-methodology.md`                 |
+| Backend design doc    | `backend-design.md`                      |
+| Auth design doc       | `auth-design.md`                         |
+| Frontend design       | `frontend-design.md`                     |
+| Brand guidelines      | `brand.md`                               |
+| UI mockup             | `ui-v2.html`                             |
+| Testing design doc    | `testing-design.md`                      |
+| This decisions doc    | `decisions-overview.md`                  |
+| Trip editing spec     | `completed/trip-editing-spec.md`         |
+| Eight Sleep spec      | `exploration/eight-sleep-integration.md` |
+| Actuals UX ideas      | `exploration/actuals-ux-ideas.md`        |
+| Config audit          | `exploration/configuration-audit.md`     |
+| Shovel-ready specs    | `shovel_ready/*.md`                      |
+| Completed designs     | `completed/*.md`                         |
