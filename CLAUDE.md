@@ -199,11 +199,12 @@ Public read-only JSON-RPC 2.0 endpoint at `POST /api/mcp` for AI assistants to q
 
 **Files:**
 
-- `src/app/api/mcp/route.ts` - JSON-RPC handler
+- `src/app/api/mcp/route.ts` - JSON-RPC handler (TypeScript)
 - `src/lib/mcp/types.ts` - Types and Zod schemas
 - `src/lib/mcp/tool-definitions.ts` - Tool JSON schemas
 - `src/lib/rate-limiter.ts` - Sliding window rate limiter
 - `src/lib/ip-utils.ts` - IP extraction from headers
+- `api/mcp/tools.py` - Vercel Python endpoint (internal, called by route.ts)
 - `api/_python/mcp_tools.py` - Python tool implementations
 
 ## Security Considerations
@@ -290,7 +291,7 @@ This project uses Claude Code plugins that should be invoked for significant wor
 
 ## Testing
 
-**TypeScript (Vitest)**: ~340 tests covering utility functions and components
+**TypeScript (Vitest)**: ~360 tests covering utility functions and components
 
 - `src/lib/__tests__/time-utils.test.ts` - Date/time formatting, timezone-aware operations
 - `src/lib/__tests__/timezone-utils.test.ts` - Flight duration calculation, timezone shifts
@@ -326,6 +327,9 @@ This project uses Claude Code plugins that should be invoked for significant wor
 - `test_sorting.py` - Intervention sorting, late-night handling, sleep_target near departure filtering
 - `test_timezone_handling.py` - Phase timezone handling, is_in_transit flag
 - `test_mcp_tools.py` - MCP tool implementations (phase shift, adaptation plan)
+- `conftest.py` - Shared fixtures including `frozen_time` for deterministic date testing
+
+**Time Mocking (Python)**: Uses `time-machine` for C-level time mocking that catches all `datetime.now()` calls including in dependencies like Arcascope. Tests with hardcoded dates use the `frozen_time` fixture (freezes to Jan 1, 2026). Tests needing flexibility use relative dates (`datetime.now() + timedelta(days=N)`).
 
 ## Design Documents
 

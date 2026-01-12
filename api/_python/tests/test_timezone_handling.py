@@ -359,19 +359,19 @@ class TestUlrFlightDetection:
 class TestUlrSleepWindows:
     """Test ULR sleep window generation and offset calculation."""
 
-    def test_ulr_sleep_windows_have_flight_offset_hours(self):
+    def test_ulr_sleep_windows_have_flight_offset_hours(self, frozen_time):
         """ULR sleep windows should have flight_offset_hours in final schedule."""
         from circadian.scheduler_v2 import ScheduleGeneratorV2
         from circadian.types import ScheduleRequest
 
-        # SFO → SIN: 17h flight
+        # SFO → SIN: 17h flight (dates are after frozen_time of Jan 1, 2026)
         request = ScheduleRequest(
             legs=[
                 TripLeg(
                     origin_tz="America/Los_Angeles",
                     dest_tz="Asia/Singapore",
-                    departure_datetime="2026-01-11T09:45",
-                    arrival_datetime="2026-01-12T19:10",
+                    departure_datetime="2026-01-15T09:45",
+                    arrival_datetime="2026-01-16T19:10",
                 )
             ],
             prep_days=3,
@@ -397,7 +397,7 @@ class TestUlrSleepWindows:
             )
             assert nap.flight_offset_hours >= 0, "flight_offset_hours should be non-negative"
 
-    def test_ulr_flight_duration_calculated_in_utc(self):
+    def test_ulr_flight_duration_calculated_in_utc(self, frozen_time):
         """Flight duration should be calculated in UTC, not naive local times."""
         from circadian.circadian_math import calculate_timezone_shift
 
@@ -408,8 +408,8 @@ class TestUlrSleepWindows:
         leg = TripLeg(
             origin_tz="America/Los_Angeles",
             dest_tz="Asia/Singapore",
-            departure_datetime="2026-01-11T09:45",
-            arrival_datetime="2026-01-12T19:10",
+            departure_datetime="2026-01-15T09:45",
+            arrival_datetime="2026-01-16T19:10",
         )
 
         dep_dt = datetime.fromisoformat(leg.departure_datetime)
@@ -441,20 +441,20 @@ class TestUlrSleepWindows:
 class TestWakeTargetCapping:
     """Test that wake_target is capped for pre_departure phases."""
 
-    def test_wake_target_capped_3h_before_departure(self):
+    def test_wake_target_capped_3h_before_departure(self, frozen_time):
         """Wake target should be capped to 3h before departure on flight day."""
         from circadian.scheduler_v2 import ScheduleGeneratorV2
         from circadian.types import ScheduleRequest
 
         # Early morning departure where circadian wake would be after flight
-        # SFO → SIN: 9:45 AM departure
+        # SFO → SIN: 9:45 AM departure (dates after frozen_time of Jan 1, 2026)
         request = ScheduleRequest(
             legs=[
                 TripLeg(
                     origin_tz="America/Los_Angeles",
                     dest_tz="Asia/Singapore",
-                    departure_datetime="2026-01-11T09:45",
-                    arrival_datetime="2026-01-12T19:10",
+                    departure_datetime="2026-01-15T09:45",
+                    arrival_datetime="2026-01-16T19:10",
                 )
             ],
             prep_days=3,

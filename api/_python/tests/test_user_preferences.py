@@ -18,7 +18,10 @@ from circadian.types import ScheduleRequest, TripLeg
 
 
 class TestCaffeineCutoffHours:
-    """Tests that caffeine_cutoff_hours affects caffeine_cutoff intervention timing."""
+    """Tests that caffeine_cutoff_hours affects caffeine_cutoff intervention timing.
+
+    Uses frozen_time fixture to ensure tests work regardless of current date.
+    """
 
     def _create_request(self, caffeine_cutoff_hours: int) -> ScheduleRequest:
         """Create a standard westbound request with specified caffeine cutoff."""
@@ -39,7 +42,7 @@ class TestCaffeineCutoffHours:
             caffeine_cutoff_hours=caffeine_cutoff_hours,
         )
 
-    def test_cutoff_6h_before_sleep(self):
+    def test_cutoff_6h_before_sleep(self, frozen_time):
         """6-hour cutoff with 23:00 sleep should give 17:00 cutoff."""
         generator = ScheduleGenerator()
         request = self._create_request(caffeine_cutoff_hours=6)
@@ -50,7 +53,7 @@ class TestCaffeineCutoffHours:
         assert len(cutoffs) >= 1, "Should have caffeine_cutoff on prep day"
         assert cutoffs[0].time == "17:00", f"6h before 23:00 should be 17:00, got {cutoffs[0].time}"
 
-    def test_cutoff_8h_before_sleep(self):
+    def test_cutoff_8h_before_sleep(self, frozen_time):
         """8-hour cutoff with 23:00 sleep should give 15:00 cutoff."""
         generator = ScheduleGenerator()
         request = self._create_request(caffeine_cutoff_hours=8)
@@ -60,7 +63,7 @@ class TestCaffeineCutoffHours:
         assert len(cutoffs) >= 1, "Should have caffeine_cutoff on prep day"
         assert cutoffs[0].time == "15:00", f"8h before 23:00 should be 15:00, got {cutoffs[0].time}"
 
-    def test_cutoff_10h_before_sleep(self):
+    def test_cutoff_10h_before_sleep(self, frozen_time):
         """10-hour cutoff with 23:00 sleep should give 13:00 cutoff."""
         generator = ScheduleGenerator()
         request = self._create_request(caffeine_cutoff_hours=10)
@@ -72,7 +75,7 @@ class TestCaffeineCutoffHours:
             f"10h before 23:00 should be 13:00, got {cutoffs[0].time}"
         )
 
-    def test_cutoff_12h_before_sleep(self):
+    def test_cutoff_12h_before_sleep(self, frozen_time):
         """12-hour cutoff with 23:00 sleep should give 11:00 cutoff."""
         generator = ScheduleGenerator()
         request = self._create_request(caffeine_cutoff_hours=12)
@@ -84,7 +87,7 @@ class TestCaffeineCutoffHours:
             f"12h before 23:00 should be 11:00, got {cutoffs[0].time}"
         )
 
-    def test_different_cutoffs_produce_different_times(self):
+    def test_different_cutoffs_produce_different_times(self, frozen_time):
         """Verify that different cutoff settings produce measurably different times."""
         generator = ScheduleGenerator()
 
@@ -104,7 +107,10 @@ class TestCaffeineCutoffHours:
 
 
 class TestLightExposureMinutes:
-    """Tests that light_exposure_minutes affects light intervention duration."""
+    """Tests that light_exposure_minutes affects light intervention duration.
+
+    Uses frozen_time fixture to ensure tests work regardless of current date.
+    """
 
     def _create_request(self, light_exposure_minutes: int) -> ScheduleRequest:
         """Create a standard eastbound request with specified light duration."""
@@ -125,7 +131,7 @@ class TestLightExposureMinutes:
             light_exposure_minutes=light_exposure_minutes,
         )
 
-    def test_light_duration_30min(self):
+    def test_light_duration_30min(self, frozen_time):
         """30-minute light exposure setting should produce 30-min interventions."""
         generator = ScheduleGenerator()
         request = self._create_request(light_exposure_minutes=30)
@@ -137,7 +143,7 @@ class TestLightExposureMinutes:
             f"Duration should be 30 min, got {light_seeks[0].duration_min}"
         )
 
-    def test_light_duration_45min(self):
+    def test_light_duration_45min(self, frozen_time):
         """45-minute light exposure setting should produce 45-min interventions."""
         generator = ScheduleGenerator()
         request = self._create_request(light_exposure_minutes=45)
@@ -149,7 +155,7 @@ class TestLightExposureMinutes:
             f"Duration should be 45 min, got {light_seeks[0].duration_min}"
         )
 
-    def test_light_duration_60min(self):
+    def test_light_duration_60min(self, frozen_time):
         """60-minute light exposure setting should produce 60-min interventions."""
         generator = ScheduleGenerator()
         request = self._create_request(light_exposure_minutes=60)
@@ -161,7 +167,7 @@ class TestLightExposureMinutes:
             f"Duration should be 60 min, got {light_seeks[0].duration_min}"
         )
 
-    def test_light_duration_90min(self):
+    def test_light_duration_90min(self, frozen_time):
         """90-minute light exposure setting should produce 90-min interventions."""
         generator = ScheduleGenerator()
         request = self._create_request(light_exposure_minutes=90)
@@ -173,7 +179,7 @@ class TestLightExposureMinutes:
             f"Duration should be 90 min, got {light_seeks[0].duration_min}"
         )
 
-    def test_different_durations_produce_different_values(self):
+    def test_different_durations_produce_different_values(self, frozen_time):
         """Verify that different duration settings produce measurably different durations."""
         generator = ScheduleGenerator()
 

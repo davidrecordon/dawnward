@@ -61,18 +61,21 @@ These are from peer-reviewed circadian research. Changing breaks the Forger99 mo
 
 #### Nap Windows (`sleep_pressure.py`)
 
-| Line | Constant                     | Value | Purpose                         |
-| ---- | ---------------------------- | ----- | ------------------------------- |
-| 33   | `STANDARD_NAP_START_PERCENT` | 0.30  | 30% into wake period            |
-| 34   | `STANDARD_NAP_END_PERCENT`   | 0.50  | 50% into wake period            |
-| 35   | `HIGH_DEBT_NAP_START_PERCENT`| 0.25  | Earlier window when sleep-deprived |
-| 36   | `HIGH_DEBT_NAP_END_PERCENT`  | 0.55  | Wider window when sleep-deprived |
-| 192  | Arrival nap cutoff           | 13:00 | 1:00 PM hard cutoff             |
-| 206  | Settle-in time               | 45min | Buffer after arrival            |
+| Line | Constant                      | Value | Purpose                            |
+| ---- | ----------------------------- | ----- | ---------------------------------- |
+| 33   | `STANDARD_NAP_START_PERCENT`  | 0.30  | 30% into wake period               |
+| 34   | `STANDARD_NAP_END_PERCENT`    | 0.50  | 50% into wake period               |
+| 35   | `HIGH_DEBT_NAP_START_PERCENT` | 0.25  | Earlier window when sleep-deprived |
+| 36   | `HIGH_DEBT_NAP_END_PERCENT`   | 0.55  | Wider window when sleep-deprived   |
+| 39   | `ARRIVAL_NAP_CUTOFF_HOUR`     | 13    | 1:00 PM - no arrival naps after    |
+| 40   | `ARRIVAL_SETTLE_IN_MINUTES`   | 45    | Buffer time after arrival          |
 
-### Category 2: Algorithm Configuration (Could Centralize)
+### Category 2: Algorithm Configuration (Keep as Module-Level Constants)
 
-System behavior that could move to a config file.
+System behavior constants. **Not recommended to centralize** - these are already well-organized
+as module-level constants co-located with their usage. Centralizing would increase coupling
+between independent modules without meaningful benefit. The current pattern of named constants
+at the top of each module is the right choice for this codebase size.
 
 #### Phase Generation (`phase_generator.py`)
 
@@ -103,10 +106,10 @@ System behavior that could move to a config file.
 
 #### Scheduler (`scheduler_v2.py`)
 
-| Line | Constant                 | Value | Purpose                    |
-| ---- | ------------------------ | ----- | -------------------------- |
-| 112  | Short flight threshold   | 6h    | Skip in-transit < 6h       |
-| 198  | Past intervention buffer | 30min | Grace period for filtering |
+| Line | Constant                           | Value | Purpose                    |
+| ---- | ---------------------------------- | ----- | -------------------------- |
+| 34   | `SHORT_FLIGHT_THRESHOLD_HOURS`     | 6     | Skip in-transit < 6h       |
+| 35   | `PAST_INTERVENTION_BUFFER_MINUTES` | 30    | Grace period for filtering |
 
 ---
 
@@ -161,7 +164,7 @@ const PHASE_ORDER: Record<Phase, number> = {
   preparation: 0,
   pre_departure: 1,
   in_transit: 2,
-  in_transit_ulr: 2,  // Ultra-long-range flights (12+ hours)
+  in_transit_ulr: 2, // Ultra-long-range flights (12+ hours)
   post_arrival: 3,
   adaptation: 4,
 };
@@ -215,19 +218,20 @@ Already well-organized with `getInterventionStyle()` function providing semantic
 
 ### Python Tools Endpoint (`api/mcp/tools.py`)
 
-| Line | Constant          | Value   | Purpose                           |
-| ---- | ----------------- | ------- | --------------------------------- |
-| 24   | `MAX_BODY_SIZE`   | 64KB    | Request body limit                |
+| Line | Constant          | Value   | Purpose                             |
+| ---- | ----------------- | ------- | ----------------------------------- |
+| 24   | `MAX_BODY_SIZE`   | 64KB    | Request body limit                  |
 | 25   | `INTERNAL_SECRET` | env var | Internal auth (MCP_INTERNAL_SECRET) |
 
 ### Type Definitions (`src/lib/mcp/types.ts`)
 
-| Line  | Constant              | Value | Purpose                      |
-| ----- | --------------------- | ----- | ---------------------------- |
+| Line  | Constant              | Value  | Purpose                     |
+| ----- | --------------------- | ------ | --------------------------- |
 | 35-43 | `JSON_RPC_ERRORS`     | object | Standard JSON-RPC 2.0 codes |
-| 132   | `MAX_TIMEZONE_LENGTH` | 64    | IANA timezone validation     |
+| 132   | `MAX_TIMEZONE_LENGTH` | 64     | IANA timezone validation    |
 
 **JSON_RPC_ERRORS values:**
+
 ```typescript
 PARSE_ERROR: -32700,
 INVALID_REQUEST: -32600,
@@ -243,18 +247,18 @@ RATE_LIMIT_EXCEEDED: -32001,  // Custom
 
 ### Rate Limiter (`src/lib/rate-limiter.ts`)
 
-| Line | Constant           | Value    | Purpose                      |
-| ---- | ------------------ | -------- | ---------------------------- |
-| 9    | `ONE_HOUR_MS`      | 3600000  | 1 hour in milliseconds       |
-| 16   | `CLEANUP_INTERVAL` | 1000     | Requests before cleanup runs |
-| 19   | `MAX_TRACKED_IPS`  | 10000    | Memory protection limit      |
+| Line | Constant           | Value   | Purpose                      |
+| ---- | ------------------ | ------- | ---------------------------- |
+| 9    | `ONE_HOUR_MS`      | 3600000 | 1 hour in milliseconds       |
+| 16   | `CLEANUP_INTERVAL` | 1000    | Requests before cleanup runs |
+| 19   | `MAX_TRACKED_IPS`  | 10000   | Memory protection limit      |
 
 ### IP Utilities (`src/lib/ip-utils.ts`)
 
-| Line | Constant       | Value  | Purpose         |
-| ---- | -------------- | ------ | --------------- |
-| 8    | `IPV4_PATTERN` | regex  | IPv4 validation |
-| 9    | `IPV6_PATTERN` | regex  | IPv6 validation |
+| Line | Constant       | Value | Purpose         |
+| ---- | -------------- | ----- | --------------- |
+| 8    | `IPV4_PATTERN` | regex | IPv4 validation |
+| 9    | `IPV6_PATTERN` | regex | IPv6 validation |
 
 ---
 
@@ -304,56 +308,47 @@ lightExposureMinutes Int     @default(60)
 
 ## Configuration Duplication Issues
 
-### Intensity Rates (Soft Duplication)
+### Intensity Rates (Fixed)
 
-The schedule intensity rates are defined in `shift_calculator.py` but documented/hardcoded in multiple other locations:
+The schedule intensity rates are defined in `shift_calculator.py`:
 
 | Location                    | Type             | Content                                        |
 | --------------------------- | ---------------- | ---------------------------------------------- |
 | `shift_calculator.py:51-64` | Code (canonical) | `INTENSITY_CONFIGS` dict - **source of truth** |
-| `types.py:86-90`            | Comments         | Duplicated rate values in docstring            |
-| `test_shift_rates.py:36-38` | Test comments    | Same rates documented                          |
-| `test_shift_rates.py:44-57` | Test assertions  | Hardcoded values (expected - validates code)   |
+| `types.py:86-87`            | Comments         | Cross-reference to canonical source (fixed)    |
+| `test_shift_rates.py:44-57` | Test assertions  | Hardcoded values (validates code - correct)    |
 
-**Risk:** If rates in `INTENSITY_CONFIGS` change, comments become stale. Test assertions would fail (good), but comments would not (bad).
-
-**Recommended fix:** Remove inline rate values from comments in `types.py`, add cross-reference to canonical source.
+**Status:** Fixed. `types.py` now references `shift_calculator.py` instead of duplicating rate values.
 
 ---
 
-## Recommended Future Config Structure
+## Why Not Centralize?
 
-### Python: `api/_python/circadian/config/`
+After code-simplifier analysis (January 2026), we decided **against** creating central config files:
 
-```
-config/
-├── science.py          # Immutable PRC/marker constants
-├── algorithm.py        # System behavior (buffers, thresholds)
-└── defaults.py         # Default user preferences
-```
+| Consideration        | Assessment                                                            |
+| -------------------- | --------------------------------------------------------------------- |
+| **Coupling**         | Central config creates imports between otherwise independent modules  |
+| **Cohesion**         | Constants are clearer when co-located with their usage                |
+| **Scale**            | ~35 algorithm constants across 5 files doesn't justify infrastructure |
+| **Tuning frequency** | These are science-derived values, rarely changed                      |
 
-### TypeScript: `src/config/`
-
-```
-config/
-├── constants.ts        # System constants (timeouts, increments)
-├── defaults.ts         # Default form values (merge with trip-form.ts)
-└── design-tokens.ts    # Colors, spacing (optional)
-```
+The current pattern of **module-level named constants** is appropriate for this codebase.
+Constants are already discoverable via this audit document.
 
 ---
 
 ## Summary
 
-| Category          | Count | Action                                          |
-| ----------------- | ----- | ----------------------------------------------- |
-| Immutable Science | ~36   | Leave as-is, document sources                   |
-| Algorithm Config  | ~35   | Could centralize (low priority)                 |
-| User Preferences  | 10    | All working, 4 future candidates                |
-| Frontend Defaults | ~26   | Mostly centralized, well-organized              |
-| MCP Constants     | ~12   | New endpoint for AI integrations                |
-| Rate Limiting     | ~5    | Memory-safe sliding window implementation       |
-| Duplication       | 1     | Fix soft duplication in intensity rate comments |
+| Category          | Count | Action                                    |
+| ----------------- | ----- | ----------------------------------------- |
+| Immutable Science | ~36   | Leave as-is, document sources             |
+| Algorithm Config  | ~35   | Keep as module-level constants (decided)  |
+| User Preferences  | 10    | All working, 4 future candidates          |
+| Frontend Defaults | ~26   | Mostly centralized, well-organized        |
+| MCP Constants     | ~12   | New endpoint for AI integrations          |
+| Rate Limiting     | ~5    | Memory-safe sliding window implementation |
+| Duplication       | 0     | Fixed (types.py now cross-references)     |
 
 ### Priority Actions
 

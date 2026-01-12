@@ -35,6 +35,10 @@ STANDARD_NAP_END_PERCENT = 0.50  # 50% into wake period
 HIGH_DEBT_NAP_START_PERCENT = 0.25  # Earlier when sleep-deprived
 HIGH_DEBT_NAP_END_PERCENT = 0.55  # Wider window when sleep-deprived
 
+# Arrival-day recovery nap constraints
+ARRIVAL_NAP_CUTOFF_HOUR = 13  # 1:00 PM - no naps after this
+ARRIVAL_SETTLE_IN_MINUTES = 45  # Buffer time after arrival
+
 
 @dataclass
 class NapRecommendation:
@@ -189,7 +193,7 @@ class SleepPressureModel:
         sleep_minutes = time_to_minutes(target_sleep_time)
 
         # Calculate hard cutoff (1pm or 6-8h before sleep, whichever is earlier)
-        one_pm_minutes = 13 * 60  # 1:00 PM
+        one_pm_minutes = ARRIVAL_NAP_CUTOFF_HOUR * 60
         buffer_before_sleep = 7 * 60  # 7 hours
         sleep_cutoff = sleep_minutes - buffer_before_sleep
         if sleep_cutoff < 0:
@@ -202,8 +206,8 @@ class SleepPressureModel:
         if arrival_minutes >= hard_cutoff or arrival_minutes >= 16 * 60:
             return None
 
-        # Nap window starts 30-60 min after arrival (settle in time)
-        settle_in_minutes = 45
+        # Nap window starts after arrival (settle in time)
+        settle_in_minutes = ARRIVAL_SETTLE_IN_MINUTES
         window_start = minutes_to_time(arrival_minutes + settle_in_minutes)
 
         # Window ends at hard cutoff
