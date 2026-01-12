@@ -12,7 +12,9 @@ import {
   MapPin,
   Moon,
   Pill,
+  Plus,
   Settings,
+  X,
 } from "lucide-react";
 import { formatDateTimeLocal } from "@/lib/time-utils";
 import type { Airport } from "@/types/airport";
@@ -27,7 +29,11 @@ import { PrepDaysSlider } from "@/components/prep-days-slider";
 import { FormError } from "@/components/form-error";
 import { DateTimeSelect } from "@/components/ui/datetime-select";
 import { TimeSelect } from "@/components/ui/time-select";
-import type { TripFormState } from "@/types/trip-form";
+import {
+  createEmptyLeg,
+  type TripFormState,
+  type TripLeg,
+} from "@/types/trip-form";
 
 interface TripFormProps {
   formState: TripFormState;
@@ -42,6 +48,10 @@ interface FormErrors {
   destination?: string;
   departureDateTime?: string;
   arrivalDateTime?: string;
+  leg2Origin?: string;
+  leg2Destination?: string;
+  leg2DepartureDateTime?: string;
+  leg2ArrivalDateTime?: string;
   form?: string;
 }
 
@@ -145,10 +155,51 @@ export function TripForm({
     }
   };
 
+  const updateLeg2Field = <K extends keyof TripLeg>(
+    field: K,
+    value: TripLeg[K]
+  ) => {
+    if (!formState.leg2) return;
+    onFormChange({
+      ...formState,
+      leg2: { ...formState.leg2, [field]: value },
+    });
+
+    // Clear leg2 errors when user makes a change
+    const errorKey = `leg2${field.charAt(0).toUpperCase() + field.slice(1)}` as keyof FormErrors;
+    if (errors[errorKey]) {
+      setErrors((prev) => ({ ...prev, [errorKey]: undefined }));
+    }
+    if (errors.form) {
+      setErrors((prev) => ({ ...prev, form: undefined }));
+    }
+  };
+
+  const addLeg2 = () => {
+    // Auto-populate leg 2 origin from leg 1 destination
+    const newLeg = createEmptyLeg();
+    if (formState.destination) {
+      newLeg.origin = formState.destination;
+    }
+    onFormChange({ ...formState, leg2: newLeg });
+  };
+
+  const removeLeg2 = () => {
+    onFormChange({ ...formState, leg2: null });
+    // Clear any leg2 errors
+    setErrors((prev) => ({
+      ...prev,
+      leg2Origin: undefined,
+      leg2Destination: undefined,
+      leg2DepartureDateTime: undefined,
+      leg2ArrivalDateTime: undefined,
+    }));
+  };
+
   const validate = (): boolean => {
     const newErrors: FormErrors = {};
 
-    // Field-level validation
+    // Field-level validation for leg 1
     if (!formState.origin) {
       newErrors.origin = "Please select a departure airport";
     }
@@ -162,7 +213,7 @@ export function TripForm({
       newErrors.arrivalDateTime = "Please select when you arrive";
     }
 
-    // Cross-field validation
+    // Cross-field validation for leg 1
     if (
       formState.origin &&
       formState.destination &&
@@ -176,6 +227,51 @@ export function TripForm({
       const arr = new Date(formState.arrivalDateTime);
       if (arr <= dep) {
         newErrors.form = "Your arrival time needs to be after departure";
+      }
+    }
+
+    // Leg 2 validation (if present)
+    if (formState.leg2) {
+      if (!formState.leg2.origin) {
+        newErrors.leg2Origin = "Please select a departure airport";
+      }
+      if (!formState.leg2.destination) {
+        newErrors.leg2Destination = "Please select an arrival airport";
+      }
+      if (!formState.leg2.departureDateTime) {
+        newErrors.leg2DepartureDateTime = "Please select when you depart";
+      }
+      if (!formState.leg2.arrivalDateTime) {
+        newErrors.leg2ArrivalDateTime = "Please select when you arrive";
+      }
+
+      // Cross-field validation for leg 2
+      if (
+        formState.leg2.origin &&
+        formState.leg2.destination &&
+        formState.leg2.origin.code === formState.leg2.destination.code
+      ) {
+        newErrors.form =
+          "Connection origin and destination can't be the same airport";
+      }
+
+      if (formState.leg2.departureDateTime && formState.leg2.arrivalDateTime) {
+        const dep2 = new Date(formState.leg2.departureDateTime);
+        const arr2 = new Date(formState.leg2.arrivalDateTime);
+        if (arr2 <= dep2) {
+          newErrors.form =
+            "Connection arrival time needs to be after departure";
+        }
+      }
+
+      // Leg 2 must depart after leg 1 arrives
+      if (formState.arrivalDateTime && formState.leg2.departureDateTime) {
+        const leg1Arrival = new Date(formState.arrivalDateTime);
+        const leg2Departure = new Date(formState.leg2.departureDateTime);
+        if (leg2Departure <= leg1Arrival) {
+          newErrors.form =
+            "Connection departure must be after your first flight arrives";
+        }
       }
     }
 
@@ -236,6 +332,15 @@ export function TripForm({
           />
         )}
 
+        {/* Flight 1 header (only shown when leg 2 exists) */}
+        {formState.leg2 && (
+          <div className="flex items-center gap-2">
+            <div className="h-px flex-1 bg-slate-200" />
+            <span className="text-sm font-medium text-slate-500">Flight 1</span>
+            <div className="h-px flex-1 bg-slate-200" />
+          </div>
+        )}
+
         {/* Airport selects */}
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2">
@@ -252,7 +357,17 @@ export function TripForm({
             <Label>Arriving at</Label>
             <AirportSelect
               value={formState.destination}
-              onSelect={(airport) => updateField("destination", airport)}
+              onSelect={(airport) => {
+                updateField("destination", airport);
+                // Auto-update leg 2 origin when leg 1 destination changes
+                if (formState.leg2 && airport) {
+                  onFormChange({
+                    ...formState,
+                    destination: airport,
+                    leg2: { ...formState.leg2, origin: airport },
+                  });
+                }
+              }}
               placeholder="Select destination..."
               hasError={!!errors.destination}
             />
@@ -281,6 +396,89 @@ export function TripForm({
             <FieldError message={errors.arrivalDateTime} />
           </div>
         </div>
+
+        {/* Add Connection button or Flight 2 section */}
+        {!formState.leg2 ? (
+          <button
+            type="button"
+            onClick={addLeg2}
+            className="flex w-full items-center justify-center gap-2 rounded-lg border-2 border-dashed border-slate-200 py-3 text-sm font-medium text-slate-500 transition-colors hover:border-slate-300 hover:bg-slate-50 hover:text-slate-600"
+          >
+            <Plus className="h-4 w-4" />
+            Add Connection
+          </button>
+        ) : (
+          <>
+            {/* Flight 2 header */}
+            <div className="flex items-center gap-2">
+              <div className="h-px flex-1 bg-slate-200" />
+              <span className="text-sm font-medium text-slate-500">
+                Flight 2
+              </span>
+              <button
+                type="button"
+                onClick={removeLeg2}
+                className="rounded p-0.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600"
+                aria-label="Remove connection"
+              >
+                <X className="h-4 w-4" />
+              </button>
+              <div className="h-px flex-1 bg-slate-200" />
+            </div>
+
+            {/* Leg 2 airport selects */}
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label>Departing from</Label>
+                <AirportSelect
+                  value={formState.leg2.origin}
+                  onSelect={(airport) => updateLeg2Field("origin", airport)}
+                  placeholder="Select origin..."
+                  hasError={!!errors.leg2Origin}
+                />
+                <FieldError message={errors.leg2Origin} />
+              </div>
+              <div className="space-y-2">
+                <Label>Arriving at</Label>
+                <AirportSelect
+                  value={formState.leg2.destination}
+                  onSelect={(airport) =>
+                    updateLeg2Field("destination", airport)
+                  }
+                  placeholder="Select destination..."
+                  hasError={!!errors.leg2Destination}
+                />
+                <FieldError message={errors.leg2Destination} />
+              </div>
+            </div>
+
+            {/* Leg 2 datetime pickers */}
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label>Departure</Label>
+                <DateTimeSelect
+                  value={formState.leg2.departureDateTime}
+                  onChange={(value) =>
+                    updateLeg2Field("departureDateTime", value)
+                  }
+                  hasError={!!errors.leg2DepartureDateTime}
+                />
+                <FieldError message={errors.leg2DepartureDateTime} />
+              </div>
+              <div className="space-y-2">
+                <Label>Arrival</Label>
+                <DateTimeSelect
+                  value={formState.leg2.arrivalDateTime}
+                  onChange={(value) =>
+                    updateLeg2Field("arrivalDateTime", value)
+                  }
+                  hasError={!!errors.leg2ArrivalDateTime}
+                />
+                <FieldError message={errors.leg2ArrivalDateTime} />
+              </div>
+            </div>
+          </>
+        )}
 
         <hr className="border-slate-200" />
 

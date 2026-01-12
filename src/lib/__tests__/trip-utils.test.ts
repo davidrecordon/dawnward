@@ -7,6 +7,10 @@ describe("mapSharedScheduleToTripData", () => {
     destTz: "Europe/London",
     departureDatetime: "2025-01-15T10:00",
     arrivalDatetime: "2025-01-16T06:00",
+    leg2OriginTz: null,
+    leg2DestTz: null,
+    leg2DepartureDatetime: null,
+    leg2ArrivalDatetime: null,
     prepDays: 3,
     wakeTime: "07:00",
     sleepTime: "23:00",
@@ -28,6 +32,7 @@ describe("mapSharedScheduleToTripData", () => {
     expect(result.destTz).toBe("Europe/London");
     expect(result.departureDatetime).toBe("2025-01-15T10:00");
     expect(result.arrivalDatetime).toBe("2025-01-16T06:00");
+    expect(result.leg2).toBeNull();
     expect(result.prepDays).toBe(3);
     expect(result.wakeTime).toBe("07:00");
     expect(result.sleepTime).toBe("23:00");
@@ -38,6 +43,37 @@ describe("mapSharedScheduleToTripData", () => {
     expect(result.scheduleIntensity).toBe("balanced");
     expect(result.routeLabel).toBe("SFO → LHR");
     expect(result.code).toBe("abc123");
+  });
+
+  it("maps leg2 correctly when present", () => {
+    const multiLegRecord = {
+      ...mockRecord,
+      leg2OriginTz: "Europe/London",
+      leg2DestTz: "Asia/Tokyo",
+      leg2DepartureDatetime: "2025-01-16T10:00",
+      leg2ArrivalDatetime: "2025-01-17T05:00",
+      routeLabel: "SFO → LHR → NRT",
+    };
+    const result = mapSharedScheduleToTripData(multiLegRecord);
+
+    expect(result.leg2).not.toBeNull();
+    expect(result.leg2!.originTz).toBe("Europe/London");
+    expect(result.leg2!.destTz).toBe("Asia/Tokyo");
+    expect(result.leg2!.departureDatetime).toBe("2025-01-16T10:00");
+    expect(result.leg2!.arrivalDatetime).toBe("2025-01-17T05:00");
+  });
+
+  it("returns null leg2 when partial leg2 fields present", () => {
+    const partialLeg2 = {
+      ...mockRecord,
+      leg2OriginTz: "Europe/London",
+      leg2DestTz: null, // Missing
+      leg2DepartureDatetime: "2025-01-16T10:00",
+      leg2ArrivalDatetime: "2025-01-17T05:00",
+    };
+    const result = mapSharedScheduleToTripData(partialLeg2);
+
+    expect(result.leg2).toBeNull();
   });
 
   it("handles null routeLabel", () => {

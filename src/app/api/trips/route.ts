@@ -21,6 +21,7 @@ const timezoneSchema = z.string().min(1).refine(isValidTimezone, {
 });
 
 const tripRequestSchema = z.object({
+  // Leg 1 (required)
   origin_tz: timezoneSchema,
   dest_tz: timezoneSchema,
   departure_datetime: z
@@ -35,6 +36,26 @@ const tripRequestSchema = z.object({
       DATETIME_PATTERN,
       "Invalid datetime format (expected YYYY-MM-DDTHH:MM)"
     ),
+
+  // Leg 2 (optional connection)
+  leg2_origin_tz: timezoneSchema.optional(),
+  leg2_dest_tz: timezoneSchema.optional(),
+  leg2_departure_datetime: z
+    .string()
+    .regex(
+      DATETIME_PATTERN,
+      "Invalid datetime format (expected YYYY-MM-DDTHH:MM)"
+    )
+    .optional(),
+  leg2_arrival_datetime: z
+    .string()
+    .regex(
+      DATETIME_PATTERN,
+      "Invalid datetime format (expected YYYY-MM-DDTHH:MM)"
+    )
+    .optional(),
+
+  // Preferences
   prep_days: z.number().int().min(1).max(7),
   wake_time: z
     .string()
@@ -88,6 +109,10 @@ export async function POST(request: Request) {
           destTz: data.dest_tz,
           departureDatetime: data.departure_datetime,
           arrivalDatetime: data.arrival_datetime,
+          leg2OriginTz: data.leg2_origin_tz ?? null,
+          leg2DestTz: data.leg2_dest_tz ?? null,
+          leg2DepartureDatetime: data.leg2_departure_datetime ?? null,
+          leg2ArrivalDatetime: data.leg2_arrival_datetime ?? null,
           prepDays: data.prep_days,
           wakeTime: data.wake_time,
           sleepTime: data.sleep_time,
@@ -114,6 +139,10 @@ export async function POST(request: Request) {
         destTz: data.dest_tz,
         departureDatetime: data.departure_datetime,
         arrivalDatetime: data.arrival_datetime,
+        leg2OriginTz: data.leg2_origin_tz ?? null,
+        leg2DestTz: data.leg2_dest_tz ?? null,
+        leg2DepartureDatetime: data.leg2_departure_datetime ?? null,
+        leg2ArrivalDatetime: data.leg2_arrival_datetime ?? null,
         prepDays: data.prep_days,
         wakeTime: data.wake_time,
         sleepTime: data.sleep_time,

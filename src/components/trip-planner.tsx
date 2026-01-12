@@ -12,16 +12,36 @@ import { defaultFormState, type TripFormState } from "@/types/trip-form";
 import { getFormState, saveFormState } from "@/lib/schedule-storage";
 import type { UserPreferences } from "@/types/user-preferences";
 
+/** Build route label from form state (e.g. "SFO → LAX → JFK") */
+function buildRouteLabel(formState: TripFormState): string | undefined {
+  const leg1Origin = formState.origin?.code;
+  const leg1Dest = formState.destination?.code;
+  const leg2Dest = formState.leg2?.destination?.code;
+
+  if (!leg1Origin || !leg1Dest) return undefined;
+  if (leg2Dest) {
+    return `${leg1Origin} → ${leg1Dest} → ${leg2Dest}`;
+  }
+  return `${leg1Origin} → ${leg1Dest}`;
+}
+
 /** Save trip to database and return the trip ID */
 async function saveTripToDb(formState: TripFormState): Promise<string> {
   const response = await fetch("/api/trips", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
+      // Leg 1
       origin_tz: formState.origin?.tz,
       dest_tz: formState.destination?.tz,
       departure_datetime: formState.departureDateTime,
       arrival_datetime: formState.arrivalDateTime,
+      // Leg 2 (if present)
+      leg2_origin_tz: formState.leg2?.origin?.tz,
+      leg2_dest_tz: formState.leg2?.destination?.tz,
+      leg2_departure_datetime: formState.leg2?.departureDateTime || undefined,
+      leg2_arrival_datetime: formState.leg2?.arrivalDateTime || undefined,
+      // Preferences
       prep_days: formState.prepDays,
       wake_time: formState.wakeTime,
       sleep_time: formState.sleepTime,
@@ -30,10 +50,7 @@ async function saveTripToDb(formState: TripFormState): Promise<string> {
       uses_exercise: formState.useExercise,
       nap_preference: formState.napPreference,
       schedule_intensity: formState.scheduleIntensity,
-      route_label:
-        formState.origin?.code && formState.destination?.code
-          ? `${formState.origin.code} → ${formState.destination.code}`
-          : undefined,
+      route_label: buildRouteLabel(formState),
     }),
   });
 
@@ -260,6 +277,7 @@ export function TripPlanner() {
             departureDateTime={formState.departureDateTime}
             arrivalDateTime={formState.arrivalDateTime}
             prepDays={formState.prepDays}
+            leg2={formState.leg2}
           />
 
           {/* Calendar Sync Preview */}

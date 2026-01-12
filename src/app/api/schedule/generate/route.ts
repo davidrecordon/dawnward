@@ -30,6 +30,7 @@ const timezoneSchema = z.string().min(1).refine(isValidTimezone, {
 
 // Zod schema for schedule generation request
 const scheduleRequestSchema = z.object({
+  // Leg 1 (required)
   origin_tz: timezoneSchema,
   dest_tz: timezoneSchema,
   departure_datetime: z
@@ -44,6 +45,26 @@ const scheduleRequestSchema = z.object({
       DATETIME_PATTERN,
       "Invalid datetime format (expected YYYY-MM-DDTHH:MM)"
     ),
+
+  // Leg 2 (optional connection)
+  leg2_origin_tz: timezoneSchema.optional(),
+  leg2_dest_tz: timezoneSchema.optional(),
+  leg2_departure_datetime: z
+    .string()
+    .regex(
+      DATETIME_PATTERN,
+      "Invalid datetime format (expected YYYY-MM-DDTHH:MM)"
+    )
+    .optional(),
+  leg2_arrival_datetime: z
+    .string()
+    .regex(
+      DATETIME_PATTERN,
+      "Invalid datetime format (expected YYYY-MM-DDTHH:MM)"
+    )
+    .optional(),
+
+  // Preferences
   prep_days: z.number().int().min(1).max(7),
   wake_time: z
     .string()
@@ -93,10 +114,17 @@ export async function POST(request: Request) {
 
     // Zod schema already applied defaults, so we can use body directly
     const requestData = {
+      // Leg 1
       origin_tz: body.origin_tz,
       dest_tz: body.dest_tz,
       departure_datetime: body.departure_datetime,
       arrival_datetime: body.arrival_datetime,
+      // Leg 2 (optional)
+      leg2_origin_tz: body.leg2_origin_tz,
+      leg2_dest_tz: body.leg2_dest_tz,
+      leg2_departure_datetime: body.leg2_departure_datetime,
+      leg2_arrival_datetime: body.leg2_arrival_datetime,
+      // Preferences
       prep_days: body.prep_days,
       wake_time: body.wake_time,
       sleep_time: body.sleep_time,
@@ -129,15 +157,27 @@ from circadian.scheduler_v2 import ScheduleGeneratorV2
 with open(sys.argv[2], 'r') as f:
     data = json.load(f)
 
+# Build legs array
+legs = [
+    TripLeg(
+        origin_tz=data['origin_tz'],
+        dest_tz=data['dest_tz'],
+        departure_datetime=data['departure_datetime'],
+        arrival_datetime=data['arrival_datetime'],
+    )
+]
+
+# Add leg 2 if present
+if data.get('leg2_origin_tz') and data.get('leg2_dest_tz') and data.get('leg2_departure_datetime') and data.get('leg2_arrival_datetime'):
+    legs.append(TripLeg(
+        origin_tz=data['leg2_origin_tz'],
+        dest_tz=data['leg2_dest_tz'],
+        departure_datetime=data['leg2_departure_datetime'],
+        arrival_datetime=data['leg2_arrival_datetime'],
+    ))
+
 request = ScheduleRequest(
-    legs=[
-        TripLeg(
-            origin_tz=data['origin_tz'],
-            dest_tz=data['dest_tz'],
-            departure_datetime=data['departure_datetime'],
-            arrival_datetime=data['arrival_datetime'],
-        )
-    ],
+    legs=legs,
     prep_days=data['prep_days'],
     wake_time=data['wake_time'],
     sleep_time=data['sleep_time'],

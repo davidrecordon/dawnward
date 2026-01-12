@@ -138,7 +138,7 @@ describe("POST /api/trips", () => {
       expect(mockedPrisma.sharedSchedule.create).not.toHaveBeenCalled();
     });
 
-    it("checks all 12 input fields for duplicate detection", async () => {
+    it("checks all 16 input fields for duplicate detection (including leg2)", async () => {
       mockedPrisma.sharedSchedule.findFirst.mockResolvedValue(null);
       mockedPrisma.sharedSchedule.create.mockResolvedValue({ id: "trip-123" });
 
@@ -151,6 +151,10 @@ describe("POST /api/trips", () => {
           destTz: "Europe/London",
           departureDatetime: "2026-01-11T20:45",
           arrivalDatetime: "2026-01-12T15:15",
+          leg2OriginTz: null,
+          leg2DestTz: null,
+          leg2DepartureDatetime: null,
+          leg2ArrivalDatetime: null,
           prepDays: 3,
           wakeTime: "07:00",
           sleepTime: "23:00",

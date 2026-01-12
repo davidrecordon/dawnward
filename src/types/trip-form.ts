@@ -1,6 +1,20 @@
 import type { Airport } from "./airport";
 
 /**
+ * A single flight leg (origin, destination, and times)
+ */
+export interface TripLeg {
+  /** Origin airport */
+  origin: Airport | null;
+  /** Destination airport */
+  destination: Airport | null;
+  /** Departure datetime in ISO format for datetime-local input */
+  departureDateTime: string;
+  /** Arrival datetime in ISO format for datetime-local input */
+  arrivalDateTime: string;
+}
+
+/**
  * Nap preference options for schedule generation
  */
 export type NapPreference = "no" | "flight_only" | "all_days";
@@ -41,6 +55,8 @@ export interface TripFormState {
   sleepTime: string;
   /** Number of days before departure to start adapting (1-7) */
   prepDays: number;
+  /** Optional second leg (connection flight) */
+  leg2: TripLeg | null;
 }
 
 /**
@@ -59,4 +75,15 @@ export const defaultFormState: TripFormState = {
   wakeTime: "07:00",
   sleepTime: "22:00",
   prepDays: 3,
+  leg2: null,
 };
+
+/**
+ * Create an empty leg (for adding a connection)
+ */
+export const createEmptyLeg = (): TripLeg => ({
+  origin: null,
+  destination: null,
+  departureDateTime: "",
+  arrivalDateTime: "",
+});

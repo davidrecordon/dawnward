@@ -84,7 +84,7 @@ model SharedSchedule {
   userId String? // null = anonymous user
   user   User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  // Schedule inputs (denormalized for fast regeneration)
+  // Schedule inputs - Leg 1 (denormalized for fast regeneration)
   originTz          String
   destTz            String
   departureDatetime String
@@ -97,6 +97,12 @@ model SharedSchedule {
   usesExercise      Boolean
   napPreference     String @default("flight_only")
   scheduleIntensity String @default("balanced")
+
+  // Schedule inputs - Leg 2 (nullable for single-leg trips)
+  leg2OriginTz          String?
+  leg2DestTz            String?
+  leg2DepartureDatetime String?
+  leg2ArrivalDatetime   String?
 
   // Schedule storage (for editing/recalculation)
   initialScheduleJson  Json?     // First generated schedule (frozen)
