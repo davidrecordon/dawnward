@@ -37,7 +37,7 @@ export function TripPreviewCard({
   const timeShift = React.useMemo(() => {
     if (!origin || !finalDestination) return null;
     return calculateTimeShift(origin.tz, finalDestination.tz);
-  }, [origin, finalDestination]);
+  }, [origin?.tz, finalDestination?.tz]);
 
   // Calculate flight duration for leg 1
   const leg1Duration = React.useMemo(() => {
@@ -50,7 +50,7 @@ export function TripPreviewCard({
       origin.tz,
       destination.tz
     );
-  }, [origin, destination, departureDateTime, arrivalDateTime]);
+  }, [origin?.tz, destination?.tz, departureDateTime, arrivalDateTime]);
 
   // Calculate flight duration for leg 2
   const leg2Duration = React.useMemo(() => {
@@ -68,7 +68,7 @@ export function TripPreviewCard({
       leg2.origin.tz,
       leg2.destination.tz
     );
-  }, [leg2]);
+  }, [leg2?.origin?.tz, leg2?.destination?.tz, leg2?.departureDateTime, leg2?.arrivalDateTime]);
 
   // Calculate layover duration (time between leg1 arrival and leg2 departure)
   const layoverDuration = React.useMemo(() => {
@@ -83,7 +83,7 @@ export function TripPreviewCard({
     const hours = Math.floor(diffMs / (1000 * 60 * 60));
     const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
     return { hours, minutes };
-  }, [arrivalDateTime, leg2, destination]);
+  }, [arrivalDateTime, leg2?.departureDateTime, destination?.tz]);
 
   // For display, use leg1 duration when no leg2, otherwise show total flight time
   const duration = React.useMemo(() => {

@@ -358,14 +358,22 @@ export function TripForm({
             <AirportSelect
               value={formState.destination}
               onSelect={(airport) => {
-                updateField("destination", airport);
-                // Auto-update leg 2 origin when leg 1 destination changes
+                // Single state update - update leg2 origin when destination changes
                 if (formState.leg2 && airport) {
                   onFormChange({
                     ...formState,
                     destination: airport,
                     leg2: { ...formState.leg2, origin: airport },
                   });
+                } else {
+                  onFormChange({ ...formState, destination: airport });
+                }
+                // Clear relevant errors
+                if (errors.destination) {
+                  setErrors((prev) => ({ ...prev, destination: undefined }));
+                }
+                if (errors.form) {
+                  setErrors((prev) => ({ ...prev, form: undefined }));
                 }
               }}
               placeholder="Select destination..."

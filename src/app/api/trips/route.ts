@@ -81,11 +81,12 @@ const tripRequestSchema = z.object({
  */
 export async function POST(request: Request) {
   try {
-    // Check authentication (optional - anonymous users get userId: null)
-    const session = await auth();
+    // Parallelize auth and body parsing to avoid waterfall
+    const [session, rawBody] = await Promise.all([
+      auth(),
+      request.json(),
+    ]);
     const userId = session?.user?.id ?? null;
-
-    const rawBody = await request.json();
 
     // Validate input
     const parseResult = tripRequestSchema.safeParse(rawBody);
