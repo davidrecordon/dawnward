@@ -1,19 +1,28 @@
 "use client";
 
-import { Check, Pencil } from "lucide-react";
+import { Check, Pencil, Plane } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
   getInterventionStyle,
   formatTimeWithTimezone,
   formatFlightOffset,
+  formatInFlightDualTimezones,
 } from "@/lib/intervention-utils";
 import type { Intervention, InterventionActual } from "@/types/schedule";
 
+interface FlightContext {
+  originTimezone: string;
+  destTimezone: string;
+  departureDateTime: string;
+}
+
 interface InterventionCardProps {
   intervention: Intervention;
-  /** Optional timezone to display (shown on Flight Day and Arrival day) */
+  /** Timezone for this intervention's time display */
   timezone?: string;
+  /** Flight context for in-transit dual timezone display */
+  flightContext?: FlightContext;
   /** Card variant: default shows full card, nested shows compact version without time */
   variant?: "default" | "nested";
   /** Optional click handler for recording actuals */
@@ -27,6 +36,7 @@ interface InterventionCardProps {
 export function InterventionCard({
   intervention,
   timezone,
+  flightContext,
   variant = "default",
   onClick,
   actual,
@@ -46,6 +56,23 @@ export function InterventionCard({
     const interventionDateTime = new Date(`${date}T${intervention.time}`);
     return interventionDateTime < new Date();
   })();
+
+  // Show dual timezones for in-transit items with flight offset and different timezones
+  const showDualTimezone =
+    intervention.is_in_transit &&
+    hasFlightOffset &&
+    flightContext &&
+    flightContext.originTimezone !== flightContext.destTimezone;
+
+  // Calculate dual timezone times from departure + flight offset
+  const dualTimes = showDualTimezone
+    ? formatInFlightDualTimezones(
+        flightContext.departureDateTime,
+        intervention.flight_offset_hours!,
+        flightContext.originTimezone,
+        flightContext.destTimezone
+      )
+    : null;
 
   return (
     <Card
@@ -96,13 +123,16 @@ export function InterventionCard({
             </p>
           )}
         </div>
-        {/* Time display with inline actuals */}
+        {/* Time display with inline actuals and dual timezone support */}
         {!isNested && (
           <div className="flex flex-col items-end gap-0.5">
             {actual?.status === "modified" && actual.actualTime ? (
+              // Modified: strikethrough original + actual time badge
               <>
-                <span className="text-xs text-slate-400 line-through">
-                  {formatTimeWithTimezone(intervention.time, timezone)}
+                <span className="text-xs tabular-nums text-slate-400 line-through">
+                  {dualTimes
+                    ? dualTimes.originTime
+                    : formatTimeWithTimezone(intervention.time, timezone)}
                 </span>
                 <Badge
                   variant="secondary"
@@ -112,6 +142,7 @@ export function InterventionCard({
                 </Badge>
               </>
             ) : actual?.status === "skipped" ? (
+              // Skipped: just show badge
               <Badge
                 variant="secondary"
                 className="shrink-0 bg-slate-100 font-medium text-slate-400"
@@ -119,13 +150,38 @@ export function InterventionCard({
                 Skipped
               </Badge>
             ) : actual?.status === "as_planned" && isPast ? (
-              <Badge
-                variant="secondary"
-                className="shrink-0 bg-emerald-50 font-medium text-emerald-600"
-              >
-                {formatTimeWithTimezone(intervention.time, timezone)}
-                <Check className="ml-1 h-3 w-3" />
-              </Badge>
+              // As planned (past): show completed styling with checkmark
+              dualTimes ? (
+                <div className="shrink-0 text-right">
+                  <div className="flex items-center justify-end gap-1 text-sm font-medium tabular-nums text-emerald-600">
+                    {dualTimes.originTime}
+                    <Check className="h-3.5 w-3.5" />
+                  </div>
+                  <div className="flex items-center justify-end gap-1 text-xs text-emerald-500/70">
+                    <span className="tabular-nums">{dualTimes.destTime}</span>
+                    <Plane className="h-3 w-3 -rotate-45" />
+                  </div>
+                </div>
+              ) : (
+                <Badge
+                  variant="secondary"
+                  className="shrink-0 bg-emerald-50 font-medium text-emerald-600"
+                >
+                  {formatTimeWithTimezone(intervention.time, timezone)}
+                  <Check className="ml-1 h-3 w-3" />
+                </Badge>
+              )
+            ) : // Default: show time (dual or single)
+            dualTimes ? (
+              <div className="shrink-0 text-right">
+                <div className="text-sm font-medium tabular-nums text-slate-700">
+                  {dualTimes.originTime}
+                </div>
+                <div className="flex items-center justify-end gap-1 text-xs text-slate-500">
+                  <span className="tabular-nums">{dualTimes.destTime}</span>
+                  <Plane className="h-3 w-3 -rotate-45 text-sky-400" />
+                </div>
+              </div>
             ) : (
               <Badge
                 variant="secondary"
