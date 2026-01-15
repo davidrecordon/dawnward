@@ -1,6 +1,7 @@
 import type { TripData } from "@/types/trip-data";
 import type { ScheduleResponse } from "@/types/schedule";
 import type { JsonValue } from "@prisma/client/runtime/client";
+import type { PrismaClient } from "@/generated/prisma/client";
 
 /**
  * Database record shape from Prisma sharedSchedule
@@ -48,4 +49,22 @@ export function mapSharedScheduleToTripData(
     initialScheduleJson: record.initialScheduleJson as ScheduleResponse | null,
     currentScheduleJson: record.currentScheduleJson as ScheduleResponse | null,
   };
+}
+
+/**
+ * Increment view count for a shared trip (fire-and-forget).
+ * Used when non-owners view a shared schedule.
+ */
+export function incrementViewCount(prisma: PrismaClient, tripId: string): void {
+  prisma.sharedSchedule
+    .update({
+      where: { id: tripId },
+      data: {
+        viewCount: { increment: 1 },
+        lastViewedAt: new Date(),
+      },
+    })
+    .catch(() => {
+      // Ignore errors - analytics shouldn't break the page
+    });
 }

@@ -53,28 +53,34 @@ export function AirportSelect({
       });
   }, []);
 
-  // Filter airports when search query changes
+  // Filter airports when search query changes (non-urgent update)
   React.useEffect(() => {
     if (searchQuery.length >= 2) {
-      const results = searchAirports(searchQuery, airports, 10);
-      setFilteredAirports(results);
+      // Use startTransition to keep input responsive during search
+      searchAirports(searchQuery, airports, 10).then((results) => {
+        React.startTransition(() => {
+          setFilteredAirports(results);
+        });
+      });
     } else {
       // Show popular airports when no search query
-      const popular = airports.filter((a) =>
-        [
-          "JFK",
-          "LAX",
-          "SFO",
-          "LHR",
-          "CDG",
-          "NRT",
-          "SIN",
-          "DXB",
-          "HKG",
-          "SYD",
-        ].includes(a.code)
-      );
-      setFilteredAirports(popular);
+      React.startTransition(() => {
+        const popular = airports.filter((a) =>
+          [
+            "JFK",
+            "LAX",
+            "SFO",
+            "LHR",
+            "CDG",
+            "NRT",
+            "SIN",
+            "DXB",
+            "HKG",
+            "SYD",
+          ].includes(a.code)
+        );
+        setFilteredAirports(popular);
+      });
     }
   }, [searchQuery, airports]);
 

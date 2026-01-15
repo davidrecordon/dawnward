@@ -78,83 +78,85 @@ const mockAirports: Airport[] = [
 
 describe("searchAirports", () => {
   describe("query length validation", () => {
-    it("returns empty array for single character query", () => {
-      expect(searchAirports("S", mockAirports)).toEqual([]);
+    it("returns empty array for single character query", async () => {
+      expect(await searchAirports("S", mockAirports)).toEqual([]);
     });
 
-    it("returns empty array for empty query", () => {
-      expect(searchAirports("", mockAirports)).toEqual([]);
+    it("returns empty array for empty query", async () => {
+      expect(await searchAirports("", mockAirports)).toEqual([]);
     });
 
-    it("returns results for 2+ character query", () => {
-      expect(searchAirports("SF", mockAirports).length).toBeGreaterThan(0);
+    it("returns results for 2+ character query", async () => {
+      expect((await searchAirports("SF", mockAirports)).length).toBeGreaterThan(
+        0
+      );
     });
   });
 
   describe("exact code matching", () => {
-    it("gives highest priority to exact code match", () => {
-      const results = searchAirports("sfo", mockAirports);
+    it("gives highest priority to exact code match", async () => {
+      const results = await searchAirports("sfo", mockAirports);
       expect(results[0].code).toBe("SFO");
     });
 
-    it("is case insensitive for code matching", () => {
-      const results = searchAirports("SFO", mockAirports);
+    it("is case insensitive for code matching", async () => {
+      const results = await searchAirports("SFO", mockAirports);
       expect(results[0].code).toBe("SFO");
 
-      const resultsLower = searchAirports("sfo", mockAirports);
+      const resultsLower = await searchAirports("sfo", mockAirports);
       expect(resultsLower[0].code).toBe("SFO");
     });
   });
 
   describe("code prefix matching", () => {
-    it("matches airports by code prefix", () => {
-      const results = searchAirports("LH", mockAirports);
+    it("matches airports by code prefix", async () => {
+      const results = await searchAirports("LH", mockAirports);
       expect(results[0].code).toBe("LHR");
     });
 
-    it("code prefix ranks higher than city match", () => {
+    it("code prefix ranks higher than city match", async () => {
       // "SA" should match SAN (code starts with SA) before San Francisco
-      const results = searchAirports("SA", mockAirports);
+      const results = await searchAirports("SA", mockAirports);
       expect(results[0].code).toBe("SAN");
     });
   });
 
   describe("city matching", () => {
-    it("finds airports by city name", () => {
-      const results = searchAirports("London", mockAirports);
+    it("finds airports by city name", async () => {
+      const results = await searchAirports("London", mockAirports);
       expect(results.length).toBe(2);
       expect(results.map((a) => a.code)).toContain("LHR");
       expect(results.map((a) => a.code)).toContain("LGW");
     });
 
-    it("city start match ranks higher than city contains", () => {
+    it("city start match ranks higher than city contains", async () => {
       // "San" starts San Francisco, San Diego, San Jose
-      const results = searchAirports("San", mockAirports);
+      const results = await searchAirports("San", mockAirports);
       expect(results.length).toBe(3);
       // All should be San* cities
       expect(results.every((a) => a.city.startsWith("San"))).toBe(true);
     });
 
-    it("finds airports with partial city match", () => {
-      const results = searchAirports("York", mockAirports);
+    it("finds airports with partial city match", async () => {
+      const results = await searchAirports("York", mockAirports);
       expect(results[0].code).toBe("JFK");
     });
   });
 
   describe("name matching", () => {
-    it("finds airports by name", () => {
-      const results = searchAirports("Kennedy", mockAirports);
+    it("finds airports by name", async () => {
+      const results = await searchAirports("Kennedy", mockAirports);
       expect(results[0].code).toBe("JFK");
     });
 
-    it("finds airports by partial name match", () => {
-      const results = searchAirports("Gatwick", mockAirports);
+    it("finds airports by partial name match", async () => {
+      const results = await searchAirports("Gatwick", mockAirports);
       expect(results[0].code).toBe("LGW");
     });
   });
 
   describe("scoring priority", () => {
-    it("exact code match gets highest priority", () => {
+    it("exact code match gets highest priority", async () => {
       // Create test data that exercises scoring paths
       const testAirports: Airport[] = [
         {
@@ -180,13 +182,13 @@ describe("searchAirports", () => {
         },
       ];
 
-      const results = searchAirports("ABC", testAirports);
+      const results = await searchAirports("ABC", testAirports);
 
       // Exact match should be first
       expect(results[0].code).toBe("ABC");
     });
 
-    it("code prefix ranks higher than city contains", () => {
+    it("code prefix ranks higher than city contains", async () => {
       const testAirports: Airport[] = [
         {
           code: "XYZ",
@@ -204,7 +206,7 @@ describe("searchAirports", () => {
         },
       ];
 
-      const results = searchAirports("AB", testAirports);
+      const results = await searchAirports("AB", testAirports);
 
       // Code prefix match should be first
       expect(results[0].code).toBe("ABD");
@@ -212,7 +214,7 @@ describe("searchAirports", () => {
   });
 
   describe("limit parameter", () => {
-    it("respects default limit of 10", () => {
+    it("respects default limit of 10", async () => {
       // All airports should match "a" (appears in many places)
       const manyAirports = Array.from({ length: 20 }, (_, i) => ({
         code: `A${String(i).padStart(2, "0")}`,
@@ -222,26 +224,26 @@ describe("searchAirports", () => {
         tz: "UTC",
       }));
 
-      const results = searchAirports("Airport", manyAirports);
+      const results = await searchAirports("Airport", manyAirports);
       expect(results.length).toBeLessThanOrEqual(10);
     });
 
-    it("respects custom limit", () => {
-      const results = searchAirports("London", mockAirports, 1);
+    it("respects custom limit", async () => {
+      const results = await searchAirports("London", mockAirports, 1);
       expect(results.length).toBe(1);
     });
   });
 
   describe("no matches", () => {
-    it("returns empty array when no matches found", () => {
-      const results = searchAirports("ZZZZZ", mockAirports);
+    it("returns empty array when no matches found", async () => {
+      const results = await searchAirports("ZZZZZ", mockAirports);
       expect(results).toEqual([]);
     });
   });
 
   describe("whitespace handling", () => {
-    it("trims whitespace from query", () => {
-      const results = searchAirports("  SFO  ", mockAirports);
+    it("trims whitespace from query", async () => {
+      const results = await searchAirports("  SFO  ", mockAirports);
       expect(results[0].code).toBe("SFO");
     });
   });

@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import {
   getDayLabel,
   isEditableIntervention,
@@ -106,9 +107,6 @@ export function DaySection({
   actuals,
   onInterventionClick,
 }: DaySectionProps) {
-  // Build combined items array (TimedItem before transitions are inserted)
-  const items: TimedItem[] = [];
-
   // Only show timezone on Flight Day and Arrival day
   const showTimezone =
     daySchedule.day === FLIGHT_DAY || daySchedule.day === ARRIVAL_DAY;
@@ -124,199 +122,221 @@ export function DaySection({
     ? flightDuration.hours + flightDuration.minutes / 60
     : undefined;
 
-  // Build pre-grouping items array with all interventions, flights, and now marker
-  const preGroupItems: GroupableItem[] = [];
+  // Memoize expensive item construction, sorting, and transition logic
+  const { itemsWithTransitions, hasMultipleTimezones } = useMemo(() => {
+    // Build combined items array (TimedItem before transitions are inserted)
+    const items: TimedItem[] = [];
 
-  // Add all interventions
-  daySchedule.items.forEach((intervention) => {
-    // For in-transit items, show destination timezone to help traveler adjust
-    let itemTimezone = intervention.timezone;
-    if (intervention.is_in_transit) {
-      itemTimezone = destination.tz;
-    }
-    preGroupItems.push({
-      kind: "intervention",
-      time: intervention.time,
-      data: {
-        ...intervention,
-        timezone: showTimezone ? itemTimezone : undefined,
-      },
-      timezone: showTimezone ? itemTimezone : undefined,
-    });
-  });
+    // Build pre-grouping items array with all interventions, flights, and now marker
+    const preGroupItems: GroupableItem[] = [];
 
-  // Add flight events if on this day
-  if (daySchedule.date === departureDate) {
-    preGroupItems.push({
-      kind: "departure",
-      time: departureTime,
-      timezone: origin.tz,
-    });
-  }
-  if (daySchedule.date === arrivalDate) {
-    preGroupItems.push({
-      kind: "arrival",
-      time: arrivalTime,
-      timezone: destination.tz,
-    });
-  }
-
-  // Add "now" marker if this is today, with phase-aware timezone
-  if (isCurrentDay) {
-    const nowTz = getNowTimezone(
-      origin.tz,
-      destination.tz,
-      `${departureDate}T${departureTime}`,
-      `${arrivalDate}T${arrivalTime}`
-    );
-    const nowTime = getCurrentTimeInTimezone(nowTz);
-    preGroupItems.push({ kind: "now", time: nowTime, timezone: nowTz });
-  }
-
-  // Group items by parent (wake_target or arrival) with same-effective-time children
-  // Pass actuals so grouping considers modified times (children with different actual times unnest)
-  const { groups, ungrouped } = groupTimedItems(
-    preGroupItems,
-    actuals,
-    daySchedule.day
-  );
-
-  // Add groups as timed_item_group
-  groups.forEach((group) => {
-    items.push({
-      kind: "timed_item_group",
-      time: group.time,
-      data: group,
-      timezone: group.timezone,
-    });
-  });
-
-  // Add ungrouped items
-  ungrouped.forEach((item, index) => {
-    if (item.kind === "intervention") {
-      items.push({
-        kind: "intervention",
-        time: item.time,
-        data: item.data,
-        index,
-        timezone: item.timezone,
-      });
-    } else if (item.kind === "departure") {
-      items.push({
-        kind: "departure",
-        time: item.time,
-        timezone: item.timezone,
-      });
-    } else if (item.kind === "arrival") {
-      items.push({ kind: "arrival", time: item.time, timezone: item.timezone });
-    } else if (item.kind === "now") {
-      items.push({ kind: "now", time: item.time, timezone: item.timezone });
-    }
-  });
-
-  // Sort items with timezone-aware logic
-  // Flight events act as phase boundaries: departure ends pre-departure, arrival starts post-arrival
-  items.sort((a, b) => {
-    // Get timezone for an item (defaults to daySchedule.timezone)
-    const tzA = a.timezone ?? daySchedule.timezone;
-    const tzB = b.timezone ?? daySchedule.timezone;
-
-    // Departure comes before in-transit interventions
-    if (
-      a.kind === "departure" &&
-      isInterventionLike(b.kind) &&
-      tzB !== origin.tz
-    ) {
-      return -1;
-    }
-    if (
-      b.kind === "departure" &&
-      isInterventionLike(a.kind) &&
-      tzA !== origin.tz
-    ) {
-      return 1;
-    }
-
-    // Different timezones: preserve phase order (pre_departure → in_transit → post_arrival)
-    if (tzA !== tzB) {
-      return 0;
-    }
-
-    // In-transit interventions: sort by flight_offset_hours
-    const aOffset =
-      a.kind === "intervention" ? a.data.flight_offset_hours : undefined;
-    const bOffset =
-      b.kind === "intervention" ? b.data.flight_offset_hours : undefined;
-    if (aOffset !== undefined && bOffset !== undefined) {
-      return aOffset - bOffset;
-    }
-
-    // Get intervention type for late-night sort handling
-    const getTypeForSort = (item: TimedItem): string | undefined => {
-      if (item.kind === "intervention") return item.data.type;
-      if (item.kind === "timed_item_group") {
-        const { parent } = item.data;
-        return parent.kind === "intervention" ? parent.data.type : "arrival";
+    // Add all interventions
+    daySchedule.items.forEach((intervention) => {
+      // For in-transit items, show destination timezone to help traveler adjust
+      let itemTimezone = intervention.timezone;
+      if (intervention.is_in_transit) {
+        itemTimezone = destination.tz;
       }
-      return undefined;
-    };
+      preGroupItems.push({
+        kind: "intervention",
+        time: intervention.time,
+        data: {
+          ...intervention,
+          timezone: showTimezone ? itemTimezone : undefined,
+        },
+        timezone: showTimezone ? itemTimezone : undefined,
+      });
+    });
 
-    // Same timezone: sort by time with late-night awareness
-    const timeCompare =
-      toSortableMinutes(a.time, getTypeForSort(a)) -
-      toSortableMinutes(b.time, getTypeForSort(b));
-    if (timeCompare !== 0) {
-      return timeCompare;
+    // Add flight events if on this day
+    if (daySchedule.date === departureDate) {
+      preGroupItems.push({
+        kind: "departure",
+        time: departureTime,
+        timezone: origin.tz,
+      });
     }
-
-    // Same time: order by kind (departure, arrival, interventions, now)
-    const kindOrder: Record<TimedItem["kind"], number> = {
-      departure: 0,
-      arrival: 1,
-      intervention: 2,
-      timed_item_group: 2,
-      now: 3,
-    };
-    return kindOrder[a.kind] - kindOrder[b.kind];
-  });
-
-  // Determine if this day has multiple timezones (for deciding whether to show tz on "now" marker)
-  // Check interventions plus flight events
-  const hasMultipleTimezones =
-    dayHasMultipleTimezones(daySchedule.items) ||
-    (daySchedule.date === departureDate &&
-      daySchedule.date === arrivalDate &&
-      origin.tz !== destination.tz);
-
-  // Insert timezone transitions when timezone changes between consecutive items
-  const itemsWithTransitions: ScheduleItem[] = [];
-  let lastTimezone: string | undefined;
-
-  for (const item of items) {
-    const itemTz = item.timezone;
-
-    // Insert transition if timezone changed (and both are defined)
-    if (lastTimezone && itemTz && lastTimezone !== itemTz) {
-      itemsWithTransitions.push({
-        kind: "timezone_transition",
-        fromTz: lastTimezone,
-        toTz: itemTz,
+    if (daySchedule.date === arrivalDate) {
+      preGroupItems.push({
+        kind: "arrival",
+        time: arrivalTime,
+        timezone: destination.tz,
       });
     }
 
-    itemsWithTransitions.push(item);
-
-    if (itemTz) {
-      lastTimezone = itemTz;
+    // Add "now" marker if this is today, with phase-aware timezone
+    if (isCurrentDay) {
+      const nowTz = getNowTimezone(
+        origin.tz,
+        destination.tz,
+        `${departureDate}T${departureTime}`,
+        `${arrivalDate}T${arrivalTime}`
+      );
+      const nowTime = getCurrentTimeInTimezone(nowTz);
+      preGroupItems.push({ kind: "now", time: nowTime, timezone: nowTz });
     }
-  }
+
+    // Group items by parent (wake_target or arrival) with same-effective-time children
+    // Pass actuals so grouping considers modified times (children with different actual times unnest)
+    const { groups, ungrouped } = groupTimedItems(
+      preGroupItems,
+      actuals,
+      daySchedule.day
+    );
+
+    // Add groups as timed_item_group
+    groups.forEach((group) => {
+      items.push({
+        kind: "timed_item_group",
+        time: group.time,
+        data: group,
+        timezone: group.timezone,
+      });
+    });
+
+    // Add ungrouped items
+    ungrouped.forEach((item, index) => {
+      if (item.kind === "intervention") {
+        items.push({
+          kind: "intervention",
+          time: item.time,
+          data: item.data,
+          index,
+          timezone: item.timezone,
+        });
+      } else if (item.kind === "departure") {
+        items.push({
+          kind: "departure",
+          time: item.time,
+          timezone: item.timezone,
+        });
+      } else if (item.kind === "arrival") {
+        items.push({
+          kind: "arrival",
+          time: item.time,
+          timezone: item.timezone,
+        });
+      } else if (item.kind === "now") {
+        items.push({ kind: "now", time: item.time, timezone: item.timezone });
+      }
+    });
+
+    // Sort items with timezone-aware logic
+    // Flight events act as phase boundaries: departure ends pre-departure, arrival starts post-arrival
+    items.sort((a, b) => {
+      // Get timezone for an item (defaults to daySchedule.timezone)
+      const tzA = a.timezone ?? daySchedule.timezone;
+      const tzB = b.timezone ?? daySchedule.timezone;
+
+      // Departure comes before in-transit interventions
+      if (
+        a.kind === "departure" &&
+        isInterventionLike(b.kind) &&
+        tzB !== origin.tz
+      ) {
+        return -1;
+      }
+      if (
+        b.kind === "departure" &&
+        isInterventionLike(a.kind) &&
+        tzA !== origin.tz
+      ) {
+        return 1;
+      }
+
+      // Different timezones: preserve phase order (pre_departure → in_transit → post_arrival)
+      if (tzA !== tzB) {
+        return 0;
+      }
+
+      // In-transit interventions: sort by flight_offset_hours
+      const aOffset =
+        a.kind === "intervention" ? a.data.flight_offset_hours : undefined;
+      const bOffset =
+        b.kind === "intervention" ? b.data.flight_offset_hours : undefined;
+      if (aOffset !== undefined && bOffset !== undefined) {
+        return aOffset - bOffset;
+      }
+
+      // Get intervention type for late-night sort handling
+      const getTypeForSort = (item: TimedItem): string | undefined => {
+        if (item.kind === "intervention") return item.data.type;
+        if (item.kind === "timed_item_group") {
+          const { parent } = item.data;
+          return parent.kind === "intervention" ? parent.data.type : "arrival";
+        }
+        return undefined;
+      };
+
+      // Same timezone: sort by time with late-night awareness
+      const timeCompare =
+        toSortableMinutes(a.time, getTypeForSort(a)) -
+        toSortableMinutes(b.time, getTypeForSort(b));
+      if (timeCompare !== 0) {
+        return timeCompare;
+      }
+
+      // Same time: order by kind (departure, arrival, interventions, now)
+      const kindOrder: Record<TimedItem["kind"], number> = {
+        departure: 0,
+        arrival: 1,
+        intervention: 2,
+        timed_item_group: 2,
+        now: 3,
+      };
+      return kindOrder[a.kind] - kindOrder[b.kind];
+    });
+
+    // Determine if this day has multiple timezones (for deciding whether to show tz on "now" marker)
+    // Check interventions plus flight events
+    const hasMultipleTimezones =
+      dayHasMultipleTimezones(daySchedule.items) ||
+      (daySchedule.date === departureDate &&
+        daySchedule.date === arrivalDate &&
+        origin.tz !== destination.tz);
+
+    // Insert timezone transitions when timezone changes between consecutive items
+    const itemsWithTransitions: ScheduleItem[] = [];
+    let lastTimezone: string | undefined;
+
+    for (const item of items) {
+      const itemTz = item.timezone;
+
+      // Insert transition if timezone changed (and both are defined)
+      if (lastTimezone && itemTz && lastTimezone !== itemTz) {
+        itemsWithTransitions.push({
+          kind: "timezone_transition",
+          fromTz: lastTimezone,
+          toTz: itemTz,
+        });
+      }
+
+      itemsWithTransitions.push(item);
+
+      if (itemTz) {
+        lastTimezone = itemTz;
+      }
+    }
+
+    return { itemsWithTransitions, hasMultipleTimezones };
+  }, [
+    daySchedule,
+    origin,
+    destination,
+    departureDate,
+    departureTime,
+    arrivalDate,
+    arrivalTime,
+    isCurrentDay,
+    actuals,
+    showTimezone,
+  ]);
 
   // Day label color based on phase
   function getDayLabelStyle(): string {
-    const { day } = daySchedule;
-    if (day < FLIGHT_DAY) return "text-sky-600"; // Pre-departure
-    if (day === FLIGHT_DAY) return "text-sky-700"; // Flight day
-    if (day === ARRIVAL_DAY) return "text-emerald-600"; // Arrival
+    if (daySchedule.day < FLIGHT_DAY) return "text-sky-600"; // Pre-departure
+    if (daySchedule.day === FLIGHT_DAY) return "text-sky-700"; // Flight day
+    if (daySchedule.day === ARRIVAL_DAY) return "text-emerald-600"; // Arrival
     return "text-violet-600"; // Post-arrival adaptation
   }
 

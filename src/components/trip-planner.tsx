@@ -155,9 +155,11 @@ export function TripPlanner() {
   }, []);
 
   // Fetch user preferences when signed in
+  // Use session?.user?.id as primitive dependency to avoid re-runs on object recreation
+  const userId = session?.user?.id;
   React.useEffect(() => {
     async function fetchPreferences() {
-      if (status !== "authenticated" || !session?.user) return;
+      if (status !== "authenticated" || !userId) return;
 
       try {
         const res = await fetch("/api/user/preferences");
@@ -180,7 +182,7 @@ export function TripPlanner() {
     if (isHydrated && status === "authenticated") {
       fetchPreferences();
     }
-  }, [isHydrated, status, session?.user]);
+  }, [isHydrated, status, userId]);
 
   // Save form state when it changes (after hydration)
   React.useEffect(() => {

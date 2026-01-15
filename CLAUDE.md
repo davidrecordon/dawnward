@@ -281,10 +281,18 @@ This project uses Claude Code plugins that should be invoked for significant wor
 - Removes dead code, simplifies conditionals
 - Invoke via Task tool with `subagent_type: "code-simplifier:code-simplifier"`
 
+**`vercel-react-best-practices`** - Use when reviewing or optimizing React/Next.js code
+
+- Performance optimization guidelines from Vercel Engineering
+- Covers 8 categories: waterfalls, bundle size, server-side, client-side, re-renders, rendering, JS perf, advanced patterns
+- Key patterns: `Promise.all()` for parallel fetches, `next/dynamic` for code splitting, `startTransition` for non-urgent updates, `useMemo` for expensive computations
+- Invoke via Skill tool when asked to review or optimize React code
+
 **When to use them:**
 
 - Building new components or pages → `/frontend-design`
 - Implementing backend features, APIs, or complex logic → `/feature-dev`
+- Reviewing or optimizing React/Next.js performance → `vercel-react-best-practices`
 - Small fixes, typos, or simple changes → No skill needed
 
 **Before proposing to commit:** Always run `code-simplifier` after completing multi-file changes or new features. This catches duplication introduced during development and keeps the codebase clean. The workflow is: implement → tests pass → simplify → tests still pass → commit.

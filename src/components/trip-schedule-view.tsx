@@ -1,7 +1,14 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  startTransition,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import {
   ArrowLeft,
   ArrowRight,
@@ -11,12 +18,23 @@ import {
   X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { DaySection } from "@/components/schedule/day-section";
 import { ScheduleHeader } from "@/components/schedule/schedule-header";
 import {
   PostTripCard,
   ScheduleNotFoundCard,
 } from "@/components/schedule/journey-states";
+
+// Lazy-load DaySection since it's heavy and rendered multiple times
+const DaySection = dynamic(
+  () => import("@/components/schedule/day-section").then((m) => m.DaySection),
+  {
+    loading: () => (
+      <div className="animate-pulse rounded-lg bg-white/50 p-4">
+        <div className="h-20 rounded bg-slate-200/50" />
+      </div>
+    ),
+  }
+);
 import { SignInPrompt } from "@/components/auth/sign-in-prompt";
 import { ShareButton } from "@/components/share-button";
 import { CalendarSyncButton } from "@/components/calendar-sync-button";
@@ -68,16 +86,13 @@ function timezoneToAirport(
   position: "origin" | "dest"
 ): MinimalAirport {
   // Try to extract airport code from route label (e.g., "SFO → NRT")
-  if (routeLabel) {
-    const parts = routeLabel.split(" → ");
-    const code = position === "origin" ? parts[0] : parts[1];
-    if (code && code.length === 3) {
-      return { code, name: code, city: code, country: "", tz };
-    }
+  const code = routeLabel?.split(" → ")[position === "origin" ? 0 : 1];
+  if (code?.length === 3) {
+    return { code, name: code, city: code, country: "", tz };
   }
+
   // Fall back to timezone city name
-  const tzParts = tz.split("/");
-  const city = tzParts[tzParts.length - 1].replace(/_/g, " ");
+  const city = tz.split("/").pop()!.replace(/_/g, " ");
   return { code: "", name: city, city, country: "", tz };
 }
 
@@ -150,7 +165,10 @@ export function TripScheduleView({
     setActuals((prev) => {
       const next = new Map(prev);
       for (const actual of savedActuals) {
-        next.set(getActualKey(actual.dayOffset, actual.interventionType), actual);
+        next.set(
+          getActualKey(actual.dayOffset, actual.interventionType),
+          actual
+        );
       }
       return next;
     });
@@ -184,7 +202,9 @@ export function TripScheduleView({
         });
 
         if (applyResponse.ok) {
-          setSchedule(result.newSchedule);
+          startTransition(() => {
+            setSchedule(result.newSchedule);
+          });
           setSummaryMessage(
             `Schedule updated: ${result.changes.length} intervention(s) adjusted`
           );
@@ -209,7 +229,10 @@ export function TripScheduleView({
         const storedSchedule =
           tripData.currentScheduleJson || tripData.initialScheduleJson;
         if (storedSchedule) {
-          setSchedule(storedSchedule);
+          // Use startTransition for non-urgent schedule update
+          startTransition(() => {
+            setSchedule(storedSchedule);
+          });
           setIsLoading(false);
           return;
         }
@@ -240,7 +263,10 @@ export function TripScheduleView({
         }
 
         const result = await response.json();
-        setSchedule(result.schedule);
+        // Use startTransition for non-urgent schedule update
+        startTransition(() => {
+          setSchedule(result.schedule);
+        });
 
         // Save the initial schedule and snapshots for authenticated owners
         if (isOwner && isLoggedIn) {
@@ -268,15 +294,13 @@ export function TripScheduleView({
       }
     }
 
+    // Fetch schedule and actuals in parallel for owners
+    // Actuals don't depend on schedule content, only on tripId
     loadOrGenerateSchedule();
-  }, [tripData, tripId, isOwner, isLoggedIn]);
-
-  // Fetch actuals once schedule is loaded (for owners)
-  useEffect(() => {
-    if (schedule && !isLoading && isOwner && isLoggedIn) {
+    if (isOwner && isLoggedIn) {
       fetchActuals();
     }
-  }, [schedule, isLoading, isOwner, isLoggedIn, fetchActuals]);
+  }, [tripData, tripId, isOwner, isLoggedIn, fetchActuals]);
 
   // Auto-dismiss summary message after 5 seconds
   useEffect(() => {
@@ -567,7 +591,9 @@ export function TripScheduleView({
             tripId={tripId}
             currentPreferences={currentPreferences}
             onPreferencesUpdated={(newSchedule, updatedPreferences) => {
-              setSchedule(newSchedule);
+              startTransition(() => {
+                setSchedule(newSchedule);
+              });
               setCurrentPreferences(updatedPreferences);
             }}
           />

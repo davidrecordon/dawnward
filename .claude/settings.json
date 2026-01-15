@@ -19,6 +19,7 @@
       "Skill(commit-commands:*)",
       "Skill(feature-dev:*)",
       "Skill(frontend-design:*)",
+      "Skill(vercel-react-best-practices)",
       "WebFetch(domain:arcascope.github.io)",
       "WebSearch"
     ]

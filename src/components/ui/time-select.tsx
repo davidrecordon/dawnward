@@ -59,9 +59,6 @@ export function TimeSelect({
   className,
   hasError,
 }: TimeSelectProps) {
-  // Find the display label for the current value
-  const selectedOption = TIME_OPTIONS.find((opt) => opt.value === value);
-
   return (
     <Select value={value} onValueChange={onChange}>
       <SelectTrigger
@@ -72,9 +69,7 @@ export function TimeSelect({
         )}
         aria-invalid={hasError}
       >
-        <SelectValue placeholder={placeholder}>
-          {selectedOption?.label}
-        </SelectValue>
+        <SelectValue placeholder={placeholder} />
       </SelectTrigger>
       <SelectContent className="max-h-60">
         <SelectGroup>

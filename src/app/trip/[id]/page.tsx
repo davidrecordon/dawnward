@@ -1,7 +1,10 @@
 import { notFound } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { mapSharedScheduleToTripData } from "@/lib/trip-utils";
+import {
+  mapSharedScheduleToTripData,
+  incrementViewCount,
+} from "@/lib/trip-utils";
 import { TripScheduleView } from "@/components/trip-schedule-view";
 
 interface Props {
@@ -11,22 +14,22 @@ interface Props {
 export default async function TripByIdPage({ params }: Props) {
   const { id } = await params;
 
-  // Load trip from database
-  const trip = await prisma.sharedSchedule.findUnique({
-    where: { id },
-    include: {
-      user: {
-        select: { id: true, name: true },
+  // Load trip and auth in parallel to avoid waterfall
+  const [trip, session] = await Promise.all([
+    prisma.sharedSchedule.findUnique({
+      where: { id },
+      include: {
+        user: {
+          select: { id: true, name: true },
+        },
       },
-    },
-  });
+    }),
+    auth(),
+  ]);
 
   if (!trip) {
     notFound();
   }
-
-  // Check ownership
-  const session = await auth();
   const isOwner = session?.user?.id === trip.userId;
 
   // SECURITY: Only allow viewing if:
@@ -40,15 +43,7 @@ export default async function TripByIdPage({ params }: Props) {
 
   // Increment view count for non-owners viewing shared trips
   if (!isOwner && trip.code) {
-    prisma.sharedSchedule
-      .update({
-        where: { id: trip.id },
-        data: {
-          viewCount: { increment: 1 },
-          lastViewedAt: new Date(),
-        },
-      })
-      .catch(() => {});
+    incrementViewCount(prisma, trip.id);
   }
 
   return (

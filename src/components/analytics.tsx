@@ -1,6 +1,12 @@
 "use client";
 
-import { Analytics as VercelAnalytics } from "@vercel/analytics/react";
+import dynamic from "next/dynamic";
+
+// Defer loading Vercel Analytics until after hydration
+const VercelAnalytics = dynamic(
+  () => import("@vercel/analytics/react").then((m) => m.Analytics),
+  { ssr: false }
+);
 
 /**
  * Check if user has opted out of tracking via privacy signals.
@@ -8,22 +14,16 @@ import { Analytics as VercelAnalytics } from "@vercel/analytics/react";
 function hasOptedOut(): boolean {
   if (typeof window === "undefined") return false;
 
-  if (
-    (navigator as unknown as { globalPrivacyControl?: boolean })
-      .globalPrivacyControl === true
-  ) {
-    return true;
-  }
+  // Global Privacy Control (modern standard)
+  const gpc = (navigator as unknown as { globalPrivacyControl?: boolean })
+    .globalPrivacyControl;
+  if (gpc === true) return true;
 
   // DNT is the legacy signal (less standardized but still respected)
   const dnt =
     navigator.doNotTrack ||
     (window as unknown as { doNotTrack?: string }).doNotTrack;
-  if (dnt === "1" || dnt === "yes") {
-    return true;
-  }
-
-  return false;
+  return dnt === "1" || dnt === "yes";
 }
 
 export function Analytics() {

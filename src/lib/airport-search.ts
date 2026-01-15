@@ -1,8 +1,9 @@
-import Fuse from "fuse.js";
 import type { Airport } from "@/types/airport";
+import type Fuse from "fuse.js";
 
 let airportsCache: Airport[] | null = null;
 let fuseInstance: Fuse<Airport> | null = null;
+let FuseClass: typeof Fuse | null = null;
 
 /**
  * Load airports from the JSON file (cached after first load)
@@ -24,14 +25,26 @@ export async function loadAirports(): Promise<Airport[]> {
 }
 
 /**
+ * Lazy-load Fuse.js library (deferred until first search)
+ */
+async function loadFuse(): Promise<typeof Fuse> {
+  if (!FuseClass) {
+    const fuseModule = await import("fuse.js");
+    FuseClass = fuseModule.default;
+  }
+  return FuseClass;
+}
+
+/**
  * Get or create Fuse.js instance for searching airports
  */
-function getFuse(airports: Airport[]): Fuse<Airport> {
+async function getFuse(airports: Airport[]): Promise<Fuse<Airport>> {
   // Reuse cached instance if airports haven't changed
   if (fuseInstance && airports === airportsCache) {
     return fuseInstance;
   }
 
+  const Fuse = await loadFuse();
   fuseInstance = new Fuse(airports, {
     keys: [
       { name: "code", weight: 3 },
@@ -55,11 +68,11 @@ function getFuse(airports: Airport[]): Fuse<Airport> {
  * @param limit - Maximum number of results (default 10)
  * @returns Matching airports sorted by relevance
  */
-export function searchAirports(
+export async function searchAirports(
   query: string,
   airports: Airport[],
   limit: number = 10
-): Airport[] {
+): Promise<Airport[]> {
   const normalizedQuery = query.toLowerCase().trim();
 
   if (normalizedQuery.length < 2) {
@@ -78,8 +91,8 @@ export function searchAirports(
       a.code.toLowerCase() !== normalizedQuery
   );
 
-  // Use Fuse for fuzzy matching on city and name
-  const fuse = getFuse(airports);
+  // Use Fuse for fuzzy matching on city and name (lazy-loaded)
+  const fuse = await getFuse(airports);
   const fuseResults = fuse.search(normalizedQuery, { limit: limit * 2 });
 
   // Build results with priority ordering:
