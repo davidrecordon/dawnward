@@ -12,6 +12,7 @@ import dynamic from "next/dynamic";
 import {
   ArrowLeft,
   ArrowRight,
+  Calendar,
   Loader2,
   Settings2,
   User,
@@ -38,6 +39,11 @@ const DaySection = dynamic(
 import { SignInPrompt } from "@/components/auth/sign-in-prompt";
 import { ShareButton } from "@/components/share-button";
 import { CalendarSyncButton } from "@/components/calendar-sync-button";
+import { CalendarComingSoonModal } from "@/components/calendar-coming-soon-modal";
+
+// Feature flag for calendar sync (enabled in dev, disabled in production)
+const CALENDAR_SYNC_ENABLED =
+  process.env.NEXT_PUBLIC_FEATURE_CALENDAR_SYNC === "true";
 import { EditPreferencesModal } from "@/components/trip/edit-preferences-modal";
 import { RecordActualSheet } from "@/components/trip/record-actual-sheet";
 import { getDayLabel, formatShortDate } from "@/lib/intervention-utils";
@@ -120,6 +126,7 @@ export function TripScheduleView({
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showCalendarModal, setShowCalendarModal] = useState(false);
 
   // Track current preferences (can change after edits)
   const [currentPreferences, setCurrentPreferences] = useState({
@@ -548,11 +555,22 @@ export function TripScheduleView({
         {isOwner && (
           <div className="flex gap-3 pt-4">
             <ShareButton formState={formStateForShare} tripId={tripId} />
-            <CalendarSyncButton
-              tripId={tripId}
-              isLoggedIn={isLoggedIn}
-              hasCalendarScope={hasCalendarScope}
-            />
+            {CALENDAR_SYNC_ENABLED ? (
+              <CalendarSyncButton
+                tripId={tripId}
+                isLoggedIn={isLoggedIn}
+                hasCalendarScope={hasCalendarScope}
+              />
+            ) : (
+              <Button
+                variant="outline"
+                className="flex-1 bg-white/70"
+                onClick={() => setShowCalendarModal(true)}
+              >
+                <Calendar className="mr-2 h-4 w-4" />
+                Add to Calendar
+              </Button>
+            )}
             {isLoggedIn && (
               <Button
                 variant="outline"
@@ -616,6 +634,15 @@ export function TripScheduleView({
               )
             )}
             nestedChildren={selectedIntervention.nestedChildren}
+          />
+        )}
+
+        {/* Calendar Coming Soon Modal - when feature flag is off */}
+        {!CALENDAR_SYNC_ENABLED && (
+          <CalendarComingSoonModal
+            open={showCalendarModal}
+            onClose={() => setShowCalendarModal(false)}
+            isSignedIn={isLoggedIn}
           />
         )}
       </div>

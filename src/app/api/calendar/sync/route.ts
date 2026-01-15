@@ -7,12 +7,23 @@ import {
 } from "@/lib/google-calendar";
 import type { ScheduleResponse } from "@/types/schedule";
 
+// Feature flag for calendar sync
+const CALENDAR_SYNC_ENABLED =
+  process.env.NEXT_PUBLIC_FEATURE_CALENDAR_SYNC === "true";
+
 /**
  * POST /api/calendar/sync
  * Sync a trip's schedule to Google Calendar.
  * Creates calendar events for all actionable interventions.
  */
 export async function POST(request: Request) {
+  // Guard: Calendar sync feature must be enabled
+  if (!CALENDAR_SYNC_ENABLED) {
+    return NextResponse.json(
+      { error: "Calendar sync is not available" },
+      { status: 404 }
+    );
+  }
   const session = await auth();
 
   if (!session?.user?.id) {
@@ -121,6 +132,14 @@ export async function POST(request: Request) {
  * Remove all calendar events for a trip.
  */
 export async function DELETE(request: Request) {
+  // Guard: Calendar sync feature must be enabled
+  if (!CALENDAR_SYNC_ENABLED) {
+    return NextResponse.json(
+      { error: "Calendar sync is not available" },
+      { status: 404 }
+    );
+  }
+
   const session = await auth();
 
   if (!session?.user?.id) {
@@ -181,6 +200,14 @@ export async function DELETE(request: Request) {
  * Check if a trip is synced to calendar.
  */
 export async function GET(request: Request) {
+  // Guard: Calendar sync feature must be enabled
+  if (!CALENDAR_SYNC_ENABLED) {
+    return NextResponse.json(
+      { error: "Calendar sync is not available" },
+      { status: 404 }
+    );
+  }
+
   const session = await auth();
 
   if (!session?.user?.id) {
