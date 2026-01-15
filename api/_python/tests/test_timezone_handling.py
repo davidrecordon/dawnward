@@ -437,6 +437,44 @@ class TestUlrSleepWindows:
             f"Flight duration {ulr_phase.flight_duration_hours:.1f}h seems too short"
         )
 
+    def test_regular_flight_nap_has_flight_offset_hours(self):
+        """Regular (non-ULR) flight naps should also have flight_offset_hours."""
+        from circadian.scheduler_v2 import ScheduleGeneratorV2
+        from circadian.types import ScheduleRequest
+
+        # SFO → LHR: ~10h flight (regular, not ULR)
+        request = ScheduleRequest(
+            legs=[
+                TripLeg(
+                    origin_tz="America/Los_Angeles",
+                    dest_tz="Europe/London",
+                    departure_datetime="2026-01-15T20:45",
+                    arrival_datetime="2026-01-16T15:00",
+                )
+            ],
+            prep_days=2,
+            wake_time="07:00",
+            sleep_time="23:00",
+        )
+
+        scheduler = ScheduleGeneratorV2()
+        response = scheduler.generate_schedule(request)
+
+        # Find in-transit schedule
+        in_transit = [d for d in response.interventions if d.is_in_transit]
+        assert len(in_transit) >= 1, "Should have in-transit schedule for 10h flight"
+
+        # Check nap_window interventions have flight_offset_hours
+        transit_schedule = in_transit[0]
+        nap_windows = [i for i in transit_schedule.items if i.type == "nap_window"]
+        assert len(nap_windows) >= 1, "10h flight should have at least 1 nap suggestion"
+
+        for nap in nap_windows:
+            assert nap.flight_offset_hours is not None, (
+                f"nap_window at {nap.time} should have flight_offset_hours"
+            )
+            assert nap.flight_offset_hours >= 0, "flight_offset_hours should be non-negative"
+
 
 class TestWakeTargetCapping:
     """Test that wake_target is capped for pre_departure phases."""

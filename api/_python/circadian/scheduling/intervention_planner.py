@@ -14,7 +14,7 @@ Implements per-phase planning including:
 """
 
 from dataclasses import dataclass
-from datetime import UTC, datetime, time
+from datetime import UTC, datetime, time, timedelta
 from typing import Literal
 from zoneinfo import ZoneInfo
 
@@ -261,11 +261,30 @@ class InterventionPlanner:
         return max(0, round(offset_hours, 1))
 
     def _plan_regular_flight_nap(self, phase: TravelPhase) -> list[Intervention]:
-        """Plan a single nap suggestion for flights 6+ hours."""
+        """Plan a single nap suggestion for flights 6+ hours.
+
+        Places nap window roughly 2 hours into flight (after meal service).
+        """
         flight_hours = phase.flight_duration_hours or 8
+
+        # Calculate nap time: ~2 hours after departure (after meal service settles)
+        nap_offset_hours = min(2.0, flight_hours * 0.25)
+
+        # Calculate display time in destination timezone
+        dest_tz = ZoneInfo(self.request.legs[0].dest_tz)
+        departure_utc = phase.start_datetime
+        if departure_utc.tzinfo is None:
+            origin_tz = ZoneInfo(self.request.legs[0].origin_tz)
+            departure_utc = departure_utc.replace(tzinfo=origin_tz)
+        departure_utc = departure_utc.astimezone(UTC)
+
+        nap_utc = departure_utc + timedelta(hours=nap_offset_hours)
+        nap_local = nap_utc.astimezone(dest_tz)
+        display_time = nap_local.strftime("%H:%M")
+
         return [
             Intervention(
-                time="00:00",  # Placeholder - will be filtered/adjusted
+                time=display_time,
                 type="nap_window",
                 title="In-flight sleep",
                 description=(
@@ -273,7 +292,7 @@ class InterventionPlanner:
                     "Use an eye mask and earplugs to improve sleep quality."
                 ),
                 duration_min=int(flight_hours * 0.5 * 60),  # ~50% of flight
-                flight_offset_hours=None,
+                flight_offset_hours=round(nap_offset_hours, 1),
             )
         ]
 
