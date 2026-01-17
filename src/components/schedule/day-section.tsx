@@ -25,6 +25,7 @@ import { GroupedItemCard } from "./grouped-item-card";
 import { NowMarker } from "./now-marker";
 import { TimezoneTransition } from "./timezone-transition";
 import { calculateFlightDuration } from "@/lib/timezone-utils";
+import { DateTime } from "luxon";
 import { getActualKey } from "@/lib/actuals-utils";
 import type {
   DaySchedule,
@@ -140,6 +141,15 @@ export function DaySection({
     // Build pre-grouping items array with all interventions, flights, and now marker
     const preGroupItems: GroupableItem[] = [];
 
+    // Parse departure and arrival times for pre-landing detection on arrival day
+    const departureDt = DateTime.fromISO(`${departureDate}T${departureTime}`, {
+      zone: origin.tz,
+    });
+    const arrivalDt = DateTime.fromISO(`${arrivalDate}T${arrivalTime}`, {
+      zone: destination.tz,
+    });
+    const isArrivalDay = daySchedule.day === ARRIVAL_DAY;
+
     // Add all interventions
     // Note: is_in_transit is set at the DaySchedule level by Python scheduler,
     // so we propagate it to each intervention for dual timezone display logic
@@ -147,7 +157,30 @@ export function DaySection({
     daySchedule.items.forEach((intervention) => {
       // For in-transit items, show destination timezone to help traveler adjust
       let itemTimezone = intervention.timezone;
-      if (isInTransitDay || intervention.is_in_transit) {
+      let isItemInTransit = isInTransitDay || intervention.is_in_transit;
+      let flightOffsetHours = intervention.flight_offset_hours;
+
+      // Pre-landing detection: For arrival day interventions that occur before
+      // landing, mark them as in-transit with flight offset for dual timezone display
+      if (
+        isArrivalDay &&
+        !isItemInTransit &&
+        departureDt.isValid &&
+        arrivalDt.isValid
+      ) {
+        const itemDt = DateTime.fromISO(
+          `${daySchedule.date}T${intervention.time}`,
+          { zone: destination.tz }
+        );
+        if (itemDt.isValid && itemDt < arrivalDt) {
+          // This item occurs before landing - mark as in-transit
+          isItemInTransit = true;
+          // Calculate hours since departure for flight offset
+          flightOffsetHours = itemDt.diff(departureDt, "hours").hours;
+        }
+      }
+
+      if (isItemInTransit) {
         itemTimezone = destination.tz;
       }
       preGroupItems.push({
@@ -155,7 +188,8 @@ export function DaySection({
         time: intervention.time,
         data: {
           ...intervention,
-          is_in_transit: isInTransitDay || intervention.is_in_transit,
+          is_in_transit: isItemInTransit,
+          flight_offset_hours: flightOffsetHours,
           timezone: showTimezone ? itemTimezone : undefined,
         },
         timezone: showTimezone ? itemTimezone : undefined,
