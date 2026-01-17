@@ -2,7 +2,7 @@
 
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { CloudMoon, Plane } from "lucide-react";
+import { CloudMoon, PlaneTakeoff } from "lucide-react";
 import {
   formatTimeWithTimezone,
   formatFlightOffset,
@@ -93,11 +93,11 @@ export function InFlightSleepCard({
           {dualTimes ? (
             <>
               <div className="text-sm font-medium tabular-nums text-slate-700">
-                {dualTimes.originTime}
+                {dualTimes.destTime}
               </div>
-              <div className="mt-0.5 flex items-center gap-1 text-xs text-slate-500">
-                <span className="tabular-nums">{dualTimes.destTime}</span>
-                <Plane className="h-3 w-3 -rotate-45 text-violet-400" />
+              <div className="mt-0.5 flex items-center gap-1 text-xs text-slate-400">
+                <span className="tabular-nums">{dualTimes.originTime}</span>
+                <PlaneTakeoff className="h-3 w-3 opacity-60" />
               </div>
             </>
           ) : (

@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Pencil, Plane } from "lucide-react";
+import { Check, Pencil, PlaneTakeoff } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -154,12 +154,12 @@ export function InterventionCard({
               dualTimes ? (
                 <div className="shrink-0 text-right">
                   <div className="flex items-center justify-end gap-1 text-sm font-medium tabular-nums text-emerald-600">
-                    {dualTimes.originTime}
+                    {dualTimes.destTime}
                     <Check className="h-3.5 w-3.5" />
                   </div>
                   <div className="flex items-center justify-end gap-1 text-xs text-emerald-500/70">
-                    <span className="tabular-nums">{dualTimes.destTime}</span>
-                    <Plane className="h-3 w-3 -rotate-45" />
+                    <span className="tabular-nums">{dualTimes.originTime}</span>
+                    <PlaneTakeoff className="h-3 w-3 opacity-60" />
                   </div>
                 </div>
               ) : (
@@ -175,11 +175,11 @@ export function InterventionCard({
             dualTimes ? (
               <div className="shrink-0 text-right">
                 <div className="text-sm font-medium tabular-nums text-slate-700">
-                  {dualTimes.originTime}
+                  {dualTimes.destTime}
                 </div>
-                <div className="flex items-center justify-end gap-1 text-xs text-slate-500">
-                  <span className="tabular-nums">{dualTimes.destTime}</span>
-                  <Plane className="h-3 w-3 -rotate-45 text-sky-400" />
+                <div className="flex items-center justify-end gap-1 text-xs text-slate-400">
+                  <span className="tabular-nums">{dualTimes.originTime}</span>
+                  <PlaneTakeoff className="h-3 w-3 opacity-60" />
                 </div>
               </div>
             ) : (
