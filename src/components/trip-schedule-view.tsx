@@ -50,6 +50,7 @@ import { getDayLabel, formatShortDate } from "@/lib/intervention-utils";
 import { mergePhasesByDate } from "@/lib/schedule-utils";
 import { getActualKey, buildActualsMap } from "@/lib/actuals-utils";
 import {
+  getCurrentDateInTimezone,
   getCurrentDayNumber,
   isBeforeSchedule,
   isAfterSchedule,
@@ -364,9 +365,15 @@ export function TripScheduleView({
       // Timeline mode: start with all days expanded
       const allDays = new Set(schedule.interventions.map((d) => d.day));
       setExpandedDays(allDays);
+    } else {
+      // Summary mode: auto-expand today's day (if it exists in the schedule)
+      const today = getCurrentDateInTimezone(tripData.originTz);
+      const todaySchedule = schedule.interventions.find((d) => d.date === today);
+      if (todaySchedule) {
+        setExpandedDays(new Set([todaySchedule.day]));
+      }
     }
-    // Summary mode: leave expandedDays empty (all collapsed)
-  }, [schedule, scheduleViewMode]);
+  }, [schedule, scheduleViewMode, tripData.originTz]);
 
   if (isLoading) {
     return (
