@@ -7,6 +7,7 @@ import {
   formatFlightOffset,
   formatFlightPhase,
   isEditableIntervention,
+  formatInFlightDualTimezones,
 } from "../intervention-utils";
 
 describe("getInterventionStyle", () => {
@@ -295,5 +296,68 @@ describe("isEditableIntervention", () => {
     it("returns false for caffeine_cutoff", () => {
       expect(isEditableIntervention("caffeine_cutoff")).toBe(false);
     });
+  });
+});
+
+describe("formatInFlightDualTimezones", () => {
+  it("calculates times correctly for SFO to London (eastbound)", () => {
+    // Departure: Jan 15, 8:45 PM PST
+    // 4 hours into flight: 12:45 AM PST on Jan 16 = 8:45 AM GMT on Jan 16
+    const result = formatInFlightDualTimezones(
+      "2026-01-15T20:45",
+      4, // 4 hours into flight
+      "America/Los_Angeles",
+      "Europe/London"
+    );
+    // Origin time should be around 12:45 AM PST
+    expect(result.originTime).toContain("12:45 AM");
+    expect(result.originTime).toContain("PST");
+    // Dest time should be around 8:45 AM GMT
+    expect(result.destTime).toContain("8:45 AM");
+    expect(result.destTime).toContain("GMT");
+  });
+
+  it("handles in-flight sleep at flight midpoint", () => {
+    // Departure: Jan 15, 6:00 PM PST (11 hour flight to London)
+    // 5.5 hours into flight: 11:30 PM PST = 7:30 AM GMT next day
+    const result = formatInFlightDualTimezones(
+      "2026-01-15T18:00",
+      5.5,
+      "America/Los_Angeles",
+      "Europe/London"
+    );
+    expect(result.originTime).toContain("11:30 PM");
+    expect(result.destTime).toContain("7:30 AM");
+  });
+
+  it("handles westbound flight (London to LA)", () => {
+    // Departure: Jan 15, 10:00 AM GMT
+    // 6 hours into flight: 4:00 PM GMT = 8:00 AM PST
+    const result = formatInFlightDualTimezones(
+      "2026-01-15T10:00",
+      6,
+      "Europe/London",
+      "America/Los_Angeles"
+    );
+    expect(result.originTime).toContain("4:00 PM");
+    expect(result.originTime).toContain("GMT");
+    expect(result.destTime).toContain("8:00 AM");
+    expect(result.destTime).toContain("PST");
+  });
+
+  it("handles trans-Pacific flight (SFO to Tokyo)", () => {
+    // Departure: Jan 15, 1:00 PM PST (11 hour flight to Tokyo)
+    // 8 hours into flight: 9:00 PM PST Jan 15 = 2:00 PM JST Jan 16
+    const result = formatInFlightDualTimezones(
+      "2026-01-15T13:00",
+      8,
+      "America/Los_Angeles",
+      "Asia/Tokyo"
+    );
+    expect(result.originTime).toContain("9:00 PM");
+    expect(result.originTime).toContain("PST");
+    expect(result.destTime).toContain("2:00 PM");
+    // Tokyo may show as JST or GMT+9 depending on system locale
+    expect(result.destTime).toMatch(/JST|GMT\+9/);
   });
 });

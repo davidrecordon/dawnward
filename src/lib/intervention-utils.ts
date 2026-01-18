@@ -254,3 +254,85 @@ const EDITABLE_INTERVENTION_TYPES: Set<InterventionType> = new Set([
 export function isEditableIntervention(type: InterventionType): boolean {
   return EDITABLE_INTERVENTION_TYPES.has(type);
 }
+
+/**
+ * Format dual timezone times for in-flight items using flight offset.
+ * Calculates the actual moment from departure + offset, then formats both timezones.
+ *
+ * This solves the timezone conversion problem for in-flight events: given a departure
+ * time in origin timezone and hours into the flight, we calculate the actual UTC moment
+ * and format it in both origin and destination timezones.
+ *
+ * @param departureDateTime - Departure datetime as ISO string (YYYY-MM-DDTHH:MM)
+ * @param flightOffsetHours - Hours into the flight
+ * @param originTz - Origin IANA timezone
+ * @param destTz - Destination IANA timezone
+ * @returns Object with formatted origin and destination times with abbreviations
+ */
+export function formatInFlightDualTimezones(
+  departureDateTime: string,
+  flightOffsetHours: number,
+  originTz: string,
+  destTz: string
+): { originTime: string; destTime: string } {
+  // Parse departure time in origin timezone
+  const [depDate, depTime] = departureDateTime.split("T");
+  const depDateTimeStr = `${depDate}T${depTime}:00`;
+
+  // Create a Date object and figure out the UTC timestamp for departure in origin TZ
+  const tempDate = new Date(depDateTimeStr);
+  const originFormatter = new Intl.DateTimeFormat("en-US", {
+    timeZone: originTz,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+
+  // Get what the temp date shows in origin timezone
+  const parts = originFormatter.formatToParts(tempDate);
+  const tempHour = parseInt(parts.find((p) => p.type === "hour")?.value ?? "0");
+  const tempMinute = parseInt(
+    parts.find((p) => p.type === "minute")?.value ?? "0"
+  );
+
+  // Calculate offset to get the actual UTC time for departure in origin TZ
+  const [inputHour, inputMinute] = depTime.split(":").map(Number);
+  const hourDiff = inputHour - tempHour;
+  const minuteDiff = inputMinute - tempMinute;
+
+  // Adjust to get UTC timestamp for departure
+  const departureUTC = new Date(
+    tempDate.getTime() + hourDiff * 60 * 60 * 1000 + minuteDiff * 60 * 1000
+  );
+
+  // Add flight offset to get the moment of the in-flight event
+  const eventUTC = new Date(
+    departureUTC.getTime() + flightOffsetHours * 60 * 60 * 1000
+  );
+
+  // Format in both timezones
+  const originTimeFormatter = new Intl.DateTimeFormat("en-US", {
+    timeZone: originTz,
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+  });
+
+  const destTimeFormatter = new Intl.DateTimeFormat("en-US", {
+    timeZone: destTz,
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+  });
+
+  const originTimeStr = originTimeFormatter.format(eventUTC).replace(/^0/, "");
+  const destTimeStr = destTimeFormatter.format(eventUTC).replace(/^0/, "");
+
+  return {
+    originTime: `${originTimeStr} ${getTimezoneAbbr(originTz, eventUTC)}`,
+    destTime: `${destTimeStr} ${getTimezoneAbbr(destTz, eventUTC)}`,
+  };
+}

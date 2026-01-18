@@ -25,6 +25,7 @@ import { GroupedItemCard } from "./grouped-item-card";
 import { NowMarker } from "./now-marker";
 import { TimezoneTransition } from "./timezone-transition";
 import { calculateFlightDuration } from "@/lib/timezone-utils";
+import { DateTime } from "luxon";
 import { getActualKey } from "@/lib/actuals-utils";
 import type {
   DaySchedule,
@@ -122,6 +123,16 @@ export function DaySection({
     ? flightDuration.hours + flightDuration.minutes / 60
     : undefined;
 
+  // Flight context for in-transit cards to show dual timezones
+  const flightContext = showTimezone
+    ? {
+        originTimezone: origin.tz,
+        destTimezone: destination.tz,
+        departureDateTime: `${departureDate}T${departureTime}`,
+        totalFlightHours,
+      }
+    : undefined;
+
   // Memoize expensive item construction, sorting, and transition logic
   const { itemsWithTransitions, hasMultipleTimezones } = useMemo(() => {
     // Build combined items array (TimedItem before transitions are inserted)
@@ -130,11 +141,46 @@ export function DaySection({
     // Build pre-grouping items array with all interventions, flights, and now marker
     const preGroupItems: GroupableItem[] = [];
 
+    // Parse departure and arrival times for pre-landing detection on arrival day
+    const departureDt = DateTime.fromISO(`${departureDate}T${departureTime}`, {
+      zone: origin.tz,
+    });
+    const arrivalDt = DateTime.fromISO(`${arrivalDate}T${arrivalTime}`, {
+      zone: destination.tz,
+    });
+    const isArrivalDay = daySchedule.day === ARRIVAL_DAY;
+
     // Add all interventions
+    // Note: is_in_transit is set at the DaySchedule level by Python scheduler,
+    // so we propagate it to each intervention for dual timezone display logic
+    const isInTransitDay = daySchedule.is_in_transit ?? false;
     daySchedule.items.forEach((intervention) => {
       // For in-transit items, show destination timezone to help traveler adjust
       let itemTimezone = intervention.timezone;
-      if (intervention.is_in_transit) {
+      let isItemInTransit = isInTransitDay || intervention.is_in_transit;
+      let flightOffsetHours = intervention.flight_offset_hours;
+
+      // Pre-landing detection: For arrival day interventions that occur before
+      // landing, mark them as in-transit with flight offset for dual timezone display
+      if (
+        isArrivalDay &&
+        !isItemInTransit &&
+        departureDt.isValid &&
+        arrivalDt.isValid
+      ) {
+        const itemDt = DateTime.fromISO(
+          `${daySchedule.date}T${intervention.time}`,
+          { zone: destination.tz }
+        );
+        if (itemDt.isValid && itemDt < arrivalDt) {
+          // This item occurs before landing - mark as in-transit
+          isItemInTransit = true;
+          // Calculate hours since departure for flight offset
+          flightOffsetHours = itemDt.diff(departureDt, "hours").hours;
+        }
+      }
+
+      if (isItemInTransit) {
         itemTimezone = destination.tz;
       }
       preGroupItems.push({
@@ -142,6 +188,8 @@ export function DaySection({
         time: intervention.time,
         data: {
           ...intervention,
+          is_in_transit: isItemInTransit,
+          flight_offset_hours: flightOffsetHours,
           timezone: showTimezone ? itemTimezone : undefined,
         },
         timezone: showTimezone ? itemTimezone : undefined,
@@ -414,12 +462,13 @@ export function DaySection({
                     <InFlightSleepCard
                       intervention={item.data}
                       timezone={item.timezone}
-                      totalFlightHours={totalFlightHours}
+                      flightContext={flightContext}
                     />
                   ) : (
                     <InterventionCard
                       intervention={item.data}
                       timezone={item.timezone}
+                      flightContext={flightContext}
                       date={daySchedule.date}
                       actual={actuals?.get(
                         getActualKey(daySchedule.day, item.data.type)
@@ -443,6 +492,7 @@ export function DaySection({
                     timezone={item.timezone}
                     origin={origin}
                     destination={destination}
+                    flightContext={flightContext}
                     actuals={actuals}
                     onInterventionClick={onInterventionClick}
                     dayOffset={daySchedule.day}

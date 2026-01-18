@@ -7,6 +7,12 @@ import { getActualKey } from "@/lib/actuals-utils";
 import { InterventionCard } from "./intervention-card";
 import { FlightCard } from "./flight-card";
 
+interface FlightContext {
+  originTimezone: string;
+  destTimezone: string;
+  departureDateTime: string;
+}
+
 interface GroupedItemCardProps {
   group: TimedItemGroup;
   /** Optional timezone to display on the parent card */
@@ -15,6 +21,8 @@ interface GroupedItemCardProps {
   origin: Airport;
   /** Destination airport (for arrival parent's FlightCard) */
   destination: Airport;
+  /** Flight context for in-transit dual timezone display */
+  flightContext?: FlightContext;
   /** Recorded actuals map for displaying inline changes */
   actuals?: ActualsMap;
   /** Callback when an intervention card is clicked (for recording actuals) */
@@ -43,6 +51,7 @@ export function GroupedItemCard({
   timezone,
   origin,
   destination,
+  flightContext,
   actuals,
   onInterventionClick,
   dayOffset,
@@ -67,6 +76,7 @@ export function GroupedItemCard({
         <InterventionCard
           intervention={parent.data}
           timezone={timezone}
+          flightContext={flightContext}
           date={date}
           actual={actuals?.get(getActualKey(dayOffset, parent.data.type))}
           onClick={
@@ -118,6 +128,7 @@ export function GroupedItemCard({
                     <InterventionCard
                       intervention={child}
                       variant="nested"
+                      flightContext={flightContext}
                       date={date}
                       actual={actuals?.get(getActualKey(dayOffset, child.type))}
                       onClick={
