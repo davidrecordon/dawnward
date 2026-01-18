@@ -8,8 +8,9 @@ import {
   formatTime,
   formatFlightOffset,
   getDayLabel,
+  getDayLabelColor,
+  getDayCardGradient,
   FLIGHT_DAY,
-  ARRIVAL_DAY,
 } from "@/lib/intervention-utils";
 import { formatLongDate } from "@/lib/time-utils";
 import {
@@ -372,27 +373,9 @@ export function DaySummaryCard({
     onExpandChange?.(next);
   };
 
-  const isFlightDay = daySchedule.day === FLIGHT_DAY;
-  const isArrivalDay = daySchedule.day === ARRIVAL_DAY;
-
-  // Header color by phase
-  const headerColor =
-    daySchedule.day < FLIGHT_DAY
-      ? "text-sky-600"
-      : isFlightDay
-        ? "text-sky-700"
-        : isArrivalDay
-          ? "text-emerald-600"
-          : "text-violet-600";
-
-  // Top gradient by day type
-  const topGradient = isFlightDay
-    ? "bg-gradient-to-r from-amber-400 via-sky-400 to-emerald-400"
-    : isArrivalDay
-      ? "bg-gradient-to-r from-sky-400 to-emerald-400"
-      : daySchedule.day < FLIGHT_DAY
-        ? "bg-gradient-to-r from-sky-400 via-indigo-400 to-violet-400"
-        : "bg-gradient-to-r from-emerald-400 via-teal-400 to-violet-400";
+  // Use shared utilities for consistent styling across components
+  const headerColor = getDayLabelColor(daySchedule.day);
+  const topGradient = getDayCardGradient(daySchedule.day);
 
   return (
     <section id={`day-${daySchedule.day}`} className="scroll-mt-15">

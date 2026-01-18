@@ -143,6 +143,38 @@ export function getDayLabel(day: number, hasSameDayArrival?: boolean): string {
 }
 
 /**
+ * Get the text color class for a day header based on schedule phase.
+ *
+ * @param day - Day number relative to departure
+ * @returns Tailwind text color class
+ */
+export function getDayLabelColor(day: number): string {
+  if (day < FLIGHT_DAY) return "text-sky-600"; // Pre-departure/preparation
+  if (day === FLIGHT_DAY) return "text-sky-700"; // Flight day
+  if (day === ARRIVAL_DAY) return "text-emerald-600"; // Arrival day
+  return "text-violet-600"; // Post-arrival adaptation
+}
+
+/**
+ * Get the top gradient class for a day card based on schedule phase.
+ *
+ * @param day - Day number relative to departure
+ * @returns Tailwind gradient class
+ */
+export function getDayCardGradient(day: number): string {
+  if (day < FLIGHT_DAY) {
+    return "bg-gradient-to-r from-sky-400 via-indigo-400 to-violet-400";
+  }
+  if (day === FLIGHT_DAY) {
+    return "bg-gradient-to-r from-amber-400 via-sky-400 to-emerald-400";
+  }
+  if (day === ARRIVAL_DAY) {
+    return "bg-gradient-to-r from-sky-400 to-emerald-400";
+  }
+  return "bg-gradient-to-r from-emerald-400 via-teal-400 to-violet-400";
+}
+
+/**
  * Format a date string to a short format (e.g., "Jan 28")
  */
 export function formatShortDate(dateStr: string): string {

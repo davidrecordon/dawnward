@@ -4,9 +4,8 @@ import { useMemo } from "react";
 import { ChevronUp } from "lucide-react";
 import {
   getDayLabel,
+  getDayLabelColor,
   isEditableIntervention,
-  FLIGHT_DAY,
-  ARRIVAL_DAY,
 } from "@/lib/intervention-utils";
 import {
   dayHasMultipleTimezones,
@@ -368,14 +367,6 @@ export function DaySection({
     actuals,
   ]);
 
-  // Day label color based on phase
-  function getDayLabelStyle(): string {
-    if (daySchedule.day < FLIGHT_DAY) return "text-sky-600"; // Pre-departure
-    if (daySchedule.day === FLIGHT_DAY) return "text-sky-700"; // Flight day
-    if (daySchedule.day === ARRIVAL_DAY) return "text-emerald-600"; // Arrival
-    return "text-violet-600"; // Post-arrival adaptation
-  }
-
   // Summary view: render DaySummaryCard when not expanded
   if (!isExpanded) {
     return (
@@ -412,7 +403,7 @@ export function DaySection({
           <div className="flex items-center justify-between px-4 py-2.5">
             <div className="flex items-baseline gap-3">
               <span
-                className={`text-sm font-bold tracking-wide uppercase ${getDayLabelStyle()}`}
+                className={`text-sm font-bold tracking-wide uppercase ${getDayLabelColor(daySchedule.day)}`}
               >
                 {getDayLabel(daySchedule.day, daySchedule.hasSameDayArrival)}
               </span>
