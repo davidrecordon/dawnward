@@ -243,7 +243,8 @@ function SummaryContent({
 }) {
   const isFlightDay = daySchedule.day === FLIGHT_DAY;
   const hasDeparture = daySchedule.date === departureDate;
-  const hasArrival = daySchedule.date === arrivalDate;
+  // On flight day, always show arrival info (even if arrival is next calendar day)
+  const hasArrival = isFlightDay || daySchedule.date === arrivalDate;
 
   if (daySchedule.items.length === 0 && !hasDeparture && !hasArrival) {
     return (
@@ -283,7 +284,15 @@ function SummaryContent({
         {/* On the Plane */}
         {groups.inTransit.length > 0 && (
           <>
-            <FlightSubSectionHeader title="On the Plane" variant="transit" />
+            <FlightSubSectionHeader
+              title="On the Plane"
+              subtitle={
+                hasDeparture
+                  ? `${formatTime(departureTime)} from ${origin.code}`
+                  : undefined
+              }
+              variant="transit"
+            />
             {groups.inTransit.map((item, i) => (
               <SummaryInterventionRow
                 key={`transit-${item.type}-${getDisplayTime(item)}-${i}`}

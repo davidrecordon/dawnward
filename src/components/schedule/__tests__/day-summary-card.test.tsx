@@ -227,6 +227,70 @@ describe("DaySummaryCard", () => {
       expect(screen.getByText("Arrive at LHR")).toBeInTheDocument();
       expect(screen.getByText("6:00 PM")).toBeInTheDocument();
     });
+
+    it("shows After Landing section on flight day for overnight flights (arrival next calendar day)", () => {
+      // SFO→LHR departing Tuesday 8:45 PM, arriving Wednesday 6:00 AM
+      const daySchedule = createMockDaySchedule({
+        day: FLIGHT_DAY,
+        date: "2026-01-20", // Tuesday - departure date
+        hasSameDayArrival: false,
+        items: [
+          createMockIntervention({
+            type: "melatonin",
+            phase_type: "post_arrival",
+            dest_time: "21:00",
+          }),
+        ],
+      });
+
+      render(
+        <DaySummaryCard
+          {...defaultProps}
+          daySchedule={daySchedule}
+          departureDate="2026-01-20" // Tuesday
+          departureTime="20:45"
+          arrivalDate="2026-01-21" // Wednesday - next calendar day
+          arrivalTime="06:00"
+        />
+      );
+
+      // Should show "After Landing" section with arrival info
+      expect(screen.getByText("After Landing")).toBeInTheDocument();
+      expect(screen.getByText("Arrive at LHR")).toBeInTheDocument();
+      expect(screen.getByText("6:00 AM")).toBeInTheDocument();
+      // Post-arrival intervention should be shown
+      expect(
+        screen.getByText("Take melatonin to shift rhythm")
+      ).toBeInTheDocument();
+    });
+  });
+
+  describe("On the Plane section", () => {
+    it("shows departure time subtitle on On the Plane section", () => {
+      const daySchedule = createMockDaySchedule({
+        day: FLIGHT_DAY,
+        date: "2026-01-20",
+        items: [
+          createMockIntervention({
+            type: "nap_window",
+            phase_type: "in_transit",
+            flight_offset_hours: 4,
+          }),
+        ],
+      });
+
+      render(
+        <DaySummaryCard
+          {...defaultProps}
+          daySchedule={daySchedule}
+          departureDate="2026-01-20"
+          departureTime="20:45"
+        />
+      );
+
+      expect(screen.getByText("On the Plane")).toBeInTheDocument();
+      expect(screen.getByText("8:45 PM from SFO")).toBeInTheDocument();
+    });
   });
 
   describe("expand/collapse functionality", () => {
