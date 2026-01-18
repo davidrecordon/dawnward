@@ -77,6 +77,8 @@ interface TripScheduleViewProps {
   sharerName: string | null;
   /** User preference: always show both origin and destination timezones */
   showDualTimezone?: boolean;
+  /** User preference: default view mode for schedule (summary or timeline) */
+  scheduleViewMode?: "summary" | "timeline";
 }
 
 // Minimal airport info for display
@@ -124,8 +126,14 @@ export function TripScheduleView({
   hasCalendarScope,
   sharerName,
   showDualTimezone = false,
+  scheduleViewMode = "summary",
 }: TripScheduleViewProps) {
   const [schedule, setSchedule] = useState<ScheduleResponse | null>(null);
+
+  // Track which days are expanded
+  // Initialize based on scheduleViewMode preference (populated when schedule loads)
+  const [expandedDays, setExpandedDays] = useState<Set<number>>(new Set());
+  const hasInitializedExpandedDays = useRef(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -152,6 +160,19 @@ export function TripScheduleView({
 
   // Ref to prevent race conditions during recalculation
   const isRecalculatingRef = useRef(false);
+
+  // Toggle day expansion (for summary view mode)
+  const toggleDayExpanded = useCallback((day: number) => {
+    setExpandedDays((prev) => {
+      const next = new Set(prev);
+      if (next.has(day)) {
+        next.delete(day);
+      } else {
+        next.add(day);
+      }
+      return next;
+    });
+  }, []);
 
   // Fetch actuals on mount for authenticated owners
   const fetchActuals = useCallback(async () => {
@@ -332,6 +353,20 @@ export function TripScheduleView({
     }, SCROLL_TO_NOW_DELAY_MS);
     return () => clearTimeout(timer);
   }, [schedule, isLoading]);
+
+  // Initialize expanded days based on user preference when schedule loads
+  useEffect(() => {
+    if (!schedule || hasInitializedExpandedDays.current) return;
+
+    hasInitializedExpandedDays.current = true;
+
+    if (scheduleViewMode === "timeline") {
+      // Timeline mode: start with all days expanded
+      const allDays = new Set(schedule.interventions.map((d) => d.day));
+      setExpandedDays(allDays);
+    }
+    // Summary mode: leave expandedDays empty (all collapsed)
+  }, [schedule, scheduleViewMode]);
 
   if (isLoading) {
     return (
@@ -537,6 +572,8 @@ export function TripScheduleView({
               isCurrentDay={daySchedule.day === currentDayNumber}
               actuals={actuals}
               showDualTimezone={showDualTimezone}
+              isExpanded={expandedDays.has(daySchedule.day)}
+              onExpandChange={() => toggleDayExpanded(daySchedule.day)}
               onInterventionClick={
                 isOwner && isLoggedIn
                   ? (intervention, dayOffset, date, nestedChildren) =>

@@ -16,11 +16,11 @@ The current detailed view shows each intervention as a full card with icon, titl
 
 ## Design Direction (from user input)
 
-| Decision | Choice |
-|----------|--------|
-| View mode | **Hybrid** - Summary by default, tap day to expand details |
-| Content level | **Icon + time + mini description** |
-| Tiering integration | **TBD** - Explore options below |
+| Decision            | Choice                                                     |
+| ------------------- | ---------------------------------------------------------- |
+| View mode           | **Hybrid** - Summary by default, tap day to expand details |
+| Content level       | **Icon + time + mini description**                         |
+| Tiering integration | **TBD** - Explore options below                            |
 
 ---
 
@@ -31,6 +31,7 @@ The current detailed view shows each intervention as a full card with icon, titl
 A single card per day that contains all interventions in a scannable list format:
 
 **Regular prep day (collapsed):**
+
 ```
 ┌─────────────────────────────────────────────────────┐
 │  DAY -2 • Sunday, January 18                    ▼   │
@@ -45,6 +46,7 @@ A single card per day that contains all interventions in a scannable list format
 ```
 
 **Flight day (collapsed with sub-sections):**
+
 ```
 ┌─────────────────────────────────────────────────────┐
 │  FLIGHT DAY • Monday, January 20                ▼   │
@@ -71,6 +73,7 @@ A single card per day that contains all interventions in a scannable list format
 ```
 
 **Minimal shift (tips card only, no expand):**
+
 ```
 ┌─────────────────────────────────────────────────────┐
 │  SFO → DEN • +1 hour shift                          │
@@ -90,6 +93,7 @@ A single card per day that contains all interventions in a scannable list format
 ```
 
 **Tier defaults visualization:**
+
 ```
 MINIMAL (0-2h)     LIGHT (3h)        MODERATE (4-6h)   SIGNIFICANT (7-9h)  SEVERE (10-12h)
 ┌──────────┐       ┌──────────┐      ┌──────────┐      ┌──────────┐        ┌──────────┐
@@ -112,17 +116,17 @@ No expand          Can expand        Can expand        Flight day          Can c
 
 Current detailed descriptions → Condensed versions:
 
-| Type | Current Description | Condensed |
-|------|---------------------|-----------|
-| `wake_target` | "Try to wake up at this time to help shift your circadian clock. Get bright light soon after waking." | "Wake up to help shift your clock" |
-| `light_seek` | "Get outside or use a light box for 30+ minutes of bright light." | "Get 30+ min bright light" |
-| `light_avoid` | "Avoid bright light and screens. Wear blue blockers if needed." | "Avoid bright light, dim screens" |
-| `caffeine_cutoff` | "Avoid caffeine from now on to protect tonight's sleep. Caffeine's half-life is ~6 hours." | "Last caffeine for today" |
-| `caffeine_ok` | "Coffee and tea are fine until your cutoff time." | "Caffeine OK until cutoff" |
-| `caffeine_boost` | "Strategic caffeine can help you stay alert when needed." | "Use caffeine to stay alert" |
-| `melatonin` | "Take 0.5mg fast-release melatonin now. This timing shifts your body clock earlier—it's not meant to make you sleepy right now." | "Take melatonin to shift earlier" |
-| `sleep_target` | "Aim to be in bed with lights out at this time. Dim lights 1-2 hours before to prepare for sleep." | "Aim for sleep by this time" |
-| `nap_window` | "This is an optimal window for a brief nap if needed." | "Good window for a short nap" |
+| Type              | Current Description                                                                                                              | Condensed                          |
+| ----------------- | -------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------- |
+| `wake_target`     | "Try to wake up at this time to help shift your circadian clock. Get bright light soon after waking."                            | "Wake up to help shift your clock" |
+| `light_seek`      | "Get outside or use a light box for 30+ minutes of bright light."                                                                | "Get 30+ min bright light"         |
+| `light_avoid`     | "Avoid bright light and screens. Wear blue blockers if needed."                                                                  | "Avoid bright light, dim screens"  |
+| `caffeine_cutoff` | "Avoid caffeine from now on to protect tonight's sleep. Caffeine's half-life is ~6 hours."                                       | "Last caffeine for today"          |
+| `caffeine_ok`     | "Coffee and tea are fine until your cutoff time."                                                                                | "Caffeine OK until cutoff"         |
+| `caffeine_boost`  | "Strategic caffeine can help you stay alert when needed."                                                                        | "Use caffeine to stay alert"       |
+| `melatonin`       | "Take 0.5mg fast-release melatonin now. This timing shifts your body clock earlier—it's not meant to make you sleepy right now." | "Take melatonin to shift earlier"  |
+| `sleep_target`    | "Aim to be in bed with lights out at this time. Dim lights 1-2 hours before to prepare for sleep."                               | "Aim for sleep by this time"       |
+| `nap_window`      | "This is an optimal window for a brief nap if needed."                                                                           | "Good window for a short nap"      |
 
 ### Interaction
 
@@ -137,18 +141,18 @@ Animation: Smooth accordion expand/collapse with slight spring.
 
 ### New Components
 
-| Component | Purpose |
-|-----------|---------|
-| `DaySummaryCard` | Single collapsed day with intervention list |
-| `SummaryInterventionRow` | Icon + time + condensed text row |
-| `ExpandableDay` | Wrapper handling expand/collapse state |
+| Component                | Purpose                                     |
+| ------------------------ | ------------------------------------------- |
+| `DaySummaryCard`         | Single collapsed day with intervention list |
+| `SummaryInterventionRow` | Icon + time + condensed text row            |
+| `ExpandableDay`          | Wrapper handling expand/collapse state      |
 
 ### Modified Components
 
-| Component | Change |
-|-----------|--------|
-| `DaySection` | Add collapsed state, delegate to `DaySummaryCard` when collapsed |
-| `schedule-page` | Track expanded days in state, default all collapsed |
+| Component       | Change                                                           |
+| --------------- | ---------------------------------------------------------------- |
+| `DaySection`    | Add collapsed state, delegate to `DaySummaryCard` when collapsed |
+| `schedule-page` | Track expanded days in state, default all collapsed              |
 
 ### Data Flow
 
@@ -170,6 +174,7 @@ Schedule Page
 ### Option A: Independent Features
 
 **Summary view** and **shift tiering** are orthogonal:
+
 - Tiering controls **what** shows (full schedule vs tips card)
 - Summary controls **how** it displays (cards vs list)
 
@@ -180,11 +185,13 @@ Moderate+:      Summary OR detailed (user choice)
 ```
 
 **Pros:**
+
 - Simpler mental model
 - Users control their own experience
 - Features can ship independently
 
 **Cons:**
+
 - Missed opportunity for smart defaults
 - User has to understand two different simplification concepts
 
@@ -199,10 +206,12 @@ Moderate+:      Summary default, can expand
 ```
 
 **Pros:**
+
 - Very simple experience for minimal shifts
 - Reinforces "you don't need a complex schedule"
 
 **Cons:**
+
 - Removes user agency for minimal shifts
 - Inconsistent behavior across tiers
 
@@ -210,20 +219,22 @@ Moderate+:      Summary default, can expand
 
 Treat both as one **"schedule simplification"** system with smart defaults:
 
-| Tier | Default View | Expand Available | Rationale |
-|------|--------------|------------------|-----------|
-| Minimal (0-2h) | Tips card | No | No real schedule needed |
-| Light (3h) | Summary | Yes (shows "mostly the same as your normal routine") | Light guidance |
-| Moderate (4-6h) | Summary | Yes | Quick reference preferred |
-| Significant (7-9h) | Summary | Yes, starts expanded on flight day | More detail for complex shifts |
-| Severe (10-12h) | Detailed | Can collapse | Full guidance for extreme shifts |
+| Tier               | Default View | Expand Available                                     | Rationale                        |
+| ------------------ | ------------ | ---------------------------------------------------- | -------------------------------- |
+| Minimal (0-2h)     | Tips card    | No                                                   | No real schedule needed          |
+| Light (3h)         | Summary      | Yes (shows "mostly the same as your normal routine") | Light guidance                   |
+| Moderate (4-6h)    | Summary      | Yes                                                  | Quick reference preferred        |
+| Significant (7-9h) | Summary      | Yes, starts expanded on flight day                   | More detail for complex shifts   |
+| Severe (10-12h)    | Detailed     | Can collapse                                         | Full guidance for extreme shifts |
 
 **Pros:**
+
 - Intelligent defaults based on trip complexity
 - Progressive disclosure matches user need
 - Single coherent "smart schedule" narrative
 
 **Cons:**
+
 - More complex implementation
 - Requires tiering to ship first (or together)
 
@@ -236,6 +247,7 @@ Treat both as one **"schedule simplification"** system with smart defaults:
 The summary card format maps directly to email and calendar:
 
 **Morning email:**
+
 ```
 Good morning, David.
 
@@ -253,6 +265,7 @@ SFO → London in 2 days
 ```
 
 **Calendar event description:**
+
 ```
 Today's jet lag plan:
 ☀️ 6:00 AM - Wake up to help shift your clock
@@ -267,16 +280,19 @@ Create a shared `formatDayForText()` utility:
 
 ```typescript
 function formatDayForText(day: DaySchedule): string {
-  return day.items.map(intervention => {
-    const icon = getInterventionEmoji(intervention.type);
-    const time = formatTime(getDisplayTime(intervention));
-    const desc = getCondensedDescription(intervention.type);
-    return `${icon}  ${time}   ${desc}`;
-  }).join('\n');
+  return day.items
+    .map((intervention) => {
+      const icon = getInterventionEmoji(intervention.type);
+      const time = formatTime(getDisplayTime(intervention));
+      const desc = getCondensedDescription(intervention.type);
+      return `${icon}  ${time}   ${desc}`;
+    })
+    .join("\n");
 }
 ```
 
 Used by:
+
 - `DaySummaryCard` component (web)
 - Email template generation
 - Calendar event builder
@@ -350,6 +366,7 @@ Used by:
 **File:** `src/app/trip/[id]/page.tsx`
 
 Changes:
+
 - Add `expandedDays: Set<number>` state to track which days are expanded
 - Pass `isExpanded` and `onExpandChange` props to day rendering
 - Default all days to collapsed (summary view)
@@ -357,6 +374,7 @@ Changes:
 **File:** `src/components/schedule/day-section.tsx`
 
 Changes:
+
 - Add `isExpanded` and `onExpandChange` props
 - When collapsed, render `DaySummaryCard` instead of full timeline
 - When expanded, render current detailed view (wrapped in `DaySummaryCard.renderExpanded`)
@@ -367,13 +385,14 @@ interface DaySectionProps {
   // ... existing props
   isExpanded?: boolean;
   onExpandChange?: (expanded: boolean) => void;
-  viewMode?: 'summary' | 'detailed';
+  viewMode?: "summary" | "detailed";
 }
 ```
 
 **File:** `src/components/schedule/schedule-display.tsx` (if exists) or equivalent
 
 Changes:
+
 - Manage expanded state for all days
 - Handle "expand all" / "collapse all" actions (optional)
 
@@ -384,10 +403,11 @@ Changes:
 **File:** `src/types/user-preferences.ts`
 
 Add new preference:
+
 ```typescript
 export interface UserPreferences {
   // ... existing
-  scheduleViewMode?: 'summary' | 'detailed';  // NEW - default: 'summary'
+  scheduleViewMode?: "summary" | "detailed"; // NEW - default: 'summary'
 }
 ```
 
@@ -398,6 +418,7 @@ Update User model to include `scheduleViewMode` in preferences JSON.
 **File:** `src/app/settings/page.tsx`
 
 Add toggle in Display Preferences section:
+
 ```
 Schedule View
 ○ Summary (compact list, tap to expand)  [default]
@@ -442,28 +463,29 @@ The `renderExpanded` prop is already supported. Parent component passes actual `
 **File:** `src/lib/schedule-display-utils.ts` (new)
 
 ```typescript
-import type { ShiftTier } from '@/types/schedule';
+import type { ShiftTier } from "@/types/schedule";
 
-export function getDefaultViewMode(tier: ShiftTier): 'summary' | 'detailed' {
-  return tier === 'severe' ? 'detailed' : 'summary';
+export function getDefaultViewMode(tier: ShiftTier): "summary" | "detailed" {
+  return tier === "severe" ? "detailed" : "summary";
 }
 
 export function shouldAutoExpandFlightDay(tier: ShiftTier): boolean {
-  return tier === 'significant' || tier === 'severe';
+  return tier === "significant" || tier === "severe";
 }
 
 export function canExpand(tier: ShiftTier): boolean {
-  return tier !== 'minimal';  // Minimal tier shows tips card only
+  return tier !== "minimal"; // Minimal tier shows tips card only
 }
 ```
 
 **File:** `src/app/trip/[id]/page.tsx`
 
 Apply tier-based defaults:
+
 ```typescript
 const defaultExpanded = new Set<number>();
 if (shouldAutoExpandFlightDay(schedule.shift_tier)) {
-  defaultExpanded.add(0);  // Flight day
+  defaultExpanded.add(0); // Flight day
 }
 const [expandedDays, setExpandedDays] = useState(defaultExpanded);
 ```
@@ -481,6 +503,7 @@ Same pattern as trip page - summary by default, expandable.
 **File:** `src/components/schedule/__tests__/day-summary-card.test.tsx` (new)
 
 Test cases:
+
 - Renders correct number of intervention rows
 - Flight day shows sub-sections (Before Boarding, On Plane, After Landing)
 - Flight offset times render as "~X hours into flight"
@@ -492,6 +515,7 @@ Test cases:
 **File:** `src/lib/__tests__/schedule-display-utils.test.ts` (new)
 
 Test cases:
+
 - `getDefaultViewMode()` returns 'detailed' only for severe tier
 - `shouldAutoExpandFlightDay()` returns true for significant/severe
 - `canExpand()` returns false only for minimal tier
@@ -508,20 +532,20 @@ Delete after integration is complete.
 
 ## File Summary
 
-| File | Action | Purpose |
-|------|--------|---------|
-| `src/components/schedule/day-summary-card.tsx` | ✅ Created | Main summary card component |
-| `src/app/demo/summary-card/page.tsx` | Delete after | Temporary demo page |
-| `src/app/trip/[id]/page.tsx` | Modify | Add expand state, use DaySummaryCard |
-| `src/app/s/[code]/page.tsx` | Modify | Same as trip page |
-| `src/components/schedule/day-section.tsx` | Modify | Accept expanded state, delegate to summary when collapsed |
-| `src/types/user-preferences.ts` | Modify | Add `scheduleViewMode` preference |
-| `prisma/schema.prisma` | Modify | Include new preference field |
-| `src/app/settings/page.tsx` | Modify | Add view mode toggle |
-| `src/app/api/user/preferences/route.ts` | Modify | Handle new preference |
-| `src/lib/schedule-display-utils.ts` | Create | Tier-based display logic |
-| `src/components/schedule/__tests__/day-summary-card.test.tsx` | Create | Component tests |
-| `src/lib/__tests__/schedule-display-utils.test.ts` | Create | Utility tests |
+| File                                                          | Action       | Purpose                                                   |
+| ------------------------------------------------------------- | ------------ | --------------------------------------------------------- |
+| `src/components/schedule/day-summary-card.tsx`                | ✅ Created   | Main summary card component                               |
+| `src/app/demo/summary-card/page.tsx`                          | Delete after | Temporary demo page                                       |
+| `src/app/trip/[id]/page.tsx`                                  | Modify       | Add expand state, use DaySummaryCard                      |
+| `src/app/s/[code]/page.tsx`                                   | Modify       | Same as trip page                                         |
+| `src/components/schedule/day-section.tsx`                     | Modify       | Accept expanded state, delegate to summary when collapsed |
+| `src/types/user-preferences.ts`                               | Modify       | Add `scheduleViewMode` preference                         |
+| `prisma/schema.prisma`                                        | Modify       | Include new preference field                              |
+| `src/app/settings/page.tsx`                                   | Modify       | Add view mode toggle                                      |
+| `src/app/api/user/preferences/route.ts`                       | Modify       | Handle new preference                                     |
+| `src/lib/schedule-display-utils.ts`                           | Create       | Tier-based display logic                                  |
+| `src/components/schedule/__tests__/day-summary-card.test.tsx` | Create       | Component tests                                           |
+| `src/lib/__tests__/schedule-display-utils.test.ts`            | Create       | Utility tests                                             |
 
 ---
 
@@ -544,11 +568,11 @@ Delete after integration is complete.
 
 ## Risks & Mitigations
 
-| Risk | Mitigation |
-|------|------------|
-| Performance: Re-rendering on expand/collapse | Use React.memo on DaySummaryCard, lazy load DaySection content |
-| Accessibility: Screen reader confusion | Ensure aria-expanded and aria-controls are correctly set (already in prototype) |
-| Mobile: Tap target too small | Header is full-width button, should be sufficient |
+| Risk                                         | Mitigation                                                                      |
+| -------------------------------------------- | ------------------------------------------------------------------------------- |
+| Performance: Re-rendering on expand/collapse | Use React.memo on DaySummaryCard, lazy load DaySection content                  |
+| Accessibility: Screen reader confusion       | Ensure aria-expanded and aria-controls are correctly set (already in prototype) |
+| Mobile: Tap target too small                 | Header is full-width button, should be sufficient                               |
 
 ---
 

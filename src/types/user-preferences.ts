@@ -12,6 +12,7 @@ export interface UserPreferences {
   scheduleIntensity: string;
   // Display preferences
   showDualTimezone: boolean;
+  scheduleViewMode: "summary" | "timeline";
 }
 
 /**
@@ -55,5 +56,6 @@ export function mapFormToDbPreferences(form: {
     scheduleIntensity: form.scheduleIntensity,
     // Display preferences not in trip form - use defaults
     showDualTimezone: false,
+    scheduleViewMode: "summary",
   };
 }

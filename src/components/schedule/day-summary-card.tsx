@@ -12,7 +12,12 @@ import {
   ARRIVAL_DAY,
 } from "@/lib/intervention-utils";
 import { formatLongDate } from "@/lib/time-utils";
-import { getDisplayTime, isInTransitPhase, isPreFlightPhase, isPostArrivalPhase } from "@/types/schedule";
+import {
+  getDisplayTime,
+  isInTransitPhase,
+  isPreFlightPhase,
+  isPostArrivalPhase,
+} from "@/types/schedule";
 import type { DaySchedule, Intervention } from "@/types/schedule";
 import type { Airport } from "@/types/airport";
 
@@ -88,7 +93,7 @@ function SummaryInterventionRow({
   const hasFlightOffset = intervention.flight_offset_hours != null;
 
   return (
-    <div className="group flex items-center gap-3 rounded-md px-2 py-2 -mx-2 transition-colors duration-200 hover:bg-slate-50/50">
+    <div className="group -mx-2 flex items-center gap-3 rounded-md px-2 py-2 transition-colors duration-200 hover:bg-slate-50/50">
       {/* Icon with colored background */}
       <div
         className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ${style.bgColor} ring-1 ring-white/60`}
@@ -98,7 +103,7 @@ function SummaryInterventionRow({
 
       {/* Time */}
       <span
-        className={`shrink-0 text-sm font-semibold tabular-nums text-slate-700 whitespace-nowrap ${
+        className={`shrink-0 text-sm font-semibold whitespace-nowrap text-slate-700 tabular-nums ${
           showFlightOffset && hasFlightOffset ? "w-[140px]" : "w-[72px]"
         }`}
       >
@@ -134,11 +139,15 @@ function FlightSubSectionHeader({
   };
 
   return (
-    <div className={`mt-3 mb-1 rounded-r-md border-l-2 py-1.5 pl-3 first:mt-0 ${styles[variant]}`}>
-      <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+    <div
+      className={`mt-3 mb-1 rounded-r-md border-l-2 py-1.5 pl-3 first:mt-0 ${styles[variant]}`}
+    >
+      <span className="text-xs font-semibold tracking-wider text-slate-500 uppercase">
         {title}
       </span>
-      {subtitle && <span className="ml-2 text-xs text-slate-400">{subtitle}</span>}
+      {subtitle && (
+        <span className="ml-2 text-xs text-slate-400">{subtitle}</span>
+      )}
     </div>
   );
 }
@@ -160,7 +169,7 @@ function FlightEventRow({
   const isDeparture = type === "departure";
 
   return (
-    <div className="group flex items-center gap-3 rounded-md px-2 py-2 -mx-2 transition-colors hover:bg-slate-50/50">
+    <div className="group -mx-2 flex items-center gap-3 rounded-md px-2 py-2 transition-colors hover:bg-slate-50/50">
       <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-sky-100 ring-1 ring-white/60">
         {isDeparture ? (
           <Plane className="h-3.5 w-3.5 -rotate-45 text-sky-600" />
@@ -168,11 +177,13 @@ function FlightEventRow({
           <PlaneLanding className="h-3.5 w-3.5 text-sky-600" />
         )}
       </div>
-      <span className="w-[72px] shrink-0 text-sm font-semibold tabular-nums text-slate-700">
+      <span className="w-[72px] shrink-0 text-sm font-semibold text-slate-700 tabular-nums">
         {formatTime(time)}
       </span>
       <span className="text-sm text-slate-600">
-        {isDeparture ? `${origin.code} → ${destination.code} departs` : `Arrive at ${destination.code}`}
+        {isDeparture
+          ? `${origin.code} → ${destination.code} departs`
+          : `Arrive at ${destination.code}`}
       </span>
     </div>
   );
@@ -186,7 +197,11 @@ function groupByFlightPhase(items: Intervention[]): {
   inTransit: Intervention[];
   afterLanding: Intervention[];
 } {
-  const result = { beforeBoarding: [] as Intervention[], inTransit: [] as Intervention[], afterLanding: [] as Intervention[] };
+  const result = {
+    beforeBoarding: [] as Intervention[],
+    inTransit: [] as Intervention[],
+    afterLanding: [] as Intervention[],
+  };
 
   for (const item of items) {
     if (isInTransitPhase(item.phase_type)) {
@@ -230,7 +245,11 @@ function SummaryContent({
   const hasArrival = daySchedule.date === arrivalDate;
 
   if (daySchedule.items.length === 0 && !hasDeparture && !hasArrival) {
-    return <p className="py-3 text-center text-sm text-slate-400">No scheduled interventions</p>;
+    return (
+      <p className="py-3 text-center text-sm text-slate-400">
+        No scheduled interventions
+      </p>
+    );
   }
 
   // Flight day: show sub-sections
@@ -244,10 +263,18 @@ function SummaryContent({
           <>
             <FlightSubSectionHeader title="Before Boarding" variant="before" />
             {groups.beforeBoarding.map((item, i) => (
-              <SummaryInterventionRow key={`before-${item.type}-${getDisplayTime(item)}-${i}`} intervention={item} />
+              <SummaryInterventionRow
+                key={`before-${item.type}-${getDisplayTime(item)}-${i}`}
+                intervention={item}
+              />
             ))}
             {hasDeparture && (
-              <FlightEventRow type="departure" time={departureTime} origin={origin} destination={destination} />
+              <FlightEventRow
+                type="departure"
+                time={departureTime}
+                origin={origin}
+                destination={destination}
+              />
             )}
           </>
         )}
@@ -257,7 +284,11 @@ function SummaryContent({
           <>
             <FlightSubSectionHeader title="On the Plane" variant="transit" />
             {groups.inTransit.map((item, i) => (
-              <SummaryInterventionRow key={`transit-${item.type}-${getDisplayTime(item)}-${i}`} intervention={item} showFlightOffset />
+              <SummaryInterventionRow
+                key={`transit-${item.type}-${getDisplayTime(item)}-${i}`}
+                intervention={item}
+                showFlightOffset
+              />
             ))}
           </>
         )}
@@ -267,14 +298,26 @@ function SummaryContent({
           <>
             <FlightSubSectionHeader
               title="After Landing"
-              subtitle={hasArrival ? `${formatTime(arrivalTime)} at ${destination.code}` : undefined}
+              subtitle={
+                hasArrival
+                  ? `${formatTime(arrivalTime)} at ${destination.code}`
+                  : undefined
+              }
               variant="after"
             />
             {hasArrival && (
-              <FlightEventRow type="arrival" time={arrivalTime} origin={origin} destination={destination} />
+              <FlightEventRow
+                type="arrival"
+                time={arrivalTime}
+                origin={origin}
+                destination={destination}
+              />
             )}
             {groups.afterLanding.map((item, i) => (
-              <SummaryInterventionRow key={`after-${item.type}-${getDisplayTime(item)}-${i}`} intervention={item} />
+              <SummaryInterventionRow
+                key={`after-${item.type}-${getDisplayTime(item)}-${i}`}
+                intervention={item}
+              />
             ))}
           </>
         )}
@@ -286,7 +329,10 @@ function SummaryContent({
   return (
     <>
       {daySchedule.items.map((item, i) => (
-        <SummaryInterventionRow key={`${item.type}-${getDisplayTime(item)}-${i}`} intervention={item} />
+        <SummaryInterventionRow
+          key={`${item.type}-${getDisplayTime(item)}-${i}`}
+          intervention={item}
+        />
       ))}
     </>
   );
@@ -315,7 +361,9 @@ export function DaySummaryCard({
 }: DaySummaryCardProps) {
   const [internalExpanded, setInternalExpanded] = useState(false);
   const isExpanded = controlledExpanded ?? internalExpanded;
-  const canExpand = !disableExpand && renderExpanded !== undefined;
+  // Allow expand if either renderExpanded or onExpandChange is provided
+  const canExpand =
+    !disableExpand && (renderExpanded !== undefined || onExpandChange !== undefined);
 
   const handleToggle = () => {
     if (!canExpand) return;
@@ -360,21 +408,49 @@ export function DaySummaryCard({
             canExpand ? "cursor-pointer hover:bg-slate-50/50" : "cursor-default"
           }`}
           aria-expanded={canExpand ? isExpanded : undefined}
-          aria-controls={canExpand ? `day-${daySchedule.day}-content` : undefined}
-          aria-label={canExpand ? (isExpanded ? "Collapse day details" : "Expand day details") : undefined}
+          aria-controls={
+            canExpand ? `day-${daySchedule.day}-content` : undefined
+          }
+          aria-label={
+            canExpand
+              ? isExpanded
+                ? "Collapse day details"
+                : "Expand day details"
+              : undefined
+          }
         >
           <div className="flex items-baseline gap-2">
-            <span className={`text-sm font-bold uppercase tracking-wide ${headerColor}`}>
+            <span
+              className={`text-sm font-bold tracking-wide uppercase ${headerColor}`}
+            >
               {getDayLabel(daySchedule.day, daySchedule.hasSameDayArrival)}
             </span>
             <span className="text-slate-300">•</span>
-            <span className="font-medium text-slate-600">{formatLongDate(daySchedule.date)}</span>
+            <span className="font-medium text-slate-600">
+              {formatLongDate(daySchedule.date)}
+            </span>
           </div>
 
           {canExpand && (
-            <ChevronDown
-              className={`h-5 w-5 text-slate-400 transition-transform duration-200 ${isExpanded ? "rotate-180" : ""}`}
-            />
+            <span
+              className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-all duration-200 ${
+                isExpanded
+                  ? "bg-slate-100 text-slate-600"
+                  : "bg-sky-50 text-sky-700 ring-1 ring-inset ring-sky-200/60 hover:bg-sky-100 hover:ring-sky-300/60"
+              }`}
+            >
+              {isExpanded ? (
+                <>
+                  <span>Hide</span>
+                  <ChevronDown className="h-3.5 w-3.5 rotate-180 transition-transform duration-200" />
+                </>
+              ) : (
+                <>
+                  <span>View details</span>
+                  <ChevronDown className="h-3.5 w-3.5 transition-transform duration-200" />
+                </>
+              )}
+            </span>
           )}
         </button>
 
@@ -382,10 +458,12 @@ export function DaySummaryCard({
         <div id={`day-${daySchedule.day}-content`}>
           {isExpanded && renderExpanded ? (
             // Expanded: render detailed view
-            <div className="border-t border-slate-100 px-4 py-4">{renderExpanded()}</div>
+            <div className="border-t border-slate-100 px-4 py-4">
+              {renderExpanded()}
+            </div>
           ) : (
             // Summary view
-            <CardContent className="border-t border-slate-100 pb-4 pt-2">
+            <CardContent className="border-t border-slate-100 pt-2 pb-4">
               <SummaryContent
                 daySchedule={daySchedule}
                 origin={origin}

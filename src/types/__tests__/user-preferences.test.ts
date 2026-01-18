@@ -17,6 +17,7 @@ describe("User Preferences Mapping", () => {
         napPreference: "all_days",
         scheduleIntensity: "aggressive",
         showDualTimezone: false,
+        scheduleViewMode: "summary" as const,
       };
 
       const formPrefs = mapDbToFormPreferences(dbPrefs);
@@ -44,6 +45,7 @@ describe("User Preferences Mapping", () => {
         napPreference: "no",
         scheduleIntensity: "gentle",
         showDualTimezone: true,
+        scheduleViewMode: "timeline" as const,
       };
 
       const formPrefs = mapDbToFormPreferences(dbPrefs);
@@ -84,6 +86,7 @@ describe("User Preferences Mapping", () => {
         napPreference: "all_days",
         scheduleIntensity: "aggressive",
         showDualTimezone: false,
+        scheduleViewMode: "summary",
       });
     });
 
@@ -98,12 +101,13 @@ describe("User Preferences Mapping", () => {
         napPreference: "flight_only",
         scheduleIntensity: "balanced",
         showDualTimezone: false, // Display preference defaults to false
+        scheduleViewMode: "summary" as const, // Display preference defaults to summary
       };
 
       const formPrefs = mapDbToFormPreferences(original);
       const backToDb = mapFormToDbPreferences(formPrefs);
 
-      // Form fields round-trip correctly; showDualTimezone defaults to false
+      // Form fields round-trip correctly; display preferences default to false/summary
       expect(backToDb).toEqual(original);
     });
   });
