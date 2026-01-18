@@ -52,7 +52,6 @@ import { getActualKey, buildActualsMap } from "@/lib/actuals-utils";
 import {
   getCurrentDateInTimezone,
   getCurrentDayNumber,
-  isBeforeSchedule,
   isAfterSchedule,
 } from "@/lib/time-utils";
 import type {
@@ -144,6 +143,8 @@ export function TripScheduleView({
   const [currentPreferences, setCurrentPreferences] = useState({
     usesCaffeine: tripData.usesCaffeine,
     usesMelatonin: tripData.usesMelatonin,
+    usesExercise: tripData.usesExercise,
+    napPreference: tripData.napPreference,
     scheduleIntensity: tripData.scheduleIntensity,
   });
 
@@ -444,9 +445,7 @@ export function TripScheduleView({
   };
 
   const currentDayNumber = getCurrentDayNumber(data);
-  const isPreTrip = isBeforeSchedule(data);
   const isPostTrip = isAfterSchedule(data);
-  const firstDayDate = schedule.interventions[0]?.date;
   const mergedDays = mergePhasesByDate(schedule.interventions);
 
   // Form state for share button (matches TripFormState interface)
@@ -512,8 +511,9 @@ export function TripScheduleView({
         {/* Schedule header */}
         <ScheduleHeader
           schedule={data}
-          isPreTrip={isPreTrip}
-          scheduleStartDate={firstDayDate}
+          isOwner={isOwner}
+          isLoggedIn={isLoggedIn}
+          onCustomizeClick={() => setShowEditModal(true)}
         />
 
         {/* Summary banner - shows after actuals are saved and schedule is updated */}
@@ -633,6 +633,7 @@ export function TripScheduleView({
                 onClick={() => setShowEditModal(true)}
               >
                 <Settings2 className="h-4 w-4" />
+                Customize Trip
               </Button>
             )}
           </div>

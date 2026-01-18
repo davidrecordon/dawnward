@@ -2,7 +2,8 @@
 
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Compass, Plane } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Plane, Settings2 } from "lucide-react";
 import type { ScheduleResponse } from "@/types/schedule";
 import type { Airport } from "@/types/airport";
 
@@ -16,29 +17,16 @@ interface ScheduleHeaderProps {
   };
   isPreTrip?: boolean;
   scheduleStartDate?: string;
-}
-
-function getRelativeTimeText(startDate: string): string {
-  const start = new Date(startDate + "T00:00:00");
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
-  const diffTime = start.getTime() - today.getTime();
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-  if (diffDays <= 0) return "today";
-  if (diffDays === 1) return "tomorrow";
-  if (diffDays < 7) return `in ${diffDays} days`;
-  if (diffDays < 14) return "in about a week";
-  if (diffDays < 21) return "in about two weeks";
-  if (diffDays < 28) return "in about three weeks";
-  return `in ${Math.round(diffDays / 7)} weeks`;
+  isOwner?: boolean;
+  isLoggedIn?: boolean;
+  onCustomizeClick?: () => void;
 }
 
 export function ScheduleHeader({
   schedule,
-  isPreTrip,
-  scheduleStartDate,
+  isOwner,
+  isLoggedIn,
+  onCustomizeClick,
 }: ScheduleHeaderProps) {
   const { request, schedule: sched } = schedule;
 
@@ -52,9 +40,7 @@ export function ScheduleHeader({
       ? "bg-sky-100 text-sky-700 hover:bg-sky-100"
       : "bg-violet-100 text-violet-700 hover:bg-violet-100";
 
-  const relativeTime = scheduleStartDate
-    ? getRelativeTimeText(scheduleStartDate)
-    : "";
+  const showCustomizeButton = isOwner && isLoggedIn && onCustomizeClick;
 
   return (
     <Card className="overflow-hidden border-white/50 bg-white/90 shadow-sm backdrop-blur-sm">
@@ -87,21 +73,16 @@ export function ScheduleHeader({
             </p>
           </div>
 
-          {/* Right column - contextual message */}
-          {isPreTrip && scheduleStartDate && (
-            <div className="flex items-center gap-3 border-l border-slate-200 pl-6">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-sky-400 to-indigo-500 shadow-md shadow-sky-500/20">
-                <Compass className="h-5 w-5 text-white" />
-              </div>
-              <div className="text-right">
-                <p className="font-semibold text-slate-700">
-                  Your journey awaits
-                </p>
-                <p className="text-sm text-slate-500">
-                  Schedule begins {relativeTime}
-                </p>
-              </div>
-            </div>
+          {/* Right column - customize button for owners */}
+          {showCustomizeButton && (
+            <Button
+              variant="outline"
+              className="bg-white/70"
+              onClick={onCustomizeClick}
+            >
+              <Settings2 className="mr-2 h-4 w-4" />
+              Customize Trip
+            </Button>
           )}
         </div>
       </CardContent>

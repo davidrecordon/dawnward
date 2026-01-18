@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Coffee, Pill, Gauge, Loader2 } from "lucide-react";
+import { Activity, Coffee, Moon, Pill, Gauge, Loader2 } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -20,6 +20,8 @@ type ScheduleIntensity = "gentle" | "balanced" | "aggressive";
 interface TripPreferences {
   usesCaffeine: boolean;
   usesMelatonin: boolean;
+  usesExercise: boolean;
+  napPreference: string;
   scheduleIntensity: string;
 }
 
@@ -53,6 +55,12 @@ export function EditPreferencesModal({
   const [usesMelatonin, setUsesMelatonin] = React.useState(
     currentPreferences.usesMelatonin
   );
+  const [usesExercise, setUsesExercise] = React.useState(
+    currentPreferences.usesExercise
+  );
+  const [napPreference, setNapPreference] = React.useState(
+    currentPreferences.napPreference
+  );
   const [scheduleIntensity, setScheduleIntensity] =
     React.useState<ScheduleIntensity>(
       currentPreferences.scheduleIntensity as ScheduleIntensity
@@ -65,6 +73,8 @@ export function EditPreferencesModal({
     if (open) {
       setUsesCaffeine(currentPreferences.usesCaffeine);
       setUsesMelatonin(currentPreferences.usesMelatonin);
+      setUsesExercise(currentPreferences.usesExercise);
+      setNapPreference(currentPreferences.napPreference);
       setScheduleIntensity(
         currentPreferences.scheduleIntensity as ScheduleIntensity
       );
@@ -75,6 +85,8 @@ export function EditPreferencesModal({
   const hasChanges =
     usesCaffeine !== currentPreferences.usesCaffeine ||
     usesMelatonin !== currentPreferences.usesMelatonin ||
+    usesExercise !== currentPreferences.usesExercise ||
+    napPreference !== currentPreferences.napPreference ||
     scheduleIntensity !== currentPreferences.scheduleIntensity;
 
   const handleSave = async () => {
@@ -93,6 +105,8 @@ export function EditPreferencesModal({
         body: JSON.stringify({
           usesCaffeine,
           usesMelatonin,
+          usesExercise,
+          napPreference,
           scheduleIntensity,
         }),
       });
@@ -106,6 +120,8 @@ export function EditPreferencesModal({
       onPreferencesUpdated(result.schedule, {
         usesCaffeine,
         usesMelatonin,
+        usesExercise,
+        napPreference,
         scheduleIntensity,
       });
       onClose();
@@ -139,7 +155,7 @@ export function EditPreferencesModal({
               <Gauge className="h-6 w-6 text-sky-600" />
             </div>
             <DialogTitle className="text-center text-xl tracking-tight">
-              Edit Schedule Preferences
+              Customize This Trip
             </DialogTitle>
             <DialogDescription className="text-center text-slate-600">
               Changing preferences will regenerate your schedule with new
@@ -187,6 +203,61 @@ export function EditPreferencesModal({
                 onCheckedChange={setUsesCaffeine}
                 aria-label="Include caffeine"
               />
+            </div>
+
+            {/* Exercise toggle */}
+            <div className="flex items-center justify-between rounded-lg bg-sky-50 p-3">
+              <div className="flex items-center gap-3">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-sky-100">
+                  <Activity className="h-4 w-4 text-sky-600" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium">Include exercise</p>
+                  <p className="text-xs text-slate-500">
+                    Timed physical activity for circadian shift
+                  </p>
+                </div>
+              </div>
+              <Switch
+                checked={usesExercise}
+                onCheckedChange={setUsesExercise}
+                aria-label="Include exercise"
+              />
+            </div>
+
+            {/* Nap preference selector */}
+            <div className="rounded-lg bg-violet-50 p-3">
+              <div className="flex items-center gap-3">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-violet-100">
+                  <Moon className="h-4 w-4 text-violet-600" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium">Recommend naps</p>
+                  <p className="text-xs text-slate-500">
+                    Strategic napping to reduce sleep debt
+                  </p>
+                </div>
+              </div>
+              <div className="mt-3 flex gap-2">
+                {[
+                  { value: "no", label: "No" },
+                  { value: "flight_only", label: "On the flight" },
+                  { value: "all_days", label: "On all days" },
+                ].map((option) => (
+                  <button
+                    key={option.value}
+                    onClick={() => setNapPreference(option.value)}
+                    className={cn(
+                      "flex-1 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                      napPreference === option.value
+                        ? "bg-violet-500 text-white"
+                        : "bg-white text-slate-700 hover:bg-violet-100"
+                    )}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
             </div>
 
             {/* Intensity selector */}
