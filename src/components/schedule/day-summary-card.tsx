@@ -364,7 +364,8 @@ export function DaySummaryCard({
   const isExpanded = controlledExpanded ?? internalExpanded;
   // Allow expand if either renderExpanded or onExpandChange is provided
   const canExpand =
-    !disableExpand && (renderExpanded !== undefined || onExpandChange !== undefined);
+    !disableExpand &&
+    (renderExpanded !== undefined || onExpandChange !== undefined);
 
   const handleToggle = () => {
     if (!canExpand) return;
@@ -419,7 +420,7 @@ export function DaySummaryCard({
               className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-all duration-200 ${
                 isExpanded
                   ? "bg-slate-100 text-slate-600"
-                  : "bg-sky-50 text-sky-700 ring-1 ring-inset ring-sky-200/60 hover:bg-sky-100 hover:ring-sky-300/60"
+                  : "bg-sky-50 text-sky-700 ring-1 ring-sky-200/60 ring-inset hover:bg-sky-100 hover:ring-sky-300/60"
               }`}
             >
               {isExpanded ? (

@@ -368,7 +368,9 @@ export function TripScheduleView({
     } else {
       // Summary mode: auto-expand today's day (if it exists in the schedule)
       const today = getCurrentDateInTimezone(tripData.originTz);
-      const todaySchedule = schedule.interventions.find((d) => d.date === today);
+      const todaySchedule = schedule.interventions.find(
+        (d) => d.date === today
+      );
       if (todaySchedule) {
         setExpandedDays(new Set([todaySchedule.day]));
       }
