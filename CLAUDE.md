@@ -181,11 +181,22 @@ scripts/
 - `wake_target` at 00:00-05:59 sorts as "early morning" (start of day)
 - In-transit items with `flight_offset_hours` sort by offset, not time
 
+**Schedule View Modes**: Two display modes controlled by `scheduleViewMode` user preference:
+
+- **Summary mode** (default): Shows `DaySummaryCard` with condensed intervention list. Today's day auto-expands. Users can expand/collapse individual days.
+- **Timeline mode**: All days start expanded showing full `DaySection` detail view.
+
+The `DaySummaryCard` component shows:
+- Icon + time + condensed description per intervention
+- Flight Day splits into sub-sections: Before Boarding, On the Plane, After Landing
+- "View details" button expands to show full timeline
+- "Summarize" pill collapses back to summary view
+
 ### Database Schema (Key Tables)
 
 **Auth (NextAuth.js):**
 
-- `User` - id, email, name, image, preferences (wake/sleep times, melatonin/caffeine, intensity)
+- `User` - id, email, name, image, preferences (wake/sleep times, melatonin/caffeine, intensity, scheduleViewMode)
 - `Account` - OAuth provider accounts (Google tokens, scopes)
 - `Session` - Database sessions (though JWT strategy is used)
 - `VerificationToken` - For email verification (future use)
@@ -460,7 +471,7 @@ export default function MyFeatureDemo() {
 
 ## Testing
 
-**TypeScript (Vitest)**: ~490 tests covering utility functions and components
+**TypeScript (Vitest)**: ~511 tests covering utility functions and components
 
 - `src/lib/__tests__/time-utils.test.ts` - Date/time formatting, timezone-aware operations
 - `src/lib/__tests__/timezone-utils.test.ts` - Flight duration calculation, timezone shifts
@@ -483,6 +494,7 @@ export default function MyFeatureDemo() {
 - `src/components/auth/__tests__/sign-in-button.test.tsx` - Sign-in button variants
 - `src/components/auth/__tests__/user-menu.test.tsx` - User menu, avatar initials
 - `src/components/schedule/__tests__/day-section.test.tsx` - Schedule day section rendering
+- `src/components/schedule/__tests__/day-summary-card.test.tsx` - Summary card rendering, flight day sub-sections, expand/collapse
 - `src/components/schedule/__tests__/intervention-card.test.tsx` - Intervention card rendering, dual timezone display
 - `src/components/schedule/__tests__/inflight-sleep-card.test.tsx` - In-flight sleep card, flight offset display
 - `src/lib/__tests__/google-calendar.test.ts` - Calendar event building, reminder timing
