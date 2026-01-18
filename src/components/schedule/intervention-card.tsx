@@ -1,28 +1,23 @@
 "use client";
 
-import { Check, Pencil, PlaneTakeoff } from "lucide-react";
+import { Check, Pencil, PlaneLanding, PlaneTakeoff } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
   getInterventionStyle,
-  formatTimeWithTimezone,
+  formatTime,
   formatFlightOffset,
-  formatInFlightDualTimezones,
+  formatDualTimezones,
 } from "@/lib/intervention-utils";
 import type { Intervention, InterventionActual } from "@/types/schedule";
-
-interface FlightContext {
-  originTimezone: string;
-  destTimezone: string;
-  departureDateTime: string;
-}
+import {
+  getDisplayTime,
+  isPostArrivalPhase,
+  isPreFlightPhase,
+} from "@/types/schedule";
 
 interface InterventionCardProps {
   intervention: Intervention;
-  /** Timezone for this intervention's time display */
-  timezone?: string;
-  /** Flight context for in-transit dual timezone display */
-  flightContext?: FlightContext;
   /** Card variant: default shows full card, nested shows compact version without time */
   variant?: "default" | "nested";
   /** Optional click handler for recording actuals */
@@ -31,16 +26,123 @@ interface InterventionCardProps {
   actual?: InterventionActual;
   /** Date of the intervention (YYYY-MM-DD) - used to determine if "as_planned" should show completed styling */
   date?: string;
+  /** User preference: always show both origin and destination timezones */
+  showDualTimezone?: boolean;
+}
+
+interface TimeDisplayProps {
+  actual: InterventionActual | undefined;
+  isPast: boolean;
+  isPreFlight: boolean;
+  displayTime: string;
+  dualTimes: { originTime: string; destTime: string } | null;
+  primaryTime: string | null;
+  secondaryTime: string | null;
+}
+
+/**
+ * Renders the time display for an intervention card.
+ * Handles different states: modified, skipped, completed (as_planned), and default.
+ */
+function TimeDisplay({
+  actual,
+  isPast,
+  isPreFlight,
+  displayTime,
+  dualTimes,
+  primaryTime,
+  secondaryTime,
+}: TimeDisplayProps): React.JSX.Element {
+  const SecondaryIcon = isPreFlight ? PlaneLanding : PlaneTakeoff;
+
+  // Modified: strikethrough original + actual time badge
+  if (actual?.status === "modified" && actual.actualTime) {
+    return (
+      <>
+        <span className="text-xs text-slate-400 tabular-nums line-through">
+          {dualTimes ? dualTimes.originTime : formatTime(displayTime)}
+        </span>
+        <Badge
+          variant="secondary"
+          className="shrink-0 bg-sky-100 font-medium text-sky-600"
+        >
+          {formatTime(actual.actualTime)}
+        </Badge>
+      </>
+    );
+  }
+
+  // Skipped: just show badge
+  if (actual?.status === "skipped") {
+    return (
+      <Badge
+        variant="secondary"
+        className="shrink-0 bg-slate-100 font-medium text-slate-400"
+      >
+        Skipped
+      </Badge>
+    );
+  }
+
+  // As planned (past): show completed styling with checkmark
+  if (actual?.status === "as_planned" && isPast) {
+    if (dualTimes) {
+      return (
+        <div className="shrink-0 text-right">
+          <div className="flex items-center justify-end gap-1 text-sm font-medium text-emerald-600 tabular-nums">
+            {primaryTime}
+            <Check className="h-3.5 w-3.5" />
+          </div>
+          <div className="flex items-center justify-end gap-1 text-xs text-emerald-500/70">
+            <span className="tabular-nums">{secondaryTime}</span>
+            <SecondaryIcon className="h-3 w-3 opacity-60" />
+          </div>
+        </div>
+      );
+    }
+    return (
+      <Badge
+        variant="secondary"
+        className="shrink-0 bg-emerald-50 font-medium text-emerald-600"
+      >
+        {formatTime(displayTime)}
+        <Check className="ml-1 h-3 w-3" />
+      </Badge>
+    );
+  }
+
+  // Default: show time (dual or single)
+  if (dualTimes) {
+    return (
+      <div className="shrink-0 text-right">
+        <div className="text-sm font-medium text-slate-700 tabular-nums">
+          {primaryTime}
+        </div>
+        <div className="flex items-center justify-end gap-1 text-xs text-slate-400">
+          <span className="tabular-nums">{secondaryTime}</span>
+          <SecondaryIcon className="h-3 w-3 opacity-60" />
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <Badge
+      variant="secondary"
+      className="shrink-0 bg-white/70 font-medium text-slate-600"
+    >
+      {formatTime(displayTime)}
+    </Badge>
+  );
 }
 
 export function InterventionCard({
   intervention,
-  timezone,
-  flightContext,
   variant = "default",
   onClick,
   actual,
   date,
+  showDualTimezone = false,
 }: InterventionCardProps): React.JSX.Element {
   const style = getInterventionStyle(intervention.type);
   const Icon = style.icon;
@@ -49,29 +151,36 @@ export function InterventionCard({
   // Check if this is an in-flight item with offset info
   const hasFlightOffset = intervention.flight_offset_hours != null;
 
+  // Get the display time (origin_time for prep phases, dest_time for post-arrival)
+  const displayTime = getDisplayTime(intervention);
+
   // Determine if the intervention is in the past (for "as_planned" completed styling)
-  // Only show "completed" green styling if the intervention's datetime has passed
+  // Use origin_date and origin_time for accurate comparison
   const isPast = (() => {
     if (!date) return false;
-    const interventionDateTime = new Date(`${date}T${intervention.time}`);
+    const interventionDateTime = new Date(`${date}T${displayTime}`);
     return interventionDateTime < new Date();
   })();
 
-  // Show dual timezones for in-transit items with flight offset and different timezones
-  const showDualTimezone =
-    intervention.is_in_transit &&
-    hasFlightOffset &&
-    flightContext &&
-    flightContext.originTimezone !== flightContext.destTimezone;
+  // Phase type helpers
+  const isPreFlight = isPreFlightPhase(intervention.phase_type);
+  const isPostArrival = isPostArrivalPhase(intervention.phase_type);
 
-  // Calculate dual timezone times from departure + flight offset
-  const dualTimes = showDualTimezone
-    ? formatInFlightDualTimezones(
-        flightContext.departureDateTime,
-        intervention.flight_offset_hours!,
-        flightContext.originTimezone,
-        flightContext.destTimezone
-      )
+  // Get dual timezone times if enabled AND not post-arrival (user has arrived)
+  const dualTimes = isPostArrival
+    ? null
+    : formatDualTimezones(intervention, showDualTimezone);
+
+  // Swap primary/secondary times based on phase
+  const primaryTime = dualTimes
+    ? isPreFlight
+      ? dualTimes.originTime
+      : dualTimes.destTime
+    : null;
+  const secondaryTime = dualTimes
+    ? isPreFlight
+      ? dualTimes.destTime
+      : dualTimes.originTime
     : null;
 
   return (
@@ -126,70 +235,15 @@ export function InterventionCard({
         {/* Time display with inline actuals and dual timezone support */}
         {!isNested && (
           <div className="flex flex-col items-end gap-0.5">
-            {actual?.status === "modified" && actual.actualTime ? (
-              // Modified: strikethrough original + actual time badge
-              <>
-                <span className="text-xs tabular-nums text-slate-400 line-through">
-                  {dualTimes
-                    ? dualTimes.originTime
-                    : formatTimeWithTimezone(intervention.time, timezone)}
-                </span>
-                <Badge
-                  variant="secondary"
-                  className="shrink-0 bg-sky-100 font-medium text-sky-600"
-                >
-                  {formatTimeWithTimezone(actual.actualTime, timezone)}
-                </Badge>
-              </>
-            ) : actual?.status === "skipped" ? (
-              // Skipped: just show badge
-              <Badge
-                variant="secondary"
-                className="shrink-0 bg-slate-100 font-medium text-slate-400"
-              >
-                Skipped
-              </Badge>
-            ) : actual?.status === "as_planned" && isPast ? (
-              // As planned (past): show completed styling with checkmark
-              dualTimes ? (
-                <div className="shrink-0 text-right">
-                  <div className="flex items-center justify-end gap-1 text-sm font-medium tabular-nums text-emerald-600">
-                    {dualTimes.destTime}
-                    <Check className="h-3.5 w-3.5" />
-                  </div>
-                  <div className="flex items-center justify-end gap-1 text-xs text-emerald-500/70">
-                    <span className="tabular-nums">{dualTimes.originTime}</span>
-                    <PlaneTakeoff className="h-3 w-3 opacity-60" />
-                  </div>
-                </div>
-              ) : (
-                <Badge
-                  variant="secondary"
-                  className="shrink-0 bg-emerald-50 font-medium text-emerald-600"
-                >
-                  {formatTimeWithTimezone(intervention.time, timezone)}
-                  <Check className="ml-1 h-3 w-3" />
-                </Badge>
-              )
-            ) : // Default: show time (dual or single)
-            dualTimes ? (
-              <div className="shrink-0 text-right">
-                <div className="text-sm font-medium tabular-nums text-slate-700">
-                  {dualTimes.destTime}
-                </div>
-                <div className="flex items-center justify-end gap-1 text-xs text-slate-400">
-                  <span className="tabular-nums">{dualTimes.originTime}</span>
-                  <PlaneTakeoff className="h-3 w-3 opacity-60" />
-                </div>
-              </div>
-            ) : (
-              <Badge
-                variant="secondary"
-                className="shrink-0 bg-white/70 font-medium text-slate-600"
-              >
-                {formatTimeWithTimezone(intervention.time, timezone)}
-              </Badge>
-            )}
+            <TimeDisplay
+              actual={actual}
+              isPast={isPast}
+              isPreFlight={isPreFlight}
+              displayTime={displayTime}
+              dualTimes={dualTimes}
+              primaryTime={primaryTime}
+              secondaryTime={secondaryTime}
+            />
           </div>
         )}
         {/* Edit indicator for clickable cards */}

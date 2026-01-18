@@ -26,9 +26,16 @@ function makeIntervention(
 ): Intervention {
   return {
     type,
-    time,
     title: `Test ${type}`,
     description: "Test description",
+    origin_time: time,
+    dest_time: time,
+    origin_date: "2026-01-15",
+    dest_date: "2026-01-15",
+    origin_tz: "America/Los_Angeles",
+    dest_tz: "Europe/London",
+    phase_type: "preparation",
+    show_dual_timezone: false,
     ...extras,
   };
 }
@@ -43,7 +50,6 @@ function makeDaySchedule(
     date,
     day,
     items,
-    timezone: "America/Los_Angeles",
     ...extras,
   };
 }
@@ -167,7 +173,7 @@ describe("mergePhasesByDate", () => {
 
       // wake_target at 4am should be FIRST (not treated as late night)
       expect(items[0].type).toBe("wake_target");
-      expect(items[0].time).toBe("04:00");
+      expect(items[0].dest_time).toBe("04:00");
     });
 
     it("should NOT treat light_seek at 5:00 AM as late night", () => {
@@ -184,7 +190,7 @@ describe("mergePhasesByDate", () => {
 
       // light_seek at 5am should be first
       expect(items[0].type).toBe("light_seek");
-      expect(items[0].time).toBe("05:00");
+      expect(items[0].dest_time).toBe("05:00");
     });
 
     it("should sort sleep_target at 1:00 AM after 11:00 PM items", () => {
@@ -217,7 +223,7 @@ describe("mergePhasesByDate", () => {
       ];
 
       const merged = mergePhasesByDate(phases);
-      const times = merged[0].items.map((i) => i.time);
+      const times = merged[0].items.map((i) => i.dest_time);
 
       expect(times).toEqual(["08:00", "15:00", "18:00"]);
     });
@@ -256,14 +262,22 @@ describe("mergePhasesByDate", () => {
         makeDaySchedule(
           "2025-01-15",
           0,
-          [makeIntervention("wake_target", "07:00")],
-          { phase_type: "pre_departure", timezone: "America/Los_Angeles" }
+          [
+            makeIntervention("wake_target", "07:00", {
+              phase_type: "pre_departure",
+            }),
+          ],
+          { phase_type: "pre_departure" }
         ),
         makeDaySchedule(
           "2025-01-15",
           0,
-          [makeIntervention("nap_window", "22:00")],
-          { phase_type: "in_transit", timezone: "in_transit" }
+          [
+            makeIntervention("nap_window", "22:00", {
+              phase_type: "in_transit",
+            }),
+          ],
+          { phase_type: "in_transit" }
         ),
       ];
 
@@ -274,30 +288,42 @@ describe("mergePhasesByDate", () => {
       expect(merged[0].items.length).toBe(2);
     });
 
-    it("should preserve timezone tags when merging", () => {
+    it("should preserve phase_type on interventions when merging", () => {
       const phases: DaySchedule[] = [
         makeDaySchedule(
           "2025-01-15",
           0,
-          [makeIntervention("wake_target", "07:00")],
-          { phase_type: "pre_departure", timezone: "America/Los_Angeles" }
+          [
+            makeIntervention("wake_target", "07:00", {
+              phase_type: "pre_departure",
+              origin_tz: "America/Los_Angeles",
+              dest_tz: "Europe/London",
+            }),
+          ],
+          { phase_type: "pre_departure" }
         ),
         makeDaySchedule(
           "2025-01-15",
           1,
-          [makeIntervention("light_seek", "10:00")],
-          { phase_type: "post_arrival", timezone: "Europe/London" }
+          [
+            makeIntervention("light_seek", "10:00", {
+              phase_type: "post_arrival",
+              origin_tz: "America/Los_Angeles",
+              dest_tz: "Europe/London",
+            }),
+          ],
+          { phase_type: "post_arrival" }
         ),
       ];
 
       const merged = mergePhasesByDate(phases);
 
-      // Items should have their source timezone tagged
+      // Items should preserve their phase_type
       const wakeItem = merged[0].items.find((i) => i.type === "wake_target");
       const lightItem = merged[0].items.find((i) => i.type === "light_seek");
 
-      expect(wakeItem?.timezone).toBe("America/Los_Angeles");
-      expect(lightItem?.timezone).toBe("Europe/London");
+      expect(wakeItem?.phase_type).toBe("pre_departure");
+      expect(lightItem?.phase_type).toBe("post_arrival");
     });
   });
 
@@ -308,14 +334,22 @@ describe("mergePhasesByDate", () => {
         makeDaySchedule(
           "2025-01-15",
           0,
-          [makeIntervention("wake_target", "07:00")],
-          { phase_type: "pre_departure", timezone: "Europe/Paris" }
+          [
+            makeIntervention("wake_target", "07:00", {
+              phase_type: "pre_departure",
+            }),
+          ],
+          { phase_type: "pre_departure" }
         ),
         makeDaySchedule(
           "2025-01-15",
           1,
-          [makeIntervention("sleep_target", "22:00")],
-          { phase_type: "post_arrival", timezone: "America/Los_Angeles" }
+          [
+            makeIntervention("sleep_target", "22:00", {
+              phase_type: "post_arrival",
+            }),
+          ],
+          { phase_type: "post_arrival" }
         ),
       ];
 
@@ -331,26 +365,42 @@ describe("mergePhasesByDate", () => {
         makeDaySchedule(
           "2025-01-14",
           -1,
-          [makeIntervention("melatonin", "22:00")],
-          { phase_type: "preparation", timezone: "Europe/Paris" }
+          [
+            makeIntervention("melatonin", "22:00", {
+              phase_type: "preparation",
+            }),
+          ],
+          { phase_type: "preparation" }
         ),
         makeDaySchedule(
           "2025-01-15",
           0,
-          [makeIntervention("wake_target", "09:00")],
-          { phase_type: "pre_departure", timezone: "Europe/Paris" }
+          [
+            makeIntervention("wake_target", "09:00", {
+              phase_type: "pre_departure",
+            }),
+          ],
+          { phase_type: "pre_departure" }
         ),
         makeDaySchedule(
           "2025-01-15",
           1,
-          [makeIntervention("sleep_target", "17:00")],
-          { phase_type: "post_arrival", timezone: "America/Los_Angeles" }
+          [
+            makeIntervention("sleep_target", "17:00", {
+              phase_type: "post_arrival",
+            }),
+          ],
+          { phase_type: "post_arrival" }
         ),
         makeDaySchedule(
           "2025-01-16",
           2,
-          [makeIntervention("wake_target", "04:00")],
-          { phase_type: "adaptation", timezone: "America/Los_Angeles" }
+          [
+            makeIntervention("wake_target", "04:00", {
+              phase_type: "adaptation",
+            }),
+          ],
+          { phase_type: "adaptation" }
         ),
       ];
 
@@ -369,14 +419,22 @@ describe("mergePhasesByDate", () => {
         makeDaySchedule(
           "2025-01-15",
           0,
-          [makeIntervention("wake_target", "07:00")],
-          { phase_type: "pre_departure", timezone: "America/Los_Angeles" }
+          [
+            makeIntervention("wake_target", "07:00", {
+              phase_type: "pre_departure",
+            }),
+          ],
+          { phase_type: "pre_departure" }
         ),
         makeDaySchedule(
           "2025-01-16",
           1,
-          [makeIntervention("sleep_target", "22:00")],
-          { phase_type: "post_arrival", timezone: "Europe/London" }
+          [
+            makeIntervention("sleep_target", "22:00", {
+              phase_type: "post_arrival",
+            }),
+          ],
+          { phase_type: "post_arrival" }
         ),
       ];
 
@@ -392,8 +450,12 @@ describe("mergePhasesByDate", () => {
         makeDaySchedule(
           "2025-01-15",
           0,
-          [makeIntervention("wake_target", "07:00")],
-          { phase_type: "pre_departure", timezone: "America/Los_Angeles" }
+          [
+            makeIntervention("wake_target", "07:00", {
+              phase_type: "pre_departure",
+            }),
+          ],
+          { phase_type: "pre_departure" }
         ),
       ];
 
@@ -406,8 +468,12 @@ describe("mergePhasesByDate", () => {
         makeDaySchedule(
           "2025-01-15",
           1,
-          [makeIntervention("sleep_target", "22:00")],
-          { phase_type: "post_arrival", timezone: "Europe/London" }
+          [
+            makeIntervention("sleep_target", "22:00", {
+              phase_type: "post_arrival",
+            }),
+          ],
+          { phase_type: "post_arrival" }
         ),
       ];
 
@@ -421,19 +487,35 @@ describe("mergePhasesByDate", () => {
           "2025-01-15",
           0,
           [
-            makeIntervention("melatonin", "08:00"),
-            makeIntervention("wake_target", "09:00"),
+            makeIntervention("melatonin", "08:00", {
+              phase_type: "pre_departure",
+              origin_tz: "Europe/Paris",
+              dest_tz: "America/Los_Angeles",
+            }),
+            makeIntervention("wake_target", "09:00", {
+              phase_type: "pre_departure",
+              origin_tz: "Europe/Paris",
+              dest_tz: "America/Los_Angeles",
+            }),
           ],
-          { phase_type: "pre_departure", timezone: "Europe/Paris" }
+          { phase_type: "pre_departure" }
         ),
         makeDaySchedule(
           "2025-01-15",
           1,
           [
-            makeIntervention("wake_target", "02:00"),
-            makeIntervention("sleep_target", "17:00"),
+            makeIntervention("wake_target", "02:00", {
+              phase_type: "post_arrival",
+              origin_tz: "Europe/Paris",
+              dest_tz: "America/Los_Angeles",
+            }),
+            makeIntervention("sleep_target", "17:00", {
+              phase_type: "post_arrival",
+              origin_tz: "Europe/Paris",
+              dest_tz: "America/Los_Angeles",
+            }),
           ],
-          { phase_type: "post_arrival", timezone: "America/Los_Angeles" }
+          { phase_type: "post_arrival" }
         ),
       ];
 
@@ -444,71 +526,143 @@ describe("mergePhasesByDate", () => {
       expect(merged[0].items.length).toBe(4);
       expect(merged[0].hasSameDayArrival).toBe(true);
 
-      // Items should have their source timezones
-      const parisItems = merged[0].items.filter(
-        (i) => i.timezone === "Europe/Paris"
+      // Items should have their source phase_types
+      const preDepartureItems = merged[0].items.filter(
+        (i) => i.phase_type === "pre_departure"
       );
-      const laItems = merged[0].items.filter(
-        (i) => i.timezone === "America/Los_Angeles"
+      const postArrivalItems = merged[0].items.filter(
+        (i) => i.phase_type === "post_arrival"
       );
-      expect(parisItems.length).toBe(2);
-      expect(laItems.length).toBe(2);
+      expect(preDepartureItems.length).toBe(2);
+      expect(postArrivalItems.length).toBe(2);
+    });
+
+    it("should not mutate input arrays (idempotent on repeated calls)", () => {
+      // This test catches the bug where items were pushed to the original
+      // phase.items array, causing duplicates on React re-renders
+      const phases: DaySchedule[] = [
+        makeDaySchedule(
+          "2025-01-15",
+          0,
+          [
+            makeIntervention("wake_target", "04:00", {
+              phase_type: "pre_departure",
+            }),
+          ],
+          { phase_type: "pre_departure" }
+        ),
+        makeDaySchedule(
+          "2025-01-15",
+          0,
+          [
+            makeIntervention("nap_window", "06:45", {
+              phase_type: "in_transit",
+              flight_offset_hours: 2,
+            }),
+          ],
+          { phase_type: "in_transit" }
+        ),
+      ];
+
+      // Record original item counts
+      const originalCounts = phases.map((p) => p.items.length);
+
+      // Call mergePhasesByDate multiple times (simulating React re-renders)
+      const result1 = mergePhasesByDate(phases);
+      const result2 = mergePhasesByDate(phases);
+      const result3 = mergePhasesByDate(phases);
+
+      // All results should be identical
+      expect(result1[0].items.length).toBe(2);
+      expect(result2[0].items.length).toBe(2);
+      expect(result3[0].items.length).toBe(2);
+
+      // Original input arrays should not be mutated
+      phases.forEach((phase, i) => {
+        expect(phase.items.length).toBe(originalCounts[i]);
+      });
     });
   });
 });
 
 describe("dayHasMultipleTimezones", () => {
+  // Note: dayHasMultipleTimezones now determines display timezone based on phase_type:
+  // - preparation/pre_departure → uses origin_tz
+  // - post_arrival/adaptation → uses dest_tz
+
   it("returns false for empty interventions", () => {
     expect(dayHasMultipleTimezones([])).toBe(false);
   });
 
-  it("returns false when all interventions have the same timezone", () => {
+  it("returns false when all interventions have same display timezone", () => {
+    // All preparation phase items display in origin_tz
     const interventions: Intervention[] = [
       makeIntervention("wake_target", "07:00", {
-        timezone: "America/Los_Angeles",
+        phase_type: "preparation",
+        origin_tz: "America/Los_Angeles",
+        dest_tz: "Europe/London",
       }),
       makeIntervention("light_seek", "08:00", {
-        timezone: "America/Los_Angeles",
+        phase_type: "preparation",
+        origin_tz: "America/Los_Angeles",
+        dest_tz: "Europe/London",
       }),
       makeIntervention("sleep_target", "22:00", {
-        timezone: "America/Los_Angeles",
+        phase_type: "preparation",
+        origin_tz: "America/Los_Angeles",
+        dest_tz: "Europe/London",
       }),
     ];
 
     expect(dayHasMultipleTimezones(interventions)).toBe(false);
   });
 
-  it("returns false when interventions have no timezone", () => {
+  it("returns true when interventions display in different timezones", () => {
+    // pre_departure items display in origin_tz, post_arrival in dest_tz
     const interventions: Intervention[] = [
-      makeIntervention("wake_target", "07:00"),
-      makeIntervention("light_seek", "08:00"),
-    ];
-
-    expect(dayHasMultipleTimezones(interventions)).toBe(false);
-  });
-
-  it("returns true when interventions have different timezones", () => {
-    const interventions: Intervention[] = [
-      makeIntervention("wake_target", "09:00", { timezone: "Europe/Paris" }),
-      makeIntervention("melatonin", "08:00", { timezone: "Europe/Paris" }),
+      makeIntervention("wake_target", "09:00", {
+        phase_type: "pre_departure",
+        origin_tz: "Europe/Paris",
+        dest_tz: "America/Los_Angeles",
+      }),
+      makeIntervention("melatonin", "08:00", {
+        phase_type: "pre_departure",
+        origin_tz: "Europe/Paris",
+        dest_tz: "America/Los_Angeles",
+      }),
       makeIntervention("sleep_target", "17:00", {
-        timezone: "America/Los_Angeles",
+        phase_type: "post_arrival",
+        origin_tz: "Europe/Paris",
+        dest_tz: "America/Los_Angeles",
       }),
     ];
 
+    // pre_departure shows Europe/Paris, post_arrival shows America/Los_Angeles
     expect(dayHasMultipleTimezones(interventions)).toBe(true);
   });
 
   it("returns true for Flight & Arrival Day with pre-departure and post-arrival items", () => {
     // Simulates CDG→SFO same-day arrival
     const interventions: Intervention[] = [
-      makeIntervention("melatonin", "08:00", { timezone: "Europe/Paris" }),
-      makeIntervention("wake_target", "09:00", { timezone: "Europe/Paris" }),
+      makeIntervention("melatonin", "08:00", {
+        phase_type: "pre_departure",
+        origin_tz: "Europe/Paris",
+        dest_tz: "America/Los_Angeles",
+      }),
+      makeIntervention("wake_target", "09:00", {
+        phase_type: "pre_departure",
+        origin_tz: "Europe/Paris",
+        dest_tz: "America/Los_Angeles",
+      }),
       makeIntervention("wake_target", "02:00", {
-        timezone: "America/Los_Angeles",
+        phase_type: "post_arrival",
+        origin_tz: "Europe/Paris",
+        dest_tz: "America/Los_Angeles",
       }),
       makeIntervention("sleep_target", "17:00", {
-        timezone: "America/Los_Angeles",
+        phase_type: "post_arrival",
+        origin_tz: "Europe/Paris",
+        dest_tz: "America/Los_Angeles",
       }),
     ];
 
@@ -516,36 +670,50 @@ describe("dayHasMultipleTimezones", () => {
   });
 
   it("returns false for single-timezone adaptation day", () => {
-    // Day +1 after arrival - all in destination timezone
+    // Day +1 after arrival - all in destination timezone (all adaptation phase)
     const interventions: Intervention[] = [
       makeIntervention("wake_target", "04:00", {
-        timezone: "America/Los_Angeles",
+        phase_type: "adaptation",
+        origin_tz: "Europe/Paris",
+        dest_tz: "America/Los_Angeles",
       }),
       makeIntervention("light_avoid", "04:00", {
-        timezone: "America/Los_Angeles",
+        phase_type: "adaptation",
+        origin_tz: "Europe/Paris",
+        dest_tz: "America/Los_Angeles",
       }),
       makeIntervention("light_seek", "15:00", {
-        timezone: "America/Los_Angeles",
+        phase_type: "adaptation",
+        origin_tz: "Europe/Paris",
+        dest_tz: "America/Los_Angeles",
       }),
       makeIntervention("sleep_target", "19:00", {
-        timezone: "America/Los_Angeles",
+        phase_type: "adaptation",
+        origin_tz: "Europe/Paris",
+        dest_tz: "America/Los_Angeles",
       }),
     ];
 
+    // All adaptation phase items display in dest_tz (America/Los_Angeles)
     expect(dayHasMultipleTimezones(interventions)).toBe(false);
   });
 
-  it("ignores undefined timezone when counting", () => {
+  it("returns false when all phases use same timezone", () => {
+    // Same timezone trip (e.g., LA → LA layover)
     const interventions: Intervention[] = [
       makeIntervention("wake_target", "07:00", {
-        timezone: "America/Los_Angeles",
+        phase_type: "preparation",
+        origin_tz: "America/Los_Angeles",
+        dest_tz: "America/Los_Angeles",
       }),
-      makeIntervention("light_seek", "08:00"), // No timezone
-      makeIntervention("sleep_target", "22:00", {
-        timezone: "America/Los_Angeles",
+      makeIntervention("light_seek", "08:00", {
+        phase_type: "post_arrival",
+        origin_tz: "America/Los_Angeles",
+        dest_tz: "America/Los_Angeles",
       }),
     ];
 
+    // Even though phases differ, both timezones are the same
     expect(dayHasMultipleTimezones(interventions)).toBe(false);
   });
 });

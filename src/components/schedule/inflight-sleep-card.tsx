@@ -3,24 +3,18 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { CloudMoon, PlaneTakeoff } from "lucide-react";
 import {
-  formatTimeWithTimezone,
+  formatTime,
   formatFlightOffset,
-  formatInFlightDualTimezones,
+  formatDualTimezones,
 } from "@/lib/intervention-utils";
 import type { Intervention } from "@/types/schedule";
 
-interface FlightContext {
-  originTimezone: string;
-  destTimezone: string;
-  departureDateTime: string;
-}
-
 interface InFlightSleepCardProps {
   intervention: Intervention;
-  /** Optional timezone to display (destination timezone) */
-  timezone?: string;
-  /** Flight context for dual timezone display */
-  flightContext?: FlightContext;
+  /** Total flight duration in hours (for progress bar display) */
+  totalFlightHours?: number;
+  /** User preference: always show both origin and destination timezones */
+  showDualTimezone?: boolean;
 }
 
 /**
@@ -30,29 +24,16 @@ interface InFlightSleepCardProps {
  */
 export function InFlightSleepCard({
   intervention,
-  timezone,
-  flightContext,
+  showDualTimezone = false,
 }: InFlightSleepCardProps): React.JSX.Element {
   const flightOffset = intervention.flight_offset_hours ?? 0;
   const durationHours = intervention.duration_min
     ? intervention.duration_min / 60
     : undefined;
 
-  // Show dual timezones when in-transit with flight offset and different timezones
-  const showDualTimezone =
-    intervention.is_in_transit &&
-    intervention.flight_offset_hours != null &&
-    flightContext &&
-    flightContext.originTimezone !== flightContext.destTimezone;
-
-  const dualTimes = showDualTimezone
-    ? formatInFlightDualTimezones(
-        flightContext.departureDateTime,
-        intervention.flight_offset_hours!,
-        flightContext.originTimezone,
-        flightContext.destTimezone
-      )
-    : null;
+  // Get dual timezone times - in-flight items always have show_dual_timezone=true from Python
+  // User preference can also force dual times on all items
+  const dualTimes = formatDualTimezones(intervention, showDualTimezone);
 
   return (
     <Card className="overflow-hidden border-violet-200/40 bg-gradient-to-r from-violet-50/80 via-slate-50 to-violet-50/60 shadow-sm backdrop-blur-sm transition-all duration-300 hover:translate-x-1 hover:shadow-md">
@@ -83,7 +64,7 @@ export function InFlightSleepCard({
         <div className="shrink-0 self-center text-right">
           {dualTimes ? (
             <>
-              <div className="text-sm font-medium tabular-nums text-slate-700">
+              <div className="text-sm font-medium text-slate-700 tabular-nums">
                 {dualTimes.destTime}
               </div>
               <div className="mt-0.5 flex items-center justify-end gap-1 text-xs text-slate-400">
@@ -92,8 +73,8 @@ export function InFlightSleepCard({
               </div>
             </>
           ) : (
-            <div className="text-sm font-medium tabular-nums text-slate-700">
-              {formatTimeWithTimezone(intervention.time, timezone)}
+            <div className="text-sm font-medium text-slate-700 tabular-nums">
+              {formatTime(intervention.dest_time)}
             </div>
           )}
         </div>

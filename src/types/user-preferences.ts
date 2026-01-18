@@ -10,6 +10,8 @@ export interface UserPreferences {
   usesExercise: boolean;
   napPreference: string;
   scheduleIntensity: string;
+  // Display preferences
+  showDualTimezone: boolean;
 }
 
 /**
@@ -51,5 +53,7 @@ export function mapFormToDbPreferences(form: {
     usesExercise: form.useExercise,
     napPreference: form.napPreference,
     scheduleIntensity: form.scheduleIntensity,
+    // Display preferences not in trip form - use defaults
+    showDualTimezone: false,
   };
 }

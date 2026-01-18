@@ -6,6 +6,7 @@
       "Bash(bunx tsc:*)",
       "Bash(eslint:*)",
       "Bash(mypy:*)",
+      "Bash(npx tsx:*)",
       "Bash(pip:*)",
       "Bash(pip3:*)",
       "Bash(prettier:*)",

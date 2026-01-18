@@ -30,6 +30,7 @@ import {
 import { useMediaQuery, MD_BREAKPOINT_QUERY } from "@/hooks/use-media-query";
 import { TimeSelect } from "@/components/ui/time-select";
 import type { Intervention, InterventionActual } from "@/types/schedule";
+import { getDisplayTime } from "@/types/schedule";
 
 type ActualStatus = "as_planned" | "modified" | "skipped";
 
@@ -103,8 +104,11 @@ export function RecordActualSheet({
   actual,
   nestedChildren,
 }: RecordActualSheetProps) {
+  // Get the display time for this intervention (origin_time for prep, dest_time for post-arrival)
+  const displayTime = getDisplayTime(intervention);
+
   const [status, setStatus] = React.useState<ActualStatus>("as_planned");
-  const [actualTime, setActualTime] = React.useState(intervention.time);
+  const [actualTime, setActualTime] = React.useState(displayTime);
   const [isSaving, setIsSaving] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 
@@ -115,19 +119,19 @@ export function RecordActualSheet({
   React.useEffect(() => {
     if (open) {
       setStatus(actual?.status ?? "as_planned");
-      setActualTime(actual?.actualTime ?? intervention.time);
+      setActualTime(actual?.actualTime ?? displayTime);
       setError(null);
     }
-  }, [open, intervention, actual]);
+  }, [open, displayTime, actual]);
 
   const style = getInterventionStyle(intervention.type);
   const Icon = style.icon;
-  const formattedTime = formatTime(intervention.time);
+  const formattedTime = formatTime(displayTime);
   const formattedDate = formatShortDate(date);
 
   // Check if this intervention is in the past (for tense-aware copy)
   const isPast = (() => {
-    const interventionDateTime = new Date(`${date}T${intervention.time}`);
+    const interventionDateTime = new Date(`${date}T${displayTime}`);
     return interventionDateTime < new Date();
   })();
 
@@ -148,7 +152,7 @@ export function RecordActualSheet({
         legIndex,
         dayOffset,
         intervention.type,
-        intervention.time,
+        displayTime,
         status === "modified" ? actualTime : null,
         status
       );
@@ -156,7 +160,11 @@ export function RecordActualSheet({
 
       // If this is a parent with children and status is "modified",
       // cascade the time change to editable children
-      if (status === "modified" && nestedChildren && nestedChildren.length > 0) {
+      if (
+        status === "modified" &&
+        nestedChildren &&
+        nestedChildren.length > 0
+      ) {
         const cascadeErrors: string[] = [];
 
         for (const child of nestedChildren) {
@@ -169,7 +177,7 @@ export function RecordActualSheet({
               legIndex,
               dayOffset,
               child.type,
-              child.time,
+              getDisplayTime(child),
               actualTime,
               "modified"
             );

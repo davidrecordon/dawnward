@@ -173,7 +173,7 @@ class TestPhaseTimezones:
 
 
 class TestSchedulerTimezoneConversion:
-    """Test that scheduler converts None timezone to 'In transit' string."""
+    """Test that interventions carry complete timezone context."""
 
     def _make_request(
         self,
@@ -199,8 +199,8 @@ class TestSchedulerTimezoneConversion:
             uses_caffeine=True,
         )
 
-    def test_scheduler_converts_none_to_in_transit_string(self):
-        """DaySchedule.timezone should be 'In transit' for in-transit phases."""
+    def test_in_transit_interventions_have_timezone_context(self):
+        """In-transit interventions should have origin_tz and dest_tz set."""
         # Use a ULR flight to ensure we get in-transit output (non-ULR is skipped)
         request = self._make_request(
             origin_tz="America/Los_Angeles",
@@ -219,14 +219,21 @@ class TestSchedulerTimezoneConversion:
             ds for ds in response.interventions if ds.phase_type in ("in_transit", "in_transit_ulr")
         ]
 
-        # ULR flights should produce in-transit output with "In transit" timezone
+        # In-transit interventions should have timezone context
         for day_schedule in in_transit_days:
-            assert day_schedule.timezone == "In transit", (
-                f"In-transit DaySchedule should have timezone='In transit', got {day_schedule.timezone}"
-            )
+            for item in day_schedule.items:
+                assert item.origin_tz == "America/Los_Angeles", (
+                    f"In-transit item should have origin_tz set, got {item.origin_tz}"
+                )
+                assert item.dest_tz == "Asia/Tokyo", (
+                    f"In-transit item should have dest_tz set, got {item.dest_tz}"
+                )
+                assert item.show_dual_timezone is True, (
+                    "In-transit item should have show_dual_timezone=True"
+                )
 
-    def test_scheduler_preserves_regular_timezones(self):
-        """Non-transit phases should preserve their IANA timezones."""
+    def test_interventions_carry_timezone_context(self):
+        """All interventions should carry origin_tz and dest_tz."""
         request = self._make_request(
             origin_tz="America/Los_Angeles",
             dest_tz="Europe/London",
@@ -238,19 +245,17 @@ class TestSchedulerTimezoneConversion:
         generator = ScheduleGeneratorV2()
         response = generator.generate_schedule(request, current_datetime=past_datetime)
 
-        # Check pre-departure uses origin
-        pre_departure = [ds for ds in response.interventions if ds.phase_type == "pre_departure"]
-        for ds in pre_departure:
-            assert ds.timezone == "America/Los_Angeles", (
-                f"Pre-departure should have origin tz, got {ds.timezone}"
-            )
-
-        # Check post-arrival uses destination
-        post_arrival = [ds for ds in response.interventions if ds.phase_type == "post_arrival"]
-        for ds in post_arrival:
-            assert ds.timezone == "Europe/London", (
-                f"Post-arrival should have dest tz, got {ds.timezone}"
-            )
+        # Check all interventions have timezone context
+        for ds in response.interventions:
+            for item in ds.items:
+                assert item.origin_tz == "America/Los_Angeles", (
+                    f"Item should have origin_tz, got {item.origin_tz}"
+                )
+                assert item.dest_tz == "Europe/London", (
+                    f"Item should have dest_tz, got {item.dest_tz}"
+                )
+                assert item.origin_time is not None, "Item should have origin_time"
+                assert item.dest_time is not None, "Item should have dest_time"
 
     def test_is_in_transit_flag_set_correctly(self):
         """DaySchedule.is_in_transit should be True only for in-transit phases."""
@@ -651,3 +656,204 @@ class TestPhaseSequenceTimezones:
         # Should see origin (LAX), layover (LHR), and destination (CDG)
         assert "America/Los_Angeles" in timezones_seen, "Should see origin timezone"
         assert "Europe/Paris" in timezones_seen, "Should see destination timezone"
+
+
+class TestMultiLegInterventionContext:
+    """Test that interventions carry consistent timezone context in multi-leg trips."""
+
+    def test_multi_leg_interventions_have_final_destination_context(self, frozen_time):
+        """All interventions should carry origin and final destination timezone context."""
+        from circadian.scheduler_v2 import ScheduleGeneratorV2
+        from circadian.types import ScheduleRequest
+
+        # LAX → LHR → CDG (layover in London, final destination Paris)
+        request = ScheduleRequest(
+            legs=[
+                TripLeg(
+                    origin_tz="America/Los_Angeles",
+                    dest_tz="Europe/London",
+                    departure_datetime="2026-01-15T18:00",
+                    arrival_datetime="2026-01-16T12:00",
+                ),
+                TripLeg(
+                    origin_tz="Europe/London",
+                    dest_tz="Europe/Paris",
+                    departure_datetime="2026-01-17T09:00",
+                    arrival_datetime="2026-01-17T11:30",
+                ),
+            ],
+            prep_days=2,
+            wake_time="07:00",
+            sleep_time="23:00",
+            uses_melatonin=True,
+            uses_caffeine=True,
+        )
+
+        scheduler = ScheduleGeneratorV2()
+        response = scheduler.generate_schedule(request)
+
+        # All interventions should have consistent origin/dest timezone context
+        for day_schedule in response.interventions:
+            for item in day_schedule.items:
+                assert item.origin_tz == "America/Los_Angeles", (
+                    f"Intervention {item.type} should have origin LAX timezone, "
+                    f"got {item.origin_tz}"
+                )
+                assert item.dest_tz == "Europe/Paris", (
+                    f"Intervention {item.type} should have final dest Paris timezone, "
+                    f"got {item.dest_tz}"
+                )
+
+    def test_multi_leg_adaptation_uses_final_destination(self, frozen_time):
+        """Adaptation days should use the final destination timezone."""
+        from circadian.scheduler_v2 import ScheduleGeneratorV2
+        from circadian.types import ScheduleRequest
+
+        # SFO → NRT → ICN (layover in Tokyo, final destination Seoul)
+        request = ScheduleRequest(
+            legs=[
+                TripLeg(
+                    origin_tz="America/Los_Angeles",
+                    dest_tz="Asia/Tokyo",
+                    departure_datetime="2026-01-15T12:00",
+                    arrival_datetime="2026-01-16T16:00",
+                ),
+                TripLeg(
+                    origin_tz="Asia/Tokyo",
+                    dest_tz="Asia/Seoul",
+                    departure_datetime="2026-01-17T10:00",
+                    arrival_datetime="2026-01-17T12:30",
+                ),
+            ],
+            prep_days=2,
+            wake_time="07:00",
+            sleep_time="23:00",
+        )
+
+        scheduler = ScheduleGeneratorV2()
+        response = scheduler.generate_schedule(request)
+
+        # Find adaptation days
+        adaptation_days = [ds for ds in response.interventions if ds.phase_type == "adaptation"]
+        assert len(adaptation_days) > 0, "Should have adaptation days"
+
+        for day_schedule in adaptation_days:
+            for item in day_schedule.items:
+                # dest_time should be in Seoul timezone
+                assert item.dest_tz == "Asia/Seoul", (
+                    f"Adaptation intervention should have Seoul dest_tz, got {item.dest_tz}"
+                )
+
+
+class TestMidnightCrossingInterventions:
+    """Test handling of interventions that cross midnight."""
+
+    def test_sleep_target_crosses_midnight_different_dates(self, frozen_time):
+        """
+        Sleep target at 11:30 PM origin time might be 7:30 AM dest time next day.
+        Verify origin_date and dest_date differ appropriately.
+        """
+        from circadian.scheduler_v2 import ScheduleGeneratorV2
+        from circadian.types import ScheduleRequest
+
+        # SFO → LHR: 8h timezone difference
+        request = ScheduleRequest(
+            legs=[
+                TripLeg(
+                    origin_tz="America/Los_Angeles",
+                    dest_tz="Europe/London",
+                    departure_datetime="2026-01-20T17:00",
+                    arrival_datetime="2026-01-21T11:00",
+                )
+            ],
+            prep_days=2,
+            wake_time="07:00",
+            sleep_time="23:30",  # Late sleep time
+            uses_melatonin=True,
+            uses_caffeine=True,
+        )
+
+        scheduler = ScheduleGeneratorV2()
+        response = scheduler.generate_schedule(request)
+
+        # Find sleep_target interventions
+        for day_schedule in response.interventions:
+            for item in day_schedule.items:
+                if item.type == "sleep_target":
+                    # Parse times
+                    origin_hour = int(item.origin_time.split(":")[0])
+                    dest_hour = int(item.dest_time.split(":")[0])
+
+                    # If origin is late night (23:xx) and dest is morning (07:xx),
+                    # dates should differ by 1 day
+                    if origin_hour >= 22 and dest_hour < 12:
+                        assert item.origin_date != item.dest_date, (
+                            f"Late night origin ({item.origin_time}) and morning dest "
+                            f"({item.dest_time}) should have different dates"
+                        )
+
+    def test_early_morning_intervention_sorts_correctly(self, frozen_time):
+        """
+        Interventions at 00:xx or 01:xx should sort as late-night (after 23:xx),
+        not early morning.
+        """
+        from circadian.scheduler_v2 import ScheduleGeneratorV2
+        from circadian.types import ScheduleRequest
+
+        # Short timezone shift to get interventions around midnight
+        request = ScheduleRequest(
+            legs=[
+                TripLeg(
+                    origin_tz="America/Los_Angeles",
+                    dest_tz="America/Denver",
+                    departure_datetime="2026-01-20T22:00",
+                    arrival_datetime="2026-01-20T23:30",
+                )
+            ],
+            prep_days=1,
+            wake_time="07:00",
+            sleep_time="00:30",  # Very late sleep (12:30 AM)
+            uses_melatonin=True,
+        )
+
+        scheduler = ScheduleGeneratorV2()
+        response = scheduler.generate_schedule(request)
+
+        # Verify schedule generates without errors
+        assert response is not None
+        assert len(response.interventions) > 0
+
+    def test_origin_date_dest_date_are_valid_iso_format(self, frozen_time):
+        """All interventions should have valid ISO date format for origin_date and dest_date."""
+        import re
+
+        from circadian.scheduler_v2 import ScheduleGeneratorV2
+        from circadian.types import ScheduleRequest
+
+        request = ScheduleRequest(
+            legs=[
+                TripLeg(
+                    origin_tz="America/Los_Angeles",
+                    dest_tz="Asia/Tokyo",
+                    departure_datetime="2026-01-20T12:00",
+                    arrival_datetime="2026-01-21T16:00",
+                )
+            ],
+            prep_days=2,
+            wake_time="07:00",
+            sleep_time="23:00",
+        )
+
+        scheduler = ScheduleGeneratorV2()
+        response = scheduler.generate_schedule(request)
+
+        iso_date_pattern = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+
+        for day_schedule in response.interventions:
+            for item in day_schedule.items:
+                assert iso_date_pattern.match(item.origin_date), (
+                    f"origin_date '{item.origin_date}' should be YYYY-MM-DD format"
+                )
+                assert iso_date_pattern.match(item.dest_date), (
+                    f"dest_date '{item.dest_date}' should be YYYY-MM-DD format"
+                )

@@ -117,6 +117,10 @@ class ConstraintFilter:
                 result.append(intervention)
                 continue
 
+            # During planning, time is always set (Optional only for post-enrichment frontend)
+            if intervention.time is None:
+                continue
+
             i_time = parse_time(intervention.time)
             i_minutes = time_to_minutes(i_time)
 
@@ -233,6 +237,10 @@ class ConstraintFilter:
         keep_always = {"wake_target", "sleep_target"}
 
         for intervention in interventions:
+            # During planning, time is always set
+            if intervention.time is None:
+                continue
+
             i_time = parse_time(intervention.time)
             i_minutes = time_to_minutes(i_time)
 
@@ -299,6 +307,11 @@ class ConstraintFilter:
                 result.append(intervention)
                 continue
 
+            # During planning, time is always set
+            if intervention.time is None:
+                result.append(intervention)
+                continue
+
             i_minutes = time_to_minutes(parse_time(intervention.time))
 
             if is_during_sleep(i_minutes, sleep_minutes, wake_minutes):
@@ -356,8 +369,8 @@ class ConstraintFilter:
         - sleep_target last (at sleep time)
         """
 
-        def sort_key(intervention: Intervention) -> tuple:
-            time_str = intervention.time
+        def sort_key(intervention: Intervention) -> tuple[int, tuple[int, int]]:
+            time_str = intervention.time or "00:00"  # Fallback for type safety
             itype = intervention.type
 
             # Convert time to sortable minutes with late-night awareness

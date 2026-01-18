@@ -8,7 +8,10 @@ import type { InterventionActual, ActualsMap } from "@/types/schedule";
  * Generate a unique key for looking up an actual.
  * Format: "dayOffset:interventionType"
  */
-export function getActualKey(dayOffset: number, interventionType: string): string {
+export function getActualKey(
+  dayOffset: number,
+  interventionType: string
+): string {
   return `${dayOffset}:${interventionType}`;
 }
 

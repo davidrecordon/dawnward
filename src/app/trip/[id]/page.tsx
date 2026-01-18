@@ -27,6 +27,14 @@ export default async function TripByIdPage({ params }: Props) {
     auth(),
   ]);
 
+  // Fetch user's display preferences if logged in
+  const userPrefs = session?.user?.id
+    ? await prisma.user.findUnique({
+        where: { id: session.user.id },
+        select: { showDualTimezone: true },
+      })
+    : null;
+
   if (!trip) {
     notFound();
   }
@@ -54,6 +62,7 @@ export default async function TripByIdPage({ params }: Props) {
       isLoggedIn={!!session?.user}
       hasCalendarScope={session?.hasCalendarScope ?? false}
       sharerName={trip.user?.name ?? null}
+      showDualTimezone={userPrefs?.showDualTimezone ?? false}
     />
   );
 }

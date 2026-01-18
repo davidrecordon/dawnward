@@ -1,7 +1,16 @@
 "use client";
 
 import * as React from "react";
-import { Activity, Coffee, Gauge, Moon, Pill, Clock, Sun } from "lucide-react";
+import {
+  Activity,
+  Coffee,
+  Gauge,
+  Globe,
+  Moon,
+  Pill,
+  Clock,
+  Sun,
+} from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PreferenceToggle } from "@/components/preference-toggle";
@@ -21,6 +30,7 @@ interface UserPreferences {
   lightExposureMinutes: number;
   napPreference: string;
   scheduleIntensity: string;
+  showDualTimezone: boolean;
 }
 
 interface SettingsFormProps {
@@ -240,6 +250,23 @@ export function SettingsForm({ initialPreferences }: SettingsFormProps) {
               colorScheme="orange"
             />
           )}
+        </CardContent>
+      </Card>
+
+      {/* Display */}
+      <Card className="bg-white/90 backdrop-blur-sm">
+        <CardHeader>
+          <CardTitle className="text-lg">Display</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <PreferenceToggle
+            icon={<Globe className="h-4 w-4" />}
+            title="Show dual timezones"
+            description="Always display times in both origin and destination timezones"
+            checked={preferences.showDualTimezone}
+            onCheckedChange={(val) => updateField("showDualTimezone", val)}
+            colorScheme="sky"
+          />
         </CardContent>
       </Card>
     </div>

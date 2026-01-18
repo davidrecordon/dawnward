@@ -4,6 +4,7 @@ import type {
   Intervention,
   InterventionType,
 } from "@/types/schedule";
+import { getDisplayTime } from "@/types/schedule";
 
 /** Default event duration in minutes when not specified */
 const DEFAULT_EVENT_DURATION_MIN = 15;
@@ -169,7 +170,7 @@ export function groupInterventionsByTime(
       continue;
     }
 
-    const time = intervention.time;
+    const time = getDisplayTime(intervention);
     if (!groups.has(time)) {
       groups.set(time, []);
     }
@@ -191,7 +192,7 @@ export function buildCalendarEvent(
     throw new Error("Cannot build event from empty interventions");
   }
 
-  const time = interventions[0].time; // All interventions in group have same time
+  const time = getDisplayTime(interventions[0]); // All interventions in group have same time
   const anchor = getAnchorIntervention(interventions);
 
   // Calculate event duration (use anchor's duration or default)
@@ -311,7 +312,9 @@ export async function createEventsForSchedule(
 
   for (const day of interventionDays) {
     const groups = groupInterventionsByTime(day.items);
-    const timezone = day.timezone ?? destTz;
+    // Use destTz - each intervention carries its own timezone context
+    // but for calendar events we use destination timezone for simplicity
+    const timezone = destTz;
 
     for (const [, interventions] of groups) {
       try {

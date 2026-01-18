@@ -1068,9 +1068,10 @@ class TestSevereJetLag:
             print("\n=== QF74 SCHEDULE DEBUG (Evening Departure Regression) ===")
             print(f"Direction: {schedule.direction}")
             for day_schedule in schedule.interventions:
-                print(f"\n--- Day {day_schedule.day} ({day_schedule.timezone}) ---")
+                print(f"\n--- Day {day_schedule.day} ({day_schedule.phase_type}) ---")
                 for item in day_schedule.items:
-                    print(f"  {item.time} - {item.type}: {item.title}")
+                    display_time = item.dest_time or item.time
+                    print(f"  {display_time} - {item.type}: {item.title}")
 
         assert len(errors) == 0, f"Found {len(errors)} errors:\n" + "\n".join(
             f"  - {e.category}: {e.message}" for e in errors

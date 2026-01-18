@@ -75,6 +75,8 @@ interface TripScheduleViewProps {
   isLoggedIn: boolean;
   hasCalendarScope: boolean;
   sharerName: string | null;
+  /** User preference: always show both origin and destination timezones */
+  showDualTimezone?: boolean;
 }
 
 // Minimal airport info for display
@@ -121,6 +123,7 @@ export function TripScheduleView({
   isLoggedIn,
   hasCalendarScope,
   sharerName,
+  showDualTimezone = false,
 }: TripScheduleViewProps) {
   const [schedule, setSchedule] = useState<ScheduleResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -533,6 +536,7 @@ export function TripScheduleView({
               arrivalTime={arrivalTime}
               isCurrentDay={daySchedule.day === currentDayNumber}
               actuals={actuals}
+              showDualTimezone={showDualTimezone}
               onInterventionClick={
                 isOwner && isLoggedIn
                   ? (intervention, dayOffset, date, nestedChildren) =>

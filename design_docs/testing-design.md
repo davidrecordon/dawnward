@@ -518,13 +518,16 @@ def frozen_time():
 ### When to Use
 
 **Use `frozen_time` fixture** for tests with hardcoded dates that must be in the future:
+
 - Tests in `test_timezone_handling.py` with specific flight dates
 - Tests in `test_user_preferences.py` with hardcoded January 2026 dates
 
 **Use relative dates** for tests that don't need specific dates:
+
 - `test_realistic_flights.py` uses `datetime.now() + timedelta(days=7)`
 
 **No mocking needed** for tests using `_generate_phases()` helper:
+
 - The `PhaseGenerator` doesn't check current time
 - Only tests using `generate_schedule()` without `current_datetime` parameter are vulnerable
 

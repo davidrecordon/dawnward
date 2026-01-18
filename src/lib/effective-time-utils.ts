@@ -14,6 +14,7 @@ import type {
   InterventionActual,
   ActualsMap,
 } from "@/types/schedule";
+import { getDisplayTime } from "@/types/schedule";
 import { isEditableIntervention } from "./intervention-utils";
 import { getActualKey } from "./actuals-utils";
 
@@ -35,7 +36,7 @@ interface GroupableItemLike {
  * Get the effective time for an intervention, considering actuals.
  *
  * Returns actualTime if status is "modified" and actualTime exists,
- * otherwise returns the planned time.
+ * otherwise returns the display time (origin_time for prep phases, dest_time for post-arrival).
  *
  * @param intervention - The intervention with planned time
  * @param actual - Optional recorded actual for this intervention
@@ -48,7 +49,7 @@ export function getEffectiveTime(
   if (actual?.status === "modified" && actual.actualTime) {
     return actual.actualTime;
   }
-  return intervention.time;
+  return getDisplayTime(intervention);
 }
 
 /**
@@ -99,7 +100,7 @@ export function getEffectiveTimeForGroupable(
  * based on effective times.
  *
  * A child stays nested if:
- * - Its planned time matches the parent's effective time AND one of:
+ * - Its display time matches the parent's effective time AND one of:
  *   - It's non-editable (cascades with parent, no independent actuals)
  *   - It's skipped (stays nested, shows "Skipped" label)
  *   - Its effective time matches the parent's effective time
@@ -114,16 +115,18 @@ export function shouldChildStayNested(
   childActual: InterventionActual | undefined,
   parentEffectiveTime: string
 ): boolean {
-  // Non-editable children nest only if their planned time matches parent's time
+  const childDisplayTime = getDisplayTime(child);
+
+  // Non-editable children nest only if their display time matches parent's time
   // (they cascade with parent and don't have independent actuals)
   if (!isEditableIntervention(child.type)) {
-    return child.time === parentEffectiveTime;
+    return childDisplayTime === parentEffectiveTime;
   }
 
-  // Skipped children stay nested if planned time matches
+  // Skipped children stay nested if display time matches
   // (show "Skipped" label instead of unnesting)
   if (childActual?.status === "skipped") {
-    return child.time === parentEffectiveTime;
+    return childDisplayTime === parentEffectiveTime;
   }
 
   // Editable children: compare effective times

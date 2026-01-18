@@ -32,6 +32,7 @@ const preferencesSchema = z.object({
     .optional(),
   napPreference: z.enum(["no", "flight_only", "all_days"]).optional(),
   scheduleIntensity: z.enum(["gentle", "balanced", "aggressive"]).optional(),
+  showDualTimezone: z.boolean().optional(),
 });
 
 /**
@@ -58,6 +59,7 @@ export async function GET() {
       lightExposureMinutes: true,
       napPreference: true,
       scheduleIntensity: true,
+      showDualTimezone: true,
     },
   });
 
@@ -118,6 +120,7 @@ export async function PATCH(request: Request) {
       lightExposureMinutes: true,
       napPreference: true,
       scheduleIntensity: true,
+      showDualTimezone: true,
     },
   });
 

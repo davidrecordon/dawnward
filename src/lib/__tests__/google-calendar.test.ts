@@ -17,9 +17,16 @@ function makeIntervention(
 ): Intervention {
   return {
     type,
-    time,
     title: `Test ${type}`,
     description: `Description for ${type}`,
+    origin_time: time,
+    dest_time: time,
+    origin_date: "2026-01-15",
+    dest_date: "2026-01-15",
+    origin_tz: "America/Los_Angeles",
+    dest_tz: "Europe/London",
+    phase_type: "post_arrival",
+    show_dual_timezone: false,
     ...overrides,
   };
 }
@@ -226,7 +233,11 @@ describe("buildCalendarEvent", () => {
       }),
     ];
 
-    const event = buildCalendarEvent(interventions, "2026-01-15", "America/New_York");
+    const event = buildCalendarEvent(
+      interventions,
+      "2026-01-15",
+      "America/New_York"
+    );
 
     expect(event.summary).toBe("💊 Take melatonin");
     expect(event.description).toBe("• Take 0.5mg");
@@ -242,7 +253,11 @@ describe("buildCalendarEvent", () => {
       makeIntervention("light_seek", "07:00"),
     ];
 
-    const event = buildCalendarEvent(interventions, "2026-01-15", "America/New_York");
+    const event = buildCalendarEvent(
+      interventions,
+      "2026-01-15",
+      "America/New_York"
+    );
 
     // wake_target = 30 min reminder
     expect(event.reminders?.overrides?.[0]?.minutes).toBe(30);
@@ -253,7 +268,11 @@ describe("buildCalendarEvent", () => {
       makeIntervention("light_seek", "07:00", { duration_min: 45 }),
     ];
 
-    const event = buildCalendarEvent(interventions, "2026-01-15", "America/New_York");
+    const event = buildCalendarEvent(
+      interventions,
+      "2026-01-15",
+      "America/New_York"
+    );
 
     // Start at 07:00, end 45 min later at 07:45
     expect(event.start?.dateTime).toContain("07:00");
@@ -263,7 +282,11 @@ describe("buildCalendarEvent", () => {
   it("defaults to 15 minute duration when not specified", () => {
     const interventions = [makeIntervention("melatonin", "21:00")];
 
-    const event = buildCalendarEvent(interventions, "2026-01-15", "America/New_York");
+    const event = buildCalendarEvent(
+      interventions,
+      "2026-01-15",
+      "America/New_York"
+    );
 
     // Start at 21:00, end 15 min later at 21:15
     expect(event.start?.dateTime).toContain("21:00");
@@ -271,8 +294,101 @@ describe("buildCalendarEvent", () => {
   });
 
   it("throws error for empty interventions", () => {
-    expect(() => buildCalendarEvent([], "2026-01-15", "America/New_York")).toThrow(
-      "Cannot build event from empty interventions"
-    );
+    expect(() =>
+      buildCalendarEvent([], "2026-01-15", "America/New_York")
+    ).toThrow("Cannot build event from empty interventions");
+  });
+
+  describe("timezone context from intervention", () => {
+    it("uses dest_time for post-arrival interventions", () => {
+      const interventions = [
+        makeIntervention("wake_target", "07:00", {
+          phase_type: "post_arrival",
+          origin_time: "23:00", // 11 PM previous night in origin
+          dest_time: "07:00", // 7 AM in destination
+        }),
+      ];
+
+      const event = buildCalendarEvent(
+        interventions,
+        "2026-01-15",
+        "Europe/London" // Destination timezone
+      );
+
+      // Should use dest_time (07:00) for the event
+      expect(event.start?.dateTime).toContain("07:00");
+    });
+
+    it("uses origin_time for preparation phase interventions", () => {
+      const interventions = [
+        makeIntervention("wake_target", "07:00", {
+          phase_type: "preparation",
+          origin_time: "07:00",
+          dest_time: "15:00", // 3 PM in destination
+        }),
+      ];
+
+      const event = buildCalendarEvent(
+        interventions,
+        "2026-01-15",
+        "America/Los_Angeles" // Origin timezone
+      );
+
+      // For preparation phase, event should be based on origin time
+      expect(event.start?.dateTime).toContain("07:00");
+      expect(event.start?.timeZone).toBe("America/Los_Angeles");
+    });
+
+    it("uses provided timezone for event start/end", () => {
+      const interventions = [makeIntervention("melatonin", "21:00")];
+
+      const event = buildCalendarEvent(
+        interventions,
+        "2026-01-15",
+        "Asia/Tokyo"
+      );
+
+      expect(event.start?.timeZone).toBe("Asia/Tokyo");
+      expect(event.end?.timeZone).toBe("Asia/Tokyo");
+    });
+
+    it("handles in-transit interventions with dest_time", () => {
+      const interventions = [
+        makeIntervention("nap_window", "14:00", {
+          phase_type: "in_transit",
+          origin_time: "14:00",
+          dest_time: "22:00",
+          flight_offset_hours: 4.5,
+        }),
+      ];
+
+      const event = buildCalendarEvent(
+        interventions,
+        "2026-01-15",
+        "Europe/London" // Destination timezone for in-transit
+      );
+
+      // In-transit events should use dest_time
+      expect(event.start?.dateTime).toContain("22:00");
+    });
+
+    it("preserves intervention metadata in event", () => {
+      const interventions = [
+        makeIntervention("light_seek", "08:00", {
+          description: "Get 30 minutes of morning light",
+          duration_min: 30,
+        }),
+      ];
+
+      const event = buildCalendarEvent(
+        interventions,
+        "2026-01-15",
+        "America/New_York"
+      );
+
+      expect(event.description).toContain("Get 30 minutes of morning light");
+      // Duration should be reflected in end time
+      expect(event.end?.dateTime).toContain("08:30");
+    });
   });
 });

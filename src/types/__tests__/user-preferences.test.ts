@@ -16,6 +16,7 @@ describe("User Preferences Mapping", () => {
         usesExercise: true,
         napPreference: "all_days",
         scheduleIntensity: "aggressive",
+        showDualTimezone: false,
       };
 
       const formPrefs = mapDbToFormPreferences(dbPrefs);
@@ -42,6 +43,7 @@ describe("User Preferences Mapping", () => {
         usesExercise: false,
         napPreference: "no",
         scheduleIntensity: "gentle",
+        showDualTimezone: true,
       };
 
       const formPrefs = mapDbToFormPreferences(dbPrefs);
@@ -81,10 +83,11 @@ describe("User Preferences Mapping", () => {
         usesExercise: true,
         napPreference: "all_days",
         scheduleIntensity: "aggressive",
+        showDualTimezone: false,
       });
     });
 
-    it("is the inverse of mapDbToFormPreferences", () => {
+    it("is the inverse of mapDbToFormPreferences for form fields", () => {
       const original = {
         defaultWakeTime: "08:00",
         defaultSleepTime: "22:30",
@@ -94,11 +97,13 @@ describe("User Preferences Mapping", () => {
         usesExercise: false,
         napPreference: "flight_only",
         scheduleIntensity: "balanced",
+        showDualTimezone: false, // Display preference defaults to false
       };
 
       const formPrefs = mapDbToFormPreferences(original);
       const backToDb = mapFormToDbPreferences(formPrefs);
 
+      // Form fields round-trip correctly; showDualTimezone defaults to false
       expect(backToDb).toEqual(original);
     });
   });

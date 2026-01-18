@@ -42,6 +42,7 @@ export default async function SettingsPage() {
       lightExposureMinutes: true,
       napPreference: true,
       scheduleIntensity: true,
+      showDualTimezone: true,
     },
   });
 
@@ -79,6 +80,7 @@ export default async function SettingsPage() {
             lightExposureMinutes: user.lightExposureMinutes,
             napPreference: user.napPreference,
             scheduleIntensity: user.scheduleIntensity,
+            showDualTimezone: user.showDualTimezone,
           }}
         />
 

@@ -32,7 +32,37 @@ bun run typecheck:python # Run mypy type checking
 bun prisma generate     # Generate Prisma client to src/generated/prisma
 bun prisma migrate dev  # Run migrations in development
 bun prisma studio       # Open Prisma Studio GUI
+
+# Scripts
+npx tsx scripts/regenerate-schedules.ts  # Regenerate all stored schedules
 ```
+
+## Scripts
+
+### `scripts/regenerate-schedules.ts`
+
+Regenerates stored schedules in the database by re-running the Python scheduler. Use this after schema changes to intervention data (e.g., adding new fields like timezone enrichment).
+
+```bash
+npx tsx scripts/regenerate-schedules.ts           # Regenerate all schedules
+npx tsx scripts/regenerate-schedules.ts --dry-run # Preview without saving
+npx tsx scripts/regenerate-schedules.ts --id=xxx  # Regenerate specific trip by ID
+```
+
+**What it does:**
+
+- Fetches all `SharedSchedule` records from the database
+- Re-runs the Python scheduler with the original trip parameters
+- Updates both `initialScheduleJson` and `currentScheduleJson` with the new output
+- Validates that new schedules have expected fields before saving
+
+**When to use:**
+
+- After adding new fields to the `Intervention` type that the Python scheduler now generates
+- After fixing bugs in the scheduler that affected stored schedules
+- To migrate legacy schedules to a new format
+
+**Requirements:** Requires `DATABASE_URL` environment variable (uses `.env` automatically).
 
 ## Before Committing
 
@@ -130,6 +160,9 @@ design_docs/
 ├── exploration/      # Future ideas, rough scopes, cleanup notes
 ├── shovel_ready/     # Scoped and ready to implement
 └── [*.md]            # Core reference docs (decisions, backend, auth, etc.)
+
+scripts/
+└── regenerate-schedules.ts  # Migrate stored schedules after schema changes
 ```
 
 ### Key Patterns
@@ -141,6 +174,12 @@ design_docs/
 **Auth Flow**: Progressive signup - anonymous users can generate schedules (saved to DB with `userId: null`), then sign in with Google to access trip history and preferences. Auth uses JWT sessions for Edge Runtime compatibility. Config is split: `auth.config.ts` (Edge-compatible) and `auth.ts` (with Prisma adapter).
 
 **Trip Storage**: All trips are stored in the database via `SharedSchedule` model. localStorage is only used for form draft state. Trips can optionally be shared via short codes (`/s/abc123`).
+
+**Intervention Sorting**: Interventions sort by `dest_time` using `toSortableMinutes()`. Special cases:
+
+- `sleep_target` at 00:00-05:59 sorts as "late night" (end of day, after 23:59)
+- `wake_target` at 00:00-05:59 sorts as "early morning" (start of day)
+- In-transit items with `flight_offset_hours` sort by offset, not time
 
 ### Database Schema (Key Tables)
 
@@ -179,7 +218,52 @@ Key intervention types:
 - `melatonin` - Optimal melatonin timing
 - `caffeine_ok` / `caffeine_cutoff` / `caffeine_boost` - Caffeine strategy
 - `sleep_target` / `wake_target` - Target sleep schedule
-- `sleep_window` - In-flight sleep opportunities (for ultra-long-haul flights)
+- `nap_window` - In-flight sleep opportunities (for ultra-long-haul flights)
+
+### Intervention Timezone Architecture
+
+Each `Intervention` carries complete timezone context - no external lookups needed:
+
+```typescript
+interface Intervention {
+  type: InterventionType;
+  title: string;
+  description: string;
+
+  // Dual timezone times (required)
+  origin_time: string; // HH:MM in origin timezone
+  dest_time: string; // HH:MM in destination timezone
+  origin_date: string; // YYYY-MM-DD in origin timezone
+  dest_date: string; // YYYY-MM-DD in destination timezone
+  origin_tz: string; // IANA timezone (e.g., "America/Los_Angeles")
+  dest_tz: string; // IANA timezone (e.g., "Europe/London")
+
+  // Phase info
+  phase_type: PhaseType; // "preparation" | "pre_departure" | "in_transit" | "post_arrival" | "adaptation"
+  show_dual_timezone: boolean; // Backend hint for dual display
+
+  // Optional fields
+  duration_min?: number;
+  flight_offset_hours?: number; // For in-flight sleep windows only
+}
+```
+
+**Display logic by phase** (use `getDisplayTime()` helper):
+
+| Phase           | Primary Time | Secondary Time                | Rationale                              |
+| --------------- | ------------ | ----------------------------- | -------------------------------------- |
+| `preparation`   | origin_time  | dest_time (if dual enabled)   | User is at home                        |
+| `pre_departure` | origin_time  | dest_time (if dual enabled)   | User is at origin airport              |
+| `in_transit`    | dest_time    | origin_time (if dual enabled) | User adapting to destination           |
+| `post_arrival`  | dest_time    | _none_                        | User has arrived, origin time is noise |
+| `adaptation`    | dest_time    | _none_                        | User is at destination                 |
+
+**Key rules:**
+
+- Never use a legacy `time` field - it was removed. Always use `origin_time`/`dest_time`
+- `is_in_transit` is on `DaySchedule`, not `Intervention`
+- `flight_offset_hours` distinguishes in-flight sleep windows from ground naps
+- DST handling: Node.js may return "GMT+1" instead of "BST" for British Summer Time
 
 ### MCP Interface
 
@@ -299,7 +383,7 @@ This project uses Claude Code plugins that should be invoked for significant wor
 
 ## Testing
 
-**TypeScript (Vitest)**: ~360 tests covering utility functions and components
+**TypeScript (Vitest)**: ~490 tests covering utility functions and components
 
 - `src/lib/__tests__/time-utils.test.ts` - Date/time formatting, timezone-aware operations
 - `src/lib/__tests__/timezone-utils.test.ts` - Flight duration calculation, timezone shifts
@@ -322,9 +406,12 @@ This project uses Claude Code plugins that should be invoked for significant wor
 - `src/components/auth/__tests__/sign-in-button.test.tsx` - Sign-in button variants
 - `src/components/auth/__tests__/user-menu.test.tsx` - User menu, avatar initials
 - `src/components/schedule/__tests__/day-section.test.tsx` - Schedule day section rendering
+- `src/components/schedule/__tests__/intervention-card.test.tsx` - Intervention card rendering, dual timezone display
+- `src/components/schedule/__tests__/inflight-sleep-card.test.tsx` - In-flight sleep card, flight offset display
+- `src/lib/__tests__/google-calendar.test.ts` - Calendar event building, reminder timing
 - `src/types/__tests__/user-preferences.test.ts` - User preference type validation
 
-**Python (pytest)**: ~290 tests covering schedule generation (6-layer validation strategy)
+**Python (pytest)**: ~340 tests covering schedule generation (6-layer validation strategy)
 
 - `test_model_parity.py` - CBTmin trajectory, phase shift magnitude, daily shift targets
 - `test_physiological_bounds.py` - Max shift rates, antidromic risk, sleep duration, melatonin timing
@@ -334,10 +421,34 @@ This project uses Claude Code plugins that should be invoked for significant wor
 - `test_realistic_flights.py` - Real airline routes (VS, BA, AF, SQ, CX) with actual departure/arrival times
 - `test_sorting.py` - Intervention sorting, late-night handling, sleep_target near departure filtering
 - `test_timezone_handling.py` - Phase timezone handling, is_in_transit flag
+- `test_dst_transitions.py` - DST edge cases (spring forward, fall back, ambiguous hours)
 - `test_mcp_tools.py` - MCP tool implementations (phase shift, adaptation plan)
 - `conftest.py` - Shared fixtures including `frozen_time` for deterministic date testing
 
 **Time Mocking (Python)**: Uses `time-machine` for C-level time mocking that catches all `datetime.now()` calls including in dependencies like Arcascope. Tests with hardcoded dates use the `frozen_time` fixture (freezes to Jan 1, 2026). Tests needing flexibility use relative dates (`datetime.now() + timedelta(days=N)`).
+
+**Test Helper Pattern**: Mock intervention factories should include all required timezone fields:
+
+```typescript
+function createMockIntervention(overrides = {}): Intervention {
+  return {
+    type: "wake_target",
+    title: "Wake Target",
+    description: "Time to wake up",
+    origin_time: "07:00", // Required
+    dest_time: "15:00", // Required
+    origin_date: "2026-01-20",
+    dest_date: "2026-01-20",
+    origin_tz: "America/Los_Angeles",
+    dest_tz: "Europe/London",
+    phase_type: "preparation",
+    show_dual_timezone: false,
+    ...overrides,
+  };
+}
+```
+
+**Timezone Abbreviation Testing**: When testing timezone abbreviations (PST/PDT, GMT/BST), be aware that Node.js V8 may return offset format instead of abbreviation (e.g., "GMT+1" instead of "BST"). Use regex matching: `expect(result).toMatch(/BST|GMT\+1/)`.
 
 ## Design Documents
 
@@ -349,15 +460,13 @@ design_docs/
 ├── exploration/         # Future ideas, rough scopes, cleanup notes
 ├── shovel_ready/        # Scoped and ready to implement
 │
-├── decisions-overview.md    # All key decisions in one place
-├── backend-design.md        # API routes, database schema, MCP tools
 ├── auth-design.md           # NextAuth.js setup, progressive signup flow
-├── vercel-design.md         # Vercel deployment: Next.js + Python coexistence
-├── testing-design.md        # 6-layer validation strategy
-├── science-methodology.md   # Circadian science foundation
-├── debugging-tips.md        # Scheduler debugging lessons learned
+├── backend-design.md        # API routes, database schema, MCP tools
 ├── brand.md                 # Color, tone, and style guidelines
+├── debugging-tips.md        # Scheduler debugging lessons learned
+├── decisions-overview.md    # All key decisions in one place
 ├── frontend-design.md       # Screen structure, components, user flows
-├── ui-v2.html               # Static mockup of key screens
-└── ui-v2-homepage-only.html # Homepage mockup (fits in context window)
+├── science-methodology.md   # Circadian science foundation
+├── testing-design.md        # 6-layer validation strategy
+└── vercel-design.md         # Vercel deployment: Next.js + Python coexistence
 ```

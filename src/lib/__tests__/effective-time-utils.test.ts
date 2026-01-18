@@ -13,9 +13,16 @@ function createIntervention(
 ): Intervention {
   return {
     type,
-    time,
     title: `Test ${type}`,
     description: "Test description",
+    origin_time: time,
+    dest_time: time,
+    origin_date: "2026-01-15",
+    dest_date: "2026-01-15",
+    origin_tz: "America/Los_Angeles",
+    dest_tz: "Europe/London",
+    phase_type: "post_arrival",
+    show_dual_timezone: false,
   };
 }
 

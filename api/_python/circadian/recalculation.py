@@ -315,6 +315,8 @@ def _calculate_schedule_diff(
         if day_schedule.day < from_day:
             continue
         for intervention in day_schedule.items:
+            if intervention.time is None:
+                continue
             key = (day_schedule.day, intervention.type)
             old_interventions[key] = intervention.time
 

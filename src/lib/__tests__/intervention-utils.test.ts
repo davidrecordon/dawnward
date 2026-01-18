@@ -7,8 +7,9 @@ import {
   formatFlightOffset,
   formatFlightPhase,
   isEditableIntervention,
-  formatInFlightDualTimezones,
+  formatDualTimezones,
 } from "../intervention-utils";
+import type { Intervention } from "@/types/schedule";
 
 describe("getInterventionStyle", () => {
   it("returns correct style for light_seek", () => {
@@ -299,65 +300,219 @@ describe("isEditableIntervention", () => {
   });
 });
 
-describe("formatInFlightDualTimezones", () => {
-  it("calculates times correctly for SFO to London (eastbound)", () => {
-    // Departure: Jan 15, 8:45 PM PST
-    // 4 hours into flight: 12:45 AM PST on Jan 16 = 8:45 AM GMT on Jan 16
-    const result = formatInFlightDualTimezones(
-      "2026-01-15T20:45",
-      4, // 4 hours into flight
-      "America/Los_Angeles",
-      "Europe/London"
-    );
-    // Origin time should be around 12:45 AM PST
-    expect(result.originTime).toContain("12:45 AM");
-    expect(result.originTime).toContain("PST");
-    // Dest time should be around 8:45 AM GMT
-    expect(result.destTime).toContain("8:45 AM");
-    expect(result.destTime).toContain("GMT");
+describe("formatDualTimezones", () => {
+  /** Create a mock intervention with timezone context for testing */
+  function createMockIntervention(
+    overrides: Partial<Intervention> = {}
+  ): Intervention {
+    return {
+      type: "wake_target",
+      title: "Wake Target",
+      description: "Time to wake up",
+      origin_time: "08:00",
+      dest_time: "16:00",
+      origin_date: "2026-01-15",
+      dest_date: "2026-01-15",
+      origin_tz: "America/Los_Angeles",
+      dest_tz: "Europe/London",
+      phase_type: "in_transit",
+      show_dual_timezone: true,
+      ...overrides,
+    };
+  }
+
+  it("returns formatted times when show_dual_timezone is true", () => {
+    const intervention = createMockIntervention({
+      origin_time: "08:45",
+      dest_time: "16:45",
+      show_dual_timezone: true,
+    });
+    const result = formatDualTimezones(intervention);
+
+    expect(result).not.toBeNull();
+    expect(result!.originTime).toContain("8:45 AM");
+    expect(result!.originTime).toContain("PST");
+    expect(result!.destTime).toContain("4:45 PM");
+    expect(result!.destTime).toContain("GMT");
   });
 
-  it("handles in-flight sleep at flight midpoint", () => {
-    // Departure: Jan 15, 6:00 PM PST (11 hour flight to London)
-    // 5.5 hours into flight: 11:30 PM PST = 7:30 AM GMT next day
-    const result = formatInFlightDualTimezones(
-      "2026-01-15T18:00",
-      5.5,
-      "America/Los_Angeles",
-      "Europe/London"
-    );
-    expect(result.originTime).toContain("11:30 PM");
-    expect(result.destTime).toContain("7:30 AM");
+  it("returns null when show_dual_timezone is false", () => {
+    const intervention = createMockIntervention({
+      show_dual_timezone: false,
+    });
+    const result = formatDualTimezones(intervention);
+    expect(result).toBeNull();
   });
 
-  it("handles westbound flight (London to LA)", () => {
-    // Departure: Jan 15, 10:00 AM GMT
-    // 6 hours into flight: 4:00 PM GMT = 8:00 AM PST
-    const result = formatInFlightDualTimezones(
-      "2026-01-15T10:00",
-      6,
-      "Europe/London",
-      "America/Los_Angeles"
-    );
-    expect(result.originTime).toContain("4:00 PM");
-    expect(result.originTime).toContain("GMT");
-    expect(result.destTime).toContain("8:00 AM");
-    expect(result.destTime).toContain("PST");
+  it("handles different timezone pairs", () => {
+    const intervention = createMockIntervention({
+      origin_time: "21:00",
+      dest_time: "14:00",
+      origin_tz: "America/Los_Angeles",
+      dest_tz: "Asia/Tokyo",
+      origin_date: "2026-01-15",
+      dest_date: "2026-01-16",
+      show_dual_timezone: true,
+    });
+    const result = formatDualTimezones(intervention);
+
+    expect(result).not.toBeNull();
+    expect(result!.originTime).toContain("9:00 PM");
+    expect(result!.originTime).toContain("PST");
+    expect(result!.destTime).toContain("2:00 PM");
   });
 
-  it("handles trans-Pacific flight (SFO to Tokyo)", () => {
-    // Departure: Jan 15, 1:00 PM PST (11 hour flight to Tokyo)
-    // 8 hours into flight: 9:00 PM PST Jan 15 = 2:00 PM JST Jan 16
-    const result = formatInFlightDualTimezones(
-      "2026-01-15T13:00",
-      8,
-      "America/Los_Angeles",
-      "Asia/Tokyo"
-    );
-    expect(result.originTime).toContain("9:00 PM");
-    expect(result.originTime).toContain("PST");
-    expect(result.destTime).toContain("2:00 PM");
-    // Tokyo may show as JST or GMT+9 depending on system locale
-    expect(result.destTime).toMatch(/JST|GMT\+9/);
+  describe("DST handling", () => {
+    it("shows PDT for summer dates in Los Angeles", () => {
+      const intervention = createMockIntervention({
+        origin_time: "08:00",
+        dest_time: "16:00",
+        origin_date: "2026-07-15", // Summer - PDT
+        dest_date: "2026-07-15",
+        origin_tz: "America/Los_Angeles",
+        dest_tz: "Europe/London",
+        show_dual_timezone: true,
+      });
+      const result = formatDualTimezones(intervention);
+
+      expect(result).not.toBeNull();
+      expect(result!.originTime).toContain("PDT");
+    });
+
+    it("shows PST for winter dates in Los Angeles", () => {
+      const intervention = createMockIntervention({
+        origin_time: "08:00",
+        dest_time: "16:00",
+        origin_date: "2026-01-15", // Winter - PST
+        dest_date: "2026-01-15",
+        origin_tz: "America/Los_Angeles",
+        dest_tz: "Europe/London",
+        show_dual_timezone: true,
+      });
+      const result = formatDualTimezones(intervention);
+
+      expect(result).not.toBeNull();
+      expect(result!.originTime).toContain("PST");
+    });
+
+    it("shows British Summer Time abbreviation for summer dates in London", () => {
+      const intervention = createMockIntervention({
+        origin_time: "08:00",
+        dest_time: "16:00",
+        origin_date: "2026-07-15", // Summer
+        dest_date: "2026-07-15",
+        origin_tz: "America/Los_Angeles",
+        dest_tz: "Europe/London",
+        show_dual_timezone: true,
+      });
+      const result = formatDualTimezones(intervention);
+
+      expect(result).not.toBeNull();
+      // Node.js/V8 may return "GMT+1" instead of "BST" depending on runtime
+      expect(result!.destTime).toMatch(/BST|GMT\+1/);
+    });
+
+    it("shows GMT for winter dates in London", () => {
+      const intervention = createMockIntervention({
+        origin_time: "08:00",
+        dest_time: "16:00",
+        origin_date: "2026-01-15", // Winter - GMT
+        dest_date: "2026-01-15",
+        origin_tz: "America/Los_Angeles",
+        dest_tz: "Europe/London",
+        show_dual_timezone: true,
+      });
+      const result = formatDualTimezones(intervention);
+
+      expect(result).not.toBeNull();
+      expect(result!.destTime).toContain("GMT");
+    });
+  });
+
+  describe("zero timezone shift", () => {
+    it("returns null when origin_tz equals dest_tz", () => {
+      const intervention = createMockIntervention({
+        origin_time: "08:00",
+        dest_time: "08:00",
+        origin_tz: "America/Los_Angeles",
+        dest_tz: "America/Los_Angeles", // Same timezone
+        show_dual_timezone: true,
+      });
+      const result = formatDualTimezones(intervention);
+
+      // No need for dual display when timezones are the same
+      expect(result).toBeNull();
+    });
+
+    it("returns null for same timezone even with user preference enabled", () => {
+      const intervention = createMockIntervention({
+        origin_time: "10:00",
+        dest_time: "10:00",
+        origin_tz: "America/Los_Angeles",
+        dest_tz: "America/Los_Angeles", // Same timezone
+        show_dual_timezone: false,
+      });
+      // User preference enabled, but same timezone means no dual display needed
+      const result = formatDualTimezones(intervention, true);
+
+      // Same timezone should always return null, regardless of preferences
+      expect(result).toBeNull();
+    });
+  });
+
+  describe("legacy schedule compatibility", () => {
+    it("returns null when origin_time is missing", () => {
+      const intervention = createMockIntervention({
+        origin_time: undefined as unknown as string,
+        show_dual_timezone: true,
+      });
+      const result = formatDualTimezones(intervention);
+      expect(result).toBeNull();
+    });
+
+    it("returns null when dest_time is missing", () => {
+      const intervention = createMockIntervention({
+        dest_time: undefined as unknown as string,
+        show_dual_timezone: true,
+      });
+      const result = formatDualTimezones(intervention);
+      expect(result).toBeNull();
+    });
+
+    it("returns null when origin_tz is missing", () => {
+      const intervention = createMockIntervention({
+        origin_tz: undefined as unknown as string,
+        show_dual_timezone: true,
+      });
+      const result = formatDualTimezones(intervention);
+      expect(result).toBeNull();
+    });
+
+    it("returns null when dest_tz is missing", () => {
+      const intervention = createMockIntervention({
+        dest_tz: undefined as unknown as string,
+        show_dual_timezone: true,
+      });
+      const result = formatDualTimezones(intervention);
+      expect(result).toBeNull();
+    });
+
+    it("returns null when origin_date is missing", () => {
+      const intervention = createMockIntervention({
+        origin_date: undefined as unknown as string,
+        show_dual_timezone: true,
+      });
+      const result = formatDualTimezones(intervention);
+      expect(result).toBeNull();
+    });
+
+    it("returns null when dest_date is missing", () => {
+      const intervention = createMockIntervention({
+        dest_date: undefined as unknown as string,
+        show_dual_timezone: true,
+      });
+      const result = formatDualTimezones(intervention);
+      expect(result).toBeNull();
+    });
   });
 });

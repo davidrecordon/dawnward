@@ -10,6 +10,7 @@ import type {
   PhaseType,
   TimedItemGroup,
 } from "@/types/schedule";
+import { isInTransitPhase, isPreFlightPhase } from "@/types/schedule";
 import {
   getEffectiveTimeForGroupable,
   shouldChildStayNested,
@@ -86,25 +87,18 @@ export function mergePhasesByDate(interventions: DaySchedule[]): DaySchedule[] {
       phaseTypesByDate.get(phase.date)!.add(phase.phase_type);
     }
 
-    // Tag items with their source timezone and in-transit status
-    const taggedItems: Intervention[] = phase.items.map((item) => ({
-      ...item,
-      timezone: phase.timezone,
-      is_in_transit: phase.is_in_transit,
-    }));
-
     if (existing) {
       // Append items (already in phase order)
-      existing.items.push(...taggedItems);
+      existing.items.push(...phase.items);
       // Use the lower day number for labeling
       if (phase.day < existing.day) {
         existing.day = phase.day;
       }
     } else {
-      // First phase for this date - clone it
+      // First phase for this date - clone it (avoid mutating input)
       byDate.set(phase.date, {
         ...phase,
-        items: taggedItems,
+        items: [...phase.items],
       });
     }
   }
@@ -125,11 +119,11 @@ export function mergePhasesByDate(interventions: DaySchedule[]): DaySchedule[] {
     }
   }
 
-  // Sort items within each day: maintain phase order, sort by time within same timezone
+  // Sort items within each day: maintain phase order, sort by time within same phase
   for (const day of byDate.values()) {
     day.items.sort((a, b) => {
-      // If different timezones, keep the phase order (items were added in phase order)
-      if (a.timezone !== b.timezone) {
+      // If different phases, keep the phase order (items were added in phase order)
+      if (a.phase_type !== b.phase_type) {
         return 0;
       }
       // In-transit items: sort by flight position
@@ -139,9 +133,12 @@ export function mergePhasesByDate(interventions: DaySchedule[]): DaySchedule[] {
       ) {
         return a.flight_offset_hours - b.flight_offset_hours;
       }
-      // Regular items: chronological with late-night awareness
+      // Regular items: chronological with late-night awareness using dest_time
+      // (After enrichment, interventions have dest_time for post-arrival, origin_time for prep)
+      const aTime = a.dest_time;
+      const bTime = b.dest_time;
       return (
-        toSortableMinutes(a.time, a.type) - toSortableMinutes(b.time, b.type)
+        toSortableMinutes(aTime, a.type) - toSortableMinutes(bTime, b.type)
       );
     });
   }
@@ -153,41 +150,50 @@ export function mergePhasesByDate(interventions: DaySchedule[]): DaySchedule[] {
 }
 
 /**
- * Check if a day's interventions span multiple timezones.
+ * Check if a day's interventions span multiple display timezones.
  *
  * Used to decide whether to show timezone labels on UI elements like
  * the "You are here" marker - only needed when there's ambiguity.
  *
+ * With the new model, check if there are interventions from different phase types
+ * that would display in different timezones (preparation/pre_departure show origin,
+ * post_arrival/adaptation show destination).
+ *
  * @param interventions - Array of interventions for a single day
- * @returns true if interventions have 2+ distinct timezones
+ * @returns true if interventions would display in 2+ distinct timezones
  */
 export function dayHasMultipleTimezones(
   interventions: Intervention[]
 ): boolean {
-  const timezones = new Set<string>();
+  const displayTimezones = new Set<string>();
 
   for (const item of interventions) {
-    if (item.timezone) {
-      timezones.add(item.timezone);
+    // Determine which timezone would be displayed based on phase
+    if (isPreFlightPhase(item.phase_type)) {
+      displayTimezones.add(item.origin_tz);
+    } else {
+      displayTimezones.add(item.dest_tz);
     }
   }
 
-  return timezones.size > 1;
+  return displayTimezones.size > 1;
 }
 
 /**
  * Input item for groupTimedItems - matches the TimedItem union from day-section.tsx.
  * Defined here to avoid circular dependencies.
+ *
+ * Note: Interventions now carry their own timezone context (origin_tz, dest_tz).
+ * Markers (arrival, departure, now) still need explicit timezone.
  */
 export type GroupableItem =
   | {
       kind: "intervention";
       time: string;
       data: Intervention;
-      timezone?: string;
     }
-  | { kind: "arrival"; time: string; timezone: string }
-  | { kind: "departure"; time: string; timezone: string }
+  | { kind: "arrival"; time: string; dest_tz: string }
+  | { kind: "departure"; time: string; origin_tz: string }
   | { kind: "now"; time: string; timezone: string };
 
 /**
@@ -198,6 +204,13 @@ export interface GroupedTimedItems {
   groups: TimedItemGroup[];
   /** Items that weren't grouped */
   ungrouped: GroupableItem[];
+}
+
+/**
+ * Check if an intervention is in-transit based on its phase_type.
+ */
+function isInTransit(intervention: Intervention): boolean {
+  return isInTransitPhase(intervention.phase_type);
 }
 
 /**
@@ -217,7 +230,7 @@ function canBeParent(item: GroupableItem): boolean {
   return (
     item.kind === "intervention" &&
     item.data.type === "wake_target" &&
-    !item.data.is_in_transit
+    !isInTransit(item.data)
   );
 }
 
@@ -258,7 +271,7 @@ export function groupTimedItems(
     item: GroupableItem
   ): item is GroupableItem & { kind: "intervention" } =>
     item.kind === "intervention" &&
-    !item.data.is_in_transit &&
+    !isInTransit(item.data) &&
     !canBeParent(item);
 
   // Find all parent items and group same-effective-time items with them
@@ -299,20 +312,20 @@ export function groupTimedItems(
 
     // Only create a group if there are children
     if (children.length > 0) {
-      const parent: GroupableParent =
-        parentItem.kind === "intervention"
-          ? {
-              kind: "intervention",
-              data: parentItem.data,
-              timezone: parentItem.timezone,
-            }
-          : { kind: "arrival", timezone: parentItem.timezone };
+      let parent: GroupableParent;
+      if (parentItem.kind === "intervention") {
+        parent = { kind: "intervention", data: parentItem.data };
+      } else if (parentItem.kind === "arrival") {
+        parent = { kind: "arrival", dest_tz: parentItem.dest_tz };
+      } else {
+        // This shouldn't happen - canBeParent only returns true for intervention and arrival
+        continue;
+      }
 
       groups.push({
         parent,
         children,
         time: parentItem.time,
-        timezone: parentItem.timezone,
       });
       groupedIndices.add(parentIdx);
     }

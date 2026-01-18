@@ -1,30 +1,27 @@
 "use client";
 
-import type { TimedItemGroup, Intervention, ActualsMap } from "@/types/schedule";
+import {
+  getDisplayTime,
+  type TimedItemGroup,
+  type Intervention,
+  type ActualsMap,
+} from "@/types/schedule";
 import type { Airport } from "@/types/airport";
 import { isEditableIntervention } from "@/lib/intervention-utils";
 import { getActualKey } from "@/lib/actuals-utils";
 import { InterventionCard } from "./intervention-card";
 import { FlightCard } from "./flight-card";
 
-interface FlightContext {
-  originTimezone: string;
-  destTimezone: string;
-  departureDateTime: string;
-}
-
 interface GroupedItemCardProps {
   group: TimedItemGroup;
-  /** Optional timezone to display on the parent card */
-  timezone?: string;
   /** Origin airport (for arrival parent's FlightCard) */
   origin: Airport;
   /** Destination airport (for arrival parent's FlightCard) */
   destination: Airport;
-  /** Flight context for in-transit dual timezone display */
-  flightContext?: FlightContext;
   /** Recorded actuals map for displaying inline changes */
   actuals?: ActualsMap;
+  /** User preference: always show both origin and destination timezones */
+  showDualTimezone?: boolean;
   /** Callback when an intervention card is clicked (for recording actuals) */
   onInterventionClick?: (
     intervention: Intervention,
@@ -48,11 +45,10 @@ interface GroupedItemCardProps {
  */
 export function GroupedItemCard({
   group,
-  timezone,
   origin,
   destination,
-  flightContext,
   actuals,
+  showDualTimezone = false,
   onInterventionClick,
   dayOffset,
   date,
@@ -70,18 +66,18 @@ export function GroupedItemCard({
           time={time}
           origin={origin}
           destination={destination}
-          timezone={parent.timezone}
+          timezone={parent.dest_tz}
         />
       ) : (
         <InterventionCard
           intervention={parent.data}
-          timezone={timezone}
-          flightContext={flightContext}
           date={date}
           actual={actuals?.get(getActualKey(dayOffset, parent.data.type))}
+          showDualTimezone={showDualTimezone}
           onClick={
             onInterventionClick && isEditableIntervention(parent.data.type)
-              ? () => onInterventionClick(parent.data, dayOffset, date, children)
+              ? () =>
+                  onInterventionClick(parent.data, dayOffset, date, children)
               : undefined
           }
         />
@@ -97,7 +93,7 @@ export function GroupedItemCard({
 
               return (
                 <div
-                  key={`${child.type}-${child.time}-${index}`}
+                  key={`${child.type}-${getDisplayTime(child)}-${index}`}
                   className="relative"
                 >
                   {/* Vertical connector up (first child extends to parent) */}
@@ -128,9 +124,9 @@ export function GroupedItemCard({
                     <InterventionCard
                       intervention={child}
                       variant="nested"
-                      flightContext={flightContext}
                       date={date}
                       actual={actuals?.get(getActualKey(dayOffset, child.type))}
+                      showDualTimezone={showDualTimezone}
                       onClick={
                         onInterventionClick &&
                         isEditableIntervention(child.type)

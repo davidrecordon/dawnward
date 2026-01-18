@@ -1,7 +1,7 @@
 # Timezone Rearchitecture
 
-> **Status**: Exploration/RFC
-> **Location**: `design_docs/exploration/timezone-rearchitecture.md`
+> **Status**: Shovel Ready
+> **Location**: `design_docs/shovel_ready/timezone-rearchitecture.md`
 
 ## Problem Statement
 
@@ -294,12 +294,58 @@ describe("formatInFlightDualTimezones", () => {
 **TypeScript:**
 
 - `src/types/schedule.ts` - Update Intervention interface
+- `src/types/user-preferences.ts` - Add showDualTimezone to types
 - `src/lib/intervention-utils.ts` - Simplify dual timezone function, delete FlightContext logic
 - `src/lib/schedule-utils.ts` - Remove timezone propagation
-- `src/components/schedule/day-section.tsx` - Remove pre-landing detection
-- `src/components/schedule/intervention-card.tsx` - Use intervention fields directly
-- `src/components/schedule/inflight-sleep-card.tsx` - Use intervention fields directly
-- `src/components/schedule/grouped-item-card.tsx` - Remove FlightContext prop
+- `src/app/api/user/preferences/route.ts` - Add showDualTimezone to GET/PATCH
+- `src/components/settings-form.tsx` - Add Display section with toggle
+- `src/components/schedule/day-section.tsx` - Remove pre-landing detection, accept preference prop
+- `src/components/schedule/intervention-card.tsx` - Use intervention fields, check preference
+- `src/components/schedule/inflight-sleep-card.tsx` - Use intervention fields, check preference
+- `src/components/schedule/grouped-item-card.tsx` - Remove FlightContext prop, check preference
+
+**Database:**
+
+- `prisma/schema.prisma` - Add showDualTimezone to User model
+
+## User Preference: Always Show Dual Timezone
+
+Add a user preference to always display both origin and destination times on all intervention cards, not just in-transit items. The current behavior (only in-transit items show dual timezone) remains the default.
+
+### Database Schema
+
+Add to `prisma/schema.prisma` User model:
+
+```prisma
+showDualTimezone    Boolean @default(false)
+```
+
+### Preferences API
+
+Update `src/app/api/user/preferences/route.ts`:
+
+- Add `showDualTimezone` to GET response
+- Add to PATCH validation schema (optional boolean)
+
+### Settings UI
+
+Update `src/components/settings-form.tsx`:
+
+- Add "Display" section with `PreferenceToggle`
+- Title: "Show both timezones"
+- Description: "Always display times in both origin and destination timezones"
+
+### Component Logic
+
+In card components, the dual timezone display logic becomes:
+
+```typescript
+const showDualTimezone =
+  userPrefShowDualTimezone || // User preference overrides
+  intervention.show_dual_timezone; // Or scheduler flag (in-transit items)
+```
+
+Since every intervention now has `origin_time` and `dest_time`, no additional calculation is needed—just display both.
 
 ## Decisions
 
@@ -309,16 +355,23 @@ describe("formatInFlightDualTimezones", () => {
 
 3. **Multi-leg trips**: Not a concern—this refactor will be completed before the multi-leg feature is merged.
 
+4. **Dual timezone preference**: Signed-in users can opt to always see both origin and destination times. Default is off (current behavior).
+
 ## Verification
 
 After implementation:
 
-1. Run `bun run test:run` - All TypeScript tests pass
-2. Run `bun run test:python` - All Python tests pass including new timezone context tests
-3. Generate schedule for SFO→LHR overnight flight, verify:
+1. Run `bun prisma migrate dev` - Migration succeeds
+2. Run `bun run test:run` - All TypeScript tests pass
+3. Run `bun run test:python` - All Python tests pass including new timezone context tests
+4. Generate schedule for SFO→LHR overnight flight, verify:
    - Pre-landing items on arrival day show dual timezones
    - Times display correctly in both origin and destination timezones
-4. (Future) Create calendar events, verify times appear correct in Google Calendar
+5. Test dual timezone preference:
+   - Sign in, go to Settings, enable "Show both timezones"
+   - Generate a schedule, verify all cards show both times
+   - Disable preference, verify only in-transit items show dual times
+6. (Future) Create calendar events, verify times appear correct in Google Calendar
 
 ## Estimated Scope
 
@@ -328,13 +381,15 @@ After implementation:
 - `intervention_planner.py`: Update all Intervention() calls, add timezone computation helper
 - `scheduler_v2.py`: Add `_enrich_with_timezone_context()`, compute FlightContext from legs
 
-**TypeScript (~300 lines changed):**
+**TypeScript (~350 lines changed):**
 
 - `schedule.ts`: Update interfaces
+- `user-preferences.ts`: Add showDualTimezone type
 - `intervention-utils.ts`: Delete ~100 lines of FlightContext derivation, add simple helpers
 - `schedule-utils.ts`: Delete timezone propagation loop
 - `day-section.tsx`: Delete pre-landing detection (~20 lines)
-- Component props: Remove FlightContext from 3 components
+- `settings-form.tsx`: Add Display section with preference toggle
+- Component props: Remove FlightContext from 3 components, add preference check
 
 **Migration script (~200 lines):**
 

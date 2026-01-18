@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client"
   output   = "../src/generated/prisma"
@@ -10,33 +7,29 @@ datasource db {
   provider = "postgresql"
 }
 
-// NextAuth.js models
 model User {
-  id            String    @id @default(cuid())
-  email         String    @unique
-  emailVerified DateTime?
-  name          String?
-  image         String?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-
-  // Relationships
-  accounts         Account[]
-  sessions         Session[]
-  sharedSchedules  SharedSchedule[]
-  calendarSyncs    CalendarSync[]
-
-  // User preferences
-  defaultPrepDays     Int     @default(3)
-  defaultWakeTime     String  @default("07:00")
-  defaultSleepTime    String  @default("23:00")
-  usesMelatonin       Boolean @default(true)
-  usesCaffeine        Boolean @default(true)
-  usesExercise        Boolean @default(false)
-  caffeineCutoffHours  Int     @default(8)
-  lightExposureMinutes Int     @default(60)
-  napPreference       String  @default("flight_only") // no, flight_only, all_days
-  scheduleIntensity   String  @default("balanced")    // gentle, balanced, aggressive
+  id                   String           @id @default(cuid())
+  email                String           @unique
+  emailVerified        DateTime?
+  name                 String?
+  image                String?
+  createdAt            DateTime         @default(now())
+  updatedAt            DateTime         @updatedAt
+  defaultPrepDays      Int              @default(3)
+  defaultWakeTime      String           @default("07:00")
+  defaultSleepTime     String           @default("23:00")
+  usesMelatonin        Boolean          @default(true)
+  usesCaffeine         Boolean          @default(true)
+  caffeineCutoffHours  Int              @default(8)
+  scheduleIntensity    String           @default("balanced")
+  napPreference        String           @default("flight_only")
+  usesExercise         Boolean          @default(false)
+  lightExposureMinutes Int              @default(60)
+  showDualTimezone     Boolean          @default(false)
+  accounts             Account[]
+  calendarSyncs        CalendarSync[]
+  sessions             Session[]
+  sharedSchedules      SharedSchedule[]
 }
 
 model Account {
@@ -45,15 +38,14 @@ model Account {
   type              String
   provider          String
   providerAccountId String
-  refresh_token     String? @db.Text
-  access_token      String? @db.Text
+  refresh_token     String?
+  access_token      String?
   expires_at        Int?
   token_type        String?
   scope             String?
-  id_token          String? @db.Text
+  id_token          String?
   session_state     String?
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerAccountId])
   @@index([userId])
@@ -64,8 +56,7 @@ model Session {
   sessionToken String   @unique
   userId       String
   expires      DateTime
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
 }
@@ -79,85 +70,69 @@ model VerificationToken {
 }
 
 model SharedSchedule {
-  id     String  @id @default(cuid())
-  code   String? @unique @db.VarChar(8) // null = saved but not shared
-  userId String? // null = anonymous user
-  user   User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  // Schedule inputs (denormalized for fast regeneration)
-  originTz          String
-  destTz            String
-  departureDatetime String
-  arrivalDatetime   String
-  prepDays          Int
-  wakeTime          String
-  sleepTime         String
-  usesMelatonin     Boolean
-  usesCaffeine      Boolean
-  usesExercise      Boolean
-  napPreference     String @default("flight_only")
-  scheduleIntensity String @default("balanced")
-
-  // Schedule storage (for editing/recalculation)
-  initialScheduleJson  Json?     // First generated schedule (frozen)
-  currentScheduleJson  Json?     // Latest schedule (after recalcs)
-  lastRecalculatedAt   DateTime?
-
-  // Metadata
-  routeLabel   String?
-  viewCount    Int       @default(0)
-  createdAt    DateTime  @default(now())
-  lastViewedAt DateTime?
-
-  // Relationships
-  actuals        InterventionActual[]
-  stateSnapshots MarkerStateSnapshot[]
-  calendarSyncs  CalendarSync[]
+  id                    String                @id @default(cuid())
+  code                  String?               @unique @db.VarChar(8)
+  userId                String?
+  originTz              String
+  destTz                String
+  departureDatetime     String
+  arrivalDatetime       String
+  prepDays              Int
+  wakeTime              String
+  sleepTime             String
+  usesMelatonin         Boolean
+  usesCaffeine          Boolean
+  usesExercise          Boolean
+  napPreference         String                @default("flight_only")
+  scheduleIntensity     String                @default("balanced")
+  routeLabel            String?
+  viewCount             Int                   @default(0)
+  createdAt             DateTime              @default(now())
+  lastViewedAt          DateTime?
+  currentScheduleJson   Json?
+  initialScheduleJson   Json?
+  lastRecalculatedAt    DateTime?
+  leg2ArrivalDatetime   String?
+  leg2DepartureDatetime String?
+  leg2DestTz            String?
+  leg2OriginTz          String?
+  calendarSyncs         CalendarSync[]
+  actuals               InterventionActual[]
+  stateSnapshots        MarkerStateSnapshot[]
+  user                  User?                 @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([code])
 }
 
 model InterventionActual {
-  id         String         @id @default(cuid())
-  scheduleId String
-  schedule   SharedSchedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
-
-  // Structured key (avoids string parsing)
-  legIndex         Int    @default(0) // For multi-leg trips
-  dayOffset        Int // -3, -2, -1, 0, 1, 2...
-  interventionType String // "wake", "sleep", "light_seek", "light_avoid", "melatonin", etc.
-
-  // Timing
-  plannedTime String  // "06:00" (HH:MM in relevant timezone)
-  actualTime  String? // null = as_planned or skipped
-
-  // Status
-  status String // "as_planned" | "modified" | "skipped"
-  source String @default("manual") // "manual" | "eight_sleep"
-
-  recordedAt DateTime @default(now())
+  id               String         @id @default(cuid())
+  scheduleId       String
+  legIndex         Int            @default(0)
+  dayOffset        Int
+  interventionType String
+  plannedTime      String
+  actualTime       String?
+  status           String
+  source           String         @default("manual")
+  recordedAt       DateTime       @default(now())
+  schedule         SharedSchedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
 
   @@unique([scheduleId, legIndex, dayOffset, interventionType])
   @@index([scheduleId])
 }
 
 model MarkerStateSnapshot {
-  id         String         @id @default(cuid())
-  scheduleId String
-  schedule   SharedSchedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
-
-  // Position in trip
-  legIndex  Int @default(0)
-  dayOffset Int // Snapshot taken at END of this day
-
-  // Marker-based state (NOT Forger99 ODE - matches CircadianMarkerTracker)
-  cumulativeShift Float  // Hours shifted by end of this day
-  cbtminMinutes   Int    // CBTmin in minutes from midnight
-  dlmoMinutes     Int    // DLMO in minutes from midnight
-  direction       String // "advance" | "delay"
-
-  capturedAt DateTime @default(now())
+  id              String         @id @default(cuid())
+  scheduleId      String
+  legIndex        Int            @default(0)
+  dayOffset       Int
+  cumulativeShift Float
+  cbtminMinutes   Int
+  dlmoMinutes     Int
+  direction       String
+  capturedAt      DateTime       @default(now())
+  schedule        SharedSchedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
 
   @@unique([scheduleId, legIndex, dayOffset])
   @@index([scheduleId])
@@ -166,11 +141,11 @@ model MarkerStateSnapshot {
 model CalendarSync {
   id             String         @id @default(cuid())
   tripId         String
-  trip           SharedSchedule @relation(fields: [tripId], references: [id], onDelete: Cascade)
   userId         String
-  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  googleEventIds String[]       // Array of created Google Calendar event IDs
+  googleEventIds String[]
   lastSyncedAt   DateTime       @default(now())
+  trip           SharedSchedule @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([tripId, userId])
   @@index([tripId])

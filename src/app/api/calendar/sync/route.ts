@@ -48,7 +48,10 @@ export async function POST(request: Request) {
       );
     }
   } catch {
-    return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
+    return NextResponse.json(
+      { error: "Invalid request body" },
+      { status: 400 }
+    );
   }
 
   // Fetch the trip and verify ownership

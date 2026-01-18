@@ -52,6 +52,7 @@ const mockUserPreferences = {
   lightExposureMinutes: 60,
   napPreference: "flight_only",
   scheduleIntensity: "balanced",
+  showDualTimezone: false,
 };
 
 describe("GET /api/user/preferences", () => {
@@ -487,6 +488,107 @@ describe("User Preferences Schema Validation", () => {
         scheduleIntensity: "balanced",
       });
       expect(result.success).toBe(true);
+    });
+  });
+});
+
+describe("showDualTimezone preference", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  function createRequest(body: unknown): Request {
+    return new Request("http://localhost/api/user/preferences", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+  }
+
+  describe("GET", () => {
+    beforeEach(() => {
+      mockedAuth.mockResolvedValue({
+        user: { id: "user-123", email: "test@example.com" },
+      } as never);
+    });
+
+    it("returns showDualTimezone preference when fetching user preferences", async () => {
+      const prefsWithDualTimezone = {
+        ...mockUserPreferences,
+        showDualTimezone: true,
+      };
+      mockedPrisma.user.findUnique.mockResolvedValue(
+        prefsWithDualTimezone as never
+      );
+
+      const response = await GET();
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.showDualTimezone).toBe(true);
+    });
+
+    it("defaults showDualTimezone to false for users without preference set", async () => {
+      const prefsWithoutDualTimezone = {
+        ...mockUserPreferences,
+        showDualTimezone: false,
+      };
+      mockedPrisma.user.findUnique.mockResolvedValue(
+        prefsWithoutDualTimezone as never
+      );
+
+      const response = await GET();
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.showDualTimezone).toBe(false);
+    });
+  });
+
+  describe("PATCH", () => {
+    beforeEach(() => {
+      mockedAuth.mockResolvedValue({
+        user: { id: "user-123", email: "test@example.com" },
+      } as never);
+    });
+
+    it("saves showDualTimezone preference when set to true", async () => {
+      const updatedPrefs = { ...mockUserPreferences, showDualTimezone: true };
+      mockedPrisma.user.update.mockResolvedValue(updatedPrefs as never);
+
+      const response = await PATCH(createRequest({ showDualTimezone: true }));
+
+      expect(response.status).toBe(200);
+      expect(mockedPrisma.user.update).toHaveBeenCalledWith({
+        where: { id: "user-123" },
+        data: { showDualTimezone: true },
+        select: expect.any(Object),
+      });
+    });
+
+    it("saves showDualTimezone preference when set to false", async () => {
+      const updatedPrefs = { ...mockUserPreferences, showDualTimezone: false };
+      mockedPrisma.user.update.mockResolvedValue(updatedPrefs as never);
+
+      const response = await PATCH(createRequest({ showDualTimezone: false }));
+
+      expect(response.status).toBe(200);
+      expect(mockedPrisma.user.update).toHaveBeenCalledWith({
+        where: { id: "user-123" },
+        data: { showDualTimezone: false },
+        select: expect.any(Object),
+      });
+    });
+
+    it("returns updated showDualTimezone in response", async () => {
+      const updatedPrefs = { ...mockUserPreferences, showDualTimezone: true };
+      mockedPrisma.user.update.mockResolvedValue(updatedPrefs as never);
+
+      const response = await PATCH(createRequest({ showDualTimezone: true }));
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.showDualTimezone).toBe(true);
     });
   });
 });

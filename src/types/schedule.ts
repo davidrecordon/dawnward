@@ -46,11 +46,13 @@ export interface InterventionActual {
 export type ActualsMap = Map<string, InterventionActual>;
 
 /**
- * Single scheduled intervention
+ * Single scheduled intervention with complete timezone context.
+ *
+ * Each intervention is self-describing: it carries both origin and destination
+ * times/dates/timezones, so consumers (UI, calendar sync) don't need external
+ * context to display or process it.
  */
 export interface Intervention {
-  /** Time in HH:MM format (local time) */
-  time: string;
   /** Type of intervention */
   type: InterventionType;
   /** Display title */
@@ -59,16 +61,42 @@ export interface Intervention {
   description: string;
   /** Duration in minutes for time-window interventions (light, exercise) */
   duration_min?: number;
-  /** End time for nap window in HH:MM format */
+
+  // Dual timezone times - frontend picks which to display based on phase_type
+  /** Time in origin timezone (HH:MM format) */
+  origin_time: string;
+  /** Time in destination timezone (HH:MM format) */
+  dest_time: string;
+  /** Date in origin timezone (YYYY-MM-DD format) */
+  origin_date: string;
+  /** Date in destination timezone (YYYY-MM-DD format) */
+  dest_date: string;
+
+  // Trip timezone context (always present after enrichment)
+  /** Trip's origin IANA timezone */
+  origin_tz: string;
+  /** Trip's destination IANA timezone */
+  dest_tz: string;
+
+  // Phase info
+  /** Which phase this intervention belongs to */
+  phase_type: PhaseType;
+  /** True = display both origin and dest times (in-transit and pre-landing items) */
+  show_dual_timezone: boolean;
+
+  // Nap window fields - internal uses local, enrichment converts to UTC
+  /** End time for nap window in HH:MM format (internal, used by planner) */
   window_end?: string;
-  /** Ideal time within nap window in HH:MM format */
+  /** Ideal time within nap window in HH:MM format (internal, used by planner) */
   ideal_time?: string;
-  /** IANA timezone for this intervention's time (added during merge for display) */
-  timezone?: string;
+  /** Window end time in ISO 8601 UTC format (after enrichment) */
+  window_end_utc?: string;
+  /** Ideal time in ISO 8601 UTC format (after enrichment) */
+  ideal_time_utc?: string;
+
+  // In-flight sleep windows only
   /** Hours into flight for in-transit sleep opportunities (e.g., 4.5 = ~4.5h into flight) */
   flight_offset_hours?: number;
-  /** True if this intervention is in-transit (on the plane). Added during merge for display. */
-  is_in_transit?: boolean;
 }
 
 /**
@@ -76,8 +104,8 @@ export interface Intervention {
  * Can be a wake_target intervention or an arrival marker.
  */
 export type GroupableParent =
-  | { kind: "intervention"; data: Intervention; timezone?: string }
-  | { kind: "arrival"; timezone: string };
+  | { kind: "intervention"; data: Intervention }
+  | { kind: "arrival"; dest_tz: string };
 
 /**
  * Group of timed items anchored by a parent (wake_target or arrival).
@@ -90,8 +118,6 @@ export interface TimedItemGroup {
   children: Intervention[];
   /** Shared time in HH:MM format */
   time: string;
-  /** Optional timezone for display */
-  timezone?: string;
 }
 
 /**
@@ -105,8 +131,39 @@ export type PhaseType =
   | "post_arrival"
   | "adaptation";
 
+// =============================================================================
+// Phase Type Helpers
+// =============================================================================
+
 /**
- * Interventions for one day/phase
+ * Check if a phase is before the flight (user is at origin).
+ * These phases display times in origin timezone.
+ */
+export function isPreFlightPhase(phase: PhaseType | undefined): boolean {
+  return phase === "preparation" || phase === "pre_departure";
+}
+
+/**
+ * Check if a phase is after arrival (user is at destination).
+ * These phases display times in destination timezone only.
+ */
+export function isPostArrivalPhase(phase: PhaseType | undefined): boolean {
+  return phase === "post_arrival" || phase === "adaptation";
+}
+
+/**
+ * Check if a phase is in-transit (user is on the plane).
+ * These phases may show dual timezones.
+ */
+export function isInTransitPhase(phase: PhaseType | undefined): boolean {
+  return phase === "in_transit" || phase === "in_transit_ulr";
+}
+
+/**
+ * Interventions for one day/phase.
+ *
+ * Note: timezone removed - each intervention now carries its own timezone context.
+ * DaySchedule is now just a grouping container.
  */
 export interface DaySchedule {
   /** Day relative to departure (-3, -2, -1, 0, 1, 2...) */
@@ -117,11 +174,9 @@ export interface DaySchedule {
   items: Intervention[];
   /** Phase type from V2 scheduler (multiple phases can share the same day) */
   phase_type?: PhaseType;
-  /** IANA timezone for this day's times (e.g., "America/Los_Angeles" or "In transit") */
-  timezone?: string;
   /** True if both pre_departure and post_arrival phases exist on same date (westbound same-day arrival) */
   hasSameDayArrival?: boolean;
-  /** True if this phase is in-transit (on the plane). Replaces string matching on timezone. */
+  /** True if this phase is in-transit (on the plane). Used for UI section styling. */
   is_in_transit?: boolean;
 }
 
@@ -164,4 +219,40 @@ export interface StoredSchedule {
   };
   /** Generated schedule */
   schedule: ScheduleResponse;
+}
+
+// =============================================================================
+// Helper Functions
+// =============================================================================
+
+/**
+ * Get the appropriate display time for an intervention based on its phase.
+ *
+ * - Preparation/pre_departure phases: use origin_time
+ * - Post_arrival/adaptation phases: use dest_time
+ * - In_transit phases: use dest_time (displaying destination time during flight)
+ */
+export function getDisplayTime(intervention: Intervention): string {
+  const phase = intervention.phase_type;
+  if (phase === "preparation" || phase === "pre_departure") {
+    return intervention.origin_time;
+  }
+  return intervention.dest_time;
+}
+
+/**
+ * Format a UTC ISO 8601 string in the given timezone.
+ *
+ * @param utcIso - ISO 8601 datetime string (e.g., "2026-01-21T08:00:00+00:00")
+ * @param tz - IANA timezone (e.g., "Europe/London")
+ * @returns Formatted time string in HH:MM format
+ */
+export function formatUtcInTimezone(utcIso: string, tz: string): string {
+  const date = new Date(utcIso);
+  return date.toLocaleTimeString("en-US", {
+    timeZone: tz,
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
 }

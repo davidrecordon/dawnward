@@ -119,35 +119,85 @@ InterventionType = Literal[
 
 
 @dataclass
-class Intervention:
-    """Single scheduled intervention."""
+class FlightContext:
+    """
+    Flight timing for pre-landing detection and offset calculation.
 
-    time: str  # "18:00" local time
+    Internal to scheduler - not exposed to frontend.
+    """
+
+    departure_utc: datetime  # UTC datetime of departure
+    arrival_utc: datetime  # UTC datetime of arrival
+
+
+@dataclass
+class Intervention:
+    """
+    Single scheduled intervention with complete timezone context.
+
+    Each intervention is self-describing: it carries both origin and destination
+    times/dates/timezones, so consumers (UI, calendar sync) don't need external
+    context to display or process it.
+
+    Internal workflow:
+    1. InterventionPlanner creates with `time` field (local time in phase timezone)
+    2. Scheduler enriches with `_enrich_with_timezone_context()` to populate all fields
+    3. Frontend receives populated origin_time/dest_time (ignores `time`)
+    """
+
+    # Core fields
     type: InterventionType
     title: str  # Display title
     description: str  # User-facing explanation
     duration_min: int | None = None  # For time-window interventions
-    window_end: str | None = None  # "HH:MM" for nap window end time
-    ideal_time: str | None = None  # "HH:MM" for ideal nap time
-    flight_offset_hours: float | None = None  # Hours into flight (for in-transit naps)
+
+    # Internal: local time in phase timezone (used during planning, ignored by frontend)
+    time: str | None = None  # "HH:MM" - enrichment uses this to compute origin/dest times
+
+    # Dual timezone times - frontend picks which to display based on phase_type
+    origin_time: str | None = None  # "HH:MM" in origin timezone
+    dest_time: str | None = None  # "HH:MM" in destination timezone
+    origin_date: str | None = None  # "YYYY-MM-DD" in origin timezone
+    dest_date: str | None = None  # "YYYY-MM-DD" in destination timezone
+
+    # Trip timezone context (always present after enrichment)
+    origin_tz: str | None = None  # Trip's origin IANA timezone
+    dest_tz: str | None = None  # Trip's destination IANA timezone
+
+    # Phase info
+    phase_type: PhaseType | None = None  # Which phase this belongs to
+    show_dual_timezone: bool = False  # True = display both origin and dest times
+
+    # Nap window fields - internal uses local, enrichment converts to UTC
+    window_end: str | None = None  # "HH:MM" internal local time (legacy, used by planner)
+    ideal_time: str | None = None  # "HH:MM" internal local time (legacy, used by planner)
+    window_end_utc: str | None = None  # ISO 8601 UTC (after enrichment)
+    ideal_time_utc: str | None = None  # ISO 8601 UTC (after enrichment)
+
+    # In-flight sleep windows only
+    flight_offset_hours: float | None = None  # Pre-computed hours into flight
 
 
 @dataclass
 class DaySchedule:
-    """Interventions for one day/phase."""
+    """
+    Interventions for one day/phase.
+
+    Note: timezone removed - each intervention now carries its own timezone context.
+    DaySchedule is now just a grouping container.
+    """
 
     day: int  # Relative to departure (-3, -2, -1, 0, 1, 2...)
     date: str  # "2025-01-12" ISO date
-    timezone: str  # IANA timezone for this day's times
     items: list[Intervention] = field(default_factory=list)
 
-    # New optional phase fields (backward compatible)
+    # Phase metadata
     phase_type: PhaseType | None = None
     phase_start: str | None = None  # "HH:MM" when phase starts
     phase_end: str | None = None  # "HH:MM" when phase ends
     phase_spans_midnight: bool | None = None  # True if phase ends the next day
 
-    # Explicit in-transit flag (replaces string matching on timezone)
+    # In-transit flag for UI section styling
     is_in_transit: bool = False
 
 
