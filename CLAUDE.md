@@ -381,6 +381,83 @@ This project uses Claude Code plugins that should be invoked for significant wor
 
 **Before proposing to commit:** Always run `code-simplifier` after completing multi-file changes or new features. This catches duplication introduced during development and keeps the codebase clean. The workflow is: implement → tests pass → simplify → tests still pass → commit.
 
+## Browser Testing with Chrome
+
+Claude has access to Chrome via MCP tools for visual testing and iteration. **Use this proactively** when building UI components.
+
+**Workflow:**
+
+1. Start the dev server: `bun dev &` (runs in background)
+2. Use `mcp__claude-in-chrome__tabs_context_mcp` to get browser context
+3. Navigate to pages with `mcp__claude-in-chrome__navigate`
+4. Take screenshots with `mcp__claude-in-chrome__computer` (action: "screenshot")
+5. Interact with elements (click, scroll, type) to test functionality
+
+**When to use:**
+
+- Building new UI components → Create a demo page, view it in Chrome, iterate visually
+- Debugging layout issues → Screenshot the problem area
+- Verifying fixes → Reload and screenshot to confirm
+- Testing interactions → Click buttons, expand/collapse, verify behavior
+
+## Feature Design & Prototyping Workflow
+
+For new UI features, follow this iterative workflow:
+
+### 1. Design Exploration
+
+- Create a design doc in `design_docs/exploration/` to capture requirements
+- Ask clarifying questions to understand user needs (view mode, content level, integration points)
+- Document decisions as they're made
+
+### 2. Build a Prototype
+
+- Create a demo page at `src/app/demo/<feature>/page.tsx` with mock data
+- Use `/frontend-design` skill for component implementation
+- Start dev server and iterate visually in Chrome
+- Get user feedback, make adjustments
+
+### 3. Code Review
+
+- Run `feature-dev:code-reviewer` for bugs, logic errors, type safety, accessibility
+- Run a second review for design quality (brand consistency, spacing, colors)
+- Fix issues identified by reviewers
+
+### 4. Implementation Plan
+
+- Update design doc with full implementation plan (files to modify, code snippets, test cases)
+- Move doc from `exploration/` to `shovel_ready/` when ready
+- Include dependencies, risks, and open questions
+
+**Example demo page pattern:**
+
+```typescript
+// src/app/demo/my-feature/page.tsx
+"use client";
+
+import { useState } from "react";
+import { MyComponent } from "@/components/my-component";
+
+// Mock data that exercises all component states
+const mockData = { /* ... */ };
+
+export default function MyFeatureDemo() {
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-sky-100 to-violet-100 p-8">
+      <h1>MyComponent Demo</h1>
+      <MyComponent data={mockData} />
+    </div>
+  );
+}
+```
+
+**Key lessons:**
+
+- Always view components in browser before considering them done
+- Mock data should cover edge cases (empty states, long text, all variants)
+- Demo pages are temporary—delete them before merging to main
+- Export component prop interfaces for testability and reuse
+
 ## Testing
 
 **TypeScript (Vitest)**: ~490 tests covering utility functions and components
