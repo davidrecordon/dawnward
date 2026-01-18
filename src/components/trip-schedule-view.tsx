@@ -355,6 +355,11 @@ export function TripScheduleView({
     return () => clearTimeout(timer);
   }, [schedule, isLoading]);
 
+  // Reset initialization flag when view mode preference changes
+  useEffect(() => {
+    hasInitializedExpandedDays.current = false;
+  }, [scheduleViewMode]);
+
   // Initialize expanded days based on user preference when schedule loads
   useEffect(() => {
     if (!schedule || hasInitializedExpandedDays.current) return;

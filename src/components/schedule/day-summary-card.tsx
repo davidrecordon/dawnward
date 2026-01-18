@@ -370,7 +370,10 @@ export function DaySummaryCard({
   const handleToggle = () => {
     if (!canExpand) return;
     const next = !isExpanded;
-    setInternalExpanded(next);
+    // Only update internal state when in uncontrolled mode
+    if (controlledExpanded === undefined) {
+      setInternalExpanded(next);
+    }
     onExpandChange?.(next);
   };
 
