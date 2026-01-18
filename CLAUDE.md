@@ -186,7 +186,10 @@ scripts/
 - **Summary mode** (default): Shows `DaySummaryCard` with condensed intervention list. Today's day auto-expands. Users can expand/collapse individual days.
 - **Timeline mode**: All days start expanded showing full `DaySection` detail view.
 
+**Minimal Shift Tips**: For small timezone shifts (≤2 hours), the schedule view shows a `MinimalShiftTips` card by default instead of the full day-by-day schedule. Users can click "View full schedule" to see the detailed timeline. The 2-hour threshold is defined by `MINIMAL_SHIFT_THRESHOLD_HOURS` in `timezone-utils.ts`. The `ScheduleResponse` includes `shift_magnitude` (rounded absolute hours) and `is_minimal_shift` (boolean) to control this behavior.
+
 The `DaySummaryCard` component shows:
+
 - Icon + time + condensed description per intervention
 - Flight Day splits into sub-sections: Before Boarding, On the Plane, After Landing
 - "View details" button expands to show full timeline
@@ -471,10 +474,10 @@ export default function MyFeatureDemo() {
 
 ## Testing
 
-**TypeScript (Vitest)**: ~511 tests covering utility functions and components
+**TypeScript (Vitest)**: ~525 tests covering utility functions and components
 
 - `src/lib/__tests__/time-utils.test.ts` - Date/time formatting, timezone-aware operations
-- `src/lib/__tests__/timezone-utils.test.ts` - Flight duration calculation, timezone shifts
+- `src/lib/__tests__/timezone-utils.test.ts` - Flight duration calculation, timezone shifts, prep days recommendations
 - `src/lib/__tests__/airport-search.test.ts` - Search scoring, matching, filtering
 - `src/lib/__tests__/intervention-utils.test.ts` - Intervention styling, time formatting
 - `src/lib/__tests__/schedule-storage.test.ts` - Form state localStorage persistence
@@ -495,12 +498,13 @@ export default function MyFeatureDemo() {
 - `src/components/auth/__tests__/user-menu.test.tsx` - User menu, avatar initials
 - `src/components/schedule/__tests__/day-section.test.tsx` - Schedule day section rendering
 - `src/components/schedule/__tests__/day-summary-card.test.tsx` - Summary card rendering, flight day sub-sections, expand/collapse
+- `src/components/schedule/__tests__/minimal-shift-tips.test.tsx` - Minimal shift tips card, toggle states
 - `src/components/schedule/__tests__/intervention-card.test.tsx` - Intervention card rendering, dual timezone display
 - `src/components/schedule/__tests__/inflight-sleep-card.test.tsx` - In-flight sleep card, flight offset display
 - `src/lib/__tests__/google-calendar.test.ts` - Calendar event building, reminder timing
 - `src/types/__tests__/user-preferences.test.ts` - User preference type validation
 
-**Python (pytest)**: ~340 tests covering schedule generation (6-layer validation strategy)
+**Python (pytest)**: ~345 tests covering schedule generation (6-layer validation strategy)
 
 - `test_model_parity.py` - CBTmin trajectory, phase shift magnitude, daily shift targets
 - `test_physiological_bounds.py` - Max shift rates, antidromic risk, sleep duration, melatonin timing

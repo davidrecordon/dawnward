@@ -193,6 +193,7 @@ The expand/collapse behavior in `DaySummaryCard` may need tier-aware adjustments
 - **Moderate+**: Current behavior (summary mode with today expanded)
 
 The `scheduleViewMode` user preference ("summary" vs "timeline") should interact with tier:
+
 - Minimal tier might override user preference to always show tips-only view
 - User preference applies normally for Light tier and above
 

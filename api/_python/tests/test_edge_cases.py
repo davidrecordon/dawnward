@@ -569,3 +569,132 @@ class TestMelatoninTimingConstraints:
                     f"Day {day_schedule.day}: melatonin at {mel_time} scheduled before "
                     f"wake at {wake_time}"
                 )
+
+
+class TestShiftMagnitudeFields:
+    """Test shift_magnitude and is_minimal_shift response fields."""
+
+    def test_minimal_shift_true_for_1h_shift(self):
+        """1-hour shift should be marked as minimal."""
+        generator = ScheduleGenerator()
+        future_date = datetime.now() + timedelta(days=5)
+
+        # Denver to Chicago = 1 hour shift
+        request = ScheduleRequest(
+            legs=[
+                TripLeg(
+                    origin_tz="America/Denver",
+                    dest_tz="America/Chicago",
+                    departure_datetime=future_date.strftime("%Y-%m-%dT08:00"),
+                    arrival_datetime=future_date.strftime("%Y-%m-%dT11:00"),
+                )
+            ],
+            prep_days=1,
+            wake_time="07:00",
+            sleep_time="23:00",
+        )
+
+        schedule = generator.generate_schedule(request)
+        assert schedule is not None
+        assert schedule.shift_magnitude == 1
+        assert schedule.is_minimal_shift is True
+
+    def test_minimal_shift_true_for_2h_shift(self):
+        """2-hour shift should be marked as minimal (boundary)."""
+        generator = ScheduleGenerator()
+        future_date = datetime.now() + timedelta(days=5)
+
+        # LA to Denver = 1h, LA to Chicago = 2h
+        request = ScheduleRequest(
+            legs=[
+                TripLeg(
+                    origin_tz="America/Los_Angeles",
+                    dest_tz="America/Chicago",
+                    departure_datetime=future_date.strftime("%Y-%m-%dT08:00"),
+                    arrival_datetime=future_date.strftime("%Y-%m-%dT14:00"),
+                )
+            ],
+            prep_days=1,
+            wake_time="07:00",
+            sleep_time="23:00",
+        )
+
+        schedule = generator.generate_schedule(request)
+        assert schedule is not None
+        assert schedule.shift_magnitude == 2
+        assert schedule.is_minimal_shift is True
+
+    def test_minimal_shift_false_for_3h_shift(self):
+        """3-hour shift should NOT be minimal."""
+        generator = ScheduleGenerator()
+        future_date = datetime.now() + timedelta(days=5)
+
+        # LA to NY = 3h shift
+        request = ScheduleRequest(
+            legs=[
+                TripLeg(
+                    origin_tz="America/Los_Angeles",
+                    dest_tz="America/New_York",
+                    departure_datetime=future_date.strftime("%Y-%m-%dT08:00"),
+                    arrival_datetime=future_date.strftime("%Y-%m-%dT16:00"),
+                )
+            ],
+            prep_days=2,
+            wake_time="07:00",
+            sleep_time="23:00",
+        )
+
+        schedule = generator.generate_schedule(request)
+        assert schedule is not None
+        assert schedule.shift_magnitude == 3
+        assert schedule.is_minimal_shift is False
+
+    def test_shift_magnitude_for_large_shift(self):
+        """8-hour shift should have correct magnitude."""
+        generator = ScheduleGenerator()
+        future_date = datetime.now() + timedelta(days=5)
+
+        # SFO to London = 8h shift
+        request = ScheduleRequest(
+            legs=[
+                TripLeg(
+                    origin_tz="America/Los_Angeles",
+                    dest_tz="Europe/London",
+                    departure_datetime=future_date.strftime("%Y-%m-%dT19:00"),
+                    arrival_datetime=(future_date + timedelta(hours=10)).strftime("%Y-%m-%dT12:00"),
+                )
+            ],
+            prep_days=3,
+            wake_time="07:00",
+            sleep_time="23:00",
+        )
+
+        schedule = generator.generate_schedule(request)
+        assert schedule is not None
+        assert schedule.shift_magnitude == 8
+        assert schedule.is_minimal_shift is False
+
+    def test_zero_shift_is_minimal(self):
+        """Zero timezone change should be minimal."""
+        generator = ScheduleGenerator()
+        future_date = datetime.now() + timedelta(days=5)
+
+        # NYC to Toronto = same timezone
+        request = ScheduleRequest(
+            legs=[
+                TripLeg(
+                    origin_tz="America/New_York",
+                    dest_tz="America/Toronto",
+                    departure_datetime=future_date.strftime("%Y-%m-%dT08:00"),
+                    arrival_datetime=future_date.strftime("%Y-%m-%dT09:30"),
+                )
+            ],
+            prep_days=1,
+            wake_time="07:00",
+            sleep_time="23:00",
+        )
+
+        schedule = generator.generate_schedule(request)
+        assert schedule is not None
+        assert schedule.shift_magnitude == 0
+        assert schedule.is_minimal_shift is True

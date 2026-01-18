@@ -4,6 +4,8 @@ import {
   formatTimeShift,
   calculateFlightDuration,
   formatDuration,
+  getRecommendedPrepDays,
+  getShiftDirectionLabel,
 } from "../timezone-utils";
 
 describe("calculateTimeShift", () => {
@@ -246,5 +248,56 @@ describe("formatDuration", () => {
 
   it("formats zero hours with minutes", () => {
     expect(formatDuration(0, 45)).toBe("0h 45m");
+  });
+});
+
+describe("getRecommendedPrepDays", () => {
+  it("returns 0 for minimal shifts (0-2 hours)", () => {
+    expect(getRecommendedPrepDays(0)).toBe(0);
+    expect(getRecommendedPrepDays(1)).toBe(0);
+    expect(getRecommendedPrepDays(2)).toBe(0);
+    expect(getRecommendedPrepDays(-1)).toBe(0);
+    expect(getRecommendedPrepDays(-2)).toBe(0);
+  });
+
+  it("returns 1 for 3-4 hour shifts", () => {
+    expect(getRecommendedPrepDays(3)).toBe(1);
+    expect(getRecommendedPrepDays(4)).toBe(1);
+    expect(getRecommendedPrepDays(-3)).toBe(1);
+    expect(getRecommendedPrepDays(-4)).toBe(1);
+  });
+
+  it("returns 2 for 5-6 hour shifts", () => {
+    expect(getRecommendedPrepDays(5)).toBe(2);
+    expect(getRecommendedPrepDays(6)).toBe(2);
+    expect(getRecommendedPrepDays(-5)).toBe(2);
+    expect(getRecommendedPrepDays(-6)).toBe(2);
+  });
+
+  it("returns 3 for 7-9 hour shifts", () => {
+    expect(getRecommendedPrepDays(7)).toBe(3);
+    expect(getRecommendedPrepDays(8)).toBe(3);
+    expect(getRecommendedPrepDays(9)).toBe(3);
+    expect(getRecommendedPrepDays(-8)).toBe(3);
+  });
+
+  it("returns 5 for 10+ hour shifts", () => {
+    expect(getRecommendedPrepDays(10)).toBe(5);
+    expect(getRecommendedPrepDays(11)).toBe(5);
+    expect(getRecommendedPrepDays(12)).toBe(5);
+    expect(getRecommendedPrepDays(-11)).toBe(5);
+  });
+});
+
+describe("getShiftDirectionLabel", () => {
+  it("returns 'eastward' for positive shifts", () => {
+    expect(getShiftDirectionLabel(8)).toBe("eastward");
+    expect(getShiftDirectionLabel(1)).toBe("eastward");
+    expect(getShiftDirectionLabel(0)).toBe("eastward"); // zero is treated as eastward
+  });
+
+  it("returns 'westward' for negative shifts", () => {
+    expect(getShiftDirectionLabel(-8)).toBe("westward");
+    expect(getShiftDirectionLabel(-1)).toBe("westward");
   });
 });

@@ -24,6 +24,7 @@ import {
   PostTripCard,
   ScheduleNotFoundCard,
 } from "@/components/schedule/journey-states";
+import { MinimalShiftTips } from "@/components/schedule/minimal-shift-tips";
 
 // Lazy-load DaySection since it's heavy and rendered multiple times
 const DaySection = dynamic(
@@ -138,6 +139,10 @@ export function TripScheduleView({
   const [error, setError] = useState<string | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showCalendarModal, setShowCalendarModal] = useState(false);
+
+  // For minimal shifts: track if user wants to see full schedule
+  const [showFullScheduleForMinimalShift, setShowFullScheduleForMinimalShift] =
+    useState(false);
 
   // Track current preferences (can change after edits)
   const [currentPreferences, setCurrentPreferences] = useState({
@@ -533,7 +538,11 @@ export function TripScheduleView({
         {/* Day navigation */}
         <div className="-mb-4 flex flex-wrap justify-center gap-2 pb-2">
           {mergedDays.map((daySchedule) => {
-            const isCurrentDay = daySchedule.day === currentDayNumber;
+            // Don't highlight any day when showing minimal shift tips view
+            const isShowingTipsOnly =
+              schedule.is_minimal_shift && !showFullScheduleForMinimalShift;
+            const isCurrentDay =
+              !isShowingTipsOnly && daySchedule.day === currentDayNumber;
             return (
               <button
                 key={daySchedule.day}
@@ -571,37 +580,69 @@ export function TripScheduleView({
           })}
         </div>
 
-        {/* Schedule timeline */}
-        <div role="region" aria-label="Schedule timeline" className="space-y-2">
-          {mergedDays.map((daySchedule) => (
-            <DaySection
-              key={daySchedule.day}
-              daySchedule={daySchedule}
-              origin={origin}
-              destination={destination}
-              departureDate={departureDate}
-              departureTime={departureTime}
-              arrivalDate={arrivalDate}
-              arrivalTime={arrivalTime}
-              isCurrentDay={daySchedule.day === currentDayNumber}
-              actuals={actuals}
-              showDualTimezone={showDualTimezone}
-              isExpanded={expandedDays.has(daySchedule.day)}
-              onExpandChange={() => toggleDayExpanded(daySchedule.day)}
-              onInterventionClick={
-                isOwner && isLoggedIn
-                  ? (intervention, dayOffset, date, nestedChildren) =>
-                      setSelectedIntervention({
-                        intervention,
-                        dayOffset,
-                        date,
-                        nestedChildren,
-                      })
-                  : undefined
-              }
-            />
-          ))}
-        </div>
+        {/* Minimal shift tips - shown by default for 0-2 hour shifts */}
+        {schedule.is_minimal_shift && !showFullScheduleForMinimalShift && (
+          <MinimalShiftTips
+            shiftMagnitude={schedule.shift_magnitude}
+            direction={schedule.direction}
+            showFullScheduleOption={true}
+            onShowFullSchedule={() => setShowFullScheduleForMinimalShift(true)}
+            isFullScheduleVisible={false}
+          />
+        )}
+
+        {/* Schedule timeline - hidden by default for minimal shifts */}
+        {(!schedule.is_minimal_shift || showFullScheduleForMinimalShift) && (
+          <>
+            {/* Collapse tips option for minimal shifts viewing full schedule */}
+            {schedule.is_minimal_shift && showFullScheduleForMinimalShift && (
+              <MinimalShiftTips
+                shiftMagnitude={schedule.shift_magnitude}
+                direction={schedule.direction}
+                showFullScheduleOption={true}
+                onShowFullSchedule={() =>
+                  setShowFullScheduleForMinimalShift(false)
+                }
+                isFullScheduleVisible={true}
+              />
+            )}
+
+            <div
+              role="region"
+              aria-label="Schedule timeline"
+              className="space-y-2"
+            >
+              {mergedDays.map((daySchedule) => (
+                <DaySection
+                  key={daySchedule.day}
+                  daySchedule={daySchedule}
+                  origin={origin}
+                  destination={destination}
+                  departureDate={departureDate}
+                  departureTime={departureTime}
+                  arrivalDate={arrivalDate}
+                  arrivalTime={arrivalTime}
+                  isCurrentDay={daySchedule.day === currentDayNumber}
+                  actuals={actuals}
+                  showDualTimezone={showDualTimezone}
+                  isExpanded={expandedDays.has(daySchedule.day)}
+                  onExpandChange={() => toggleDayExpanded(daySchedule.day)}
+                  onInterventionClick={
+                    isOwner && isLoggedIn
+                      ? (intervention, dayOffset, date, nestedChildren) =>
+                          setSelectedIntervention({
+                            intervention,
+                            dayOffset,
+                            date,
+                            nestedChildren,
+                          })
+                      : undefined
+                  }
+                />
+              ))}
+            </div>
+          </>
+        )}
 
         {/* Post-trip celebration */}
         {isPostTrip && <PostTripCard />}

@@ -192,6 +192,10 @@ export interface ScheduleResponse {
   estimated_adaptation_days: number;
   /** Schedule grouped by day */
   interventions: DaySchedule[];
+  /** Absolute hours shifted (rounded integer) for UI display */
+  shift_magnitude: number;
+  /** True if shift <= 2 hours - show tips card instead of full schedule by default */
+  is_minimal_shift: boolean;
 }
 
 /**

@@ -212,6 +212,10 @@ class ScheduleResponse:
     dest_tz: str  # Destination IANA timezone
     interventions: list[DaySchedule]
 
+    # Shift magnitude and minimal shift flag for UI mode selection
+    shift_magnitude: int = 0  # Absolute hours shifted (rounded)
+    is_minimal_shift: bool = False  # True if shift <= 2 hours
+
     # Science impact stored internally, not exposed by default
     # Per flight-timing-edge-cases.md decision:
     # - Only surface in "Compare Flights" feature (future scope)

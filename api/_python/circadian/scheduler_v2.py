@@ -168,6 +168,10 @@ class ScheduleGeneratorV2:
         adaptation_phases = [p for p in phases if p.phase_type == "adaptation"]
         estimated_days = len(adaptation_phases) + 1  # +1 for post_arrival
 
+        # Compute shift magnitude for UI mode selection
+        shift_magnitude = round(abs(total_shift))
+        is_minimal_shift = shift_magnitude <= 2
+
         return ScheduleResponse(
             total_shift_hours=abs(total_shift),
             direction=direction,
@@ -175,6 +179,8 @@ class ScheduleGeneratorV2:
             origin_tz=origin_tz,
             dest_tz=dest_tz,
             interventions=day_schedules,
+            shift_magnitude=shift_magnitude,
+            is_minimal_shift=is_minimal_shift,
             _science_impact_internal=constraint_filter.get_science_impact_summary(),
         )
 

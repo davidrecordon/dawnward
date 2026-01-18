@@ -5,6 +5,21 @@
 
 import { DateTime } from "luxon";
 
+// =============================================================================
+// Constants
+// =============================================================================
+
+/** Shift threshold below which no prep days are needed (adapts naturally) */
+export const MINIMAL_SHIFT_THRESHOLD_HOURS = 2;
+
+/** Prep day thresholds by shift magnitude (in hours) */
+const PREP_DAYS_THRESHOLDS = {
+  SMALL: 4, // 3-4 hours: 1 prep day
+  MEDIUM: 6, // 5-6 hours: 2 prep days
+  LARGE: 9, // 7-9 hours: 3 prep days
+  // 10+ hours: 5 prep days (max)
+} as const;
+
 /**
  * Calculate the time shift in hours between two IANA timezones
  * Positive = eastward travel (later local time)
@@ -86,4 +101,34 @@ export function formatDuration(hours: number, minutes: number): string {
     return `${hours}h`;
   }
   return `${hours}h ${minutes}m`;
+}
+
+/**
+ * Get recommended prep days based on timezone shift magnitude.
+ *
+ * Based on circadian science:
+ * - 1-2 hours: 0 days (minimal shift, adapts naturally)
+ * - 3-4 hours: 1-2 days
+ * - 5-6 hours: 2-3 days
+ * - 7-9 hours: 3-4 days
+ * - 10-12 hours: 5 days
+ */
+export function getRecommendedPrepDays(shiftHours: number): number {
+  const absShift = Math.abs(shiftHours);
+  if (absShift <= MINIMAL_SHIFT_THRESHOLD_HOURS) return 0;
+  if (absShift <= PREP_DAYS_THRESHOLDS.SMALL) return 1;
+  if (absShift <= PREP_DAYS_THRESHOLDS.MEDIUM) return 2;
+  if (absShift <= PREP_DAYS_THRESHOLDS.LARGE) return 3;
+  return 5;
+}
+
+/**
+ * Get shift direction label for display.
+ * Positive shift (eastward) = "earlier" (clocks are ahead)
+ * Negative shift (westward) = "later" (clocks are behind)
+ */
+export function getShiftDirectionLabel(
+  shiftHours: number
+): "eastward" | "westward" {
+  return shiftHours >= 0 ? "eastward" : "westward";
 }

@@ -162,6 +162,8 @@ function createMockSchedule(
       total_shift_hours: 8,
       direction: "advance",
       estimated_adaptation_days: interventions.length,
+      shift_magnitude: 8,
+      is_minimal_shift: false,
       interventions: interventions.map((i) => ({
         date: i.date,
         day: i.day,

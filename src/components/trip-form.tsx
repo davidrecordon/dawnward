@@ -15,6 +15,12 @@ import {
   Settings,
 } from "lucide-react";
 import { formatDateTimeLocal } from "@/lib/time-utils";
+import {
+  calculateTimeShift,
+  getRecommendedPrepDays,
+  getShiftDirectionLabel,
+  MINIMAL_SHIFT_THRESHOLD_HOURS,
+} from "@/lib/timezone-utils";
 import type { Airport } from "@/types/airport";
 
 import { Button } from "@/components/ui/button";
@@ -63,6 +69,23 @@ export function TripForm({
 }: TripFormProps) {
   const router = useRouter();
   const [errors, setErrors] = React.useState<FormErrors>({});
+
+  // Calculate shift info for prep days recommendation
+  const shiftInfo = React.useMemo(() => {
+    if (!formState.origin || !formState.destination) return null;
+    const shiftHours = calculateTimeShift(
+      formState.origin.tz,
+      formState.destination.tz
+    );
+    const absShift = Math.abs(Math.round(shiftHours));
+    if (absShift === 0) return null;
+    return {
+      shiftHours,
+      absShift,
+      direction: getShiftDirectionLabel(shiftHours),
+      recommendedPrepDays: getRecommendedPrepDays(shiftHours),
+    };
+  }, [formState.origin, formState.destination]);
   const submitButtonRef = React.useRef<HTMLButtonElement>(null);
 
   // Handle "Show me" example demo
@@ -385,6 +408,25 @@ export function TripForm({
               value={formState.prepDays}
               onValueChange={(value) => updateField("prepDays", value)}
             />
+
+            {/* Prep days recommendation hint */}
+            {shiftInfo && shiftInfo.absShift > MINIMAL_SHIFT_THRESHOLD_HOURS && (
+              <p className="mt-2 text-xs text-slate-500">
+                For a {shiftInfo.absShift}-hour {shiftInfo.direction} shift, we
+                recommend{" "}
+                <button
+                  type="button"
+                  onClick={() =>
+                    updateField("prepDays", shiftInfo.recommendedPrepDays)
+                  }
+                  className="font-medium text-sky-600 underline decoration-sky-300 underline-offset-2 hover:text-sky-700"
+                >
+                  {shiftInfo.recommendedPrepDays} preparation day
+                  {shiftInfo.recommendedPrepDays !== 1 ? "s" : ""}
+                </button>
+                .
+              </p>
+            )}
           </div>
 
           {/* Only show wake/sleep times for signed-out users */}

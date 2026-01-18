@@ -7,6 +7,9 @@ import { Plane, Settings2 } from "lucide-react";
 import type { ScheduleResponse } from "@/types/schedule";
 import type { Airport } from "@/types/airport";
 
+/** Minimum shift magnitude (hours) to show the adaptation direction (advance/delay) */
+const SHOW_DIRECTION_THRESHOLD_HOURS = 10;
+
 interface ScheduleHeaderProps {
   schedule: {
     request: {
@@ -66,10 +69,32 @@ export function ScheduleHeader({
               <Badge className={badgeClass}>{shiftBadgeText}</Badge>
             </div>
             <p className="text-sm text-slate-500">
-              <span className="font-medium text-slate-600">
-                {sched.estimated_adaptation_days} days
-              </span>{" "}
-              to adapt • {request.origin.city} to {request.destination.city}
+              {sched.shift_magnitude > 0 ? (
+                <>
+                  <span className="font-medium text-slate-600">
+                    {sched.shift_magnitude}-hour shift
+                  </span>
+                  {" • "}
+                  {sched.shift_magnitude >= SHOW_DIRECTION_THRESHOLD_HOURS && (
+                    <>
+                      <span className="text-slate-500">
+                        Adapting via {sched.direction}
+                      </span>
+                      {" • "}
+                    </>
+                  )}
+                  ~{sched.estimated_adaptation_days} days to adapt
+                </>
+              ) : (
+                <>
+                  <span className="font-medium text-slate-600">
+                    {sched.estimated_adaptation_days} days
+                  </span>{" "}
+                  to adapt
+                </>
+              )}
+              {" • "}
+              {request.origin.city} to {request.destination.city}
             </p>
           </div>
 
