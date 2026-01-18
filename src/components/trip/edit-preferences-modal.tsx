@@ -11,8 +11,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
-import { cn } from "@/lib/utils";
+import { PreferenceToggle } from "@/components/preference-toggle";
+import { PreferenceSelector } from "@/components/preference-selector";
 import type { ScheduleResponse } from "@/types/schedule";
 
 type ScheduleIntensity = "gentle" | "balanced" | "aggressive";
@@ -165,131 +165,57 @@ export function EditPreferencesModal({
 
           {/* Preference toggles */}
           <div className="mt-6 space-y-3">
-            {/* Melatonin toggle */}
-            <div className="flex items-center justify-between rounded-lg bg-emerald-50 p-3">
-              <div className="flex items-center gap-3">
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-100">
-                  <Pill className="h-4 w-4 text-emerald-600" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium">Include melatonin</p>
-                  <p className="text-xs text-slate-500">
-                    Low-dose supplements for sleep timing
-                  </p>
-                </div>
-              </div>
-              <Switch
-                checked={usesMelatonin}
-                onCheckedChange={setUsesMelatonin}
-                aria-label="Include melatonin"
-              />
-            </div>
-
-            {/* Caffeine toggle */}
-            <div className="flex items-center justify-between rounded-lg bg-orange-50 p-3">
-              <div className="flex items-center gap-3">
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-orange-100">
-                  <Coffee className="h-4 w-4 text-orange-600" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium">Include caffeine</p>
-                  <p className="text-xs text-slate-500">
-                    Strategic timing for alertness
-                  </p>
-                </div>
-              </div>
-              <Switch
-                checked={usesCaffeine}
-                onCheckedChange={setUsesCaffeine}
-                aria-label="Include caffeine"
-              />
-            </div>
-
-            {/* Exercise toggle */}
-            <div className="flex items-center justify-between rounded-lg bg-sky-50 p-3">
-              <div className="flex items-center gap-3">
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-sky-100">
-                  <Activity className="h-4 w-4 text-sky-600" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium">Include exercise</p>
-                  <p className="text-xs text-slate-500">
-                    Timed physical activity for circadian shift
-                  </p>
-                </div>
-              </div>
-              <Switch
-                checked={usesExercise}
-                onCheckedChange={setUsesExercise}
-                aria-label="Include exercise"
-              />
-            </div>
-
-            {/* Nap preference selector */}
-            <div className="rounded-lg bg-violet-50 p-3">
-              <div className="flex items-center gap-3">
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-violet-100">
-                  <Moon className="h-4 w-4 text-violet-600" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium">Recommend naps</p>
-                  <p className="text-xs text-slate-500">
-                    Strategic napping to reduce sleep debt
-                  </p>
-                </div>
-              </div>
-              <div className="mt-3 flex gap-2">
-                {[
-                  { value: "no", label: "No" },
-                  { value: "flight_only", label: "On the flight" },
-                  { value: "all_days", label: "On all days" },
-                ].map((option) => (
-                  <button
-                    key={option.value}
-                    onClick={() => setNapPreference(option.value)}
-                    className={cn(
-                      "flex-1 rounded-md px-3 py-2 text-sm font-medium transition-colors",
-                      napPreference === option.value
-                        ? "bg-violet-500 text-white"
-                        : "bg-white text-slate-700 hover:bg-violet-100"
-                    )}
-                  >
-                    {option.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Intensity selector */}
-            <div className="rounded-lg bg-sky-50 p-3">
-              <div className="flex items-center gap-3">
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-sky-100">
-                  <Gauge className="h-4 w-4 text-sky-600" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium">Schedule intensity</p>
-                  <p className="text-xs text-slate-500">
-                    How aggressively to shift your schedule
-                  </p>
-                </div>
-              </div>
-              <div className="mt-3 flex gap-2">
-                {intensityOptions.map((option) => (
-                  <button
-                    key={option.value}
-                    onClick={() => setScheduleIntensity(option.value)}
-                    className={cn(
-                      "flex-1 rounded-md px-3 py-2 text-sm font-medium transition-colors",
-                      scheduleIntensity === option.value
-                        ? "bg-sky-500 text-white"
-                        : "bg-white text-slate-700 hover:bg-sky-100"
-                    )}
-                  >
-                    {option.label}
-                  </button>
-                ))}
-              </div>
-            </div>
+            <PreferenceToggle
+              icon={<Pill className="h-4 w-4" />}
+              title="Include melatonin"
+              description="Low-dose supplements for sleep timing"
+              checked={usesMelatonin}
+              onCheckedChange={setUsesMelatonin}
+              colorScheme="emerald"
+              compact
+            />
+            <PreferenceToggle
+              icon={<Coffee className="h-4 w-4" />}
+              title="Include caffeine"
+              description="Strategic timing for alertness"
+              checked={usesCaffeine}
+              onCheckedChange={setUsesCaffeine}
+              colorScheme="orange"
+              compact
+            />
+            <PreferenceToggle
+              icon={<Activity className="h-4 w-4" />}
+              title="Include exercise"
+              description="Timed physical activity for circadian shift"
+              checked={usesExercise}
+              onCheckedChange={setUsesExercise}
+              colorScheme="sky"
+              compact
+            />
+            <PreferenceSelector
+              icon={<Moon className="h-4 w-4" />}
+              title="Recommend naps"
+              description="Strategic napping to reduce sleep debt"
+              value={napPreference}
+              onValueChange={setNapPreference}
+              options={[
+                { value: "no", label: "No" },
+                { value: "flight_only", label: "On the flight" },
+                { value: "all_days", label: "On all days" },
+              ]}
+              colorScheme="violet"
+              variant="compact"
+            />
+            <PreferenceSelector
+              icon={<Gauge className="h-4 w-4" />}
+              title="Schedule intensity"
+              description="How aggressively to shift your schedule"
+              value={scheduleIntensity}
+              onValueChange={setScheduleIntensity}
+              options={intensityOptions}
+              colorScheme="sky"
+              variant="compact"
+            />
           </div>
 
           {/* Error message */}

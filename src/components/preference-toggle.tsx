@@ -12,6 +12,8 @@ interface PreferenceToggleProps {
   checked: boolean;
   onCheckedChange: (checked: boolean) => void;
   colorScheme: ColorScheme;
+  /** Use solid background instead of semi-transparent */
+  compact?: boolean;
 }
 
 export function PreferenceToggle({
@@ -21,14 +23,17 @@ export function PreferenceToggle({
   checked,
   onCheckedChange,
   colorScheme,
+  compact = false,
 }: PreferenceToggleProps): React.JSX.Element {
   const colors = colorSchemes[colorScheme];
+  // Remove /80 opacity suffix for compact mode (solid background)
+  const bgClass = compact ? colors.bg.replace("/80", "") : colors.bg;
 
   return (
     <div
       className={cn(
         "flex items-center justify-between rounded-lg p-3",
-        colors.bg
+        bgClass
       )}
     >
       <div className="flex items-center gap-3">
