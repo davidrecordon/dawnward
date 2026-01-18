@@ -32,6 +32,14 @@ export default async function SharedSchedulePage({ params }: Props) {
   }
   const isOwner = session?.user?.id === shared.userId;
 
+  // Fetch user's display preferences if logged in
+  const userPrefs = session?.user?.id
+    ? await prisma.user.findUnique({
+        where: { id: session.user.id },
+        select: { showDualTimezone: true, scheduleViewMode: true },
+      })
+    : null;
+
   // Increment view count only for non-owners (fire and forget)
   if (!isOwner) {
     incrementViewCount(prisma, shared.id);
@@ -45,6 +53,10 @@ export default async function SharedSchedulePage({ params }: Props) {
       isLoggedIn={!!session?.user}
       hasCalendarScope={session?.hasCalendarScope ?? false}
       sharerName={shared.user?.name ?? null}
+      showDualTimezone={userPrefs?.showDualTimezone ?? false}
+      scheduleViewMode={
+        (userPrefs?.scheduleViewMode as "summary" | "timeline") ?? "summary"
+      }
     />
   );
 }

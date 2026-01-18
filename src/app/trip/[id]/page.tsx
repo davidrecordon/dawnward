@@ -31,7 +31,7 @@ export default async function TripByIdPage({ params }: Props) {
   const userPrefs = session?.user?.id
     ? await prisma.user.findUnique({
         where: { id: session.user.id },
-        select: { showDualTimezone: true },
+        select: { showDualTimezone: true, scheduleViewMode: true },
       })
     : null;
 
@@ -63,6 +63,9 @@ export default async function TripByIdPage({ params }: Props) {
       hasCalendarScope={session?.hasCalendarScope ?? false}
       sharerName={trip.user?.name ?? null}
       showDualTimezone={userPrefs?.showDualTimezone ?? false}
+      scheduleViewMode={
+        (userPrefs?.scheduleViewMode as "summary" | "timeline") ?? "summary"
+      }
     />
   );
 }

@@ -184,6 +184,18 @@ bun run test:run
 bun run typecheck
 ```
 
+## Integration with Summarized Day Views
+
+The expand/collapse behavior in `DaySummaryCard` may need tier-aware adjustments:
+
+- **Minimal tier**: Consider showing tips card only (no expandable days)
+- **Light tier**: May auto-expand all days since schedule is simpler
+- **Moderate+**: Current behavior (summary mode with today expanded)
+
+The `scheduleViewMode` user preference ("summary" vs "timeline") should interact with tier:
+- Minimal tier might override user preference to always show tips-only view
+- User preference applies normally for Light tier and above
+
 ## Success Criteria
 
 - [ ] Backend returns `shift_tier` in `ScheduleResponse`
@@ -194,3 +206,4 @@ bun run typecheck
 - [ ] Severe tier (10-12h): Direction choice + all warnings
 - [ ] All tier boundaries have tests
 - [ ] Mobile responsive for all new cards
+- [ ] Tier-aware expand/collapse behavior integrates with `DaySummaryCard`

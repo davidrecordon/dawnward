@@ -1,11 +1,11 @@
 "use client";
 
 import { useMemo } from "react";
+import { ChevronUp } from "lucide-react";
 import {
   getDayLabel,
+  getDayLabelColor,
   isEditableIntervention,
-  FLIGHT_DAY,
-  ARRIVAL_DAY,
 } from "@/lib/intervention-utils";
 import {
   dayHasMultipleTimezones,
@@ -24,6 +24,7 @@ import { FlightCard } from "./flight-card";
 import { GroupedItemCard } from "./grouped-item-card";
 import { NowMarker } from "./now-marker";
 import { TimezoneTransition } from "./timezone-transition";
+import { DaySummaryCard } from "./day-summary-card";
 import { calculateFlightDuration } from "@/lib/timezone-utils";
 import { getActualKey } from "@/lib/actuals-utils";
 import { getDisplayTime } from "@/types/schedule";
@@ -50,6 +51,10 @@ interface DaySectionProps {
   actuals?: ActualsMap;
   /** User preference: always show both origin and destination timezones */
   showDualTimezone?: boolean;
+  /** Whether this day section is expanded (true) or showing summary (false) */
+  isExpanded?: boolean;
+  /** Callback when expand/collapse is toggled */
+  onExpandChange?: () => void;
   /** Optional callback when an intervention card is clicked (for recording actuals) */
   onInterventionClick?: (
     intervention: Intervention,
@@ -109,6 +114,8 @@ export function DaySection({
   isCurrentDay,
   actuals,
   showDualTimezone = false,
+  isExpanded = true,
+  onExpandChange,
   onInterventionClick,
 }: DaySectionProps) {
   // Calculate flight duration for in-flight sleep card progress bar
@@ -360,35 +367,57 @@ export function DaySection({
     actuals,
   ]);
 
-  // Day label color based on phase
-  function getDayLabelStyle(): string {
-    if (daySchedule.day < FLIGHT_DAY) return "text-sky-600"; // Pre-departure
-    if (daySchedule.day === FLIGHT_DAY) return "text-sky-700"; // Flight day
-    if (daySchedule.day === ARRIVAL_DAY) return "text-emerald-600"; // Arrival
-    return "text-violet-600"; // Post-arrival adaptation
+  // Summary view: render DaySummaryCard when not expanded
+  if (!isExpanded) {
+    return (
+      <DaySummaryCard
+        daySchedule={daySchedule}
+        origin={origin}
+        destination={destination}
+        departureDate={departureDate}
+        departureTime={departureTime}
+        arrivalDate={arrivalDate}
+        arrivalTime={arrivalTime}
+        isExpanded={false}
+        onExpandChange={() => onExpandChange?.()}
+      />
+    );
   }
 
+  // Expanded/Timeline view: render detailed timeline
   return (
     <section id={`day-${daySchedule.day}`} className="relative scroll-mt-15">
-      {/* Sticky day header */}
+      {/* Sticky day header - clickable to collapse */}
       <div className="sticky top-0 z-20 pt-4 pb-3">
-        <div className="overflow-hidden rounded-lg border border-white/50 bg-white/90 shadow-sm backdrop-blur-sm">
+        <button
+          onClick={onExpandChange}
+          className="w-full cursor-pointer overflow-hidden rounded-lg border border-white/50 bg-white/90 text-left shadow-sm backdrop-blur-sm transition-colors hover:bg-slate-50/50"
+          aria-expanded={true}
+          aria-controls={`day-${daySchedule.day}-content`}
+          aria-label="Collapse day details"
+        >
           {/* Decorative top gradient */}
           <div className="h-0.5 bg-gradient-to-r from-sky-400 via-indigo-400 to-violet-400" />
 
           {/* Header content */}
-          <div className="flex items-baseline gap-3 px-4 py-2.5">
-            <span
-              className={`text-sm font-bold tracking-wide uppercase ${getDayLabelStyle()}`}
-            >
-              {getDayLabel(daySchedule.day, daySchedule.hasSameDayArrival)}
-            </span>
-            <span className="text-slate-400">•</span>
-            <span className="font-medium text-slate-600">
-              {formatLongDate(daySchedule.date)}
+          <div className="flex items-center justify-between px-4 py-2.5">
+            <div className="flex items-baseline gap-3">
+              <span
+                className={`text-sm font-bold tracking-wide uppercase ${getDayLabelColor(daySchedule.day)}`}
+              >
+                {getDayLabel(daySchedule.day, daySchedule.hasSameDayArrival)}
+              </span>
+              <span className="text-slate-400">•</span>
+              <span className="font-medium text-slate-600">
+                {formatLongDate(daySchedule.date)}
+              </span>
+            </div>
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600 transition-all duration-200 hover:bg-slate-200">
+              <span>Summarize</span>
+              <ChevronUp className="h-3.5 w-3.5" />
             </span>
           </div>
-        </div>
+        </button>
       </div>
 
       {/* Timeline container */}
