@@ -14,11 +14,17 @@ const BASE62 = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
  * @returns Random base62 string (e.g., "a1B2c3")
  */
 export function generateShortCode(length = 6): string {
-  const bytes = randomBytes(length);
   let code = "";
-  for (let i = 0; i < length; i++) {
-    // Use modulo to map byte to base62 character
-    code += BASE62[bytes[i] % 62];
+
+  // Use rejection sampling to avoid modulo bias when mapping bytes to base62 indices.
+  // 62 * 4 = 248, so values in [0, 247] map evenly into 62 buckets via modulo.
+  while (code.length < length) {
+    const byte = randomBytes(1)[0];
+    if (byte >= 248) {
+      continue;
+    }
+    code += BASE62[byte % 62];
   }
+
   return code;
 }
