@@ -48,7 +48,9 @@ export function CalendarSyncButton({ tripId }: CalendarSyncButtonProps) {
   const [error, setError] = useState<string | null>(null);
   const [showAuthPrompt, setShowAuthPrompt] = useState(false);
   // Track verified scope (actual token state from Google)
-  const [verifiedHasScope, setVerifiedHasScope] = useState<boolean | null>(null);
+  const [verifiedHasScope, setVerifiedHasScope] = useState<boolean | null>(
+    null
+  );
 
   // Use verified scope if available, otherwise fall back to session
   const hasCalendarScope = verifiedHasScope ?? sessionHasCalendarScope;

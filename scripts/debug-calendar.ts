@@ -399,7 +399,9 @@ function printUsage() {
   console.error("  --no-melatonin     Disable melatonin");
   console.error("  --no-caffeine      Disable caffeine");
   console.error("  --verbose, -v      Show full event descriptions");
-  console.error("  --limit-days=N     Only create events for first N days (for testing)");
+  console.error(
+    "  --limit-days=N     Only create events for first N days (for testing)"
+  );
   console.error("");
   console.error("Examples:");
   console.error(
@@ -634,7 +636,9 @@ async function deleteSyncRecord(syncId: string) {
 async function resyncUserTrips(userId: string, limitDays?: number) {
   console.log(`\n🔍 Finding trips for user: ${userId}\n`);
   if (limitDays) {
-    console.log(`⚠️  Limiting to first ${limitDays} day(s) per trip (testing mode)\n`);
+    console.log(
+      `⚠️  Limiting to first ${limitDays} day(s) per trip (testing mode)\n`
+    );
   }
 
   // Get today's date at midnight for comparison
@@ -1160,7 +1164,9 @@ async function main() {
 
   // Create events (optionally limited to first N days for testing)
   if (args.limitDays) {
-    console.log(`\n⚠️  Limiting to first ${args.limitDays} day(s) (testing mode)`);
+    console.log(
+      `\n⚠️  Limiting to first ${args.limitDays} day(s) (testing mode)`
+    );
   }
   const interventionsToSync = args.limitDays
     ? schedule.interventions.slice(0, args.limitDays)

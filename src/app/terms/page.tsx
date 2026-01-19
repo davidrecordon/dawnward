@@ -24,8 +24,8 @@ export default function TermsPage() {
         <p className="mt-2 text-slate-600">
           Dawnward is a jet lag optimization tool that generates personalized
           schedules for adapting to new timezones. The service provides
-          recommendations for light exposure, sleep timing, and optional use
-          of melatonin and caffeine.
+          recommendations for light exposure, sleep timing, and optional use of
+          melatonin and caffeine.
         </p>
 
         <h2 className="mt-8 text-xl font-semibold">3. Medical Disclaimer</h2>
