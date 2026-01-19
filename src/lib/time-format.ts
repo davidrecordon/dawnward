@@ -15,3 +15,11 @@ export const DEFAULT_TIME_FORMAT: TimeFormat = "12h";
 export function isValidTimeFormat(value: unknown): value is TimeFormat {
   return value === "12h" || value === "24h";
 }
+
+/**
+ * Get a valid time format, falling back to default if invalid.
+ * Useful for safely extracting time format from user preferences.
+ */
+export function getValidTimeFormat(value: unknown): TimeFormat {
+  return isValidTimeFormat(value) ? value : DEFAULT_TIME_FORMAT;
+}

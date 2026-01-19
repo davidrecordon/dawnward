@@ -1,4 +1,63 @@
-import { type TimeFormat, DEFAULT_TIME_FORMAT } from "@/lib/time-format";
+import {
+  type TimeFormat,
+  DEFAULT_TIME_FORMAT,
+  getValidTimeFormat,
+} from "@/lib/time-format";
+
+/** Schedule view mode type */
+export type ScheduleViewMode = "summary" | "timeline";
+
+/** Default schedule view mode */
+export const DEFAULT_SCHEDULE_VIEW_MODE: ScheduleViewMode = "summary";
+
+/**
+ * Type guard to validate schedule view mode values.
+ */
+export function isValidScheduleViewMode(
+  value: unknown
+): value is ScheduleViewMode {
+  return value === "summary" || value === "timeline";
+}
+
+/**
+ * Get a valid schedule view mode, falling back to default if invalid.
+ */
+export function getValidScheduleViewMode(value: unknown): ScheduleViewMode {
+  return isValidScheduleViewMode(value) ? value : DEFAULT_SCHEDULE_VIEW_MODE;
+}
+
+/**
+ * Display preferences for schedule rendering.
+ * Used by DisplayPreferencesContext and page components.
+ */
+export interface DisplayPreferences {
+  timeFormat: TimeFormat;
+  showDualTimezone: boolean;
+  scheduleViewMode: ScheduleViewMode;
+}
+
+/**
+ * Database user preferences shape (Prisma returns strings, not typed enums).
+ */
+interface DbDisplayPreferences {
+  timeFormat?: string | null;
+  showDualTimezone?: boolean | null;
+  scheduleViewMode?: string | null;
+}
+
+/**
+ * Extract display preferences from database user preferences.
+ * Safely validates and provides defaults for any missing/invalid values.
+ */
+export function extractDisplayPreferences(
+  userPrefs: DbDisplayPreferences | null | undefined
+): DisplayPreferences {
+  return {
+    timeFormat: getValidTimeFormat(userPrefs?.timeFormat),
+    showDualTimezone: userPrefs?.showDualTimezone ?? false,
+    scheduleViewMode: getValidScheduleViewMode(userPrefs?.scheduleViewMode),
+  };
+}
 
 /**
  * User preference fields that can be synced between settings and trip form.
@@ -14,7 +73,7 @@ export interface UserPreferences {
   scheduleIntensity: string;
   // Display preferences
   showDualTimezone: boolean;
-  scheduleViewMode: "summary" | "timeline";
+  scheduleViewMode: ScheduleViewMode;
   timeFormat: TimeFormat;
 }
 
@@ -59,7 +118,7 @@ export function mapFormToDbPreferences(form: {
     scheduleIntensity: form.scheduleIntensity,
     // Display preferences not in trip form - use defaults
     showDualTimezone: false,
-    scheduleViewMode: "summary",
+    scheduleViewMode: DEFAULT_SCHEDULE_VIEW_MODE,
     timeFormat: DEFAULT_TIME_FORMAT,
   };
 }

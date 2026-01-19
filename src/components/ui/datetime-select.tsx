@@ -4,7 +4,7 @@ import * as React from "react";
 import { Calendar } from "lucide-react";
 import { TimeSelect } from "@/components/ui/time-select";
 import { cn } from "@/lib/utils";
-import type { TimeFormat } from "@/lib/intervention-utils";
+import type { TimeFormat } from "@/lib/time-format";
 
 interface DateTimeSelectProps {
   value: string; // "YYYY-MM-DDTHH:MM" ISO format

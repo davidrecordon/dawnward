@@ -11,7 +11,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
-import { formatTime, type TimeFormat } from "@/lib/intervention-utils";
+import { formatTime } from "@/lib/intervention-utils";
+import type { TimeFormat } from "@/lib/time-format";
+
+// 12 hours * 4 intervals (every 15 min) = 48 options for AM, 48 for PM
+const TIME_OPTIONS_PER_PERIOD = 48;
 
 interface TimeSelectProps {
   value: string; // "HH:MM" 24-hour format
@@ -75,7 +79,7 @@ export function TimeSelect({
           <>
             <SelectGroup>
               <SelectLabel>AM</SelectLabel>
-              {timeOptions.slice(0, 48).map((option) => (
+              {timeOptions.slice(0, TIME_OPTIONS_PER_PERIOD).map((option) => (
                 <SelectItem key={option.value} value={option.value}>
                   {option.label}
                 </SelectItem>
@@ -83,7 +87,7 @@ export function TimeSelect({
             </SelectGroup>
             <SelectGroup>
               <SelectLabel>PM</SelectLabel>
-              {timeOptions.slice(48).map((option) => (
+              {timeOptions.slice(TIME_OPTIONS_PER_PERIOD).map((option) => (
                 <SelectItem key={option.value} value={option.value}>
                   {option.label}
                 </SelectItem>

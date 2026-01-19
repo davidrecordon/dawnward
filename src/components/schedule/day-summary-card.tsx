@@ -11,8 +11,8 @@ import {
   getDayLabelColor,
   getDayCardGradient,
   FLIGHT_DAY,
-  type TimeFormat,
 } from "@/lib/intervention-utils";
+import { type TimeFormat, DEFAULT_TIME_FORMAT } from "@/lib/time-format";
 import { useTimeFormat } from "@/components/display-preferences-context";
 import { formatLongDate, formatShortDate } from "@/lib/time-utils";
 import {
@@ -509,7 +509,7 @@ export function DaySummaryCard({
  */
 export function formatDayForText(
   daySchedule: DaySchedule,
-  timeFormat: TimeFormat = "12h"
+  timeFormat: TimeFormat = DEFAULT_TIME_FORMAT
 ): string {
   return daySchedule.items
     .map((item) => {

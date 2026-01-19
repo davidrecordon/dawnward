@@ -35,7 +35,7 @@ import { FormError } from "@/components/form-error";
 import { DateTimeSelect } from "@/components/ui/datetime-select";
 import { TimeSelect } from "@/components/ui/time-select";
 import type { TripFormState } from "@/types/trip-form";
-import type { TimeFormat } from "@/lib/intervention-utils";
+import type { TimeFormat } from "@/lib/time-format";
 
 interface TripFormProps {
   formState: TripFormState;
