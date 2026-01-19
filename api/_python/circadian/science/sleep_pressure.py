@@ -36,8 +36,24 @@ HIGH_DEBT_NAP_START_PERCENT = 0.25  # Earlier when sleep-deprived
 HIGH_DEBT_NAP_END_PERCENT = 0.55  # Wider window when sleep-deprived
 
 # Arrival-day recovery nap constraints
-ARRIVAL_NAP_CUTOFF_HOUR = 13  # 1:00 PM - no naps after this
-ARRIVAL_SETTLE_IN_MINUTES = 45  # Buffer time after arrival
+#
+# WHY 1 PM CUTOFF:
+# Napping too late in the day interferes with nighttime sleep adaptation. The 1 PM cutoff
+# ensures users have 6-8+ hours before their target bedtime to build up sleep pressure.
+ARRIVAL_NAP_CUTOFF_HOUR = 13  # 1:00 PM local - no naps after this time
+#
+# WHY 2.5 HOURS SETTLE-IN TIME:
+# After an international flight lands, users can't immediately nap. They need to:
+#   - Clear customs and immigration: 45-60 minutes
+#   - Collect baggage: 15-20 minutes
+#   - Transport to hotel/accommodation: 45-60 minutes
+#   - Check in and get to room: 15 minutes
+#   - Total: ~2-2.5 hours minimum
+#
+# This means a 10:45 AM arrival → earliest realistic nap at 1:15 PM.
+# If 1:15 PM is already past the 1 PM cutoff, we skip the nap recommendation entirely
+# and tell users to push through to evening sleep instead.
+ARRIVAL_SETTLE_IN_MINUTES = 150  # 2.5 hours realistic buffer for international arrival
 
 
 @dataclass
@@ -206,9 +222,25 @@ class SleepPressureModel:
         if arrival_minutes >= hard_cutoff or arrival_minutes >= 16 * 60:
             return None
 
-        # Nap window starts after arrival (settle in time)
+        # Nap window starts after arrival + realistic settle-in time
+        # (see ARRIVAL_SETTLE_IN_MINUTES comment above for breakdown)
         settle_in_minutes = ARRIVAL_SETTLE_IN_MINUTES
-        window_start = minutes_to_time(arrival_minutes + settle_in_minutes)
+        window_start_minutes = arrival_minutes + settle_in_minutes
+
+        # KEY CHECK: If the earliest possible nap time is already past the cutoff,
+        # don't recommend a nap at all. The user should push through to evening sleep.
+        #
+        # Example: VS20 lands at 10:45 AM
+        #   - Earliest nap possible: 10:45 + 2.5h = 1:15 PM
+        #   - Cutoff: 1:00 PM
+        #   - 1:15 PM >= 1:00 PM → no nap recommended, push through
+        #
+        # This prevents showing unrealistic nap windows like "Nap: 1:15 PM - 1:00 PM"
+        # which would have negative duration.
+        if window_start_minutes >= hard_cutoff:
+            return None
+
+        window_start = minutes_to_time(window_start_minutes)
 
         # Window ends at hard cutoff
         window_end = minutes_to_time(hard_cutoff)

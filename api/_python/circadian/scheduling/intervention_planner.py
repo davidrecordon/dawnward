@@ -123,16 +123,56 @@ class InterventionPlanner:
         wake_target = day_markers["wake_target"]
         sleep_target = day_markers["sleep_target"]
 
-        # For pre_departure phases, cap wake_target to allow time for airport transit
-        # User needs ~3h before departure to get ready and travel to airport
+        # =================================================================
+        # SLEEP TARGET HANDLING FOR PRE-DEPARTURE PHASES
+        # =================================================================
+        # We maintain THREE sleep values for pre_departure phases:
+        #
+        # 1. sleep_target: The circadian-optimal sleep time from the science layer
+        #    (e.g., 7 PM for eastward shifts)
+        #
+        # 2. sleep_target_for_planning: Always equals sleep_target. Used by
+        #    _plan_light(), _plan_caffeine(), _plan_nap() since they need the
+        #    circadian-optimal time even if we don't display it to the user.
+        #
+        # 3. sleep_target_for_display: What we show the user. Can be:
+        #    - sleep_target (no change needed)
+        #    - Capped to phase_end (e.g., 5:40 PM for 8:40 PM departure)
+        #    - None (omitted - user gets sleep guidance in "After Landing" instead)
+        #
+        # Capping/omission happens when:
+        # - Sleep is within 4h of departure → cap to phase_end (3h before departure)
+        # - Sleep is AFTER departure → omit entirely (user is on plane!)
+        # - Phase_end is before noon → omit (impractical to sleep that early)
+        #
+        # When capped/omitted, original_time stores the circadian-optimal time
+        # so the UI can show "Your shifted target is X" as context.
+        # =================================================================
+        sleep_target_for_planning = sleep_target
+        sleep_original_time: str | None = None
+        sleep_target_for_display: time | None = sleep_target
         if phase.phase_type == "pre_departure":
             wake_target = self._cap_wake_target_for_departure(wake_target)
+            capped_sleep, original_sleep = self._cap_sleep_target_for_departure(sleep_target)
+            if original_sleep:
+                sleep_original_time = format_time(original_sleep)
+            if capped_sleep is None:
+                # Sleep target omitted - too early to be practical
+                # User will get sleep guidance in "After Landing" section
+                sleep_target_for_display = None
+            else:
+                sleep_target_for_display = capped_sleep
 
-        # 1. Sleep/wake targets (always included)
-        interventions.extend(self._plan_sleep_wake(phase, wake_target, sleep_target))
+        # 1. Sleep/wake targets (always included, unless sleep_target was omitted)
+        interventions.extend(
+            self._plan_sleep_wake(phase, wake_target, sleep_target_for_display, sleep_original_time)
+        )
 
         # 2. Light interventions (always included - primary intervention)
-        interventions.extend(self._plan_light(phase, cbtmin, wake_target, sleep_target))
+        # Use original sleep_target for planning, not the capped/omitted one
+        interventions.extend(
+            self._plan_light(phase, cbtmin, wake_target, sleep_target_for_planning)
+        )
 
         # 3. Melatonin (if enabled)
         if self.context.uses_melatonin:
@@ -141,11 +181,13 @@ class InterventionPlanner:
                 interventions.append(mel)
 
         # 4. Caffeine (if enabled)
+        # Use original sleep_target for planning
         if self.context.uses_caffeine:
-            interventions.extend(self._plan_caffeine(phase, wake_target, sleep_target))
+            interventions.extend(self._plan_caffeine(phase, wake_target, sleep_target_for_planning))
 
         # 5. Naps (based on preference and phase type)
-        nap = self._plan_nap(phase, wake_target, sleep_target)
+        # Use original sleep_target for planning
+        nap = self._plan_nap(phase, wake_target, sleep_target_for_planning)
         if nap:
             interventions.append(nap)
 
@@ -183,6 +225,58 @@ class InterventionPlanner:
             return minutes_to_time(max_wake_minutes)
 
         return wake_target
+
+    def _cap_sleep_target_for_departure(
+        self, sleep_target: time
+    ) -> tuple[time | None, time | None]:
+        """
+        Cap sleep_target to phase end if it would be too close to departure.
+
+        Uses 4h buffer (consistent with SLEEP_TARGET_DEPARTURE_BUFFER_HOURS in constraint_filter).
+        Pre_departure phase ends 3h before departure (airport buffer).
+
+        Args:
+            sleep_target: Circadian-optimal sleep time
+
+        Returns:
+            (capped_time, original_time):
+            - capped_time: The time to use (or None if should be omitted)
+            - original_time: The original circadian-optimal time (set when capping occurred)
+        """
+        SLEEP_BUFFER_HOURS = 4.0  # Match SLEEP_TARGET_DEPARTURE_BUFFER_HOURS
+        PRE_DEPARTURE_BUFFER_HOURS = 3  # Phase ends 3h before departure
+
+        first_leg = self.request.legs[0]
+        departure = parse_iso_datetime(first_leg.departure_datetime)
+        departure_minutes = time_to_minutes(departure.time())
+        sleep_minutes = time_to_minutes(sleep_target)
+
+        # Calculate hours before departure
+        # Handle same-day comparison (sleep after midnight handled separately)
+        hours_before = (departure_minutes - sleep_minutes) / 60
+
+        # If sleep is well before departure (>4h buffer), no capping needed
+        if hours_before >= SLEEP_BUFFER_HOURS:
+            return (sleep_target, None)
+
+        # If sleep is AFTER departure (hours_before <= 0), omit entirely
+        # User can't act on "sleep at 7 PM" when they're on a plane at 4:30 PM
+        # They'll get sleep guidance in "After Landing" section instead
+        if hours_before <= 0:
+            return (None, sleep_target)
+
+        # Sleep is within 4h of departure (but still before) - cap to phase end
+        # Cap to phase end (3h before departure)
+        phase_end_minutes = departure_minutes - (PRE_DEPARTURE_BUFFER_HOURS * 60)
+
+        # If phase_end is before noon (impractical to sleep so early), omit entirely
+        # The user will get sleep guidance in "After Landing" section instead
+        NOON_MINUTES = 12 * 60
+        if phase_end_minutes < NOON_MINUTES:
+            return (None, sleep_target)
+
+        # Cap to phase end and record original
+        return (minutes_to_time(phase_end_minutes), sleep_target)
 
     def _parse_utc_timestamp(self, iso_str: str) -> datetime | None:
         """Parse an ISO timestamp string to a timezone-aware UTC datetime."""
@@ -409,16 +503,27 @@ class InterventionPlanner:
         return interventions
 
     def _plan_sleep_wake(
-        self, phase: TravelPhase, wake_target: time, sleep_target: time
+        self,
+        phase: TravelPhase,
+        wake_target: time,
+        sleep_target: time | None,
+        sleep_original_time: str | None = None,
     ) -> list[Intervention]:
-        """Plan sleep and wake target interventions."""
+        """Plan sleep and wake target interventions.
+
+        Args:
+            phase: The travel phase
+            wake_target: Target wake time
+            sleep_target: Target sleep time (None if omitted for pre_departure)
+            sleep_original_time: Original circadian-optimal sleep time if capped
+        """
         # Direction-specific wake advice
         if self.context.direction == "advance":
             wake_advice = "Get bright light soon after waking."
         else:
             wake_advice = "Avoid bright light for the first few hours after waking."
 
-        return [
+        interventions = [
             Intervention(
                 time=format_time(wake_target),
                 type="wake_target",
@@ -428,17 +533,32 @@ class InterventionPlanner:
                 ),
                 duration_min=None,
             ),
-            Intervention(
-                time=format_time(sleep_target),
-                type="sleep_target",
-                title="Target sleep time",
-                description=(
-                    "Aim to be in bed with lights out at this time. "
-                    "Dim lights 1-2 hours before to prepare for sleep."
-                ),
-                duration_min=None,
-            ),
         ]
+
+        # Only include sleep_target if not omitted
+        if sleep_target is not None:
+            sleep_description = (
+                "Aim to be in bed with lights out at this time. "
+                "Dim lights 1-2 hours before to prepare for sleep."
+            )
+            # Add note about shifted time if capped
+            if sleep_original_time:
+                sleep_description = (
+                    f"Earlier sleep before your flight helps. "
+                    f"Your shifted target is {sleep_original_time}."
+                )
+            interventions.append(
+                Intervention(
+                    time=format_time(sleep_target),
+                    type="sleep_target",
+                    title="Target sleep time",
+                    description=sleep_description,
+                    duration_min=None,
+                    original_time=sleep_original_time,
+                )
+            )
+
+        return interventions
 
     def _plan_light(
         self, phase: TravelPhase, cbtmin: time, wake_target: time, sleep_target: time

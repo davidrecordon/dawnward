@@ -325,23 +325,62 @@ class TestSleepTargetNearDeparture:
             f"sleep_target 5h before departure should be kept, got {types}"
         )
 
-    def test_sleep_target_after_departure_kept(self):
-        """sleep_target after departure time should be kept (edge case)."""
+    def test_sleep_target_after_departure_filtered_for_pre_departure(self):
+        """sleep_target after departure time should be FILTERED for pre_departure phases.
+
+        This is the key fix for VS20 (4:30 PM departure):
+        - If sleep_target would be at 7 PM but departure is 4:30 PM
+        - The user is ON THE PLANE at 7 PM, so showing sleep_target is wrong
+        - It should be filtered, and user gets sleep in "After Landing" section instead
+        """
         cf = ConstraintFilter()
 
-        # Flight at 10:00, sleep_target at 22:00 (after departure, different phase)
-        phase = self._make_phase(start_hour=6, end_hour=23)
+        # Flight at 10:00, sleep_target at 22:00 (12h AFTER departure)
+        # For pre_departure phase, this sleep_target makes no sense - user is on plane
+        phase = self._make_phase(start_hour=6, end_hour=7)  # Phase ends before departure
         departure = datetime(2025, 1, 15, 10, 0)
 
         interventions = [
             self._make_intervention("wake_target", "06:00"),
-            self._make_intervention("sleep_target", "22:00"),  # After departure - KEEP
+            self._make_intervention("sleep_target", "22:00"),  # After departure - FILTER
         ]
 
         filtered = cf.filter_phase(interventions, phase, departure)
 
         types = [i.type for i in filtered]
-        assert "sleep_target" in types, f"sleep_target after departure should be kept, got {types}"
+        assert "sleep_target" not in types, (
+            f"sleep_target after departure should be filtered for pre_departure, got {types}"
+        )
+
+    def test_sleep_target_kept_for_post_arrival_phase(self):
+        """sleep_target should always be kept for post_arrival phases (not near departure)."""
+        cf = ConstraintFilter()
+
+        # Create a post_arrival phase (after landing)
+        base_date = datetime(2025, 1, 15)
+        phase = TravelPhase(
+            phase_type="post_arrival",  # Key: NOT pre_departure
+            start_datetime=base_date.replace(hour=10),  # Landed at 10:00
+            end_datetime=base_date.replace(hour=23),
+            timezone="Europe/London",
+            cumulative_shift=5.0,
+            remaining_shift=3.0,
+            day_number=1,
+            available_for_interventions=True,
+        )
+        departure = datetime(2025, 1, 14, 16, 30)  # Yesterday's departure
+
+        interventions = [
+            self._make_intervention("wake_target", "10:00"),
+            self._make_intervention("sleep_target", "22:00"),  # KEEP - post_arrival
+        ]
+
+        filtered = cf.filter_phase(interventions, phase, departure)
+
+        types = [i.type for i in filtered]
+        assert "sleep_target" in types, (
+            f"sleep_target should be kept for post_arrival phases, got {types}"
+        )
 
     def test_wake_target_not_affected_by_departure_proximity(self):
         """wake_target should never be filtered based on departure time."""
@@ -378,3 +417,34 @@ class TestSleepTargetNearDeparture:
         assert "sleep_target" in types, (
             "sleep_target should be kept when no departure_datetime provided"
         )
+
+    def test_sleep_target_after_departure_filtered(self):
+        """sleep_target AFTER departure time should be filtered out (not shown on Day 0).
+
+        This is the key fix for VS20 (4:30 PM departure):
+        - Shifted sleep_target at 7 PM is AFTER the 4:30 PM departure
+        - User is on the plane at that time, so showing it is wrong
+        - It should be filtered, and user gets sleep guidance in "After Landing" instead
+        """
+        cf = ConstraintFilter()
+
+        # Flight at 16:30, sleep_target at 19:00 (2.5h AFTER departure) - should be FILTERED
+        phase = self._make_phase(start_hour=6, end_hour=13)  # Pre-departure ends at airport buffer
+        departure = datetime(2025, 1, 15, 16, 30)  # 4:30 PM departure
+
+        interventions = [
+            self._make_intervention("wake_target", "06:00"),
+            self._make_intervention("sleep_target", "19:00"),  # AFTER departure - FILTER
+        ]
+
+        filtered = cf.filter_phase(interventions, phase, departure)
+
+        types = [i.type for i in filtered]
+        assert "sleep_target" not in types, (
+            f"sleep_target AFTER departure should be filtered, got {types}"
+        )
+
+        # Verify violation was recorded
+        sleep_violations = [v for v in cf.violations if v.intervention_type == "sleep_target"]
+        assert len(sleep_violations) == 1
+        assert "departure" in sleep_violations[0].reason.lower()

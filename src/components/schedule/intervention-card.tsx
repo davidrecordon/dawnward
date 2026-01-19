@@ -38,6 +38,7 @@ interface TimeDisplayProps {
   dualTimes: { originTime: string; destTime: string } | null;
   primaryTime: string | null;
   secondaryTime: string | null;
+  originalTime?: string;
 }
 
 /**
@@ -52,6 +53,7 @@ function TimeDisplay({
   dualTimes,
   primaryTime,
   secondaryTime,
+  originalTime,
 }: TimeDisplayProps): React.JSX.Element {
   const SecondaryIcon = isPreFlight ? PlaneLanding : PlaneTakeoff;
 
@@ -121,6 +123,28 @@ function TimeDisplay({
         <div className="flex items-center justify-end gap-1 text-xs text-slate-400">
           <span className="tabular-nums">{secondaryTime}</span>
           <SecondaryIcon className="h-3 w-3 opacity-60" />
+        </div>
+        {originalTime && (
+          <div className="text-[10px] text-slate-400 italic">
+            target: {formatTime(originalTime)}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // Show original time hint if time was capped
+  if (originalTime) {
+    return (
+      <div className="shrink-0 text-right">
+        <Badge
+          variant="secondary"
+          className="bg-white/70 font-medium text-slate-600"
+        >
+          {formatTime(displayTime)}
+        </Badge>
+        <div className="mt-0.5 text-[10px] text-slate-400 italic">
+          target: {formatTime(originalTime)}
         </div>
       </div>
     );
@@ -243,6 +267,7 @@ export function InterventionCard({
               dualTimes={dualTimes}
               primaryTime={primaryTime}
               secondaryTime={secondaryTime}
+              originalTime={intervention.original_time}
             />
           </div>
         )}

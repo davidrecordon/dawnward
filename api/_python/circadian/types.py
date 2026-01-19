@@ -177,6 +177,9 @@ class Intervention:
     # In-flight sleep windows only
     flight_offset_hours: float | None = None  # Pre-computed hours into flight
 
+    # Capping/adjustment info - when time was adjusted from circadian-optimal
+    original_time: str | None = None  # "HH:MM" - set when time was capped/adjusted
+
 
 @dataclass
 class DaySchedule:

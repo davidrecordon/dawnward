@@ -92,6 +92,7 @@ function SummaryInterventionRow({
   const Icon = style.icon;
   const displayTime = getDisplayTime(intervention);
   const hasFlightOffset = intervention.flight_offset_hours != null;
+  const hasOriginalTime = intervention.original_time != null;
 
   return (
     <div className="group -mx-2 flex items-center gap-3 rounded-md px-2 py-2 transition-colors duration-200 hover:bg-slate-50/50">
@@ -103,15 +104,22 @@ function SummaryInterventionRow({
       </div>
 
       {/* Time */}
-      <span
-        className={`shrink-0 text-sm font-semibold whitespace-nowrap text-slate-700 tabular-nums ${
+      <div
+        className={`shrink-0 ${
           showFlightOffset && hasFlightOffset ? "w-[140px]" : "w-[72px]"
         }`}
       >
-        {showFlightOffset && hasFlightOffset
-          ? formatFlightOffset(intervention.flight_offset_hours!)
-          : formatTime(displayTime)}
-      </span>
+        <span className="text-sm font-semibold whitespace-nowrap text-slate-700 tabular-nums">
+          {showFlightOffset && hasFlightOffset
+            ? formatFlightOffset(intervention.flight_offset_hours!)
+            : formatTime(displayTime)}
+        </span>
+        {hasOriginalTime && (
+          <div className="text-[10px] text-slate-400 italic">
+            target: {formatTime(intervention.original_time!)}
+          </div>
+        )}
+      </div>
 
       {/* Description */}
       <span className="text-sm leading-snug text-slate-600">

@@ -108,7 +108,6 @@ class ConstraintFilter:
         crosses_midnight = phase_end_minutes < phase_start_minutes
 
         # Types that should never be filtered (informational targets)
-        # Note: sleep_target has conditional filtering based on departure proximity
         keep_always = {"wake_target"}
 
         for intervention in interventions:
@@ -124,10 +123,34 @@ class ConstraintFilter:
             i_time = parse_time(intervention.time)
             i_minutes = time_to_minutes(i_time)
 
-            # Filter sleep_target if within 4h of departure (unrealistic to sleep then)
+            # =================================================================
+            # SLEEP TARGET COORDINATION WITH PLANNER
+            # =================================================================
+            # The InterventionPlanner handles sleep_target capping/omission for
+            # pre_departure phases (see _cap_sleep_target_for_departure).
+            #
+            # When the planner caps sleep_target, it sets original_time to the
+            # circadian-optimal time. This signals to us: "I already handled this,
+            # don't filter it again."
+            #
+            # If original_time is NOT set, it means:
+            # - Either this isn't a pre_departure phase (planner didn't cap it)
+            # - Or the planner determined no capping was needed (sleep is >4h before)
+            #
+            # In that case, we apply our own departure proximity filtering here
+            # as a safety net (in case sleep slipped through somehow).
+            # =================================================================
             if intervention.type == "sleep_target":
-                if departure_datetime and self._is_near_departure(
-                    i_time, phase.start_datetime, departure_datetime
+                # Planner already handled this sleep_target - respect its decision
+                if intervention.original_time is not None:
+                    result.append(intervention)
+                    continue
+
+                # No planner capping - apply departure filtering for pre_departure
+                if (
+                    phase.phase_type == "pre_departure"
+                    and departure_datetime
+                    and self._is_near_departure(i_time, phase.start_datetime, departure_datetime)
                 ):
                     self.violations.append(
                         ConstraintViolation(
@@ -139,7 +162,7 @@ class ConstraintFilter:
                         )
                     )
                     continue
-                # Keep sleep_target if not near departure
+                # Keep sleep_target if not near departure (or if not pre_departure phase)
                 result.append(intervention)
                 continue
 
@@ -333,7 +356,7 @@ class ConstraintFilter:
         self, intervention_time: time, phase_date: datetime, departure_datetime: datetime
     ) -> bool:
         """
-        Check if an intervention time is within the buffer period before departure.
+        Check if an intervention time is within the buffer period before departure OR after departure.
 
         Args:
             intervention_time: Time of the intervention (HH:MM)
@@ -342,6 +365,7 @@ class ConstraintFilter:
 
         Returns:
             True if intervention is within SLEEP_TARGET_DEPARTURE_BUFFER_HOURS of departure
+            OR if intervention is after departure (negative hours_before)
         """
         # Build datetime for the intervention using the phase date
         intervention_datetime = phase_date.replace(
@@ -352,8 +376,11 @@ class ConstraintFilter:
         time_diff = departure_datetime - intervention_datetime
         hours_before_departure = time_diff.total_seconds() / 3600
 
-        # Return True if intervention is within the buffer window (0 to N hours before)
-        return 0 < hours_before_departure <= SLEEP_TARGET_DEPARTURE_BUFFER_HOURS
+        # Return True if:
+        # 1. Intervention is after departure (hours_before <= 0), OR
+        # 2. Intervention is within the buffer window (0 < hours_before <= N)
+        # This fixes the bug where negative values (after departure) passed through
+        return hours_before_departure <= SLEEP_TARGET_DEPARTURE_BUFFER_HOURS
 
     def _sort_interventions(self, interventions: list[Intervention]) -> list[Intervention]:
         """

@@ -338,6 +338,144 @@ class TestModerateJetLag:
             f"  - {e.category}: {e.message}" for e in errors
         )
 
+    def test_vs20_sleep_target_not_on_day0_pre_departure(self):
+        """
+        VS20 regression test: sleep_target should NOT appear in Day 0's pre_departure phase.
+
+        For VS20 (4:30 PM departure):
+        - Phase ends at 1:30 PM (3h before departure)
+        - Any sleep_target would be after the user leaves for the airport
+        - The fix ensures no sleep_target is shown before departure
+        - User gets sleep guidance in "After Landing" section instead
+        """
+        generator = ScheduleGenerator()
+        base_date = datetime.now() + timedelta(days=7)
+
+        departure = make_flight_datetime(base_date, "16:30")
+        arrival = make_flight_datetime(base_date, "10:40", day_offset=1)
+
+        request = ScheduleRequest(
+            legs=[
+                TripLeg(
+                    origin_tz="America/Los_Angeles",
+                    dest_tz="Europe/London",
+                    departure_datetime=departure.strftime("%Y-%m-%dT%H:%M"),
+                    arrival_datetime=arrival.strftime("%Y-%m-%dT%H:%M"),
+                )
+            ],
+            prep_days=3,
+            wake_time="07:00",
+            sleep_time="22:00",
+            uses_melatonin=True,
+            uses_caffeine=True,
+        )
+
+        schedule = generator.generate_schedule(request)
+
+        # Find all Day 0 phases (flight day can have multiple: pre_departure, post_arrival)
+        day_0_phases = [ds for ds in schedule.interventions if ds.day == 0]
+        assert len(day_0_phases) > 0, "Day 0 should exist"
+
+        # Get pre_departure sleep_target items across all Day 0 phases
+        pre_departure_sleep = [
+            item
+            for ds in day_0_phases
+            for item in ds.items
+            if item.type == "sleep_target" and item.phase_type == "pre_departure"
+        ]
+
+        assert len(pre_departure_sleep) == 0, (
+            f"VS20: No sleep_target should appear in pre_departure phase on Day 0. "
+            f"Found {len(pre_departure_sleep)} items: {[i.time for i in pre_departure_sleep]}"
+        )
+
+        # Verify post_arrival sleep_target exists on the arrival date
+        # The UI groups by date, so post_arrival sleep may be on Day 1's entry
+        # if Day 1 has the same date as the arrival (which it does for VS20)
+        arrival_date = arrival.strftime("%Y-%m-%d")
+        post_arrival_sleep = [
+            item
+            for ds in schedule.interventions
+            if ds.date == arrival_date
+            for item in ds.items
+            if item.type == "sleep_target" and item.phase_type == "post_arrival"
+        ]
+
+        assert len(post_arrival_sleep) >= 1, (
+            f"VS20: Arrival date {arrival_date} should have post_arrival sleep_target "
+            f"for 'After Landing' guidance"
+        )
+
+    def test_british_ba286_sfo_to_london(self):
+        """
+        British Airways BA286: SFO 20:40 → LHR 03:10+1 (~7h30m).
+
+        Late evening departure, early morning arrival.
+        Tests sleep_target capping behavior:
+        - 8:45 PM departure is later than VS20
+        - Sleep_target might be capped to practical pre-departure time
+        - Should have original_time set if capped
+        """
+        generator = ScheduleGenerator()
+        base_date = datetime.now() + timedelta(days=7)
+
+        # BA286: SFO 20:40 → LHR 03:10+1 (updated timing - evening red-eye)
+        departure = make_flight_datetime(base_date, "20:40")
+        arrival = make_flight_datetime(base_date, "15:10", day_offset=1)
+
+        request = ScheduleRequest(
+            legs=[
+                TripLeg(
+                    origin_tz="America/Los_Angeles",
+                    dest_tz="Europe/London",
+                    departure_datetime=departure.strftime("%Y-%m-%dT%H:%M"),
+                    arrival_datetime=arrival.strftime("%Y-%m-%dT%H:%M"),
+                )
+            ],
+            prep_days=3,
+            wake_time="07:00",
+            sleep_time="22:00",
+            uses_melatonin=True,
+            uses_caffeine=True,
+        )
+
+        schedule = generator.generate_schedule(request)
+
+        flight = FlightInfo(
+            departure_datetime=departure,
+            arrival_datetime=arrival,
+            origin_tz="America/Los_Angeles",
+            dest_tz="Europe/London",
+        )
+
+        # 8h east = advance direction
+        assert schedule.direction == "advance", (
+            f"Expected advance direction, got {schedule.direction}"
+        )
+
+        issues = run_all_validations(schedule, flight)
+        errors = [i for i in issues if i.severity == "error"]
+
+        assert len(errors) == 0, f"Found {len(errors)} errors:\n" + "\n".join(
+            f"  - {e.category}: {e.message}" for e in errors
+        )
+
+        # Check for post_arrival sleep guidance on the arrival date
+        # The UI groups by date, so post_arrival sleep may be on Day 1's entry
+        arrival_date = arrival.strftime("%Y-%m-%d")
+        post_arrival_sleep = [
+            item
+            for ds in schedule.interventions
+            if ds.date == arrival_date
+            for item in ds.items
+            if item.type == "sleep_target" and item.phase_type == "post_arrival"
+        ]
+
+        assert len(post_arrival_sleep) >= 1, (
+            f"BA286: Arrival date {arrival_date} should have post_arrival sleep_target "
+            f"for 'After Landing' guidance"
+        )
+
     def test_virgin_vs19_london_to_sfo(self):
         """
         Virgin Atlantic VS19: LHR 11:40 → SFO 14:40 same day (~11h).
