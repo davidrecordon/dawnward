@@ -42,6 +42,8 @@ interface TripFormProps {
   onSubmit?: () => void;
   isSubmitting?: boolean;
   isSignedIn?: boolean;
+  /** User preference: use 24-hour time format */
+  use24Hour?: boolean;
 }
 
 interface FormErrors {
@@ -67,6 +69,7 @@ export function TripForm({
   onSubmit,
   isSubmitting,
   isSignedIn = false,
+  use24Hour = false,
 }: TripFormProps) {
   const router = useRouter();
   const [errors, setErrors] = React.useState<FormErrors>({});
@@ -267,6 +270,7 @@ export function TripForm({
               value={formState.departureDateTime}
               onChange={(value) => updateField("departureDateTime", value)}
               hasError={!!errors.departureDateTime}
+              use24Hour={use24Hour}
             />
             <FieldError message={errors.departureDateTime} />
           </div>
@@ -276,6 +280,7 @@ export function TripForm({
               value={formState.arrivalDateTime}
               onChange={(value) => updateField("arrivalDateTime", value)}
               hasError={!!errors.arrivalDateTime}
+              use24Hour={use24Hour}
             />
             <FieldError message={errors.arrivalDateTime} />
           </div>
@@ -418,6 +423,7 @@ export function TripForm({
                     value={formState.wakeTime}
                     onChange={(value) => updateField("wakeTime", value)}
                     placeholder="Select wake time"
+                    use24Hour={use24Hour}
                   />
                 </div>
                 <div className="space-y-2">
@@ -426,6 +432,7 @@ export function TripForm({
                     value={formState.sleepTime}
                     onChange={(value) => updateField("sleepTime", value)}
                     placeholder="Select sleep time"
+                    use24Hour={use24Hour}
                   />
                 </div>
               </div>

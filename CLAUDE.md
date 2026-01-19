@@ -519,6 +519,7 @@ export default function MyFeatureDemo() {
 - `src/app/api/trips/__tests__/route.test.ts` - Trip CRUD and deduplication
 - `src/components/__tests__/header.test.tsx` - Session-aware header rendering
 - `src/components/__tests__/preferences-save-modal.test.tsx` - Preference save modal
+- `src/components/__tests__/display-preferences-context.test.tsx` - Display preferences context and hooks
 - `src/components/auth/__tests__/sign-in-button.test.tsx` - Sign-in button variants
 - `src/components/auth/__tests__/user-menu.test.tsx` - User menu, avatar initials
 - `src/components/schedule/__tests__/day-section.test.tsx` - Schedule day section rendering

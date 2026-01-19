@@ -44,6 +44,7 @@ export default async function SettingsPage() {
       scheduleIntensity: true,
       showDualTimezone: true,
       scheduleViewMode: true,
+      use24HourFormat: true,
     },
   });
 
@@ -83,6 +84,7 @@ export default async function SettingsPage() {
             scheduleIntensity: user.scheduleIntensity,
             showDualTimezone: user.showDualTimezone,
             scheduleViewMode: user.scheduleViewMode,
+            use24HourFormat: user.use24HourFormat,
           }}
         />
 

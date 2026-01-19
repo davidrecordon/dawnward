@@ -347,7 +347,7 @@ RATE_LIMIT_EXCEEDED: -32001,  // Custom
 From `prisma/schema.prisma`, the User model has:
 
 ```prisma
-// Implemented and functional (10 fields)
+// Schedule generation preferences (10 fields)
 defaultPrepDays      Int     @default(3)
 defaultWakeTime      String  @default("07:00")
 defaultSleepTime     String  @default("23:00")
@@ -358,6 +358,11 @@ napPreference        String  @default("flight_only")
 scheduleIntensity    String  @default("balanced")
 caffeineCutoffHours  Int     @default(8)
 lightExposureMinutes Int     @default(60)
+
+// Display preferences (3 fields)
+showDualTimezone     Boolean @default(false)
+scheduleViewMode     String  @default("summary")
+use24HourFormat      Boolean @default(false)
 ```
 
 ### Implementation Status
@@ -374,6 +379,9 @@ lightExposureMinutes Int     @default(60)
 | scheduleIntensity    | ✅     | ✅    | ✅  | ✅  | Working |
 | caffeineCutoffHours  | ✅     | ✅    | ✅  | ✅  | Working |
 | lightExposureMinutes | ✅     | ✅    | ✅  | ✅  | Working |
+| showDualTimezone     | ✅     | ✅    | ✅  | ✅  | Working |
+| scheduleViewMode     | ✅     | ✅    | ✅  | ✅  | Working |
+| use24HourFormat      | ✅     | ✅    | ✅  | ✅  | Working |
 
 ### Future Preference Candidates (Not Yet Implemented)
 
@@ -424,7 +432,7 @@ Constants are already discoverable via this audit document.
 | --------------------- | ----- | ----------------------------------------- |
 | Immutable Science     | ~36   | Leave as-is, document sources             |
 | Algorithm Config      | ~42   | Keep as module-level constants (decided)  |
-| User Preferences      | 10    | All working, 4 future candidates          |
+| User Preferences      | 13    | All working, 4 future candidates          |
 | Frontend Defaults     | ~26   | Mostly centralized, well-organized        |
 | Shift & Prep Days     | 4     | Prep day calculation thresholds           |
 | Schedule View         | 4     | UI timing and display thresholds          |

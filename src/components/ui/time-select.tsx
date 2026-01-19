@@ -11,6 +11,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+import { formatTime } from "@/lib/intervention-utils";
+
+// 12 hours * 4 intervals (every 15 min) = 48 options for AM, 48 for PM
+const TIME_OPTIONS_PER_PERIOD = 48;
 
 interface TimeSelectProps {
   value: string; // "HH:MM" 24-hour format
@@ -18,31 +22,23 @@ interface TimeSelectProps {
   placeholder?: string;
   className?: string;
   hasError?: boolean;
+  /** If true, use 24-hour time format (default: false = 12-hour) */
+  use24Hour?: boolean;
 }
 
 /**
- * Generate time options with AM first, then PM, in 15-minute increments.
- * Returns array of { value: "HH:MM", label: "H:MM AM/PM" }
+ * Generate time options in 15-minute increments.
+ * @param use24Hour - If true, use 24-hour format; otherwise 12-hour
  */
-function generateTimeOptions(): { value: string; label: string }[] {
+function generateTimeOptions(
+  use24Hour: boolean
+): { value: string; label: string }[] {
   const options: { value: string; label: string }[] = [];
 
-  // Generate AM times (00:00 - 11:45)
-  for (let hour = 0; hour < 12; hour++) {
+  for (let hour = 0; hour < 24; hour++) {
     for (let minute = 0; minute < 60; minute += 15) {
       const value = `${hour.toString().padStart(2, "0")}:${minute.toString().padStart(2, "0")}`;
-      const displayHour = hour === 0 ? 12 : hour;
-      const label = `${displayHour}:${minute.toString().padStart(2, "0")} AM`;
-      options.push({ value, label });
-    }
-  }
-
-  // Generate PM times (12:00 - 23:45)
-  for (let hour = 12; hour < 24; hour++) {
-    for (let minute = 0; minute < 60; minute += 15) {
-      const value = `${hour.toString().padStart(2, "0")}:${minute.toString().padStart(2, "0")}`;
-      const displayHour = hour === 12 ? 12 : hour - 12;
-      const label = `${displayHour}:${minute.toString().padStart(2, "0")} PM`;
+      const label = formatTime(value, use24Hour);
       options.push({ value, label });
     }
   }
@@ -50,7 +46,9 @@ function generateTimeOptions(): { value: string; label: string }[] {
   return options;
 }
 
-const TIME_OPTIONS = generateTimeOptions();
+// Pre-computed options for both formats
+const TIME_OPTIONS_12H = generateTimeOptions(false);
+const TIME_OPTIONS_24H = generateTimeOptions(true);
 
 export function TimeSelect({
   value,
@@ -58,7 +56,10 @@ export function TimeSelect({
   placeholder = "Select time",
   className,
   hasError,
+  use24Hour = false,
 }: TimeSelectProps) {
+  const timeOptions = use24Hour ? TIME_OPTIONS_24H : TIME_OPTIONS_12H;
+
   return (
     <Select value={value} onValueChange={onChange}>
       <SelectTrigger
@@ -72,22 +73,34 @@ export function TimeSelect({
         <SelectValue placeholder={placeholder} />
       </SelectTrigger>
       <SelectContent className="max-h-60">
-        <SelectGroup>
-          <SelectLabel>AM</SelectLabel>
-          {TIME_OPTIONS.slice(0, 48).map((option) => (
-            <SelectItem key={option.value} value={option.value}>
-              {option.label}
-            </SelectItem>
-          ))}
-        </SelectGroup>
-        <SelectGroup>
-          <SelectLabel>PM</SelectLabel>
-          {TIME_OPTIONS.slice(48).map((option) => (
-            <SelectItem key={option.value} value={option.value}>
-              {option.label}
-            </SelectItem>
-          ))}
-        </SelectGroup>
+        {!use24Hour ? (
+          <>
+            <SelectGroup>
+              <SelectLabel>AM</SelectLabel>
+              {timeOptions.slice(0, TIME_OPTIONS_PER_PERIOD).map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectGroup>
+            <SelectGroup>
+              <SelectLabel>PM</SelectLabel>
+              {timeOptions.slice(TIME_OPTIONS_PER_PERIOD).map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectGroup>
+          </>
+        ) : (
+          <SelectGroup>
+            {timeOptions.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectGroup>
+        )}
       </SelectContent>
     </Select>
   );

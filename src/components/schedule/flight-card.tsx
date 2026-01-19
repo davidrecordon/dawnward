@@ -4,6 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Plane, PlaneTakeoff, PlaneLanding } from "lucide-react";
 import { formatTimeWithTimezone } from "@/lib/intervention-utils";
+import { useUse24HourFormat } from "@/components/display-preferences-context";
 import type { Airport } from "@/types/airport";
 
 interface FlightCardProps {
@@ -22,6 +23,7 @@ export function FlightCard({
   destination,
   timezone,
 }: FlightCardProps): React.JSX.Element {
+  const use24Hour = useUse24HourFormat();
   const isDeparture = type === "departure";
   const Icon = isDeparture ? PlaneTakeoff : PlaneLanding;
   const title = isDeparture
@@ -45,7 +47,7 @@ export function FlightCard({
           <p className="text-sm text-sky-600">{subtitle}</p>
         </div>
         <Badge className="shrink-0 bg-sky-500 font-medium text-white hover:bg-sky-500">
-          {formatTimeWithTimezone(time, timezone)}
+          {formatTimeWithTimezone(time, timezone, undefined, use24Hour)}
         </Badge>
       </CardContent>
     </Card>

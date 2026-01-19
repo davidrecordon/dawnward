@@ -33,6 +33,7 @@ interface UserPreferences {
   scheduleIntensity: string;
   showDualTimezone: boolean;
   scheduleViewMode: string;
+  use24HourFormat: boolean;
 }
 
 interface SettingsFormProps {
@@ -101,6 +102,7 @@ export function SettingsForm({ initialPreferences }: SettingsFormProps) {
               <TimeSelect
                 value={preferences.defaultWakeTime}
                 onChange={(val) => updateField("defaultWakeTime", val)}
+                use24Hour={preferences.use24HourFormat}
               />
             </div>
             <div className="space-y-2">
@@ -111,6 +113,7 @@ export function SettingsForm({ initialPreferences }: SettingsFormProps) {
               <TimeSelect
                 value={preferences.defaultSleepTime}
                 onChange={(val) => updateField("defaultSleepTime", val)}
+                use24Hour={preferences.use24HourFormat}
               />
             </div>
           </div>
@@ -288,6 +291,15 @@ export function SettingsForm({ initialPreferences }: SettingsFormProps) {
             description="Always display times in both origin and destination timezones"
             checked={preferences.showDualTimezone}
             onCheckedChange={(val) => updateField("showDualTimezone", val)}
+            colorScheme="sky"
+          />
+
+          <PreferenceToggle
+            icon={<Clock className="h-4 w-4" />}
+            title="Use 24-hour time"
+            description="Display times as 14:00 instead of 2:00 PM"
+            checked={preferences.use24HourFormat}
+            onCheckedChange={(val) => updateField("use24HourFormat", val)}
             colorScheme="sky"
           />
         </CardContent>

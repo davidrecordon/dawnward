@@ -10,6 +10,8 @@ interface DateTimeSelectProps {
   onChange: (value: string) => void;
   className?: string;
   hasError?: boolean;
+  /** If true, use 24-hour time format (default: false = 12-hour) */
+  use24Hour?: boolean;
 }
 
 /**
@@ -32,6 +34,7 @@ export function DateTimeSelect({
   onChange,
   className,
   hasError,
+  use24Hour = false,
 }: DateTimeSelectProps) {
   const dateInputRef = React.useRef<HTMLInputElement>(null);
 
@@ -109,6 +112,7 @@ export function DateTimeSelect({
         placeholder="Time"
         className="w-32"
         hasError={hasError}
+        use24Hour={use24Hour}
       />
     </div>
   );

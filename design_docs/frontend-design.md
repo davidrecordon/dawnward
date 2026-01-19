@@ -174,6 +174,10 @@ background: linear-gradient(
 - Toggle: Include melatonin — "Low-dose timed supplements (0.5mg)"
 - Toggle: Include caffeine timing — "Strategic coffee windows and cutoffs"
 
+**Display Settings card:**
+
+- Toggle: Use 24-hour time — "Display times as 14:00 instead of 2:00 PM"
+
 **Account card:**
 
 - Signed out: "Sign in to save your preferences and sync trips" + Google sign-in button

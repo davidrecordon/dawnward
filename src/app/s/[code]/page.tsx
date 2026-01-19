@@ -5,6 +5,8 @@ import {
   mapSharedScheduleToTripData,
   incrementViewCount,
 } from "@/lib/trip-utils";
+import { extractDisplayPreferences } from "@/types/user-preferences";
+import { DisplayPreferencesProvider } from "@/components/display-preferences-context";
 import { TripScheduleView } from "@/components/trip-schedule-view";
 
 interface Props {
@@ -36,7 +38,11 @@ export default async function SharedSchedulePage({ params }: Props) {
   const userPrefs = session?.user?.id
     ? await prisma.user.findUnique({
         where: { id: session.user.id },
-        select: { showDualTimezone: true, scheduleViewMode: true },
+        select: {
+          showDualTimezone: true,
+          scheduleViewMode: true,
+          use24HourFormat: true,
+        },
       })
     : null;
 
@@ -45,18 +51,19 @@ export default async function SharedSchedulePage({ params }: Props) {
     incrementViewCount(prisma, shared.id);
   }
 
+  const displayPrefs = extractDisplayPreferences(userPrefs);
+  const isAnonymous = !session?.user?.id;
+
   return (
-    <TripScheduleView
-      tripId={shared.id}
-      tripData={mapSharedScheduleToTripData(shared)}
-      isOwner={isOwner}
-      isLoggedIn={!!session?.user}
-      hasCalendarScope={session?.hasCalendarScope ?? false}
-      sharerName={shared.user?.name ?? null}
-      showDualTimezone={userPrefs?.showDualTimezone ?? false}
-      scheduleViewMode={
-        (userPrefs?.scheduleViewMode as "summary" | "timeline") ?? "summary"
-      }
-    />
+    <DisplayPreferencesProvider {...displayPrefs} detectLocale={isAnonymous}>
+      <TripScheduleView
+        tripId={shared.id}
+        tripData={mapSharedScheduleToTripData(shared)}
+        isOwner={isOwner}
+        isLoggedIn={!!session?.user}
+        hasCalendarScope={session?.hasCalendarScope ?? false}
+        sharerName={shared.user?.name ?? null}
+      />
+    </DisplayPreferencesProvider>
   );
 }

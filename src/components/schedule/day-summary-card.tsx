@@ -12,6 +12,7 @@ import {
   getDayCardGradient,
   FLIGHT_DAY,
 } from "@/lib/intervention-utils";
+import { useUse24HourFormat } from "@/components/display-preferences-context";
 import { formatLongDate, formatShortDate } from "@/lib/time-utils";
 import {
   getDisplayTime,
@@ -84,9 +85,11 @@ export interface DaySummaryCardProps {
 function SummaryInterventionRow({
   intervention,
   showFlightOffset = false,
+  use24Hour,
 }: {
   intervention: Intervention;
   showFlightOffset?: boolean;
+  use24Hour: boolean;
 }) {
   const style = getInterventionStyle(intervention.type);
   const Icon = style.icon;
@@ -112,11 +115,11 @@ function SummaryInterventionRow({
         <span className="text-sm font-semibold whitespace-nowrap text-slate-700 tabular-nums">
           {showFlightOffset && hasFlightOffset
             ? formatFlightOffset(intervention.flight_offset_hours!)
-            : formatTime(displayTime)}
+            : formatTime(displayTime, use24Hour)}
         </span>
         {hasOriginalTime && (
           <div className="text-[10px] text-slate-400 italic">
-            target: {formatTime(intervention.original_time!)}
+            target: {formatTime(intervention.original_time!, use24Hour)}
           </div>
         )}
       </div>
@@ -169,11 +172,13 @@ function FlightEventRow({
   time,
   origin,
   destination,
+  use24Hour,
 }: {
   type: "departure" | "arrival";
   time: string;
   origin: Airport;
   destination: Airport;
+  use24Hour: boolean;
 }) {
   const isDeparture = type === "departure";
 
@@ -187,7 +192,7 @@ function FlightEventRow({
         )}
       </div>
       <span className="w-[72px] shrink-0 text-sm font-semibold text-slate-700 tabular-nums">
-        {formatTime(time)}
+        {formatTime(time, use24Hour)}
       </span>
       <span className="text-sm text-slate-600">
         {isDeparture
@@ -240,6 +245,7 @@ function SummaryContent({
   departureTime,
   arrivalDate,
   arrivalTime,
+  use24Hour,
 }: {
   daySchedule: DaySchedule;
   origin: Airport;
@@ -248,6 +254,7 @@ function SummaryContent({
   departureTime: string;
   arrivalDate: string;
   arrivalTime: string;
+  use24Hour: boolean;
 }) {
   const isFlightDay = daySchedule.day === FLIGHT_DAY;
   const hasDeparture = daySchedule.date === departureDate;
@@ -276,6 +283,7 @@ function SummaryContent({
               <SummaryInterventionRow
                 key={`before-${item.type}-${getDisplayTime(item)}-${i}`}
                 intervention={item}
+                use24Hour={use24Hour}
               />
             ))}
             {hasDeparture && (
@@ -284,6 +292,7 @@ function SummaryContent({
                 time={departureTime}
                 origin={origin}
                 destination={destination}
+                use24Hour={use24Hour}
               />
             )}
           </>
@@ -296,7 +305,7 @@ function SummaryContent({
               title="On the Plane"
               subtitle={
                 hasDeparture
-                  ? `${formatTime(departureTime)} from ${origin.code}`
+                  ? `${formatTime(departureTime, use24Hour)} from ${origin.code}`
                   : undefined
               }
               variant="transit"
@@ -306,6 +315,7 @@ function SummaryContent({
                 key={`transit-${item.type}-${getDisplayTime(item)}-${i}`}
                 intervention={item}
                 showFlightOffset
+                use24Hour={use24Hour}
               />
             ))}
           </>
@@ -318,7 +328,7 @@ function SummaryContent({
               title="After Landing"
               subtitle={
                 hasArrival
-                  ? `${formatTime(arrivalTime)} at ${destination.code}`
+                  ? `${formatTime(arrivalTime, use24Hour)} at ${destination.code}`
                   : undefined
               }
               variant="after"
@@ -329,12 +339,14 @@ function SummaryContent({
                 time={arrivalTime}
                 origin={origin}
                 destination={destination}
+                use24Hour={use24Hour}
               />
             )}
             {groups.afterLanding.map((item, i) => (
               <SummaryInterventionRow
                 key={`after-${item.type}-${getDisplayTime(item)}-${i}`}
                 intervention={item}
+                use24Hour={use24Hour}
               />
             ))}
           </>
@@ -350,6 +362,7 @@ function SummaryContent({
         <SummaryInterventionRow
           key={`${item.type}-${getDisplayTime(item)}-${i}`}
           intervention={item}
+          use24Hour={use24Hour}
         />
       ))}
     </>
@@ -377,6 +390,7 @@ export function DaySummaryCard({
   onExpandChange,
   disableExpand = false,
 }: DaySummaryCardProps) {
+  const use24Hour = useUse24HourFormat();
   const [internalExpanded, setInternalExpanded] = useState(false);
   const isExpanded = controlledExpanded ?? internalExpanded;
   // Allow expand if either renderExpanded or onExpandChange is provided
@@ -479,6 +493,7 @@ export function DaySummaryCard({
                 departureTime={departureTime}
                 arrivalDate={arrivalDate}
                 arrivalTime={arrivalTime}
+                use24Hour={use24Hour}
               />
             </CardContent>
           )}
@@ -491,11 +506,14 @@ export function DaySummaryCard({
 /**
  * Format a day's interventions as plain text (for emails/calendar).
  */
-export function formatDayForText(daySchedule: DaySchedule): string {
+export function formatDayForText(
+  daySchedule: DaySchedule,
+  use24Hour = false
+): string {
   return daySchedule.items
     .map((item) => {
       const emoji = getInterventionEmoji(item.type);
-      const time = formatTime(getDisplayTime(item));
+      const time = formatTime(getDisplayTime(item), use24Hour);
       const desc = getCondensedDescription(item.type);
       return `${emoji}  ${time}   ${desc}`;
     })

@@ -111,9 +111,17 @@ export function getInterventionStyle(
 
 /**
  * Format time from HH:MM to a more readable format
+ * @param time - Time in HH:MM 24-hour format
+ * @param use24Hour - If true, display as 24-hour; if false (default), display as 12-hour with AM/PM
  */
-export function formatTime(time: string): string {
+export function formatTime(time: string, use24Hour = false): string {
   const [hours, minutes] = time.split(":").map(Number);
+
+  if (use24Hour) {
+    return `${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}`;
+  }
+
+  // 12-hour format
   const period = hours >= 12 ? "PM" : "AM";
   const displayHours = hours % 12 || 12;
   return `${displayHours}:${minutes.toString().padStart(2, "0")} ${period}`;
@@ -221,14 +229,16 @@ export function getTimezoneAbbr(tz: string, date?: Date): string {
  * @param time - Time in HH:MM format
  * @param timezone - Optional IANA timezone
  * @param date - Optional date for DST calculation
- * @returns Formatted time like "9:00 AM PST" or "9:00 AM"
+ * @param use24Hour - If true, display as 24-hour; if false (default), display as 12-hour with AM/PM
+ * @returns Formatted time like "9:00 AM PST" or "9:00 AM" (12h) or "09:00 PST" (24h)
  */
 export function formatTimeWithTimezone(
   time: string,
   timezone?: string,
-  date?: Date
+  date?: Date,
+  use24Hour = false
 ): string {
-  const formattedTime = formatTime(time);
+  const formattedTime = formatTime(time, use24Hour);
   if (!timezone) return formattedTime;
   return `${formattedTime} ${getTimezoneAbbr(timezone, date)}`;
 }
@@ -293,12 +303,14 @@ export function isEditableIntervention(type: InterventionType): boolean {
  *
  * @param intervention - Intervention with timezone context
  * @param forceDual - If true, always show dual times (user preference)
+ * @param use24Hour - If true, display as 24-hour; if false (default), display as 12-hour with AM/PM
  * @returns Object with formatted origin and destination times with abbreviations,
  *          or null if the intervention shouldn't show dual timezone or lacks required fields
  */
 export function formatDualTimezones(
   intervention: Intervention,
-  forceDual = false
+  forceDual = false,
+  use24Hour = false
 ): {
   originTime: string;
   destTime: string;
@@ -332,7 +344,7 @@ export function formatDualTimezones(
   const destDateObj = new Date(dest_date + "T00:00:00");
 
   return {
-    originTime: `${formatTime(origin_time)} ${getTimezoneAbbr(origin_tz, originDateObj)}`,
-    destTime: `${formatTime(dest_time)} ${getTimezoneAbbr(dest_tz, destDateObj)}`,
+    originTime: `${formatTime(origin_time, use24Hour)} ${getTimezoneAbbr(origin_tz, originDateObj)}`,
+    destTime: `${formatTime(dest_time, use24Hour)} ${getTimezoneAbbr(dest_tz, destDateObj)}`,
   };
 }

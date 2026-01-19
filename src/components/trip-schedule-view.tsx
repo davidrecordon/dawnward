@@ -47,6 +47,7 @@ const CALENDAR_SYNC_ENABLED =
   process.env.NEXT_PUBLIC_FEATURE_CALENDAR_SYNC === "true";
 import { EditPreferencesModal } from "@/components/trip/edit-preferences-modal";
 import { RecordActualSheet } from "@/components/trip/record-actual-sheet";
+import { useDisplayPreferences } from "@/components/display-preferences-context";
 import { getDayLabel, formatShortDate } from "@/lib/intervention-utils";
 import { mergePhasesByDate } from "@/lib/schedule-utils";
 import { getActualKey, buildActualsMap } from "@/lib/actuals-utils";
@@ -76,10 +77,6 @@ interface TripScheduleViewProps {
   isLoggedIn: boolean;
   hasCalendarScope: boolean;
   sharerName: string | null;
-  /** User preference: always show both origin and destination timezones */
-  showDualTimezone?: boolean;
-  /** User preference: default view mode for schedule (summary or timeline) */
-  scheduleViewMode?: "summary" | "timeline";
 }
 
 // Minimal airport info for display
@@ -126,9 +123,10 @@ export function TripScheduleView({
   isLoggedIn,
   hasCalendarScope,
   sharerName,
-  showDualTimezone = false,
-  scheduleViewMode = "summary",
 }: TripScheduleViewProps) {
+  // Get display preferences from context (provided by page-level wrapper)
+  const { showDualTimezone, scheduleViewMode } = useDisplayPreferences();
+
   const [schedule, setSchedule] = useState<ScheduleResponse | null>(null);
 
   // Track which days are expanded
