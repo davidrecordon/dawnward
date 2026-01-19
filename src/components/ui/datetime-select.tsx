@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { Calendar } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { TimeSelect } from "@/components/ui/time-select";
 import { cn } from "@/lib/utils";
@@ -46,16 +47,29 @@ export function DateTimeSelect({
 
   return (
     <div className={cn("flex gap-2", className)}>
-      <Input
-        type="date"
-        value={datePart}
-        onChange={handleDateChange}
-        className={cn(
-          "flex-1 bg-white",
-          hasError && "border-[#F4A574] ring-[#F4A574]/20"
+      {/* Wrapper for date input with iOS placeholder fix */}
+      <div className="relative flex-1">
+        <Input
+          type="date"
+          value={datePart}
+          onChange={handleDateChange}
+          className={cn(
+            "w-full bg-white",
+            // On iOS, empty date inputs show blank - make text transparent when empty
+            // so placeholder overlay is visible
+            !datePart && "text-transparent",
+            hasError && "border-[#F4A574] ring-[#F4A574]/20"
+          )}
+          aria-invalid={hasError}
+        />
+        {/* Placeholder overlay for iOS - hidden when date is selected */}
+        {!datePart && (
+          <div className="text-muted-foreground pointer-events-none absolute inset-0 flex items-center gap-2 px-3 text-sm">
+            <Calendar className="h-4 w-4 shrink-0 opacity-50" />
+            <span>Select date</span>
+          </div>
         )}
-        aria-invalid={hasError}
-      />
+      </div>
       <TimeSelect
         value={timePart}
         onChange={handleTimeChange}
