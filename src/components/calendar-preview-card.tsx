@@ -1,9 +1,8 @@
 "use client";
 
-import { signIn } from "next-auth/react";
 import { Calendar, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { CALENDAR_SCOPES } from "@/auth.config";
+import { requestCalendarPermission } from "@/lib/calendar-auth";
 
 interface CalendarPreviewCardProps {
   isLoggedIn: boolean;
@@ -15,10 +14,7 @@ export function CalendarPreviewCard({
   hasCalendarScope,
 }: CalendarPreviewCardProps) {
   const handleSetupCalendar = () => {
-    signIn("google", {
-      callbackUrl: window.location.pathname,
-      scope: CALENDAR_SCOPES,
-    });
+    requestCalendarPermission(window.location.pathname);
   };
 
   // State 3: Connected
@@ -62,10 +58,7 @@ export function CalendarPreviewCard({
 
   // State 1: Not logged in - sign in with calendar scope
   const handleSignInWithCalendar = () => {
-    signIn("google", {
-      callbackUrl: window.location.pathname,
-      scope: CALENDAR_SCOPES,
-    });
+    requestCalendarPermission(window.location.pathname);
   };
 
   return (

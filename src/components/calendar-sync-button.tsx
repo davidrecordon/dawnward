@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { signIn, useSession } from "next-auth/react";
+import { useSession } from "next-auth/react";
 import {
   Calendar,
   Check,
@@ -25,7 +25,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { CALENDAR_SCOPES } from "@/auth.config";
+import { requestCalendarPermission } from "@/lib/calendar-auth";
 
 interface CalendarSyncButtonProps {
   tripId: string;
@@ -178,11 +178,7 @@ export function CalendarSyncButton({ tripId }: CalendarSyncButtonProps) {
 
   // Handle calendar authorization
   const handleAuthorizeCalendar = () => {
-    // Sign in with calendar scope, then redirect back
-    signIn("google", {
-      callbackUrl: `/trip/${tripId}`,
-      scope: CALENDAR_SCOPES,
-    });
+    requestCalendarPermission(`/trip/${tripId}`);
   };
 
   // Not synced - show "Add to Calendar" button
