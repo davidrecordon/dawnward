@@ -185,6 +185,19 @@ export function buildEventTitle(interventions: Intervention[]): string {
 }
 
 /**
+ * Simplify intervention descriptions for calendar events.
+ * Some intervention types have verbose descriptions that are redundant
+ * when there are dedicated events for related guidance (e.g., light_avoid).
+ */
+function simplifyDescription(intervention: Intervention): string {
+  if (intervention.type === "wake_target") {
+    // Remove light advice - there's a separate light_seek/light_avoid event
+    return "Try to wake up at this time to help shift your circadian clock.";
+  }
+  return intervention.description;
+}
+
+/**
  * Build event description from grouped interventions.
  * Appends Dawnward footer for attribution.
  */
@@ -193,10 +206,10 @@ export function buildEventDescription(interventions: Intervention[]): string {
 
   if (interventions.length === 1) {
     // Single intervention: just the description, no bullet
-    description = interventions[0].description;
+    description = simplifyDescription(interventions[0]);
   } else {
     // Multiple interventions: bullet list
-    description = interventions.map((i) => `• ${i.description}`).join("\n");
+    description = interventions.map((i) => `• ${simplifyDescription(i)}`).join("\n");
   }
 
   return `${description}\n\n---\n${EVENT_FOOTER}`;

@@ -205,11 +205,13 @@ describe("buildEventTitle", () => {
 
 describe("buildEventDescription", () => {
   const FOOTER = "Created by Dawnward · dawnward.app";
+  const SIMPLIFIED_WAKE_DESC =
+    "Try to wake up at this time to help shift your circadian clock.";
 
   it("creates bullet list of descriptions with footer", () => {
     const interventions = [
       makeIntervention("wake_target", "07:00", {
-        description: "Wake up at target time",
+        description: "Wake up at target time. Avoid bright light.",
       }),
       makeIntervention("light_seek", "07:00", {
         description: "Get 30 minutes of bright light",
@@ -218,9 +220,25 @@ describe("buildEventDescription", () => {
 
     const description = buildEventDescription(interventions);
 
+    // wake_target uses simplified description (removes redundant light advice)
     expect(description).toBe(
-      `• Wake up at target time\n• Get 30 minutes of bright light\n\n---\n${FOOTER}`
+      `• ${SIMPLIFIED_WAKE_DESC}\n• Get 30 minutes of bright light\n\n---\n${FOOTER}`
     );
+  });
+
+  it("simplifies wake_target description for single intervention", () => {
+    const interventions = [
+      makeIntervention("wake_target", "07:00", {
+        description:
+          "Try to wake up at this time to help shift your circadian clock. Avoid bright light for the first few hours after waking.",
+      }),
+    ];
+
+    const description = buildEventDescription(interventions);
+
+    // Light advice should be removed
+    expect(description).toBe(`${SIMPLIFIED_WAKE_DESC}\n\n---\n${FOOTER}`);
+    expect(description).not.toContain("Avoid bright light");
   });
 
   it("handles single intervention without bullet but with footer", () => {
@@ -232,6 +250,20 @@ describe("buildEventDescription", () => {
 
     expect(buildEventDescription(interventions)).toBe(
       `Take 0.5mg melatonin\n\n---\n${FOOTER}`
+    );
+  });
+
+  it("preserves descriptions for non-wake_target types", () => {
+    const interventions = [
+      makeIntervention("light_seek", "07:00", {
+        description: "Get 30 minutes of morning sunlight",
+      }),
+    ];
+
+    const description = buildEventDescription(interventions);
+
+    expect(description).toBe(
+      `Get 30 minutes of morning sunlight\n\n---\n${FOOTER}`
     );
   });
 });
