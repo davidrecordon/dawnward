@@ -2,48 +2,45 @@
 import "dotenv/config";
 
 /**
- * Debug calendar event creation for a trip.
+ * Calendar Debug & Sync Script
  *
- * This script shows what calendar events WOULD be created for a trip,
- * without actually calling the Google Calendar API. Useful for verifying
- * timezone handling and event grouping before sync.
- *
- * Two modes:
+ * Preview and sync calendar events for trips. Supports three modes:
  *   1. Load from database by trip ID
- *   2. Generate fresh from flight parameters or presets
+ *   2. Generate fresh from flight presets
+ *   3. Generate from custom flight parameters
  *
  * Usage:
- *   # Load from database
+ *   # Preview events (dry-run, default)
  *   npx tsx scripts/debug-calendar.ts <trip-id>
- *   npx tsx scripts/debug-calendar.ts <trip-id> --verbose
- *
- *   # Use a flight preset
  *   npx tsx scripts/debug-calendar.ts --preset=SQ31
- *   npx tsx scripts/debug-calendar.ts --preset=VS20 --verbose
+ *
+ *   # Actually sync to Google Calendar
+ *   npx tsx scripts/debug-calendar.ts <trip-id> --sync
+ *   npx tsx scripts/debug-calendar.ts <trip-id> --resync  # delete + create
+ *   npx tsx scripts/debug-calendar.ts <trip-id> --delete  # delete only
+ *
+ *   # List available presets
  *   npx tsx scripts/debug-calendar.ts --list-presets
  *
  *   # Custom flight parameters
  *   npx tsx scripts/debug-calendar.ts --origin=SFO --dest=SIN \
  *     --depart="2026-01-22T09:45" --arrive="2026-01-23T19:00"
  *
- *   # With all options:
- *   npx tsx scripts/debug-calendar.ts \
- *     --origin-tz=America/Los_Angeles \
- *     --dest-tz=Asia/Singapore \
- *     --depart="2026-01-22T09:45" \
- *     --arrive="2026-01-23T19:00" \
- *     --prep-days=3 \
- *     --wake=07:00 \
- *     --sleep=22:00 \
- *     --melatonin \
- *     --caffeine \
- *     --verbose
+ *   # Additional options
+ *   --verbose, -v      Show full event descriptions
+ *   --prep-days=N      Preparation days (default: 3)
+ *   --wake=HH:MM       Wake time (default: 07:00)
+ *   --sleep=HH:MM      Sleep time (default: 22:00)
+ *   --no-melatonin     Disable melatonin
+ *   --no-caffeine      Disable caffeine
  */
 
 import { prisma } from "../src/lib/prisma";
 import {
   groupInterventionsByAnchor,
   buildCalendarEvent,
+  createCalendarEvent,
+  deleteCalendarEvents,
 } from "../src/lib/google-calendar";
 import type { ScheduleResponse, PhaseType } from "../src/types/schedule";
 
@@ -277,6 +274,10 @@ interface ParsedArgs {
   usesCaffeine: boolean;
   verbose: boolean;
   listPresets: boolean;
+  // Sync options
+  sync: boolean;
+  resync: boolean;
+  deleteOnly: boolean;
 }
 
 function parseArgs(): ParsedArgs {
@@ -295,11 +296,20 @@ function parseArgs(): ParsedArgs {
     usesCaffeine: true,
     verbose: false,
     listPresets: false,
+    sync: false,
+    resync: false,
+    deleteOnly: false,
   };
 
   for (const arg of args) {
     if (arg === "--verbose" || arg === "-v") {
       result.verbose = true;
+    } else if (arg === "--sync") {
+      result.sync = true;
+    } else if (arg === "--resync") {
+      result.resync = true;
+    } else if (arg === "--delete") {
+      result.deleteOnly = true;
     } else if (arg === "--melatonin") {
       result.usesMelatonin = true;
     } else if (arg === "--no-melatonin") {
@@ -343,28 +353,31 @@ function parseArgs(): ParsedArgs {
 
 function printUsage() {
   console.error("Usage:");
-  console.error("  npx tsx scripts/debug-calendar.ts <trip-id> [--verbose]");
-  console.error(
-    "  npx tsx scripts/debug-calendar.ts --preset=CODE [--verbose]"
-  );
+  console.error("  npx tsx scripts/debug-calendar.ts <trip-id> [options]");
+  console.error("  npx tsx scripts/debug-calendar.ts --preset=CODE [options]");
   console.error(
     "  npx tsx scripts/debug-calendar.ts --origin=SFO --dest=SIN --depart=... --arrive=..."
   );
   console.error("");
-  console.error("Options:");
+  console.error("Schedule Source:");
   console.error("  <trip-id>          Load trip from database by ID");
   console.error(
     "  --preset=CODE      Use a flight preset (e.g., SQ31, VS20, QF74)"
   );
   console.error("  --list-presets     List all available presets");
   console.error("  --origin=CODE      Origin airport code (e.g., SFO)");
-  console.error("  --origin-tz=TZ     Origin IANA timezone");
   console.error("  --dest=CODE        Destination airport code");
-  console.error("  --dest-tz=TZ       Destination IANA timezone");
   console.error(
     "  --depart=DATETIME  Departure datetime (e.g., 2026-01-22T09:45)"
   );
   console.error("  --arrive=DATETIME  Arrival datetime");
+  console.error("");
+  console.error("Sync Options (requires trip-id):");
+  console.error("  --sync             Create events in Google Calendar");
+  console.error("  --resync           Delete existing + create new events");
+  console.error("  --delete           Delete existing events only");
+  console.error("");
+  console.error("Schedule Options:");
   console.error("  --prep-days=N      Preparation days (default: 3)");
   console.error("  --wake=HH:MM       Wake time (default: 07:00)");
   console.error("  --sleep=HH:MM      Sleep time (default: 22:00)");
@@ -375,6 +388,9 @@ function printUsage() {
   console.error("Examples:");
   console.error(
     "  npx tsx scripts/debug-calendar.ts cmk95fhzn000104jssj2wfm3g"
+  );
+  console.error(
+    "  npx tsx scripts/debug-calendar.ts cmk95fhzn000104jssj2wfm3g --sync"
   );
   console.error("  npx tsx scripts/debug-calendar.ts --preset=SQ31");
   console.error("  npx tsx scripts/debug-calendar.ts --preset=QF74 --verbose");
@@ -431,26 +447,25 @@ function printPresets() {
 // Schedule Loading
 // =============================================================================
 
-/** Load schedule from database by trip ID */
-async function loadFromDatabase(tripId: string): Promise<{
+interface TripData {
+  tripId: string;
+  userId: string | null;
   schedule: ScheduleResponse;
   label: string;
   originTz: string;
   destTz: string;
   departure: string;
   arrival: string;
-}> {
+  existingSyncId: string | null;
+  existingEventIds: string[];
+}
+
+/** Load schedule from database by trip ID */
+async function loadFromDatabase(tripId: string): Promise<TripData> {
   const trip = await prisma.sharedSchedule.findUnique({
     where: { id: tripId },
-    select: {
-      id: true,
-      routeLabel: true,
-      originTz: true,
-      destTz: true,
-      departureDatetime: true,
-      arrivalDatetime: true,
-      initialScheduleJson: true,
-      currentScheduleJson: true,
+    include: {
+      calendarSyncs: true,
     },
   });
 
@@ -475,14 +490,177 @@ async function loadFromDatabase(tripId: string): Promise<{
       ? arrDate.toISOString()
       : String(trip.arrivalDatetime);
 
+  const existingSync = trip.calendarSyncs[0];
+
   return {
+    tripId: trip.id,
+    userId: trip.userId,
     schedule: scheduleJson as unknown as ScheduleResponse,
     label: trip.routeLabel || "Unnamed",
     originTz: trip.originTz,
     destTz: trip.destTz,
     departure,
     arrival,
+    existingSyncId: existingSync?.id ?? null,
+    existingEventIds: (existingSync?.googleEventIds as string[]) ?? [],
   };
+}
+
+// =============================================================================
+// Google Calendar Sync
+// =============================================================================
+
+/** Get Google access token for a user from the Account table */
+async function getAccessToken(userId: string): Promise<string> {
+  const account = await prisma.account.findFirst({
+    where: {
+      userId,
+      provider: "google",
+    },
+  });
+
+  if (!account) {
+    throw new Error(`No Google account found for user: ${userId}`);
+  }
+
+  if (!account.access_token) {
+    throw new Error(
+      "Google account has no access token. User may need to re-authenticate."
+    );
+  }
+
+  // Check if token might be expired
+  if (account.expires_at) {
+    const expiresAt = new Date(account.expires_at * 1000);
+    if (expiresAt < new Date()) {
+      console.warn(
+        `⚠️  Access token may be expired (expired: ${expiresAt.toISOString()})`
+      );
+      console.warn(
+        "   If sync fails, user needs to sign out and back in to refresh token."
+      );
+    }
+  }
+
+  // Check if token has calendar scope
+  if (account.scope && !account.scope.includes("calendar")) {
+    throw new Error(
+      "Google account does not have calendar scope. User needs to grant calendar permission."
+    );
+  }
+
+  return account.access_token;
+}
+
+/** Delete existing calendar events */
+async function deleteExistingEvents(
+  accessToken: string,
+  eventIds: string[]
+): Promise<{ deleted: number; failed: number }> {
+  if (eventIds.length === 0) {
+    console.log("📭 No existing events to delete");
+    return { deleted: 0, failed: 0 };
+  }
+
+  console.log(`\n🗑️  Deleting ${eventIds.length} existing events...`);
+
+  const result = await deleteCalendarEvents(accessToken, eventIds);
+
+  console.log(`   ✅ Deleted: ${result.deleted.length}`);
+  if (result.failed.length > 0) {
+    console.log(`   ❌ Failed: ${result.failed.length}`);
+    for (const id of result.failed) {
+      console.log(`      - ${id}`);
+    }
+  }
+
+  return { deleted: result.deleted.length, failed: result.failed.length };
+}
+
+/** Create calendar events from schedule */
+async function createEvents(
+  accessToken: string,
+  schedule: ScheduleResponse,
+  verbose: boolean
+): Promise<{ created: string[]; failed: number }> {
+  console.log("\n📤 Creating calendar events...\n");
+
+  const created: string[] = [];
+  let failed = 0;
+
+  for (const day of schedule.interventions) {
+    console.log(`📅 Day ${day.day} (${day.date})`);
+
+    const groups = groupInterventionsByAnchor(day.items);
+
+    for (const [, interventions] of groups) {
+      try {
+        const event = buildCalendarEvent(interventions);
+        const startTime =
+          event.start?.dateTime?.split("T")[1]?.substring(0, 5) || "??:??";
+
+        process.stdout.write(`   ${startTime} ${event.summary}... `);
+
+        const eventId = await createCalendarEvent(accessToken, event);
+        created.push(eventId);
+
+        console.log(`✅ ${eventId}`);
+
+        if (verbose) {
+          console.log(
+            `      Types: ${interventions.map((i) => i.type).join(", ")}`
+          );
+        }
+      } catch (error) {
+        failed++;
+        console.log(`❌`);
+        console.log(
+          `      Error: ${error instanceof Error ? error.message : "Unknown error"}`
+        );
+      }
+    }
+
+    console.log("");
+  }
+
+  return { created, failed };
+}
+
+/** Update or create sync record in database */
+async function updateSyncRecord(
+  tripId: string,
+  userId: string,
+  existingSyncId: string | null,
+  eventIds: string[]
+) {
+  if (existingSyncId) {
+    await prisma.calendarSync.update({
+      where: { id: existingSyncId },
+      data: {
+        googleEventIds: eventIds,
+        lastSyncedAt: new Date(),
+      },
+    });
+    console.log(`📝 Updated sync record: ${existingSyncId}`);
+  } else {
+    const sync = await prisma.calendarSync.create({
+      data: {
+        tripId,
+        userId,
+        googleEventIds: eventIds,
+        lastSyncedAt: new Date(),
+      },
+    });
+    console.log(`📝 Created sync record: ${sync.id}`);
+  }
+}
+
+/** Delete sync record from database */
+async function deleteSyncRecord(syncId: string) {
+  await prisma.calendarSync.delete({
+    where: { id: syncId },
+  });
+  console.log(`📝 Deleted sync record: ${syncId}`);
 }
 
 /** Generate schedule by calling the API */
@@ -672,24 +850,39 @@ async function main() {
     process.exit(0);
   }
 
+  // Check if sync is requested but no tripId provided
+  const wantsSync = args.sync || args.resync || args.deleteOnly;
+  if (wantsSync && !args.tripId) {
+    console.error("❌ Sync options require a trip ID from the database");
+    console.error("   Presets and custom flights cannot be synced (no owner)");
+    process.exit(1);
+  }
+
   let schedule: ScheduleResponse;
   let label: string;
   let originTz: string;
   let destTz: string;
   let departure: string;
   let arrival: string;
+  let tripData: TripData | null = null;
 
   // Mode 1: Load from database by trip ID
   if (args.tripId) {
     console.log(`\n🔍 Loading trip from database: ${args.tripId}\n`);
     try {
-      const data = await loadFromDatabase(args.tripId);
-      schedule = data.schedule;
-      label = data.label;
-      originTz = data.originTz;
-      destTz = data.destTz;
-      departure = data.departure;
-      arrival = data.arrival;
+      tripData = await loadFromDatabase(args.tripId);
+      schedule = tripData.schedule;
+      label = tripData.label;
+      originTz = tripData.originTz;
+      destTz = tripData.destTz;
+      departure = tripData.departure;
+      arrival = tripData.arrival;
+
+      if (wantsSync) {
+        console.log(`   User: ${tripData.userId ?? "(anonymous)"}`);
+        console.log(`   Existing sync: ${tripData.existingSyncId ?? "none"}`);
+        console.log(`   Existing events: ${tripData.existingEventIds.length}`);
+      }
     } catch (error) {
       console.error(
         `❌ ${error instanceof Error ? error.message : "Unknown error"}`
@@ -777,15 +970,99 @@ async function main() {
     process.exit(1);
   }
 
-  displaySchedule(
-    schedule,
-    label,
-    originTz,
-    destTz,
-    departure,
-    arrival,
-    args.verbose
+  // If not syncing, just display the schedule
+  if (!wantsSync) {
+    displaySchedule(
+      schedule,
+      label,
+      originTz,
+      destTz,
+      departure,
+      arrival,
+      args.verbose
+    );
+    await prisma.$disconnect();
+    return;
+  }
+
+  // === Sync Mode ===
+  // tripData is guaranteed to exist here due to earlier check
+  if (!tripData || !tripData.userId) {
+    console.error("❌ Trip has no owner (anonymous trip). Cannot sync.");
+    process.exit(1);
+  }
+
+  console.log(`\n🗓️  Calendar Sync Mode\n`);
+  console.log(`Trip: ${label}`);
+  console.log(
+    `Mode: ${args.deleteOnly ? "DELETE" : args.resync ? "RESYNC" : "CREATE"}`
   );
+
+  // Get access token
+  console.log("\n🔑 Getting access token...");
+  let accessToken: string;
+  try {
+    accessToken = await getAccessToken(tripData.userId);
+    console.log("   ✅ Access token retrieved");
+  } catch (error) {
+    console.error(
+      `❌ ${error instanceof Error ? error.message : "Unknown error"}`
+    );
+    process.exit(1);
+  }
+
+  // Delete only mode
+  if (args.deleteOnly) {
+    const result = await deleteExistingEvents(
+      accessToken,
+      tripData.existingEventIds
+    );
+
+    if (tripData.existingSyncId && result.deleted > 0) {
+      await deleteSyncRecord(tripData.existingSyncId);
+    }
+
+    console.log("\n🏁 Delete complete.\n");
+    await prisma.$disconnect();
+    return;
+  }
+
+  // Resync mode - delete first
+  if (args.resync && tripData.existingEventIds.length > 0) {
+    const deleteResult = await deleteExistingEvents(
+      accessToken,
+      tripData.existingEventIds
+    );
+
+    if (deleteResult.failed > 0) {
+      console.error(
+        "\n❌ Some events failed to delete. Aborting to prevent duplicates."
+      );
+      process.exit(1);
+    }
+  }
+
+  // Create events
+  const createResult = await createEvents(accessToken, schedule, args.verbose);
+
+  // Update sync record
+  if (createResult.created.length > 0) {
+    await updateSyncRecord(
+      tripData.tripId,
+      tripData.userId,
+      tripData.existingSyncId,
+      createResult.created
+    );
+  }
+
+  // Summary
+  console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+  console.log(`\n✅ Sync complete!`);
+  console.log(`   Created: ${createResult.created.length} events`);
+  if (createResult.failed > 0) {
+    console.log(`   Failed: ${createResult.failed} events`);
+  }
+  console.log("");
 
   await prisma.$disconnect();
 }
