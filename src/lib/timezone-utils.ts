@@ -79,8 +79,8 @@ export function calculateFlightDuration(
     const diff = arrival.diff(departure, "minutes");
     const totalMinutes = Math.round(diff.minutes);
 
-    if (totalMinutes < 0) {
-      return null; // Invalid: arrival before departure
+    if (totalMinutes <= 0) {
+      return null; // Invalid: arrival before or at same time as departure
     }
 
     const hours = Math.floor(totalMinutes / 60);

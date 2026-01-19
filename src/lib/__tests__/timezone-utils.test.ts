@@ -233,6 +233,25 @@ describe("calculateFlightDuration", () => {
     expect(result!.hours).toBe(11);
     expect(result!.minutes).toBe(0);
   });
+
+  it("handles Sydney to LA flight crossing date line", () => {
+    // Sydney (UTC+11) to LA (UTC-8) = -19 hours
+    // Depart Sydney 10am Jan 21, arrive LA 6am Jan 21 (same calendar day!)
+    // Naive comparison would see 06:00 < 10:00 and reject as invalid
+    const result = calculateFlightDuration(
+      "2026-01-21T10:00",
+      "2026-01-21T06:00",
+      "Australia/Sydney",
+      "America/Los_Angeles"
+    );
+
+    expect(result).not.toBeNull();
+    // 10am Sydney = 11pm UTC Jan 20
+    // 6am LA = 2pm UTC Jan 21
+    // Duration = 15 hours
+    expect(result!.hours).toBe(15);
+    expect(result!.minutes).toBe(0);
+  });
 });
 
 describe("formatDuration", () => {

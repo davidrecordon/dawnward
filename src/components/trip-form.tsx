@@ -21,6 +21,7 @@ import {
   getShiftDirectionLabel,
   MINIMAL_SHIFT_THRESHOLD_HOURS,
 } from "@/lib/timezone-utils";
+import { validateTripForm, isValidTrip } from "@/lib/trip-validation";
 import type { Airport } from "@/types/airport";
 
 import { Button } from "@/components/ui/button";
@@ -169,41 +170,15 @@ export function TripForm({
   };
 
   const validate = (): boolean => {
-    const newErrors: FormErrors = {};
-
-    // Field-level validation
-    if (!formState.origin) {
-      newErrors.origin = "Please select a departure airport";
-    }
-    if (!formState.destination) {
-      newErrors.destination = "Please select an arrival airport";
-    }
-    if (!formState.departureDateTime) {
-      newErrors.departureDateTime = "Please select when you depart";
-    }
-    if (!formState.arrivalDateTime) {
-      newErrors.arrivalDateTime = "Please select when you arrive";
-    }
-
-    // Cross-field validation
-    if (
-      formState.origin &&
-      formState.destination &&
-      formState.origin.code === formState.destination.code
-    ) {
-      newErrors.form = "Your origin and destination can't be the same airport";
-    }
-
-    if (formState.departureDateTime && formState.arrivalDateTime) {
-      const dep = new Date(formState.departureDateTime);
-      const arr = new Date(formState.arrivalDateTime);
-      if (arr <= dep) {
-        newErrors.form = "Your arrival time needs to be after departure";
-      }
-    }
+    const newErrors = validateTripForm({
+      origin: formState.origin,
+      destination: formState.destination,
+      departureDateTime: formState.departureDateTime,
+      arrivalDateTime: formState.arrivalDateTime,
+    });
 
     setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    return isValidTrip(newErrors);
   };
 
   const handleSubmit = () => {
