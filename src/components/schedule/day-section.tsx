@@ -260,7 +260,9 @@ export function DaySection({
       }
 
       // Different phases: preserve phase order (pre_departure → in_transit → post_arrival)
-      if (phaseA !== phaseB) {
+      // Only when BOTH items have defined phases - undefined phases (like "now" marker)
+      // fall through to time-based sorting
+      if (phaseA !== phaseB && phaseA !== undefined && phaseB !== undefined) {
         return 0;
       }
 
