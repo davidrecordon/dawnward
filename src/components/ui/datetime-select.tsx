@@ -2,7 +2,6 @@
 
 import * as React from "react";
 import { Calendar } from "lucide-react";
-import { Input } from "@/components/ui/input";
 import { TimeSelect } from "@/components/ui/time-select";
 import { cn } from "@/lib/utils";
 
@@ -11,6 +10,21 @@ interface DateTimeSelectProps {
   onChange: (value: string) => void;
   className?: string;
   hasError?: boolean;
+}
+
+/**
+ * Format a date string (YYYY-MM-DD) for display.
+ * Returns short format like "Jan 19, 2026"
+ */
+function formatDateForDisplay(dateStr: string): string {
+  if (!dateStr) return "";
+  const [year, month, day] = dateStr.split("-").map(Number);
+  const date = new Date(year, month - 1, day);
+  return date.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
 }
 
 export function DateTimeSelect({
@@ -47,28 +61,31 @@ export function DateTimeSelect({
 
   return (
     <div className={cn("flex gap-2", className)}>
-      {/* Wrapper for date input with iOS placeholder fix */}
-      <div className="relative flex-1 overflow-hidden">
-        <Input
+      {/* Date input wrapper - styled div with invisible native input on top */}
+      <div className="relative flex-1">
+        {/* Visible styled display that looks like an input */}
+        <div
+          className={cn(
+            "border-input flex h-9 w-full items-center gap-2 rounded-md border bg-white px-3 text-sm shadow-xs",
+            "focus-within:border-ring focus-within:ring-ring/50 focus-within:ring-[3px]",
+            hasError && "border-[#F4A574] ring-[#F4A574]/20"
+          )}
+        >
+          <Calendar className="text-muted-foreground h-4 w-4 shrink-0 opacity-50" />
+          {datePart ? (
+            <span className="truncate">{formatDateForDisplay(datePart)}</span>
+          ) : (
+            <span className="text-muted-foreground truncate">Select date</span>
+          )}
+        </div>
+        {/* Invisible native date input - captures clicks and triggers iOS picker */}
+        <input
           type="date"
           value={datePart}
           onChange={handleDateChange}
-          className={cn(
-            "w-full bg-white",
-            // On iOS, empty date inputs show blank - make text transparent when empty
-            // so placeholder overlay is visible
-            !datePart && "text-transparent",
-            hasError && "border-[#F4A574] ring-[#F4A574]/20"
-          )}
-          aria-invalid={hasError}
+          className="absolute inset-0 cursor-pointer border-0 bg-transparent opacity-0"
+          aria-label="Select date"
         />
-        {/* Placeholder overlay for iOS - hidden when date is selected */}
-        {!datePart && (
-          <div className="text-muted-foreground pointer-events-none absolute inset-0 flex items-center gap-2 px-3 text-sm">
-            <Calendar className="h-4 w-4 shrink-0 opacity-50" />
-            <span className="truncate">Select date</span>
-          </div>
-        )}
       </div>
       <TimeSelect
         value={timePart}
