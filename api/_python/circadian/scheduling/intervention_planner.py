@@ -36,6 +36,10 @@ from .constraint_filter import SLEEP_TARGET_DEPARTURE_BUFFER_HOURS
 # Crew wakes passengers ~1h before landing
 CREW_WAKE_BEFORE_LANDING_HOURS = 1
 
+# Buffer time for airport transit (user needs this time before departure)
+# Used for both wake_target and sleep_target capping
+AIRPORT_BUFFER_HOURS = 3
+
 
 @dataclass
 class PlannerContext:
@@ -239,8 +243,6 @@ class InterventionPlanner:
         Returns:
             Wake time capped to at most 3h before departure
         """
-        AIRPORT_BUFFER_HOURS = 3
-
         first_leg = self.request.legs[0]
         departure = parse_iso_datetime(first_leg.departure_datetime)
         departure_minutes = time_to_minutes(departure.time())
@@ -275,8 +277,6 @@ class InterventionPlanner:
             - capped_time: The time to use (or None if should be omitted)
             - original_time: The original circadian-optimal time (set when capping occurred)
         """
-        PRE_DEPARTURE_BUFFER_HOURS = 3  # Phase ends 3h before departure
-
         first_leg = self.request.legs[0]
         departure = parse_iso_datetime(first_leg.departure_datetime)
         departure_minutes = time_to_minutes(departure.time())
@@ -297,13 +297,11 @@ class InterventionPlanner:
             return (None, sleep_target)
 
         # Sleep is within SLEEP_TARGET_DEPARTURE_BUFFER_HOURS of departure - cap to phase end
-        # Cap to phase end (3h before departure)
-        phase_end_minutes = departure_minutes - (PRE_DEPARTURE_BUFFER_HOURS * 60)
+        phase_end_minutes = departure_minutes - (AIRPORT_BUFFER_HOURS * 60)
 
-        # If phase_end is before noon (impractical to sleep so early), omit entirely
-        # The user will get sleep guidance in "After Landing" section instead
-        NOON_MINUTES = 12 * 60
-        if phase_end_minutes < NOON_MINUTES:
+        # If capped sleep would be before noon, omit it - telling someone to sleep
+        # at 11 AM is impractical. They'll get sleep guidance in "After Landing" instead.
+        if phase_end_minutes < 12 * 60:
             return (None, sleep_target)
 
         # Cap to phase end and record original
@@ -346,14 +344,9 @@ class InterventionPlanner:
             pre_landing_minutes += 24 * 60
 
         # Use whichever is earlier: circadian wake or pre-landing wake
-        # For same-day comparison, earlier means smaller minutes value
-        # But we need to handle the case where circadian wake is in early morning
-        # and pre-landing is late night (unlikely but possible)
         if circadian_minutes < pre_landing_minutes:
-            # Circadian wake is earlier - use it as-is
             return (circadian_wake, None)
         else:
-            # Use pre-landing time, record circadian target
             return (minutes_to_time(pre_landing_minutes), circadian_wake.strftime("%H:%M"))
 
     def _parse_utc_timestamp(self, iso_str: str) -> datetime | None:

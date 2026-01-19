@@ -106,12 +106,10 @@ at the top of each module is the right choice for this codebase size.
 
 #### Intervention Planner (`intervention_planner.py`)
 
-| Line | Constant                         | Value | Purpose                                     |
-| ---- | -------------------------------- | ----- | ------------------------------------------- |
-| 36   | `CREW_WAKE_BEFORE_LANDING_HOURS` | 1     | Cap wake_target to 1h before landing        |
-| 241  | `AIRPORT_BUFFER_HOURS`           | 3     | Cap pre-departure wake to 3h before flight  |
-| 277  | `SLEEP_BUFFER_HOURS`             | 4.0   | Sleep capping threshold (matches filter)    |
-| 278  | `PRE_DEPARTURE_BUFFER_HOURS`     | 3     | Phase ends 3h before departure              |
+| Line | Constant                         | Value | Purpose                                          |
+| ---- | -------------------------------- | ----- | ------------------------------------------------ |
+| 37   | `CREW_WAKE_BEFORE_LANDING_HOURS` | 1     | Cap wake_target to 1h before landing             |
+| 40   | `AIRPORT_BUFFER_HOURS`           | 3     | Cap pre-departure wake/sleep to 3h before flight |
 
 #### Scheduler (`scheduler_v2.py`)
 
