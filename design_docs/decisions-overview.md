@@ -94,6 +94,7 @@ For timezone shifts ≤2 hours (`MINIMAL_SHIFT_THRESHOLD_HOURS`), show a simplif
 - Caffeine cutoff hours before sleep
 - Schedule view mode (summary/timeline)
 - Show dual timezone (boolean)
+- Use 24-hour time format (boolean)
 
 ### Trip Editing & Actuals Tracking
 
