@@ -3,11 +3,11 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { Calendar } from "lucide-react";
 
 import { TripForm } from "@/components/trip-form";
 import { TripPreviewCard } from "@/components/trip-preview-card";
 import { PreferencesSaveModal } from "@/components/preferences-save-modal";
+import { CalendarPreviewCard } from "@/components/calendar-preview-card";
 import { defaultFormState, type TripFormState } from "@/types/trip-form";
 import { getFormState, saveFormState } from "@/lib/schedule-storage";
 import type { UserPreferences } from "@/types/user-preferences";
@@ -292,16 +292,10 @@ export function TripPlanner() {
           />
 
           {/* Calendar Sync Preview */}
-          <div className="rounded-xl border-2 border-dashed border-slate-200 bg-white/50 p-6 text-center">
-            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-orange-100">
-              <Calendar className="h-6 w-6 text-orange-500" />
-            </div>
-            <p className="font-medium">Google Calendar Sync</p>
-            <p className="text-sm text-slate-500">
-              After generating your schedule, you can sync it to Google Calendar
-              for automatic reminders
-            </p>
-          </div>
+          <CalendarPreviewCard
+            isLoggedIn={status === "authenticated"}
+            hasCalendarScope={session?.hasCalendarScope ?? false}
+          />
 
           {/* How it works */}
           <div className="rounded-xl border border-purple-100 bg-white/60 p-4">
