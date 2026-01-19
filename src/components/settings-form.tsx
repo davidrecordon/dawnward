@@ -297,7 +297,7 @@ export function SettingsForm({ initialPreferences }: SettingsFormProps) {
           <PreferenceToggle
             icon={<Clock className="h-4 w-4" />}
             title="Use 24-hour time"
-            description="Display times as 09:30 instead of 9:30 AM"
+            description="Display times as 14:00 instead of 2:00 PM"
             checked={preferences.use24HourFormat}
             onCheckedChange={(val) => updateField("use24HourFormat", val)}
             colorScheme="sky"
