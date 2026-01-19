@@ -108,15 +108,16 @@ export function TripForm({
       tz: "Europe/London",
     };
 
-    // Calculate tomorrow at 8:45pm and day after at 3:15pm
+    // Calculate tomorrow at 4:30pm (VS20 departure) and day after at 10:45am (arrival)
     // (times must be on 15-minute increments for TimeSelect)
+    // Using VS20 SFO→LHR timing as an example of a common afternoon departure
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 2);
-    tomorrow.setHours(20, 45, 0, 0);
+    tomorrow.setHours(16, 30, 0, 0);
 
     const dayAfter = new Date();
     dayAfter.setDate(dayAfter.getDate() + 3);
-    dayAfter.setHours(15, 15, 0, 0);
+    dayAfter.setHours(10, 45, 0, 0);
 
     // Update form state with example values
     onFormChange({

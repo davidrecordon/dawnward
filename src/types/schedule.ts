@@ -97,6 +97,10 @@ export interface Intervention {
   // In-flight sleep windows only
   /** Hours into flight for in-transit sleep opportunities (e.g., 4.5 = ~4.5h into flight) */
   flight_offset_hours?: number;
+
+  // Capping/adjustment info
+  /** Original circadian-optimal time in HH:MM format, set when time was capped/adjusted */
+  original_time?: string;
 }
 
 /**

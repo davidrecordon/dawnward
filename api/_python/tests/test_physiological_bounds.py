@@ -117,10 +117,15 @@ class TestMaximumPhaseShiftRate:
         assert schedule.direction == "delay"
 
         # Check sleep_target shifts are within bounds
+        # Only include preparation/pre_departure phase sleep_targets (not post_arrival
+        # which is "after landing" guidance and shouldn't be compared to pre-departure)
         sleep_times = []
         for day_schedule in schedule.interventions:
             for item in day_schedule.items:
-                if item.type == "sleep_target":
+                if item.type == "sleep_target" and item.phase_type in (
+                    "preparation",
+                    "pre_departure",
+                ):
                     sleep_times.append((day_schedule.day, item.time))
 
         sleep_times.sort(key=lambda x: x[0])

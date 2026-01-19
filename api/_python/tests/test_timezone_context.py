@@ -178,6 +178,12 @@ class TestPreLandingDualTimezone:
 
         for day in arrival_days:
             for item in day.items:
+                # Skip sleep_target items that are "after landing" guidance
+                # (these are added to Day 0's post_arrival section to guide
+                # the user on when to sleep after landing, not pre-landing activities)
+                if item.type == "sleep_target" and "after landing" in item.title.lower():
+                    continue
+
                 # Parse the destination time (GMT)
                 hour = int(item.dest_time.split(":")[0]) if item.dest_time else 0
 

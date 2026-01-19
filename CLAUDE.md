@@ -259,6 +259,7 @@ interface Intervention {
   // Optional fields
   duration_min?: number;
   flight_offset_hours?: number; // For in-flight sleep windows only
+  original_time?: string; // HH:MM - circadian-optimal time when capped (e.g., wake capped to pre-landing)
 }
 ```
 
@@ -277,6 +278,7 @@ interface Intervention {
 - Never use a legacy `time` field - it was removed. Always use `origin_time`/`dest_time`
 - `is_in_transit` is on `DaySchedule`, not `Intervention`
 - `flight_offset_hours` distinguishes in-flight sleep windows from ground naps
+- `original_time` is set when wake/sleep targets are capped (e.g., wake capped to 1h before landing)
 - DST handling: Node.js may return "GMT+1" instead of "BST" for British Summer Time
 
 ### MCP Interface

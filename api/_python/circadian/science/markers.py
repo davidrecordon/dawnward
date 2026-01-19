@@ -23,6 +23,25 @@ CBTMIN_BEFORE_WAKE = 2.5  # CBTmin is 2.5h before wake
 DLMO_BEFORE_SLEEP = 2.0  # DLMO is 2h before sleep
 DLMO_TO_CBTMIN = 6.0  # DLMO to CBTmin is ~6 hours (sleep onset to temp nadir)
 
+# Post-arrival sleep target constraints
+#
+# WHY WE CAP SLEEP TARGETS AT MIDNIGHT:
+# When traveling eastward (advance direction), your body clock is behind the destination.
+# For an 8-hour eastward shift, on arrival day your body might want to sleep at 2-3 AM
+# destination time. But telling users "sleep at 2 AM" is impractical advice.
+#
+# Instead, we cap the recommendation at midnight and suggest using melatonin to help
+# induce sleep earlier. This gives users a realistic "evening" target they can aim for,
+# even if their body isn't quite ready. The melatonin + light avoidance will help their
+# body catch up over subsequent days.
+#
+# Example: VS20 SFO→LHR (8h shift)
+#   - Body clock says: sleep at 2 AM destination time
+#   - We recommend: sleep at midnight (with melatonin at 5 PM)
+#   - User gets practical advice instead of "stay up until 2 AM"
+MAX_SLEEP_TARGET_HOUR = 24  # Midnight (24:00 = 00:00 next day)
+MAX_SLEEP_TARGET_MINUTES = MAX_SLEEP_TARGET_HOUR * 60
+
 
 class CircadianMarkerTracker:
     """
@@ -145,17 +164,35 @@ class CircadianMarkerTracker:
             wake_minutes = cbtmin_minutes + int(CBTMIN_BEFORE_WAKE * 60)
             sleep_minutes = dlmo_minutes + int(DLMO_BEFORE_SLEEP * 60)
         else:
-            # Post-arrival: offset from destination baseline by remaining shift
+            # POST-ARRIVAL LOGIC:
+            # After landing, we're now in destination timezone. The user's body clock
+            # is misaligned by the "remaining" amount (total shift minus what we've
+            # already adapted). We compute when their body WANTS to wake/sleep,
+            # then recommend targets that gently push them toward destination time.
             remaining = total_shift - cumulative_shift
 
             if direction == "advance":
-                # Body still behind destination time
-                # Wake/sleep targets are later than ideal
+                # EASTWARD TRAVEL (e.g., SFO → London, 8h advance)
+                # Body clock is BEHIND destination time.
+                # If user normally wakes at 7 AM and has 3h remaining shift:
+                #   - Body wants to wake at 10 AM destination time (7 + 3)
+                #   - Body wants to sleep at 1 AM destination time (22:00 + 3)
+                # We recommend these "body clock" times as targets, capped for practicality.
                 wake_minutes = self._base_wake_minutes + int(remaining * 60)
                 sleep_minutes = self._base_sleep_minutes + int(remaining * 60)
+
+                # Cap sleep to midnight - see comment at MAX_SLEEP_TARGET_MINUTES above.
+                # Telling someone "sleep at 2 AM" isn't helpful; "aim for midnight,
+                # use melatonin to help you get there" is actionable advice.
+                if sleep_minutes > MAX_SLEEP_TARGET_MINUTES:
+                    sleep_minutes = MAX_SLEEP_TARGET_MINUTES
             else:
-                # Body still ahead of destination time
-                # Wake/sleep targets are earlier than ideal
+                # WESTWARD TRAVEL (e.g., London → SFO, 8h delay)
+                # Body clock is AHEAD of destination time.
+                # If user normally wakes at 7 AM and has 3h remaining shift:
+                #   - Body wants to wake at 4 AM destination time (7 - 3)
+                #   - Body wants to sleep at 7 PM destination time (22:00 - 3)
+                # These earlier times help the user delay their clock to match destination.
                 wake_minutes = self._base_wake_minutes - int(remaining * 60)
                 sleep_minutes = self._base_sleep_minutes - int(remaining * 60)
 

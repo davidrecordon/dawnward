@@ -277,3 +277,109 @@ When adding a new intervention to a phase, check BOTH:
 ### ULR Flights (12+ hours)
 
 Ultra-long-haul flights get TWO sleep windows calculated based on circadian biology, not just a generic nap suggestion.
+
+## Flight Day Scheduling (VS20/BA286 Pattern)
+
+Afternoon departures with next-morning arrivals (like VS20 SFO 16:30 → LHR 10:40+1) expose several edge cases.
+
+### Sleep Target Near/After Departure
+
+**Problem**: Pre-departure sleep_target at 7 PM when flight departs at 4:30 PM is useless (user is on the plane).
+
+**Fix**: Three-tier handling in `_cap_sleep_target_for_departure()`:
+
+1. **Sleep >4h before departure** → Keep as-is
+2. **Sleep within 0-4h of departure** → Cap to phase end (3h before departure)
+3. **Sleep AFTER departure** → Omit entirely, show in "After Landing" instead
+
+The `_is_near_departure()` check was updated to filter times where `hours_before_departure <= 0`.
+
+### Wake Target After Landing
+
+**Problem**: Circadian wake target might be 11 AM when flight lands at 10:40 AM - user is already awake.
+
+**Fix**: Cap wake_target to 1h before landing in `_get_arrival_day_wake_target()`:
+
+```python
+CREW_WAKE_BEFORE_LANDING_HOURS = 1
+pre_landing_minutes = arrival_minutes - (CREW_WAKE_BEFORE_LANDING_HOURS * 60)
+
+if circadian_minutes > pre_landing_minutes:
+    # Cap to pre-landing, preserve original in original_time field
+    return (minutes_to_time(pre_landing_minutes), circadian_wake.strftime("%H:%M"))
+```
+
+The `original_time` field preserves the circadian-optimal time for UI context.
+
+### Arrival Nap Timing
+
+**Problem**: Recommending a nap 45 minutes after landing is unrealistic - user hasn't cleared customs yet.
+
+**Fix**: Changed `ARRIVAL_SETTLE_IN_MINUTES` from 45 to 150 (2.5 hours):
+
+```python
+# User needs time to:
+#   - Clear customs and immigration: 45-60 minutes
+#   - Collect baggage: 15-20 minutes
+#   - Transport to hotel/accommodation: 45-60 minutes
+#   - Check in and get to room: 15 minutes
+#   - Total: ~2-2.5 hours minimum
+ARRIVAL_SETTLE_IN_MINUTES = 150
+```
+
+Combined with the 1 PM cutoff (`ARRIVAL_NAP_CUTOFF_HOUR = 13`), this means:
+
+- 10:40 AM arrival → earliest nap at 1:10 PM → after 1 PM cutoff → no nap recommended
+- 6:00 AM arrival → earliest nap at 8:30 AM → before 1 PM cutoff → nap recommended
+
+### Duplicate Sleep Target Prevention
+
+**Problem**: Day 0 "After Landing" and Day 1 can both fall on the same calendar date (e.g., Jan 22). Adding sleep_target to both creates duplicates in the UI.
+
+**Fix**: `_include_post_arrival_sleep_in_flight_day()` checks before adding:
+
+```python
+arrival_date = source_day_schedule.date
+sleep_already_on_date = any(
+    ds.date == arrival_date and any(item.type == "sleep_target" for item in ds.items)
+    for ds in day_schedules
+)
+if sleep_already_on_date:
+    return day_schedules  # Skip - already have sleep guidance for this date
+```
+
+### Sleep Target Midnight Cap (Eastward Advance)
+
+**Problem**: For eastward advance, sleep target shifts earlier. A 10 PM sleeper with 4h advance might get "sleep at 6 PM" (too early) or even "sleep at 2 AM next day" (circadian confusion).
+
+**Fix**: Cap sleep_target at midnight for advance direction in `get_sleep_target()`:
+
+```python
+MAX_SLEEP_TARGET_HOUR = 24  # Midnight cap
+MAX_SLEEP_TARGET_MINUTES = MAX_SLEEP_TARGET_HOUR * 60
+
+if direction == "advance" and target_minutes > MAX_SLEEP_TARGET_MINUTES:
+    target_minutes = MAX_SLEEP_TARGET_MINUTES  # Cap at midnight
+```
+
+### Testing These Edge Cases
+
+Key test patterns in `test_realistic_flights.py`:
+
+```python
+# Filter by phase_type, not just intervention type
+post_arrival_sleep = [
+    item for ds in schedule.interventions
+    if ds.date == arrival_date
+    for item in ds.items
+    if item.type == "sleep_target" and item.phase_type == "post_arrival"
+]
+
+# Check for capping via original_time field
+if wake_item.original_time is not None:
+    assert "pre-landing" in wake_item.title.lower()
+
+# Verify no duplicates on same calendar date
+sleep_targets_on_date = [...]
+assert len(sleep_targets_on_date) == 1
+```

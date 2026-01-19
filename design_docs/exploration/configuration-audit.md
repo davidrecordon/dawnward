@@ -61,14 +61,14 @@ These are from peer-reviewed circadian research. Changing breaks the Forger99 mo
 
 #### Nap Windows (`sleep_pressure.py`)
 
-| Line | Constant                      | Value | Purpose                            |
-| ---- | ----------------------------- | ----- | ---------------------------------- |
-| 33   | `STANDARD_NAP_START_PERCENT`  | 0.30  | 30% into wake period               |
-| 34   | `STANDARD_NAP_END_PERCENT`    | 0.50  | 50% into wake period               |
-| 35   | `HIGH_DEBT_NAP_START_PERCENT` | 0.25  | Earlier window when sleep-deprived |
-| 36   | `HIGH_DEBT_NAP_END_PERCENT`   | 0.55  | Wider window when sleep-deprived   |
-| 39   | `ARRIVAL_NAP_CUTOFF_HOUR`     | 13    | 1:00 PM - no arrival naps after    |
-| 40   | `ARRIVAL_SETTLE_IN_MINUTES`   | 45    | Buffer time after arrival          |
+| Line | Constant                      | Value | Purpose                                               |
+| ---- | ----------------------------- | ----- | ----------------------------------------------------- |
+| 33   | `STANDARD_NAP_START_PERCENT`  | 0.30  | 30% into wake period                                  |
+| 34   | `STANDARD_NAP_END_PERCENT`    | 0.50  | 50% into wake period                                  |
+| 35   | `HIGH_DEBT_NAP_START_PERCENT` | 0.25  | Earlier window when sleep-deprived                    |
+| 36   | `HIGH_DEBT_NAP_END_PERCENT`   | 0.55  | Wider window when sleep-deprived                      |
+| 43   | `ARRIVAL_NAP_CUTOFF_HOUR`     | 13    | 1:00 PM - no arrival naps after                       |
+| 56   | `ARRIVAL_SETTLE_IN_MINUTES`   | 150   | 2.5h buffer for customs, baggage, transport, check-in |
 
 ### Category 2: Algorithm Configuration (Keep as Module-Level Constants)
 
@@ -103,6 +103,13 @@ at the top of each module is the right choice for this codebase size.
 | ---- | ------------------------------------- | ----- | ----------------------------------- |
 | 20   | `SLEEP_TARGET_DEPARTURE_BUFFER_HOURS` | 4.0   | Filter sleep targets near departure |
 | 219  | Early morning threshold               | 6:00  | Exception for early interventions   |
+
+#### Intervention Planner (`intervention_planner.py`)
+
+| Line | Constant                         | Value | Purpose                                          |
+| ---- | -------------------------------- | ----- | ------------------------------------------------ |
+| 37   | `CREW_WAKE_BEFORE_LANDING_HOURS` | 1     | Cap wake_target to 1h before landing             |
+| 40   | `AIRPORT_BUFFER_HOURS`           | 3     | Cap pre-departure wake/sleep to 3h before flight |
 
 #### Scheduler (`scheduler_v2.py`)
 
@@ -416,7 +423,7 @@ Constants are already discoverable via this audit document.
 | Category              | Count | Action                                    |
 | --------------------- | ----- | ----------------------------------------- |
 | Immutable Science     | ~36   | Leave as-is, document sources             |
-| Algorithm Config      | ~38   | Keep as module-level constants (decided)  |
+| Algorithm Config      | ~42   | Keep as module-level constants (decided)  |
 | User Preferences      | 10    | All working, 4 future candidates          |
 | Frontend Defaults     | ~26   | Mostly centralized, well-organized        |
 | Shift & Prep Days     | 4     | Prep day calculation thresholds           |

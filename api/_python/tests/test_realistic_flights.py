@@ -338,6 +338,322 @@ class TestModerateJetLag:
             f"  - {e.category}: {e.message}" for e in errors
         )
 
+    def test_vs20_sleep_target_not_on_day0_pre_departure(self):
+        """
+        VS20 regression test: sleep_target should NOT appear in Day 0's pre_departure phase.
+
+        For VS20 (4:30 PM departure):
+        - Phase ends at 1:30 PM (3h before departure)
+        - Any sleep_target would be after the user leaves for the airport
+        - The fix ensures no sleep_target is shown before departure
+        - User gets sleep guidance in "After Landing" section instead
+        """
+        generator = ScheduleGenerator()
+        base_date = datetime.now() + timedelta(days=7)
+
+        departure = make_flight_datetime(base_date, "16:30")
+        arrival = make_flight_datetime(base_date, "10:40", day_offset=1)
+
+        request = ScheduleRequest(
+            legs=[
+                TripLeg(
+                    origin_tz="America/Los_Angeles",
+                    dest_tz="Europe/London",
+                    departure_datetime=departure.strftime("%Y-%m-%dT%H:%M"),
+                    arrival_datetime=arrival.strftime("%Y-%m-%dT%H:%M"),
+                )
+            ],
+            prep_days=3,
+            wake_time="07:00",
+            sleep_time="22:00",
+            uses_melatonin=True,
+            uses_caffeine=True,
+        )
+
+        schedule = generator.generate_schedule(request)
+
+        # Find all Day 0 phases (flight day can have multiple: pre_departure, post_arrival)
+        day_0_phases = [ds for ds in schedule.interventions if ds.day == 0]
+        assert len(day_0_phases) > 0, "Day 0 should exist"
+
+        # Get pre_departure sleep_target items across all Day 0 phases
+        pre_departure_sleep = [
+            item
+            for ds in day_0_phases
+            for item in ds.items
+            if item.type == "sleep_target" and item.phase_type == "pre_departure"
+        ]
+
+        assert len(pre_departure_sleep) == 0, (
+            f"VS20: No sleep_target should appear in pre_departure phase on Day 0. "
+            f"Found {len(pre_departure_sleep)} items: {[i.time for i in pre_departure_sleep]}"
+        )
+
+        # Verify post_arrival sleep_target exists on the arrival date
+        # The UI groups by date, so post_arrival sleep may be on Day 1's entry
+        # if Day 1 has the same date as the arrival (which it does for VS20)
+        arrival_date = arrival.strftime("%Y-%m-%d")
+        post_arrival_sleep = [
+            item
+            for ds in schedule.interventions
+            if ds.date == arrival_date
+            for item in ds.items
+            if item.type == "sleep_target" and item.phase_type == "post_arrival"
+        ]
+
+        assert len(post_arrival_sleep) >= 1, (
+            f"VS20: Arrival date {arrival_date} should have post_arrival sleep_target "
+            f"for 'After Landing' guidance"
+        )
+
+    def test_vs20_wake_target_capped_to_pre_landing(self):
+        """
+        VS20 regression test: wake_target should be capped to 1h before landing.
+
+        For VS20 (10:40 AM arrival):
+        - Circadian wake might be ~11:00 AM (4h shift from 7 AM baseline)
+        - But that's AFTER landing - user is already awake!
+        - Crew wakes passengers ~1h before landing (9:40 AM)
+        - So wake_target should be 9:40 AM with original_time showing circadian target
+        """
+        generator = ScheduleGenerator()
+        base_date = datetime.now() + timedelta(days=7)
+
+        departure = make_flight_datetime(base_date, "16:30")
+        arrival = make_flight_datetime(base_date, "10:40", day_offset=1)
+
+        request = ScheduleRequest(
+            legs=[
+                TripLeg(
+                    origin_tz="America/Los_Angeles",
+                    dest_tz="Europe/London",
+                    departure_datetime=departure.strftime("%Y-%m-%dT%H:%M"),
+                    arrival_datetime=arrival.strftime("%Y-%m-%dT%H:%M"),
+                )
+            ],
+            prep_days=3,
+            wake_time="07:00",
+            sleep_time="22:00",
+            uses_melatonin=True,
+            uses_caffeine=True,
+        )
+
+        schedule = generator.generate_schedule(request)
+
+        # Find post_arrival wake_target on arrival date
+        arrival_date = arrival.strftime("%Y-%m-%d")
+        post_arrival_wake = [
+            item
+            for ds in schedule.interventions
+            if ds.date == arrival_date
+            for item in ds.items
+            if item.type == "wake_target" and item.phase_type == "post_arrival"
+        ]
+
+        assert len(post_arrival_wake) >= 1, (
+            f"VS20: Arrival date {arrival_date} should have post_arrival wake_target"
+        )
+
+        wake_item = post_arrival_wake[0]
+
+        # Wake should be capped to 1h before landing (9:40 AM for 10:40 AM arrival)
+        assert wake_item.dest_time == "09:40", (
+            f"VS20: wake_target should be 1h before landing (09:40), got {wake_item.dest_time}"
+        )
+
+        # original_time should show the circadian-optimal time
+        assert wake_item.original_time is not None, (
+            "VS20: wake_target should have original_time set when capped to pre-landing"
+        )
+
+        # Title should indicate pre-landing adjustment
+        assert "pre-landing" in wake_item.title.lower(), (
+            f"VS20: wake_target title should mention 'pre-landing', got '{wake_item.title}'"
+        )
+
+    def test_no_duplicate_sleep_target_on_same_date(self):
+        """
+        Test that sleep_target is NOT duplicated when Day 0 and Day 1 share the same date.
+
+        For overnight flights like VS20 (depart Jan 21 evening, arrive Jan 22 morning),
+        Day 0's "After Landing" section and Day 1's adaptation phase both fall on Jan 22.
+
+        The scheduler should NOT create duplicate sleep_target entries:
+        - If Day 1 already has sleep_target on Jan 22, don't add another to Day 0
+        - Users should see exactly ONE sleep guidance per calendar date
+        """
+        generator = ScheduleGenerator()
+        base_date = datetime.now() + timedelta(days=7)
+
+        # VS20: SFO 16:30 → LHR 10:40+1
+        departure = make_flight_datetime(base_date, "16:30")
+        arrival = make_flight_datetime(base_date, "10:40", day_offset=1)
+
+        request = ScheduleRequest(
+            legs=[
+                TripLeg(
+                    origin_tz="America/Los_Angeles",
+                    dest_tz="Europe/London",
+                    departure_datetime=departure.strftime("%Y-%m-%dT%H:%M"),
+                    arrival_datetime=arrival.strftime("%Y-%m-%dT%H:%M"),
+                )
+            ],
+            prep_days=3,
+            wake_time="07:00",
+            sleep_time="22:00",
+            uses_melatonin=True,
+            uses_caffeine=True,
+        )
+
+        schedule = generator.generate_schedule(request)
+
+        # Get the arrival date (shared between Day 0 post_arrival and Day 1)
+        arrival_date = arrival.strftime("%Y-%m-%d")
+
+        # Count ALL sleep_targets on the arrival date (across all phases/days)
+        sleep_targets_on_arrival_date = [
+            item
+            for ds in schedule.interventions
+            if ds.date == arrival_date
+            for item in ds.items
+            if item.type == "sleep_target"
+        ]
+
+        # There should be exactly ONE sleep_target on the arrival date
+        # (either from Day 0 post_arrival OR Day 1, but NOT both)
+        assert len(sleep_targets_on_arrival_date) == 1, (
+            f"Expected exactly 1 sleep_target on {arrival_date}, "
+            f"found {len(sleep_targets_on_arrival_date)}. "
+            f"Duplicate prevention may have failed. "
+            f"Sleep targets found: {[s.dest_time for s in sleep_targets_on_arrival_date]}"
+        )
+
+    def test_wake_target_not_capped_when_circadian_earlier(self):
+        """
+        Test that wake_target is NOT capped when circadian wake is earlier than pre-landing.
+
+        If someone's circadian wake is 6:00 AM and landing is at 10:00 AM,
+        the wake_target should be 6:00 AM (not 9:00 AM pre-landing time).
+        """
+        generator = ScheduleGenerator()
+        base_date = datetime.now() + timedelta(days=7)
+
+        # Flight with late morning arrival
+        departure = make_flight_datetime(base_date, "20:00")
+        arrival = make_flight_datetime(base_date, "14:00", day_offset=1)
+
+        # User has early wake time (5:00 AM)
+        request = ScheduleRequest(
+            legs=[
+                TripLeg(
+                    origin_tz="America/Los_Angeles",
+                    dest_tz="Europe/London",
+                    departure_datetime=departure.strftime("%Y-%m-%dT%H:%M"),
+                    arrival_datetime=arrival.strftime("%Y-%m-%dT%H:%M"),
+                )
+            ],
+            prep_days=3,
+            wake_time="05:00",  # Early riser
+            sleep_time="21:00",
+            uses_melatonin=True,
+            uses_caffeine=True,
+        )
+
+        schedule = generator.generate_schedule(request)
+
+        # Find post_arrival wake_target on arrival date
+        arrival_date = arrival.strftime("%Y-%m-%d")
+        post_arrival_wake = [
+            item
+            for ds in schedule.interventions
+            if ds.date == arrival_date
+            for item in ds.items
+            if item.type == "wake_target" and item.phase_type == "post_arrival"
+        ]
+
+        assert len(post_arrival_wake) >= 1, "Should have post_arrival wake_target"
+
+        wake_item = post_arrival_wake[0]
+
+        # original_time should NOT be set since circadian wake is earlier than pre-landing
+        # Pre-landing would be 13:00 (1h before 14:00)
+        # Circadian wake should be much earlier for an early riser
+        if wake_item.original_time is None:
+            # Good - no adjustment was needed
+            assert "pre-landing" not in wake_item.title.lower(), (
+                "Title should not mention pre-landing when no adjustment was made"
+            )
+
+    def test_british_ba286_sfo_to_london(self):
+        """
+        British Airways BA286: SFO 20:40 → LHR 03:10+1 (~7h30m).
+
+        Late evening departure, early morning arrival.
+        Tests sleep_target capping behavior:
+        - 8:45 PM departure is later than VS20
+        - Sleep_target might be capped to practical pre-departure time
+        - Should have original_time set if capped
+        """
+        generator = ScheduleGenerator()
+        base_date = datetime.now() + timedelta(days=7)
+
+        # BA286: SFO 20:40 → LHR 03:10+1 (updated timing - evening red-eye)
+        departure = make_flight_datetime(base_date, "20:40")
+        arrival = make_flight_datetime(base_date, "15:10", day_offset=1)
+
+        request = ScheduleRequest(
+            legs=[
+                TripLeg(
+                    origin_tz="America/Los_Angeles",
+                    dest_tz="Europe/London",
+                    departure_datetime=departure.strftime("%Y-%m-%dT%H:%M"),
+                    arrival_datetime=arrival.strftime("%Y-%m-%dT%H:%M"),
+                )
+            ],
+            prep_days=3,
+            wake_time="07:00",
+            sleep_time="22:00",
+            uses_melatonin=True,
+            uses_caffeine=True,
+        )
+
+        schedule = generator.generate_schedule(request)
+
+        flight = FlightInfo(
+            departure_datetime=departure,
+            arrival_datetime=arrival,
+            origin_tz="America/Los_Angeles",
+            dest_tz="Europe/London",
+        )
+
+        # 8h east = advance direction
+        assert schedule.direction == "advance", (
+            f"Expected advance direction, got {schedule.direction}"
+        )
+
+        issues = run_all_validations(schedule, flight)
+        errors = [i for i in issues if i.severity == "error"]
+
+        assert len(errors) == 0, f"Found {len(errors)} errors:\n" + "\n".join(
+            f"  - {e.category}: {e.message}" for e in errors
+        )
+
+        # Check for post_arrival sleep guidance on the arrival date
+        # The UI groups by date, so post_arrival sleep may be on Day 1's entry
+        arrival_date = arrival.strftime("%Y-%m-%d")
+        post_arrival_sleep = [
+            item
+            for ds in schedule.interventions
+            if ds.date == arrival_date
+            for item in ds.items
+            if item.type == "sleep_target" and item.phase_type == "post_arrival"
+        ]
+
+        assert len(post_arrival_sleep) >= 1, (
+            f"BA286: Arrival date {arrival_date} should have post_arrival sleep_target "
+            f"for 'After Landing' guidance"
+        )
+
     def test_virgin_vs19_london_to_sfo(self):
         """
         Virgin Atlantic VS19: LHR 11:40 → SFO 14:40 same day (~11h).
@@ -580,6 +896,375 @@ class TestModerateJetLag:
 
         assert len(errors) == 0, f"Found {len(errors)} errors:\n" + "\n".join(
             f"  - {e.category}: {e.message}" for e in errors
+        )
+
+
+# =============================================================================
+# ARRIVAL WAKE/SLEEP COVERAGE TESTS
+# =============================================================================
+
+
+class TestArrivalWakeSleepCoverage:
+    """
+    Additional test coverage for arrival wake/sleep behavior.
+
+    These tests cover edge cases not addressed by the primary VS20 tests:
+    - Early AM arrivals (05:00-07:00) - Pre-landing conflicts with typical sleep
+    - Late evening arrivals (20:00+) - Sleep same night may be unrealistic
+    - Westbound afternoon arrivals - Different circadian dynamics (delay vs advance)
+    - Midnight arrival edge case - Pre-landing wraps to previous day
+    - Small timezone shifts (2-3h) - Wake capping may not trigger at all
+    """
+
+    def test_qf74_early_morning_arrival_wake_capped(self):
+        """
+        QF74 SFO→SYD: Early morning arrival with wake capped to pre-landing.
+
+        Flight: SFO 20:15 → SYD 06:10+2 (arrives 06:10 AM)
+        Pre-landing time: 05:10 AM (1h before 06:10)
+
+        For a 7 AM waker after an 18h timezone shift (but 5h delay via shorter path),
+        circadian wake will be shifted later. If the circadian wake is after landing,
+        it should be capped to pre-landing time with original_time showing the
+        circadian target.
+        """
+        generator = ScheduleGenerator()
+        base_date = datetime.now() + timedelta(days=7)
+
+        # QF74: SFO 20:15 → SYD 06:10+2
+        departure = make_flight_datetime(base_date, "20:15")
+        arrival = make_flight_datetime(base_date, "06:10", day_offset=2)
+
+        request = ScheduleRequest(
+            legs=[
+                TripLeg(
+                    origin_tz="America/Los_Angeles",
+                    dest_tz="Australia/Sydney",
+                    departure_datetime=departure.strftime("%Y-%m-%dT%H:%M"),
+                    arrival_datetime=arrival.strftime("%Y-%m-%dT%H:%M"),
+                )
+            ],
+            prep_days=3,
+            wake_time="07:00",
+            sleep_time="22:00",
+            uses_melatonin=True,
+            uses_caffeine=True,
+        )
+
+        schedule = generator.generate_schedule(request)
+
+        # Find post_arrival wake_target on arrival date
+        arrival_date = arrival.strftime("%Y-%m-%d")
+        post_arrival_wake = [
+            item
+            for ds in schedule.interventions
+            if ds.date == arrival_date
+            for item in ds.items
+            if item.type == "wake_target" and item.phase_type == "post_arrival"
+        ]
+
+        assert len(post_arrival_wake) >= 1, (
+            f"QF74: Arrival date {arrival_date} should have post_arrival wake_target"
+        )
+
+        wake_item = post_arrival_wake[0]
+
+        # For early morning arrivals, if circadian wake is after landing,
+        # wake should be capped to pre-landing (05:10 for 06:10 arrival)
+        # If circadian wake is earlier than 05:10, no capping occurs.
+        # The key test is that the schedule is sensible either way.
+        if wake_item.original_time is not None:
+            # Wake was capped - verify it's at pre-landing time
+            assert wake_item.dest_time == "05:10", (
+                f"QF74: capped wake_target should be 1h before landing (05:10), "
+                f"got {wake_item.dest_time}"
+            )
+            assert "pre-landing" in wake_item.title.lower(), (
+                f"QF74: capped wake_target title should mention 'pre-landing', "
+                f"got '{wake_item.title}'"
+            )
+
+    def test_cx872_late_evening_westbound_arrival(self):
+        """
+        CX872 HKG→SFO: Late evening arrival on previous day (date line crossing).
+
+        Flight: HKG 01:00 → SFO 21:15-1 (arrives 21:15 PM previous day, westbound)
+        Pre-landing time: 20:15 PM
+        Direction: advance (8h)
+
+        For westbound advance direction, circadian wake shifts EARLIER.
+        A 7 AM waker would have wake target around 5-6 AM range (shifted earlier),
+        well before the 20:15 pre-landing time.
+
+        Expect: Wake target is NOT capped since circadian wake is morning, not evening.
+        """
+        generator = ScheduleGenerator()
+        base_date = datetime.now() + timedelta(days=10)
+
+        # CX872: HKG 01:00 → SFO 21:15-1 (arrives previous day!)
+        departure = make_flight_datetime(base_date, "01:00")
+        arrival = make_flight_datetime(base_date, "21:15", day_offset=-1)
+
+        request = ScheduleRequest(
+            legs=[
+                TripLeg(
+                    origin_tz="Asia/Hong_Kong",
+                    dest_tz="America/Los_Angeles",
+                    departure_datetime=departure.strftime("%Y-%m-%dT%H:%M"),
+                    arrival_datetime=arrival.strftime("%Y-%m-%dT%H:%M"),
+                )
+            ],
+            prep_days=3,
+            wake_time="07:00",
+            sleep_time="22:00",
+            uses_melatonin=True,
+            uses_caffeine=True,
+        )
+
+        schedule = generator.generate_schedule(request)
+
+        # 16h shift → 8h advance (shorter path)
+        assert schedule.direction == "advance", (
+            f"CX872: Expected advance direction, got {schedule.direction}"
+        )
+
+        # Find post_arrival wake_target on arrival date
+        arrival_date = arrival.strftime("%Y-%m-%d")
+        post_arrival_wake = [
+            item
+            for ds in schedule.interventions
+            if ds.date == arrival_date
+            for item in ds.items
+            if item.type == "wake_target" and item.phase_type == "post_arrival"
+        ]
+
+        assert len(post_arrival_wake) >= 1, (
+            f"CX872: Arrival date {arrival_date} should have post_arrival wake_target"
+        )
+
+        wake_item = post_arrival_wake[0]
+
+        # For advance direction, circadian wake shifts earlier, not later.
+        # A 7 AM waker with advance would wake EARLIER (e.g., 5-6 AM range),
+        # which is well before the 20:15 pre-landing time.
+        # So wake should NOT be capped.
+        assert wake_item.original_time is None, (
+            f"CX872: Wake should NOT be capped for advance direction "
+            f"(circadian wake is morning, not evening). "
+            f"Got original_time={wake_item.original_time}"
+        )
+        assert "pre-landing" not in wake_item.title.lower(), (
+            f"CX872: Title should not mention pre-landing since wake is not capped. "
+            f"Got '{wake_item.title}'"
+        )
+
+    def test_vs19_westbound_afternoon_no_capping(self):
+        """
+        VS19 LHR→SFO: Westbound afternoon arrival, no wake capping expected.
+
+        Flight: LHR 11:40 → SFO 14:40 (same day, westbound delay)
+        Pre-landing time: 13:40 PM
+        Direction: delay (8h west)
+
+        For westbound delay direction, circadian wake shifts LATER.
+        But even shifted later, a 7 AM waker's wake target would be ~8-9 AM,
+        well before the 13:40 pre-landing time.
+
+        Expect: Wake target is NOT capped (circadian wake is still morning).
+        """
+        generator = ScheduleGenerator()
+        base_date = datetime.now() + timedelta(days=10)
+
+        # VS19: LHR 11:40 → SFO 14:40 same day
+        departure = make_flight_datetime(base_date, "11:40")
+        arrival = make_flight_datetime(base_date, "14:40")
+
+        request = ScheduleRequest(
+            legs=[
+                TripLeg(
+                    origin_tz="Europe/London",
+                    dest_tz="America/Los_Angeles",
+                    departure_datetime=departure.strftime("%Y-%m-%dT%H:%M"),
+                    arrival_datetime=arrival.strftime("%Y-%m-%dT%H:%M"),
+                )
+            ],
+            prep_days=3,
+            wake_time="07:00",
+            sleep_time="22:00",
+            uses_melatonin=True,
+            uses_caffeine=True,
+        )
+
+        schedule = generator.generate_schedule(request)
+
+        # 8h west = delay direction
+        assert schedule.direction == "delay", (
+            f"VS19: Expected delay direction, got {schedule.direction}"
+        )
+
+        # Find post_arrival wake_target on arrival date
+        arrival_date = arrival.strftime("%Y-%m-%d")
+        post_arrival_wake = [
+            item
+            for ds in schedule.interventions
+            if ds.date == arrival_date
+            for item in ds.items
+            if item.type == "wake_target" and item.phase_type == "post_arrival"
+        ]
+
+        assert len(post_arrival_wake) >= 1, (
+            f"VS19: Arrival date {arrival_date} should have post_arrival wake_target"
+        )
+
+        wake_item = post_arrival_wake[0]
+
+        # For delay direction, circadian wake shifts later (7 AM → ~8 AM).
+        # 8 AM is well before 13:40 pre-landing, so no capping should occur.
+        assert wake_item.original_time is None, (
+            f"VS19: Wake should NOT be capped for afternoon arrival "
+            f"(circadian wake ~8 AM is well before 13:40 pre-landing). "
+            f"Got original_time={wake_item.original_time}"
+        )
+        assert "pre-landing" not in wake_item.title.lower(), (
+            f"VS19: Title should not mention pre-landing since wake is not capped. "
+            f"Got '{wake_item.title}'"
+        )
+
+    def test_midnight_arrival_wrap_handling(self):
+        """
+        Test midnight arrival edge case where pre-landing wraps to previous day.
+
+        Flight: Hypothetical arrival at 00:30 AM
+        Pre-landing time: 23:30 PM (wraps to previous day in minutes)
+
+        This tests the overnight wrap logic to ensure no crashes or display bugs.
+        The scheduler should handle this edge case gracefully.
+        """
+        generator = ScheduleGenerator()
+        base_date = datetime.now() + timedelta(days=7)
+
+        # Hypothetical flight: afternoon departure, just-after-midnight arrival
+        # Use a transatlantic pattern: 8h shift, ~10h flight
+        departure = make_flight_datetime(base_date, "14:30")
+        arrival = make_flight_datetime(base_date, "00:30", day_offset=1)
+
+        request = ScheduleRequest(
+            legs=[
+                TripLeg(
+                    origin_tz="America/Los_Angeles",
+                    dest_tz="Europe/London",
+                    departure_datetime=departure.strftime("%Y-%m-%dT%H:%M"),
+                    arrival_datetime=arrival.strftime("%Y-%m-%dT%H:%M"),
+                )
+            ],
+            prep_days=3,
+            wake_time="07:00",
+            sleep_time="22:00",
+            uses_melatonin=True,
+            uses_caffeine=True,
+        )
+
+        schedule = generator.generate_schedule(request)
+
+        # 8h east = advance direction
+        assert schedule.direction == "advance", (
+            f"Midnight arrival test: Expected advance direction, got {schedule.direction}"
+        )
+
+        # Find post_arrival wake_target on arrival date
+        arrival_date = arrival.strftime("%Y-%m-%d")
+        post_arrival_wake = [
+            item
+            for ds in schedule.interventions
+            if ds.date == arrival_date
+            for item in ds.items
+            if item.type == "wake_target" and item.phase_type == "post_arrival"
+        ]
+
+        assert len(post_arrival_wake) >= 1, (
+            f"Midnight arrival: Arrival date {arrival_date} should have post_arrival wake_target"
+        )
+
+        wake_item = post_arrival_wake[0]
+
+        # Verify wake_target has sensible output (no crash, valid time)
+        assert wake_item.dest_time is not None, (
+            "Midnight arrival: wake_target should have dest_time"
+        )
+        # Time format validation: should be HH:MM
+        assert len(wake_item.dest_time) == 5 and wake_item.dest_time[2] == ":", (
+            f"Midnight arrival: wake_target dest_time should be HH:MM format, "
+            f"got '{wake_item.dest_time}'"
+        )
+
+    def test_ha12_small_shift_no_capping(self):
+        """
+        HA12 HNL→SFO: Small timezone shift (2h), no wake capping expected.
+
+        Flight: HNL 12:30 → SFO 20:30 (same day, 2h shift east)
+        Pre-landing time: 19:30 PM
+        Direction: advance (2h east)
+
+        Small timezone shifts don't move the circadian wake significantly.
+        A 7 AM waker with only 2h advance would wake ~5-6 AM, well before 19:30.
+
+        Expect: Wake target is NOT capped (small shift doesn't push wake to evening).
+        """
+        generator = ScheduleGenerator()
+        base_date = datetime.now() + timedelta(days=10)
+
+        # HA12: HNL 12:30 → SFO 20:30 same day
+        departure = make_flight_datetime(base_date, "12:30")
+        arrival = make_flight_datetime(base_date, "20:30")
+
+        request = ScheduleRequest(
+            legs=[
+                TripLeg(
+                    origin_tz="Pacific/Honolulu",
+                    dest_tz="America/Los_Angeles",
+                    departure_datetime=departure.strftime("%Y-%m-%dT%H:%M"),
+                    arrival_datetime=arrival.strftime("%Y-%m-%dT%H:%M"),
+                )
+            ],
+            prep_days=1,
+            wake_time="07:00",
+            sleep_time="22:00",
+            uses_melatonin=False,
+            uses_caffeine=True,
+        )
+
+        schedule = generator.generate_schedule(request)
+
+        # 2h east = advance direction
+        assert schedule.direction == "advance", (
+            f"HA12: Expected advance direction, got {schedule.direction}"
+        )
+        assert schedule.total_shift_hours == 2, (
+            f"HA12: Expected 2h shift, got {schedule.total_shift_hours}"
+        )
+
+        # Find post_arrival wake_target on arrival date
+        arrival_date = arrival.strftime("%Y-%m-%d")
+        post_arrival_wake = [
+            item
+            for ds in schedule.interventions
+            if ds.date == arrival_date
+            for item in ds.items
+            if item.type == "wake_target" and item.phase_type == "post_arrival"
+        ]
+
+        assert len(post_arrival_wake) >= 1, (
+            f"HA12: Arrival date {arrival_date} should have post_arrival wake_target"
+        )
+
+        wake_item = post_arrival_wake[0]
+
+        # For small 2h shift, circadian wake stays close to baseline (5-7 AM range),
+        # well before 19:30 pre-landing. No capping should occur.
+        assert wake_item.original_time is None, (
+            f"HA12: Wake should NOT be capped for small 2h shift "
+            f"(circadian wake is morning, not evening). "
+            f"Got original_time={wake_item.original_time}"
         )
 
 

@@ -121,13 +121,18 @@ class TestCBTminTrajectoryParity:
         assert schedule.direction == "delay"
 
         # Extract sleep times as proxy (sleep shifts later for delay)
+        # Only include preparation phase sleep_targets (not post_arrival which is
+        # "after landing" guidance for a different context)
         sleep_by_day = {}
         for day_schedule in schedule.interventions:
             if day_schedule.day > 0:
                 continue
 
             for item in day_schedule.items:
-                if item.type == "sleep_target":
+                if item.type == "sleep_target" and item.phase_type in (
+                    "preparation",
+                    "pre_departure",
+                ):
                     sleep_by_day[day_schedule.day] = item.time
                     break
 
