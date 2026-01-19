@@ -7,7 +7,11 @@ import {
   groupInterventionsByTime,
   buildCalendarEvent,
 } from "@/lib/google-calendar";
-import type { Intervention, InterventionType } from "@/types/schedule";
+import type {
+  Intervention,
+  InterventionType,
+  PhaseType,
+} from "@/types/schedule";
 
 // Helper to create test interventions
 function makeIntervention(
@@ -487,6 +491,461 @@ describe("buildCalendarEvent", () => {
       expect(() => buildCalendarEvent(interventions)).toThrow(
         /missing date context/
       );
+    });
+  });
+});
+
+/**
+ * Realistic Flight Calendar Tests
+ *
+ * These tests mirror the Python realistic flight test scenarios to verify
+ * that calendar events are created with correct dates and timezones for
+ * real-world flight routes.
+ *
+ * Flight data sourced from verified airline schedules (same as Python tests).
+ */
+describe("Realistic Flight Calendar Events", () => {
+  /**
+   * Helper to create a realistic intervention with full timezone context
+   */
+  function makeRealisticIntervention(
+    type: InterventionType,
+    phase: PhaseType,
+    opts: {
+      time: string;
+      originTz: string;
+      destTz: string;
+      originDate: string;
+      destDate: string;
+      flightOffsetHours?: number;
+    }
+  ): Intervention {
+    return {
+      type,
+      title: `Test ${type}`,
+      description: `Description for ${type}`,
+      origin_time: opts.time,
+      dest_time: opts.time,
+      origin_date: opts.originDate,
+      dest_date: opts.destDate,
+      origin_tz: opts.originTz,
+      dest_tz: opts.destTz,
+      phase_type: phase,
+      show_dual_timezone: phase === "in_transit" || phase === "in_transit_ulr",
+      flight_offset_hours: opts.flightOffsetHours,
+    };
+  }
+
+  describe("Moderate Jet Lag (8-9h shift) - Transatlantic", () => {
+    /**
+     * Virgin Atlantic VS20: SFO 16:30 → LHR 10:40+1 (~10h10m)
+     * Eastbound overnight flight, next-day arrival
+     */
+    it("VS20 SFO-LHR: preparation uses origin_tz and origin_date", () => {
+      // Day before departure (preparation)
+      const intervention = makeRealisticIntervention(
+        "wake_target",
+        "preparation",
+        {
+          time: "07:00",
+          originTz: "America/Los_Angeles",
+          destTz: "Europe/London",
+          originDate: "2026-01-14", // Day before Jan 15 departure
+          destDate: "2026-01-14", // Same day in London (before 8h shift)
+        }
+      );
+
+      const event = buildCalendarEvent([intervention]);
+
+      expect(event.start?.timeZone).toBe("America/Los_Angeles");
+      expect(event.start?.dateTime).toContain("2026-01-14");
+      expect(event.start?.dateTime).toContain("07:00");
+    });
+
+    it("VS20 SFO-LHR: post_arrival uses dest_tz and dest_date", () => {
+      // Morning after arrival (post_arrival)
+      // Arrives Jan 16 10:40 LHR, first full morning is Jan 17
+      const intervention = makeRealisticIntervention(
+        "wake_target",
+        "post_arrival",
+        {
+          time: "07:00",
+          originTz: "America/Los_Angeles",
+          destTz: "Europe/London",
+          originDate: "2026-01-16", // Jan 16 LA time
+          destDate: "2026-01-17", // Jan 17 London time (morning after arrival)
+        }
+      );
+
+      const event = buildCalendarEvent([intervention]);
+
+      expect(event.start?.timeZone).toBe("Europe/London");
+      expect(event.start?.dateTime).toContain("2026-01-17");
+      expect(event.start?.dateTime).toContain("07:00");
+    });
+
+    /**
+     * Virgin Atlantic VS19: LHR 11:40 → SFO 14:40 same day (~11h)
+     * Westbound return - same calendar day arrival due to timezone gain
+     */
+    it("VS19 LHR-SFO: post_arrival same day arrival", () => {
+      // Arrives Jan 20 14:40 SFO (same calendar day as departure)
+      const intervention = makeRealisticIntervention(
+        "sleep_target",
+        "post_arrival",
+        {
+          time: "22:00",
+          originTz: "Europe/London",
+          destTz: "America/Los_Angeles",
+          originDate: "2026-01-21", // Next day London time
+          destDate: "2026-01-20", // Same day in LA (arrived same calendar day)
+        }
+      );
+
+      const event = buildCalendarEvent([intervention]);
+
+      expect(event.start?.timeZone).toBe("America/Los_Angeles");
+      expect(event.start?.dateTime).toContain("2026-01-20");
+    });
+  });
+
+  describe("Severe Jet Lag (12-17h shift) - Cross-Dateline", () => {
+    /**
+     * Singapore Airlines SQ31: SFO 09:40 → SIN 19:05+1 (~17h25m)
+     * Ultra-long-haul crossing date line eastbound, 16h shift → 8h delay
+     */
+    it("SQ31 SFO-SIN: in-flight nap uses dest_tz and dest_date (next day)", () => {
+      // In-flight nap at ~4h into flight
+      // Departure: Jan 22 09:40 LA (PST) = Jan 23 01:40 Singapore (SGT)
+      // Nap 4h later: Jan 22 13:40 LA = Jan 23 05:40 Singapore
+      const intervention = makeRealisticIntervention(
+        "nap_window",
+        "in_transit_ulr",
+        {
+          time: "05:40",
+          originTz: "America/Los_Angeles",
+          destTz: "Asia/Singapore",
+          originDate: "2026-01-22", // LA date
+          destDate: "2026-01-23", // Singapore date (NEXT DAY!)
+          flightOffsetHours: 4,
+        }
+      );
+
+      const event = buildCalendarEvent([intervention]);
+
+      // Calendar event should be on Singapore date (Jan 23), not LA date
+      expect(event.start?.timeZone).toBe("Asia/Singapore");
+      expect(event.start?.dateTime).toContain("2026-01-23");
+      expect(event.start?.dateTime).toContain("05:40");
+    });
+
+    it("SQ31 SFO-SIN: post_arrival wake uses next morning date", () => {
+      // Arrives Jan 23 19:00 Singapore
+      // Wake target at 06:30 must be Jan 24 (morning AFTER arrival)
+      const intervention = makeRealisticIntervention(
+        "wake_target",
+        "post_arrival",
+        {
+          time: "06:30",
+          originTz: "America/Los_Angeles",
+          destTz: "Asia/Singapore",
+          originDate: "2026-01-23", // LA date
+          destDate: "2026-01-24", // Singapore morning after 19:00 arrival
+        }
+      );
+
+      const event = buildCalendarEvent([intervention]);
+
+      // Must be Jan 24, not Jan 23 (which would be BEFORE landing!)
+      expect(event.start?.timeZone).toBe("Asia/Singapore");
+      expect(event.start?.dateTime).toContain("2026-01-24");
+    });
+
+    /**
+     * Singapore Airlines SQ32: SIN 09:15 → SFO 07:50 same day (~15h35m)
+     * Date line crossing westbound - arrives same calendar day but earlier local time
+     */
+    it("SQ32 SIN-SFO: westbound date line crossing (arrives earlier)", () => {
+      // Departs Jan 20 09:15 Singapore
+      // Arrives Jan 20 07:50 LA (same calendar day but earlier local time!)
+      const intervention = makeRealisticIntervention(
+        "sleep_target",
+        "post_arrival",
+        {
+          time: "22:00",
+          originTz: "Asia/Singapore",
+          destTz: "America/Los_Angeles",
+          originDate: "2026-01-21", // Singapore next day
+          destDate: "2026-01-20", // LA same day as departure (date gained!)
+        }
+      );
+
+      const event = buildCalendarEvent([intervention]);
+
+      expect(event.start?.timeZone).toBe("America/Los_Angeles");
+      expect(event.start?.dateTime).toContain("2026-01-20");
+    });
+
+    /**
+     * Cathay Pacific CX872: HKG 01:00 → SFO 21:15-1 (~13h15m)
+     * SPECIAL CASE: Arrives PREVIOUS calendar day due to date line!
+     */
+    it("CX872 HKG-SFO: arrives previous calendar day", () => {
+      // Departs Jan 20 01:00 Hong Kong
+      // Arrives Jan 19 21:15 LA (previous calendar day!)
+      const intervention = makeRealisticIntervention(
+        "sleep_target",
+        "post_arrival",
+        {
+          time: "23:00",
+          originTz: "Asia/Hong_Kong",
+          destTz: "America/Los_Angeles",
+          originDate: "2026-01-20", // HK departure date
+          destDate: "2026-01-19", // LA arrival date (PREVIOUS day!)
+        }
+      );
+
+      const event = buildCalendarEvent([intervention]);
+
+      // Sleep target should be on Jan 19 LA time
+      expect(event.start?.timeZone).toBe("America/Los_Angeles");
+      expect(event.start?.dateTime).toContain("2026-01-19");
+    });
+
+    /**
+     * Japan Airlines JL2: HND 18:05 → SFO 10:15 same day (~9h10m)
+     * Date line crossing - arrives earlier on same calendar day
+     */
+    it("JL2 HND-SFO: same day arrival earlier local time", () => {
+      // Departs Jan 20 18:05 Tokyo
+      // Arrives Jan 20 10:15 LA (same day, earlier time)
+      const intervention = makeRealisticIntervention(
+        "wake_target",
+        "post_arrival",
+        {
+          time: "07:00",
+          originTz: "Asia/Tokyo",
+          destTz: "America/Los_Angeles",
+          originDate: "2026-01-21", // Tokyo next day
+          destDate: "2026-01-21", // LA next day (first full day)
+        }
+      );
+
+      const event = buildCalendarEvent([intervention]);
+
+      expect(event.start?.timeZone).toBe("America/Los_Angeles");
+      expect(event.start?.dateTime).toContain("2026-01-21");
+    });
+
+    /**
+     * Qantas QF74: SFO 20:15 → SYD 06:10+2 (~15h55m)
+     * SPECIAL CASE: Arrives TWO days later!
+     */
+    it("QF74 SFO-SYD: +2 day arrival", () => {
+      // Departs Jan 20 20:15 LA
+      // Arrives Jan 22 06:10 Sydney (TWO days later!)
+      const intervention = makeRealisticIntervention(
+        "wake_target",
+        "post_arrival",
+        {
+          time: "07:00",
+          originTz: "America/Los_Angeles",
+          destTz: "Australia/Sydney",
+          originDate: "2026-01-20", // LA departure date
+          destDate: "2026-01-22", // Sydney +2 days
+        }
+      );
+
+      const event = buildCalendarEvent([intervention]);
+
+      // Should be Jan 22 Sydney, not Jan 20 or 21
+      expect(event.start?.timeZone).toBe("Australia/Sydney");
+      expect(event.start?.dateTime).toContain("2026-01-22");
+    });
+
+    it("QF74 SFO-SYD: preparation still uses origin date", () => {
+      // Preparation day before departure (Jan 19)
+      const intervention = makeRealisticIntervention(
+        "melatonin",
+        "preparation",
+        {
+          time: "21:00",
+          originTz: "America/Los_Angeles",
+          destTz: "Australia/Sydney",
+          originDate: "2026-01-19",
+          destDate: "2026-01-20", // Sydney is ahead
+        }
+      );
+
+      const event = buildCalendarEvent([intervention]);
+
+      // Preparation uses origin timezone and date
+      expect(event.start?.timeZone).toBe("America/Los_Angeles");
+      expect(event.start?.dateTime).toContain("2026-01-19");
+    });
+
+    /**
+     * Qantas QF73: SYD 21:25 → SFO 15:55 same day (~13h30m)
+     * Date line crossing - arrives same calendar day despite long flight
+     */
+    it("QF73 SYD-SFO: same day arrival westbound", () => {
+      // Departs Jan 20 21:25 Sydney
+      // Arrives Jan 20 15:55 LA (same calendar day!)
+      const intervention = makeRealisticIntervention(
+        "sleep_target",
+        "post_arrival",
+        {
+          time: "22:00",
+          originTz: "Australia/Sydney",
+          destTz: "America/Los_Angeles",
+          originDate: "2026-01-21", // Sydney next day
+          destDate: "2026-01-20", // LA same day
+        }
+      );
+
+      const event = buildCalendarEvent([intervention]);
+
+      expect(event.start?.timeZone).toBe("America/Los_Angeles");
+      expect(event.start?.dateTime).toContain("2026-01-20");
+    });
+  });
+
+  describe("Minimal Jet Lag (3h shift) - Domestic/Hawaii", () => {
+    /**
+     * Hawaiian Airlines HA11: SFO 07:00 → HNL 09:35 same day (~5h35m)
+     */
+    it("HA11 SFO-HNL: same day arrival, minimal shift", () => {
+      const intervention = makeRealisticIntervention(
+        "sleep_target",
+        "post_arrival",
+        {
+          time: "22:00",
+          originTz: "America/Los_Angeles",
+          destTz: "Pacific/Honolulu",
+          originDate: "2026-01-20",
+          destDate: "2026-01-20", // Same day
+        }
+      );
+
+      const event = buildCalendarEvent([intervention]);
+
+      expect(event.start?.timeZone).toBe("Pacific/Honolulu");
+      expect(event.start?.dateTime).toContain("2026-01-20");
+    });
+
+    /**
+     * American Airlines AA16: SFO 11:00 → JFK 19:35 same day (~5.5h)
+     */
+    it("AA16 SFO-JFK: eastbound domestic same day", () => {
+      const intervention = makeRealisticIntervention(
+        "sleep_target",
+        "post_arrival",
+        {
+          time: "23:00",
+          originTz: "America/Los_Angeles",
+          destTz: "America/New_York",
+          originDate: "2026-01-20",
+          destDate: "2026-01-20",
+        }
+      );
+
+      const event = buildCalendarEvent([intervention]);
+
+      expect(event.start?.timeZone).toBe("America/New_York");
+      expect(event.start?.dateTime).toContain("2026-01-20");
+    });
+  });
+
+  describe("12h Shift Edge Case - Dubai", () => {
+    /**
+     * Emirates EK226: SFO 15:40 → DXB 19:25+1 (~15h45m)
+     * 12h timezone difference - exactly ambiguous direction
+     */
+    it("EK226 SFO-DXB: next day arrival in Dubai", () => {
+      // Departs Jan 20 15:40 LA
+      // Arrives Jan 21 19:25 Dubai
+      const intervention = makeRealisticIntervention(
+        "wake_target",
+        "post_arrival",
+        {
+          time: "07:00",
+          originTz: "America/Los_Angeles",
+          destTz: "Asia/Dubai",
+          originDate: "2026-01-21", // LA next day
+          destDate: "2026-01-22", // Dubai day after arrival
+        }
+      );
+
+      const event = buildCalendarEvent([intervention]);
+
+      expect(event.start?.timeZone).toBe("Asia/Dubai");
+      expect(event.start?.dateTime).toContain("2026-01-22");
+    });
+
+    /**
+     * Emirates EK225: DXB 08:50 → SFO 12:50 same day (~16h)
+     * Same-day arrival due to westward travel + long flight
+     */
+    it("EK225 DXB-SFO: same day arrival despite 16h flight", () => {
+      // Departs Jan 20 08:50 Dubai
+      // Arrives Jan 20 12:50 LA (same calendar day!)
+      const intervention = makeRealisticIntervention(
+        "sleep_target",
+        "post_arrival",
+        {
+          time: "22:00",
+          originTz: "Asia/Dubai",
+          destTz: "America/Los_Angeles",
+          originDate: "2026-01-21", // Dubai next day
+          destDate: "2026-01-20", // LA same day as departure
+        }
+      );
+
+      const event = buildCalendarEvent([intervention]);
+
+      expect(event.start?.timeZone).toBe("America/Los_Angeles");
+      expect(event.start?.dateTime).toContain("2026-01-20");
+    });
+  });
+
+  describe("Pre-departure phase timezone consistency", () => {
+    it("pre_departure uses origin timezone even for cross-dateline flight", () => {
+      // SFO → SIN: pre-departure caffeine cutoff
+      // Should use LA timezone, not Singapore
+      const intervention = makeRealisticIntervention(
+        "caffeine_cutoff",
+        "pre_departure",
+        {
+          time: "14:00",
+          originTz: "America/Los_Angeles",
+          destTz: "Asia/Singapore",
+          originDate: "2026-01-22",
+          destDate: "2026-01-23", // Singapore is ahead
+        }
+      );
+
+      const event = buildCalendarEvent([intervention]);
+
+      // Pre-departure uses origin timezone
+      expect(event.start?.timeZone).toBe("America/Los_Angeles");
+      expect(event.start?.dateTime).toContain("2026-01-22");
+    });
+
+    it("adaptation uses destination timezone", () => {
+      // Day 3 in Singapore after SFO → SIN flight
+      const intervention = makeRealisticIntervention("light_seek", "adaptation", {
+        time: "08:00",
+        originTz: "America/Los_Angeles",
+        destTz: "Asia/Singapore",
+        originDate: "2026-01-24",
+        destDate: "2026-01-25",
+      });
+
+      const event = buildCalendarEvent([intervention]);
+
+      // Adaptation uses destination timezone
+      expect(event.start?.timeZone).toBe("Asia/Singapore");
+      expect(event.start?.dateTime).toContain("2026-01-25");
     });
   });
 });
