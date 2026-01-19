@@ -12,7 +12,7 @@ import {
   getDayCardGradient,
   FLIGHT_DAY,
 } from "@/lib/intervention-utils";
-import { formatLongDate } from "@/lib/time-utils";
+import { formatLongDate, formatShortDate } from "@/lib/time-utils";
 import {
   getDisplayTime,
   isInTransitPhase,
@@ -422,8 +422,11 @@ export function DaySummaryCard({
               {getDayLabel(daySchedule.day, daySchedule.hasSameDayArrival)}
             </span>
             <span className="text-slate-300">•</span>
-            <span className="font-medium text-slate-600">
+            <span className="hidden font-medium text-slate-600 sm:inline">
               {formatLongDate(daySchedule.date)}
+            </span>
+            <span className="inline font-medium text-slate-600 sm:hidden">
+              {formatShortDate(daySchedule.date)}
             </span>
           </div>
 

@@ -5,6 +5,7 @@ import {
   getCurrentDateInTimezone,
   formatDateTimeLocal,
   formatLongDate,
+  formatShortDate,
   isBeforeSchedule,
   isAfterSchedule,
   getCurrentDayNumber,
@@ -119,6 +120,31 @@ describe("formatLongDate", () => {
     // January 19, 2026 is a Monday
     const result = formatLongDate("2026-01-19");
     expect(result).toContain("Monday");
+  });
+});
+
+describe("formatShortDate", () => {
+  it("formats date string to abbreviated format", () => {
+    const result = formatShortDate("2026-01-19");
+    // Should use abbreviated month name
+    expect(result).toContain("Jan");
+    expect(result).toContain("19");
+    // Should NOT contain full month name
+    expect(result).not.toContain("January");
+  });
+
+  it("includes abbreviated weekday", () => {
+    // January 19, 2026 is a Monday
+    const result = formatShortDate("2026-01-19");
+    expect(result).toContain("Mon");
+    // Should NOT contain full weekday name
+    expect(result).not.toContain("Monday");
+  });
+
+  it("handles different months", () => {
+    expect(formatShortDate("2026-03-15")).toContain("Mar");
+    expect(formatShortDate("2026-09-22")).toContain("Sep");
+    expect(formatShortDate("2026-12-25")).toContain("Dec");
   });
 });
 

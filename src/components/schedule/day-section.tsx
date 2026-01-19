@@ -15,6 +15,7 @@ import {
 } from "@/lib/schedule-utils";
 import {
   formatLongDate,
+  formatShortDate,
   getCurrentTimeInTimezone,
   getNowTimezone,
 } from "@/lib/time-utils";
@@ -408,8 +409,11 @@ export function DaySection({
                 {getDayLabel(daySchedule.day, daySchedule.hasSameDayArrival)}
               </span>
               <span className="text-slate-400">•</span>
-              <span className="font-medium text-slate-600">
+              <span className="hidden font-medium text-slate-600 sm:inline">
                 {formatLongDate(daySchedule.date)}
+              </span>
+              <span className="inline font-medium text-slate-600 sm:hidden">
+                {formatShortDate(daySchedule.date)}
               </span>
             </div>
             <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600 transition-all duration-200 hover:bg-slate-200">
