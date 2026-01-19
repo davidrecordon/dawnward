@@ -95,15 +95,14 @@ export function DateTimeSelect({
             <span className="text-muted-foreground truncate">Select date</span>
           )}
         </div>
-        {/* Hidden native date input - showPicker() called via wrapper click */}
+        {/* Native date input - transparent but clickable for iOS Safari compatibility */}
         <input
           ref={dateInputRef}
           type="date"
           value={datePart}
           onChange={handleDateChange}
-          className="pointer-events-none absolute inset-0 border-0 bg-transparent opacity-0"
+          className="absolute inset-0 border-0 bg-transparent opacity-0"
           aria-label="Select date"
-          tabIndex={-1}
         />
       </div>
       <TimeSelect
