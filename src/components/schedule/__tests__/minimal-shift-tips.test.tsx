@@ -14,8 +14,12 @@ describe("MinimalShiftTips", () => {
       />
     );
 
-    expect(screen.getByText("Quick Tips for Your 1-Hour Shift")).toBeInTheDocument();
-    expect(screen.getByText(/Small timezone changes adapt naturally/)).toBeInTheDocument();
+    expect(
+      screen.getByText("Quick Tips for Your 1-Hour Shift")
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/Small timezone changes adapt naturally/)
+    ).toBeInTheDocument();
   });
 
   it("renders all four tips", () => {
@@ -29,9 +33,15 @@ describe("MinimalShiftTips", () => {
       />
     );
 
-    expect(screen.getByText("Get bright light in the morning")).toBeInTheDocument();
-    expect(screen.getByText("Avoid caffeine within 8 hours of bedtime")).toBeInTheDocument();
-    expect(screen.getByText("Sleep at local time from day one")).toBeInTheDocument();
+    expect(
+      screen.getByText("Get bright light in the morning")
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("Avoid caffeine within 8 hours of bedtime")
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("Sleep at local time from day one")
+    ).toBeInTheDocument();
     expect(screen.getByText("Eat meals at local times")).toBeInTheDocument();
   });
 
@@ -107,6 +117,8 @@ describe("MinimalShiftTips", () => {
     );
 
     // The sleep tip should mention the specific shift magnitude
-    expect(screen.getByText(/A 2-hour shift resolves naturally/)).toBeInTheDocument();
+    expect(
+      screen.getByText(/A 2-hour shift resolves naturally/)
+    ).toBeInTheDocument();
   });
 });

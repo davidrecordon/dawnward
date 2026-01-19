@@ -410,23 +410,24 @@ export function TripForm({
             />
 
             {/* Prep days recommendation hint */}
-            {shiftInfo && shiftInfo.absShift > MINIMAL_SHIFT_THRESHOLD_HOURS && (
-              <p className="mt-2 text-xs text-slate-500">
-                For a {shiftInfo.absShift}-hour {shiftInfo.direction} shift, we
-                recommend{" "}
-                <button
-                  type="button"
-                  onClick={() =>
-                    updateField("prepDays", shiftInfo.recommendedPrepDays)
-                  }
-                  className="font-medium text-sky-600 underline decoration-sky-300 underline-offset-2 hover:text-sky-700"
-                >
-                  {shiftInfo.recommendedPrepDays} preparation day
-                  {shiftInfo.recommendedPrepDays !== 1 ? "s" : ""}
-                </button>
-                .
-              </p>
-            )}
+            {shiftInfo &&
+              shiftInfo.absShift > MINIMAL_SHIFT_THRESHOLD_HOURS && (
+                <p className="mt-2 text-xs text-slate-500">
+                  For a {shiftInfo.absShift}-hour {shiftInfo.direction} shift,
+                  we recommend{" "}
+                  <button
+                    type="button"
+                    onClick={() =>
+                      updateField("prepDays", shiftInfo.recommendedPrepDays)
+                    }
+                    className="font-medium text-sky-600 underline decoration-sky-300 underline-offset-2 hover:text-sky-700"
+                  >
+                    {shiftInfo.recommendedPrepDays} preparation day
+                    {shiftInfo.recommendedPrepDays !== 1 ? "s" : ""}
+                  </button>
+                  .
+                </p>
+              )}
           </div>
 
           {/* Only show wake/sleep times for signed-out users */}

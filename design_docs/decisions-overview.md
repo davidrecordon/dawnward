@@ -67,8 +67,23 @@
 - **Anonymous support:** Trips saved with `userId: null`, accessible by direct link
 - **Shareable URLs:** Short codes (`/s/abc123`) for sharing schedules
 - **Login required to share** — creates upsell moment, enables attribution
-- **Trip history:** Users can view and delete past trips at `/history`
+- **Trip history:** Users can view and delete past trips at `/trips`
 - **Unified view:** Both `/trip/[id]` and `/s/[code]` use same display component
+
+### Schedule View Modes
+
+Two display modes controlled by `scheduleViewMode` user preference:
+
+- **Summary mode (default)** — Condensed `DaySummaryCard` per day, today auto-expands, expand/collapse per day
+- **Timeline mode** — Full `DaySection` with all intervention cards visible
+
+### Minimal Shift Tips
+
+For timezone shifts ≤2 hours (`MINIMAL_SHIFT_THRESHOLD_HOURS`), show a simplified tips card instead of full schedule:
+
+- Brief explanation that small shifts don't need intensive intervention
+- General tips (regular sleep, morning light, caffeine cutoff)
+- "View full schedule" toggle to see detailed timeline if desired
 
 ### User Preferences (stored in DB)
 
@@ -77,6 +92,8 @@
 - Uses melatonin (boolean)
 - Uses caffeine (boolean)
 - Caffeine cutoff hours before sleep
+- Schedule view mode (summary/timeline)
+- Show dual timezone (boolean)
 
 ### Trip Editing & Actuals Tracking
 
@@ -111,11 +128,15 @@ Public, read-only circadian tools for Claude to answer jet lag questions in othe
 - **Hosting:** Part of main app (not standalone)
 - **Auth:** None required
 - **Rate limit:** By IP (100 requests/hour)
+- **Protocol:** JSON-RPC 2.0 at `POST /api/mcp`
 
-### Tools
+### Implemented Tools
 
-1. `calculate_phase_shift` — Hours of shift needed, direction, difficulty
-2. `get_adaptation_plan` — Full intervention strategy for a trip
+1. `calculate_phase_shift` — Hours of shift needed, direction, difficulty (~100ms)
+2. `get_adaptation_plan` — Full intervention strategy for a trip (~1-2s)
+
+### Planned Tools (Not Implemented)
+
 3. `get_light_windows` — Optimal light exposure/avoidance times
 4. `get_melatonin_timing` — When to take melatonin
 5. `get_caffeine_strategy` — Caffeine timing for alertness
@@ -190,9 +211,13 @@ Key tables (full SQL in backend design doc):
 | Phase 1 Auth (Google sign-in) | DONE — JWT sessions, protected routes, user prefs  |
 | Shareable URLs                | DONE — `/s/[code]` short links, trip history page  |
 | Trip Editing (Phases 1-2)     | DONE — Preference editing, actuals recording UI    |
+| Schedule View Modes           | DONE — Summary/timeline toggle, DaySummaryCard     |
+| Minimal Shift Tips            | DONE — Simplified view for ≤2 hour shifts          |
+| Timezone Rearchitecture       | DONE — Phase-aware dual timezone display           |
 | Set up hello@dawnward.app     | TODO — Used for Google OAuth consent screen        |
 | Phase 2 Auth (Calendar sync)  | TODO — Add calendar.events scope, sync API         |
 | Trip Editing (Phases 3-4)     | TODO — Model state snapshots, Forger99 recalc      |
+| Anonymous trip cleanup        | TODO — Cron job to clean up old anonymous trips    |
 
 ---
 

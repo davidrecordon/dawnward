@@ -39,7 +39,14 @@ Next.js and Python serverless functions coexist via explicit `vercel.json` confi
 
 ## Database Schema
 
-Use Vercel Postgres. All IDs are UUIDs. All timestamps are `timestamptz`.
+Use Vercel Postgres via Prisma. All IDs are CUIDs. All timestamps are `DateTime`.
+
+> **Note:** The SQL schema below represents the original design. The actual implementation uses Prisma (`prisma/schema.prisma`) with some differences:
+>
+> - `SharedSchedule` model combines trips, legs, and schedules into one table for simplicity
+> - Auth tables (`User`, `Account`, `Session`) follow NextAuth.js v5 conventions
+> - `InterventionActual` and `MarkerStateSnapshot` tables track actuals and model state
+> - See `prisma/schema.prisma` for the canonical schema
 
 ```sql
 -- Users table
@@ -304,28 +311,49 @@ GET  /api/trips/[id]/feedback     → Get feedback if exists
 
 ## MCP Interface
 
-Public read-only endpoint at `/api/mcp`. No authentication required. Rate limit by IP (100 requests/hour).
+Public read-only endpoint at `POST /api/mcp`. No authentication required. Rate limit by IP (100 requests/hour).
+
+> **Implementation Note:** Uses JSON-RPC 2.0 protocol. See `src/app/api/mcp/route.ts` for the TypeScript handler and `src/lib/mcp/` for types and tool definitions.
 
 ### Endpoint
 
 ```
-GET  /api/mcp/tools     → Returns tool definitions (JSON Schema)
-POST /api/mcp/invoke    → Execute a tool
+POST /api/mcp    → JSON-RPC 2.0 endpoint
 ```
 
-Request (POST /api/mcp/invoke):
+**Methods:**
+
+- `tools/list` — Returns available tool definitions
+- `tools/call` — Execute a tool with arguments
+
+Request (tools/list):
 
 ```json
 {
-  "tool": "get_adaptation_plan",
-  "inputs": {
-    "origin_timezone": "America/Los_Angeles",
-    "destination_timezone": "Asia/Tokyo",
-    "departure_datetime": "2026-02-15T11:30:00-08:00",
-    "prep_days_available": 3,
-    "uses_melatonin": true,
-    "uses_caffeine": true,
-    "usual_wake_time": "07:00"
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "tools/list"
+}
+```
+
+Request (tools/call):
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "method": "tools/call",
+  "params": {
+    "name": "get_adaptation_plan",
+    "arguments": {
+      "origin_timezone": "America/Los_Angeles",
+      "destination_timezone": "Asia/Tokyo",
+      "departure_datetime": "2026-02-15T11:30:00-08:00",
+      "prep_days_available": 3,
+      "uses_melatonin": true,
+      "uses_caffeine": true,
+      "usual_wake_time": "07:00"
+    }
   }
 }
 ```
@@ -334,20 +362,24 @@ Response:
 
 ```json
 {
+  "jsonrpc": "2.0",
+  "id": 2,
   "result": {
-    "total_shift_hours": -8,
-    "direction": "advance",
-    "recommended_prep_days": 3,
-    "daily_shift_target": 1.5,
-    "strategy_summary": "You need to advance your body clock by 8 hours. Starting 3 days before departure, shift ~1.5 hours per day using morning light and evening melatonin.",
-    "interventions": [...]
+    "content": [
+      {
+        "type": "text",
+        "text": "{\"total_shift_hours\": -8, \"direction\": \"advance\", ...}"
+      }
+    ]
   }
 }
 ```
 
 ### Tools
 
-#### calculate_phase_shift
+> **Implementation Status:** Only `calculate_phase_shift` and `get_adaptation_plan` are currently implemented. The remaining tools are planned but not yet built.
+
+#### calculate_phase_shift (Implemented)
 
 Calculate hours of circadian shift needed between timezones.
 
@@ -384,7 +416,7 @@ Output:
 
 Difficulty thresholds: easy (1-3h), moderate (4-6h), hard (7+h).
 
-#### get_adaptation_plan
+#### get_adaptation_plan (Implemented)
 
 Full adaptation strategy for a trip.
 
@@ -426,7 +458,7 @@ Full adaptation strategy for a trip.
 }
 ```
 
-#### get_light_windows
+#### get_light_windows (Planned)
 
 Optimal light exposure/avoidance for a specific day in adaptation.
 
@@ -452,7 +484,7 @@ Optimal light exposure/avoidance for a specific day in adaptation.
 }
 ```
 
-#### get_melatonin_timing
+#### get_melatonin_timing (Planned)
 
 When to take melatonin for circadian shifting.
 
@@ -472,7 +504,7 @@ When to take melatonin for circadian shifting.
 }
 ```
 
-#### get_caffeine_strategy
+#### get_caffeine_strategy (Planned)
 
 Caffeine timing for alertness without disrupting adaptation.
 
@@ -497,7 +529,7 @@ Caffeine timing for alertness without disrupting adaptation.
 }
 ```
 
-#### estimate_adaptation_days
+#### estimate_adaptation_days (Planned)
 
 How long until fully adapted to new timezone.
 
@@ -522,18 +554,34 @@ How long until fully adapted to new timezone.
 
 ### Directory Structure
 
+> **Note:** The actual implementation differs from original design. See below for current structure.
+
 ```
-/api/
-├── python/
-│   └── circadian/
-│       ├── __init__.py
-│       ├── model.py           # Forger99 wrapper
-│       ├── phase_shift.py     # calculate_phase_shift()
-│       ├── light.py           # get_light_windows()
-│       ├── melatonin.py       # get_melatonin_timing()
-│       ├── caffeine.py        # get_caffeine_strategy()
-│       ├── adaptation.py      # estimate_adaptation_days()
-│       └── schedule.py        # generate_full_schedule()
+api/
+├── _python/
+│   ├── circadian/
+│   │   ├── __init__.py
+│   │   ├── types.py              # Data classes (TripInput, Intervention, etc.)
+│   │   ├── scheduler_v2.py       # Phase-based schedule generator
+│   │   ├── circadian_math.py     # Core math utilities
+│   │   ├── recalculation.py      # Schedule recalculation logic
+│   │   ├── science/
+│   │   │   ├── markers.py        # CBTmin, DLMO markers
+│   │   │   ├── prc.py            # Phase response curves (light, melatonin)
+│   │   │   ├── shift_calculator.py # Daily shift rates by intensity
+│   │   │   └── sleep_pressure.py # Two-process sleep model
+│   │   └── scheduling/
+│   │       ├── phase_generator.py    # Phase-based day generation
+│   │       ├── intervention_planner.py # Intervention scheduling
+│   │       └── constraint_filter.py  # Constraint validation
+│   ├── mcp_tools.py              # MCP tool implementations
+│   ├── recalculate_schedule.py   # Vercel function for recalculation
+│   ├── regenerate_schedule.py    # Vercel function for schedule generation
+│   └── tests/                    # pytest tests (~345 tests)
+├── mcp/
+│   └── tools.py                  # Vercel function (internal, called by route.ts)
+└── schedule/
+    └── generate.py               # Vercel function for /api/schedule/generate
 ```
 
 ### Dependencies
@@ -869,6 +917,8 @@ Not in v1, but designed to accommodate:
 
 3. **Model improvements** — `trip_feedback` table collects data for future model tuning; `model_version` in schedules enables A/B testing
 
-4. **Sharing** — Trip schedules could be shareable via public link; would need `trips.share_token` column
+4. ~~**Sharing** — Trip schedules could be shareable via public link~~ ✅ **Implemented** — `/s/[code]` short links
 
 5. **Widgets** — MCP interface already enables Claude to answer jet lag questions; could expand to other AI assistants
+
+6. **Eight Sleep Integration** — Pull actual sleep data to calibrate circadian phase (spec: `exploration/eight-sleep-integration.md`)

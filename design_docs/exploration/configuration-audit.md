@@ -111,6 +111,27 @@ at the top of each module is the right choice for this codebase size.
 | 34   | `SHORT_FLIGHT_THRESHOLD_HOURS`     | 6     | Skip in-transit < 6h       |
 | 35   | `PAST_INTERVENTION_BUFFER_MINUTES` | 30    | Grace period for filtering |
 
+#### Recalculation (`recalculation.py`)
+
+| Line  | Constant                     | Value | Purpose                                |
+| ----- | ---------------------------- | ----- | -------------------------------------- |
+| 56    | `MIN_SHIFT_DIFFERENCE_HOURS` | 0.25  | Recalculation trigger threshold        |
+| 59    | `MIN_EFFECTIVENESS_FLOOR`    | 0.5   | Minimum effectiveness multiplier       |
+| 62-73 | `COMPLIANCE_MULTIPLIERS`     | dict  | Intervention-type compliance penalties |
+
+**COMPLIANCE_MULTIPLIERS values:**
+
+```python
+COMPLIANCE_MULTIPLIERS = {
+    "light_seek": 0.8,     # Missed light = 80% effective
+    "light_avoid": 0.9,    # Missed avoid = 90% effective
+    "melatonin": 0.7,      # Missed melatonin = 70% effective
+    "caffeine_cutoff": 0.95,  # Caffeine slip = 95% effective
+    "sleep_target": 0.6,   # Wrong sleep time = 60% effective
+    "wake_target": 0.7,    # Wrong wake time = 70% effective
+}
+```
+
 ---
 
 ## TypeScript Frontend Constants
@@ -180,6 +201,58 @@ const PHASE_ORDER: Record<Phase, number> = {
 | 41   | Fuse threshold   | 0.3   | Fuzzy search strictness     |
 | 44   | Min match length | 2     | Minimum chars to search     |
 | 61   | Default limit    | 10    | Max search results          |
+
+### Shift Magnitude & Prep Days (`timezone-utils.ts`)
+
+| Line | Constant                        | Value | Purpose                                    |
+| ---- | ------------------------------- | ----- | ------------------------------------------ |
+| 13   | `MINIMAL_SHIFT_THRESHOLD_HOURS` | 2     | Shift threshold below which no prep needed |
+| 16   | `PREP_DAYS_THRESHOLDS.SMALL`    | 4     | 3-4h shifts get 1 prep day                 |
+| 17   | `PREP_DAYS_THRESHOLDS.MEDIUM`   | 6     | 5-6h shifts get 2 prep days                |
+| 18   | `PREP_DAYS_THRESHOLDS.LARGE`    | 9     | 7-9h shifts get 3 prep days                |
+
+### Schedule View Constants
+
+UI timing and display threshold constants.
+
+| File                     | Line | Constant                         | Value | Purpose                                        |
+| ------------------------ | ---- | -------------------------------- | ----- | ---------------------------------------------- |
+| `minimal-shift-tips.tsx` | 8    | `CAFFEINE_CUTOFF_HOURS`          | 8     | Hours before bedtime to avoid caffeine         |
+| `schedule-header.tsx`    | 11   | `SHOW_DIRECTION_THRESHOLD_HOURS` | 10    | Min shift to show "Adapting via advance/delay" |
+| `trip-schedule-view.tsx` | 67   | `SUMMARY_BANNER_DISMISS_MS`      | 5000  | Auto-dismiss recalculation banner              |
+| `trip-schedule-view.tsx` | 70   | `SCROLL_TO_NOW_DELAY_MS`         | 100   | Delay before scrolling to now marker           |
+
+### Calendar Integration (`google-calendar.ts`)
+
+| Line | Constant                     | Value | Purpose                         |
+| ---- | ---------------------------- | ----- | ------------------------------- |
+| 10   | `DEFAULT_EVENT_DURATION_MIN` | 15    | Default calendar event duration |
+| 31   | `DEFAULT_REMINDER_MINUTES`   | 15    | Default reminder time           |
+| 63   | `DEFAULT_EMOJI`              | "📋"  | Fallback emoji for events       |
+
+### Flight Phase Constants (`intervention-utils.ts`)
+
+| Line | Constant                 | Value | Purpose                     |
+| ---- | ------------------------ | ----- | --------------------------- |
+| 18   | `FLIGHT_DAY`             | 0     | Flight day constant         |
+| 19   | `ARRIVAL_DAY`            | 1     | Arrival day constant        |
+| 22   | `EARLY_FLIGHT_THRESHOLD` | 0.33  | Early flight phase fraction |
+| 23   | `MID_FLIGHT_THRESHOLD`   | 0.66  | Mid flight phase fraction   |
+
+### Actuals & Tracking (`actuals-utils.ts`)
+
+| Line | Constant                    | Value | Purpose                     |
+| ---- | --------------------------- | ----- | --------------------------- |
+| 40   | `TWELVE_HOURS_MINUTES`      | 720   | Midnight crossing detection |
+| 42   | `TWENTY_FOUR_HOURS_MINUTES` | 1440  | Deviation calculation       |
+
+### Storage & Persistence
+
+| File                  | Line | Constant         | Value                    | Purpose                  |
+| --------------------- | ---- | ---------------- | ------------------------ | ------------------------ |
+| `short-code.ts`       | 8    | `BASE62`         | `[a-zA-Z0-9]` (62 chars) | Share code character set |
+| `schedule-storage.ts` | 9    | `FORM_STATE_KEY` | "dawnward_form_state"    | localStorage key         |
+| `trip-status.ts`      | 1    | `MS_PER_DAY`     | 86400000                 | Milliseconds per day     |
 
 ### Demo/Example Values (`trip-form.tsx`)
 
@@ -340,15 +413,21 @@ Constants are already discoverable via this audit document.
 
 ## Summary
 
-| Category          | Count | Action                                    |
-| ----------------- | ----- | ----------------------------------------- |
-| Immutable Science | ~36   | Leave as-is, document sources             |
-| Algorithm Config  | ~35   | Keep as module-level constants (decided)  |
-| User Preferences  | 10    | All working, 4 future candidates          |
-| Frontend Defaults | ~26   | Mostly centralized, well-organized        |
-| MCP Constants     | ~12   | New endpoint for AI integrations          |
-| Rate Limiting     | ~5    | Memory-safe sliding window implementation |
-| Duplication       | 0     | Fixed (types.py now cross-references)     |
+| Category              | Count | Action                                    |
+| --------------------- | ----- | ----------------------------------------- |
+| Immutable Science     | ~36   | Leave as-is, document sources             |
+| Algorithm Config      | ~38   | Keep as module-level constants (decided)  |
+| User Preferences      | 10    | All working, 4 future candidates          |
+| Frontend Defaults     | ~26   | Mostly centralized, well-organized        |
+| Shift & Prep Days     | 4     | Prep day calculation thresholds           |
+| Schedule View         | 4     | UI timing and display thresholds          |
+| Calendar Integration  | 3     | Google Calendar event defaults            |
+| Flight Phase          | 4     | Flight day timing fractions               |
+| Actuals & Tracking    | 2     | Deviation calculation constants           |
+| Storage & Persistence | 3     | localStorage keys and time constants      |
+| MCP Constants         | ~12   | New endpoint for AI integrations          |
+| Rate Limiting         | ~5    | Memory-safe sliding window implementation |
+| Duplication           | 0     | Fixed (types.py now cross-references)     |
 
 ### Priority Actions
 

@@ -20,9 +20,11 @@ Use `ui-v2-homepage-only.html` when you need to inspect exact CSS values, Tailwi
 | Screen          | Route        | Purpose                           |
 | --------------- | ------------ | --------------------------------- |
 | New Trip        | `/`          | Landing page with trip input form |
-| Trip History    | `/history`   | List of past and upcoming trips   |
+| Trip History    | `/trips`     | List of past and upcoming trips   |
 | Settings        | `/settings`  | User preferences and account      |
 | Schedule Detail | `/trip/[id]` | Daily intervention schedule       |
+| Shared Schedule | `/s/[code]`  | Public shared trip view           |
+| Science         | `/science`   | Circadian science explainer       |
 
 ---
 
@@ -239,6 +241,51 @@ When multiple interventions occur at the same time as a `wake_target`, they disp
 
 ---
 
+### Schedule View Modes
+
+Users can toggle between two display modes via the `scheduleViewMode` preference:
+
+**Summary Mode (default):**
+
+- Uses `DaySummaryCard` component for each day
+- Shows condensed intervention list with icons and times
+- Today's day auto-expands on load
+- Users can expand/collapse individual days via "View details" / "Summarize" buttons
+- Flight Day shows sub-sections: Before Boarding, On the Plane, After Landing
+
+**Timeline Mode:**
+
+- All days start expanded showing full `DaySection` detail view
+- Shows complete intervention cards with descriptions
+- Progress bar visible for each day
+
+**View Mode Toggle:**
+
+- Located in schedule header
+- Persists to user preferences (if signed in)
+- Local state for anonymous users
+
+---
+
+### Minimal Shift Tips
+
+For small timezone shifts (≤2 hours), the schedule view shows a simplified `MinimalShiftTips` card instead of the full day-by-day schedule.
+
+**Content:**
+
+- Brief explanation that small shifts don't require intensive intervention
+- General tips: maintain regular sleep, avoid caffeine 8 hours before bed, get morning light
+- "View full schedule" button to see detailed timeline if desired
+
+**Threshold:** Controlled by `MINIMAL_SHIFT_THRESHOLD_HOURS = 2` constant.
+
+**Response fields:**
+
+- `shift_magnitude` — Rounded absolute hours of timezone difference
+- `is_minimal_shift` — Boolean flag when shift ≤ threshold
+
+---
+
 ## User Flows
 
 ### Anonymous User Flow
@@ -331,17 +378,22 @@ When multiple interventions occur at the same time as a `wake_target`, they disp
 
 These components appear across multiple screens:
 
-| Component         | Used in                     |
-| ----------------- | --------------------------- |
-| Header            | All screens                 |
-| Footer            | All screens                 |
-| Trip card         | History, New Trip (preview) |
-| Toggle row        | Settings, New Trip          |
-| Time input        | Settings, New Trip          |
-| Primary button    | All screens                 |
-| Badge             | Trip cards, Schedule header |
-| Progress bar      | Schedule Detail             |
-| Intervention card | Schedule Detail             |
+| Component         | Used in                          |
+| ----------------- | -------------------------------- |
+| Header            | All screens                      |
+| Footer            | All screens                      |
+| Trip card         | Trip History, New Trip (preview) |
+| Toggle row        | Settings, New Trip               |
+| Time input        | Settings, New Trip               |
+| Primary button    | All screens                      |
+| Badge             | Trip cards, Schedule header      |
+| Progress bar      | Schedule Detail                  |
+| Intervention card | Schedule Detail (timeline mode)  |
+| DaySummaryCard    | Schedule Detail (summary mode)   |
+| DaySection        | Schedule Detail (timeline mode)  |
+| MinimalShiftTips  | Schedule Detail (small shifts)   |
+| InflightSleepCard | Schedule Detail (in-transit)     |
+| ScheduleHeader    | Schedule Detail                  |
 
 ---
 
