@@ -209,7 +209,9 @@ export function buildEventDescription(interventions: Intervention[]): string {
     description = simplifyDescription(interventions[0]);
   } else {
     // Multiple interventions: bullet list
-    description = interventions.map((i) => `• ${simplifyDescription(i)}`).join("\n");
+    description = interventions
+      .map((i) => `• ${simplifyDescription(i)}`)
+      .join("\n");
   }
 
   return `${description}\n\n---\n${EVENT_FOOTER}`;
@@ -388,9 +390,15 @@ export function groupInterventionsByAnchor(
  *
  * This is critical for cross-dateline flights where the origin and destination
  * dates differ significantly.
+ *
+ * @param interventions - The interventions to include in this event
+ * @param wakeTime - Optional HH:MM of wake_target on this day. If the event's
+ *                   time matches wakeTime, uses 0-minute reminder to avoid
+ *                   notifying before wake time.
  */
 export function buildCalendarEvent(
-  interventions: Intervention[]
+  interventions: Intervention[],
+  wakeTime?: string
 ): calendar_v3.Schema$Event {
   if (interventions.length === 0) {
     throw new Error("Cannot build event from empty interventions");
@@ -427,8 +435,10 @@ export function buildCalendarEvent(
   const startDate = new Date(`${date}T${time}:00`);
   const endDate = new Date(startDate.getTime() + durationMin * 60 * 1000);
 
-  // Use anchor's reminder time
-  const reminderMinutes = getReminderMinutes(anchor.type);
+  // Use anchor's reminder time, but if this event is at wake time, use 0
+  // to avoid notifying before the user is supposed to wake up
+  const reminderMinutes =
+    wakeTime && time === wakeTime ? 0 : getReminderMinutes(anchor.type);
 
   // Determine if event should show as busy (opaque) or free (transparent)
   const transparency = shouldShowAsBusy(anchor.type) ? "opaque" : "transparent";
@@ -578,13 +588,18 @@ export async function createEventsForSchedule(
   const created: string[] = [];
   let failed = 0;
 
-  console.log(
-    `[Calendar] Creating events for ${interventionDays.length} days`
-  );
+  console.log(`[Calendar] Creating events for ${interventionDays.length} days`);
 
   for (const day of interventionDays) {
     // Use anchor-based grouping for reduced event density
     const groups = groupInterventionsByAnchor(day.items);
+
+    // Find wake time for this day (if any) to sync reminder times
+    // Events at the same time as wake_target use 0-minute reminder
+    const wakeIntervention = day.items.find((i) => i.type === "wake_target");
+    const wakeTime = wakeIntervention
+      ? getDisplayTime(wakeIntervention)
+      : undefined;
 
     console.log(
       `[Calendar] Day ${day.day} (${day.date}): ${groups.size} event groups from ${day.items.length} interventions`
@@ -592,7 +607,7 @@ export async function createEventsForSchedule(
 
     for (const [key, interventions] of groups) {
       try {
-        const event = buildCalendarEvent(interventions);
+        const event = buildCalendarEvent(interventions, wakeTime);
         console.log(
           `[Calendar] Creating event: "${event.summary}" at ${event.start?.dateTime} (${event.start?.timeZone})`
         );
@@ -602,7 +617,10 @@ export async function createEventsForSchedule(
         // Throttle to avoid rate limiting
         await sleep(API_THROTTLE_MS);
       } catch (error) {
-        console.error(`[Calendar] Error creating event for group ${key}:`, error);
+        console.error(
+          `[Calendar] Error creating event for group ${key}:`,
+          error
+        );
         failed++;
         // Continue with other events even if one fails
       }

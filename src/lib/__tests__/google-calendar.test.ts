@@ -549,6 +549,77 @@ describe("buildCalendarEvent", () => {
       );
     });
   });
+
+  describe("wakeTime parameter for reminder sync", () => {
+    it("uses 0-minute reminder when event time matches wakeTime", () => {
+      // light_avoid at 08:30 would normally get 15-minute reminder
+      const interventions = [
+        makeIntervention("light_avoid", "08:30", { duration_min: 120 }),
+      ];
+
+      // Pass wakeTime matching the event time
+      const event = buildCalendarEvent(interventions, "08:30");
+
+      // Should use 0-minute reminder (same as wake_target) instead of 15
+      expect(event.reminders?.overrides?.[0]?.minutes).toBe(0);
+    });
+
+    it("uses normal reminder when event time does not match wakeTime", () => {
+      // light_avoid at different time than wake
+      const interventions = [
+        makeIntervention("light_avoid", "20:00", { duration_min: 180 }),
+      ];
+
+      // Wake time is 07:00, event is at 20:00
+      const event = buildCalendarEvent(interventions, "07:00");
+
+      // Should use normal 15-minute reminder (default for light_avoid)
+      expect(event.reminders?.overrides?.[0]?.minutes).toBe(15);
+    });
+
+    it("uses normal reminder when wakeTime is not provided", () => {
+      const interventions = [
+        makeIntervention("light_avoid", "08:30", { duration_min: 120 }),
+      ];
+
+      // No wakeTime passed
+      const event = buildCalendarEvent(interventions);
+
+      // Should use normal 15-minute reminder
+      expect(event.reminders?.overrides?.[0]?.minutes).toBe(15);
+    });
+
+    it("syncs melatonin reminder at wake time", () => {
+      // Edge case: melatonin at same time as wake (unlikely but valid)
+      const interventions = [makeIntervention("melatonin", "07:00")];
+
+      const event = buildCalendarEvent(interventions, "07:00");
+
+      // Should use 0-minute reminder
+      expect(event.reminders?.overrides?.[0]?.minutes).toBe(0);
+    });
+
+    it("keeps wake_target at 0 regardless of wakeTime param", () => {
+      // wake_target already uses 0-minute reminder
+      const interventions = [makeIntervention("wake_target", "07:00")];
+
+      const event = buildCalendarEvent(interventions, "07:00");
+
+      // Should still be 0
+      expect(event.reminders?.overrides?.[0]?.minutes).toBe(0);
+    });
+
+    it("syncs sleep_target reminder when at wake time (edge case)", () => {
+      // sleep_target normally gets 30-minute reminder
+      const interventions = [makeIntervention("sleep_target", "23:00")];
+
+      // If somehow wake is at 23:00 (very unusual)
+      const event = buildCalendarEvent(interventions, "23:00");
+
+      // Should use 0-minute reminder
+      expect(event.reminders?.overrides?.[0]?.minutes).toBe(0);
+    });
+  });
 });
 
 /**
