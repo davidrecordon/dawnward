@@ -83,7 +83,7 @@ export function DateTimeSelect({
           type="date"
           value={datePart}
           onChange={handleDateChange}
-          className="absolute inset-0 cursor-pointer opacity-0"
+          className="absolute inset-0 cursor-pointer border-0 bg-transparent opacity-0"
           aria-label="Select date"
         />
       </div>
