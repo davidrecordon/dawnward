@@ -317,7 +317,8 @@ async function main() {
   const shouldFilterPast = !args.includePast && !args.tripId;
   const filteredSchedules = shouldFilterPast
     ? schedules.filter((s) => {
-        const currentJson = s.currentScheduleJson as unknown as ScheduleResult | null;
+        const currentJson =
+          s.currentScheduleJson as unknown as ScheduleResult | null;
         // Skip schedules with no current JSON (shouldn't happen, but be safe)
         if (!currentJson || !currentJson.interventions) {
           return false;
@@ -379,7 +380,10 @@ async function main() {
 
       if (!args.dryRun) {
         // Build update data - always update currentScheduleJson
-        const updateData: { currentScheduleJson: object; initialScheduleJson?: object } = {
+        const updateData: {
+          currentScheduleJson: object;
+          initialScheduleJson?: object;
+        } = {
           currentScheduleJson: newSchedule as unknown as object,
         };
 
@@ -402,7 +406,9 @@ async function main() {
       errorCount++;
 
       if (args.verbose && error instanceof Error && error.stack) {
-        console.log(`  Stack: ${error.stack.split("\n").slice(1, 3).join("\n  ")}`);
+        console.log(
+          `  Stack: ${error.stack.split("\n").slice(1, 3).join("\n  ")}`
+        );
       }
     }
   }
@@ -414,7 +420,9 @@ async function main() {
   }
 
   if (!args.resetInitial && successCount > 0 && !args.dryRun) {
-    console.log("Note: Only currentScheduleJson was updated. Use --reset-initial to also update initialScheduleJson");
+    console.log(
+      "Note: Only currentScheduleJson was updated. Use --reset-initial to also update initialScheduleJson"
+    );
   }
 
   await prisma.$disconnect();

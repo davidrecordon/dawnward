@@ -471,14 +471,14 @@ Constants are already discoverable via this audit document.
 
 ## Summary
 
-| Category              | Count | Action                                    |
-| --------------------- | ----- | ----------------------------------------- |
-| Immutable Science     | ~36   | Leave as-is, document sources             |
-| Algorithm Config      | ~42   | Keep as module-level constants (decided)  |
-| User Preferences      | 13    | All working, 4 future candidates          |
-| Frontend Defaults     | ~26   | Mostly centralized, well-organized        |
-| Shift & Prep Days     | 4     | Prep day calculation thresholds           |
-| Schedule View         | 4     | UI timing and display thresholds          |
+| Category              | Count | Action                                         |
+| --------------------- | ----- | ---------------------------------------------- |
+| Immutable Science     | ~36   | Leave as-is, document sources                  |
+| Algorithm Config      | ~42   | Keep as module-level constants (decided)       |
+| User Preferences      | 13    | All working, 4 future candidates               |
+| Frontend Defaults     | ~26   | Mostly centralized, well-organized             |
+| Shift & Prep Days     | 4     | Prep day calculation thresholds                |
+| Schedule View         | 4     | UI timing and display thresholds               |
 | Calendar Integration  | ~20   | Event density, durations, reminders, busy/free |
 | Flight Phase          | 4     | Flight day timing fractions                    |
 | Actuals & Tracking    | 2     | Deviation calculation constants                |
