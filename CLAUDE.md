@@ -89,6 +89,16 @@ bun run test:python  # pytest
 - Improves naming consistency
 - Removes redundancy
 
+## Database Changes
+
+When modifying `prisma/schema.prisma`:
+
+1. **Always create migrations** — Run `bun prisma migrate dev --name <description>` after schema changes
+2. **Never use `prisma db push` for persistent changes** — It syncs the database but doesn't create migration files
+3. **Verify migration exists** — Check that `prisma/migrations/` has a new folder with your changes before committing
+
+Without migrations, schema changes work locally but fail in production and for new developers.
+
 ## Linting & Type Checking
 
 | Language   | Linter   | Formatter   | Type Checker | Config                             |
