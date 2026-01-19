@@ -77,6 +77,24 @@ npx tsx scripts/regenerate-schedules.ts --trip=<tripId>   # Specific trip (any d
 
 **Requirements:** Requires `DATABASE_URL` environment variable (uses `.env` automatically).
 
+### `scripts/debug-calendar.ts`
+
+Debug and test Google Calendar event generation without making actual API calls. Supports three modes:
+
+```bash
+npx tsx scripts/debug-calendar.ts                    # Load trip from database by ID
+npx tsx scripts/debug-calendar.ts --preset=VS20     # Use preset flight (VS20, SQ31, QF74, CX872, etc.)
+npx tsx scripts/debug-calendar.ts --custom          # Define custom flight parameters
+```
+
+**What it shows:**
+
+- Grouped calendar events with anchor-based grouping applied
+- Event details: title, time, duration, busy/free status
+- Day-by-day breakdown of events that would be created
+
+**Available presets:** HA11 (short), VS20 (eastbound overnight), SQ31 (ultra-long-haul), QF74 (cross-dateline), CX872 (long-haul eastbound)
+
 ## Before Committing
 
 **Always run linters and tests before committing changes:**
@@ -129,7 +147,7 @@ Without migrations, schema changes work locally but fail in production and for n
 ## Tech Stack
 
 - **Framework**: Next.js 16+ (App Router, React 19)
-- **Auth**: NextAuth.js v5 with Google provider, JWT sessions (Phase 1 complete, Phase 2 adds Calendar)
+- **Auth**: NextAuth.js v5 with Google provider, JWT sessions, Google Calendar scope for schedule sync
 - **Database**: Prisma Postgres with `@prisma/adapter-pg` driver adapter
 - **Styling**: Tailwind CSS v4 with shadcn/ui components
 - **Python Runtime**: Vercel Python Functions for circadian model (Arcascope library)
@@ -185,7 +203,8 @@ design_docs/
 └── [*.md]            # Core reference docs (decisions, backend, auth, etc.)
 
 scripts/
-└── regenerate-schedules.ts  # Migrate stored schedules after schema changes
+├── regenerate-schedules.ts  # Migrate stored schedules after schema changes
+└── debug-calendar.ts        # Debug calendar event generation (presets and custom flights)
 ```
 
 ### Key Patterns
@@ -235,9 +254,12 @@ The `DaySummaryCard` component shows:
   - Schedule inputs: originTz, destTz, departure/arrival times, preferences
   - Metadata: routeLabel, viewCount, createdAt, lastViewedAt
 
-**Planned:**
+**Google Calendar:**
 
-- `calendar_syncs` - Track Google Calendar event IDs for delete-and-replace sync
+- `CalendarSync` - Tracks synced trips: Google event IDs, calendar ID, last sync time
+- One-way push with delete-and-replace strategy
+- Anchor-based event grouping reduces ~20 events to ~10 per trip
+- Events use IANA timezones from intervention data (origin_tz for pre-flight, dest_tz for post-flight)
 
 ### Schedule Generation
 
@@ -329,6 +351,32 @@ Public read-only JSON-RPC 2.0 endpoint at `POST /api/mcp` for AI assistants to q
 - `src/lib/ip-utils.ts` - IP extraction from headers
 - `api/mcp/tools.py` - Vercel Python endpoint (internal, called by route.ts)
 - `api/_python/mcp_tools.py` - Python tool implementations
+
+### Google Calendar Integration
+
+Push schedule interventions to user's Google Calendar with one-click sync.
+
+**Files:**
+
+- `src/app/api/calendar/sync/route.ts` - Sync endpoint (POST creates/updates, DELETE removes)
+- `src/lib/google-calendar.ts` - Event building, grouping, and Calendar API wrapper
+
+**Event Density Optimization:**
+
+Anchor-based grouping reduces calendar clutter (~20 events → ~10 per trip):
+
+- Interventions within 2h of `wake_target` grouped as "Morning routine: Light + Caffeine"
+- Interventions within 2h of `sleep_target` grouped as "Evening routine: Melatonin"
+- Standalone types (never grouped): `caffeine_cutoff`, `exercise`, `nap_window`, `light_avoid`
+- Grouped events use the longest duration among their interventions
+
+**Timezone Handling:**
+
+- Pre-flight events use `origin_tz` and `origin_date`
+- Post-flight events use `dest_tz` and `dest_date`
+- Google Calendar receives proper IANA timezone for each event
+
+**Configuration:** See `design_docs/exploration/configuration-audit.md` for all calendar constants.
 
 ## Security Considerations
 
@@ -527,7 +575,7 @@ export default function MyFeatureDemo() {
 - `src/components/schedule/__tests__/minimal-shift-tips.test.tsx` - Minimal shift tips card, toggle states
 - `src/components/schedule/__tests__/intervention-card.test.tsx` - Intervention card rendering, dual timezone display
 - `src/components/schedule/__tests__/inflight-sleep-card.test.tsx` - In-flight sleep card, flight offset display
-- `src/lib/__tests__/google-calendar.test.ts` - Calendar event building, reminder timing
+- `src/lib/__tests__/google-calendar.test.ts` - Calendar event building, anchor-based grouping, reminder timing, duration calculations
 - `src/types/__tests__/user-preferences.test.ts` - User preference type validation
 
 **Python (pytest)**: ~345 tests covering schedule generation (6-layer validation strategy)

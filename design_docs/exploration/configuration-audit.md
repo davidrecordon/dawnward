@@ -235,10 +235,10 @@ UI timing and display threshold constants.
 
 Anchor-based grouping reduces calendar clutter (~20 events → ~10 events per trip):
 
-| Constant              | Value                                            | Purpose                            |
-| --------------------- | ------------------------------------------------ | ---------------------------------- |
-| `STANDALONE_TYPES`    | caffeine_cutoff, exercise, nap_window            | Never grouped with anchors         |
-| `GROUPING_WINDOW_MIN` | 120                                              | Minutes within anchor to group     |
+| Constant              | Value                                                     | Purpose                            |
+| --------------------- | --------------------------------------------------------- | ---------------------------------- |
+| `STANDALONE_TYPES`    | caffeine_cutoff, exercise, nap_window, light_avoid        | Never grouped with anchors         |
+| `GROUPING_WINDOW_MIN` | 120                                                       | Minutes within anchor to group     |
 
 #### Event Durations
 
@@ -265,10 +265,12 @@ Anchor-based grouping reduces calendar clutter (~20 events → ~10 events per tr
 
 #### Busy/Free Status
 
-| Shows as Busy | Shows as Free                                              |
-| ------------- | ---------------------------------------------------------- |
-| `nap_window`  | `wake_target`, `sleep_target`, `melatonin`, `caffeine_cutoff` |
-| `exercise`    | `light_seek`, `light_avoid`                                |
+| Shows as Busy | Shows as Free                                                        |
+| ------------- | -------------------------------------------------------------------- |
+| `nap_window`  | `wake_target`, `sleep_target`, `melatonin`, `caffeine_cutoff`        |
+| `exercise`    | `light_seek`, `light_avoid`                                          |
+
+Note: `sleep_target` was intentionally kept as "free" since users may not always follow the exact bedtime.
 
 #### Other Constants
 
@@ -492,4 +494,4 @@ Constants are already discoverable via this audit document.
 
 ---
 
-_Last updated: January 2026_
+_Last updated: January 18, 2026_
