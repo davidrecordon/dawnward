@@ -1,63 +1,62 @@
 import { describe, it, expect } from "vitest";
-import {
-  type TimeFormat,
-  DEFAULT_TIME_FORMAT,
-  isValidTimeFormat,
-} from "../time-format";
+import { formatTimeDisplay } from "../time-format";
 
 describe("time-format", () => {
-  describe("DEFAULT_TIME_FORMAT", () => {
-    it("defaults to 12-hour format", () => {
-      expect(DEFAULT_TIME_FORMAT).toBe("12h");
+  describe("formatTimeDisplay", () => {
+    describe("12-hour format (default)", () => {
+      it("formats morning times", () => {
+        expect(formatTimeDisplay("06:00")).toBe("6:00 AM");
+        expect(formatTimeDisplay("09:30")).toBe("9:30 AM");
+        expect(formatTimeDisplay("11:45")).toBe("11:45 AM");
+      });
+
+      it("formats noon", () => {
+        expect(formatTimeDisplay("12:00")).toBe("12:00 PM");
+        expect(formatTimeDisplay("12:30")).toBe("12:30 PM");
+      });
+
+      it("formats afternoon times", () => {
+        expect(formatTimeDisplay("14:00")).toBe("2:00 PM");
+        expect(formatTimeDisplay("17:45")).toBe("5:45 PM");
+      });
+
+      it("formats evening times", () => {
+        expect(formatTimeDisplay("20:00")).toBe("8:00 PM");
+        expect(formatTimeDisplay("23:59")).toBe("11:59 PM");
+      });
+
+      it("formats midnight", () => {
+        expect(formatTimeDisplay("00:00")).toBe("12:00 AM");
+        expect(formatTimeDisplay("00:30")).toBe("12:30 AM");
+      });
     });
 
-    it("is a valid TimeFormat", () => {
-      expect(isValidTimeFormat(DEFAULT_TIME_FORMAT)).toBe(true);
-    });
-  });
+    describe("24-hour format", () => {
+      it("formats morning times with leading zeros", () => {
+        expect(formatTimeDisplay("06:00", true)).toBe("06:00");
+        expect(formatTimeDisplay("09:30", true)).toBe("09:30");
+      });
 
-  describe("isValidTimeFormat", () => {
-    it("returns true for '12h'", () => {
-      expect(isValidTimeFormat("12h")).toBe(true);
-    });
+      it("formats afternoon times", () => {
+        expect(formatTimeDisplay("14:00", true)).toBe("14:00");
+        expect(formatTimeDisplay("17:45", true)).toBe("17:45");
+      });
 
-    it("returns true for '24h'", () => {
-      expect(isValidTimeFormat("24h")).toBe(true);
-    });
+      it("formats midnight with leading zeros", () => {
+        expect(formatTimeDisplay("00:00", true)).toBe("00:00");
+        expect(formatTimeDisplay("00:30", true)).toBe("00:30");
+      });
 
-    it("returns false for invalid strings", () => {
-      expect(isValidTimeFormat("12")).toBe(false);
-      expect(isValidTimeFormat("24")).toBe(false);
-      expect(isValidTimeFormat("12hr")).toBe(false);
-      expect(isValidTimeFormat("24hr")).toBe(false);
-      expect(isValidTimeFormat("")).toBe(false);
-      expect(isValidTimeFormat("invalid")).toBe(false);
+      it("formats evening times", () => {
+        expect(formatTimeDisplay("23:59", true)).toBe("23:59");
+      });
     });
 
-    it("returns false for non-string values", () => {
-      expect(isValidTimeFormat(null)).toBe(false);
-      expect(isValidTimeFormat(undefined)).toBe(false);
-      expect(isValidTimeFormat(12)).toBe(false);
-      expect(isValidTimeFormat(24)).toBe(false);
-      expect(isValidTimeFormat({})).toBe(false);
-      expect(isValidTimeFormat([])).toBe(false);
-      expect(isValidTimeFormat(true)).toBe(false);
-    });
-
-    it("is case-sensitive", () => {
-      expect(isValidTimeFormat("12H")).toBe(false);
-      expect(isValidTimeFormat("24H")).toBe(false);
-      expect(isValidTimeFormat("12h")).toBe(true);
-      expect(isValidTimeFormat("24h")).toBe(true);
-    });
-  });
-
-  describe("TimeFormat type", () => {
-    it("allows assignment of valid values", () => {
-      const format12: TimeFormat = "12h";
-      const format24: TimeFormat = "24h";
-      expect(format12).toBe("12h");
-      expect(format24).toBe("24h");
+    describe("explicit false for 12-hour format", () => {
+      it("works the same as default", () => {
+        expect(formatTimeDisplay("14:00", false)).toBe("2:00 PM");
+        expect(formatTimeDisplay("09:30", false)).toBe("9:30 AM");
+      });
     });
   });
 });

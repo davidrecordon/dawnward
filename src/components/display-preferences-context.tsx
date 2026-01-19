@@ -1,17 +1,13 @@
 "use client";
 
 import * as React from "react";
-import {
-  type TimeFormat,
-  DEFAULT_TIME_FORMAT,
-} from "@/lib/time-format";
 
 /**
  * Display preferences that affect how the UI renders.
  * These are user preferences fetched from the database for logged-in users.
  */
 interface DisplayPreferences {
-  timeFormat: TimeFormat;
+  use24HourFormat: boolean;
   showDualTimezone: boolean;
   scheduleViewMode: "summary" | "timeline";
 }
@@ -21,8 +17,8 @@ const DisplayPreferencesContext =
 
 interface ProviderProps {
   children: React.ReactNode;
-  /** Time format preference (12h or 24h) */
-  timeFormat?: TimeFormat;
+  /** Whether to use 24-hour time format (default: false = 12-hour) */
+  use24HourFormat?: boolean;
   /** Whether to show dual timezone display */
   showDualTimezone?: boolean;
   /** Default view mode for schedule (summary or timeline) */
@@ -35,13 +31,13 @@ interface ProviderProps {
  */
 export function DisplayPreferencesProvider({
   children,
-  timeFormat = DEFAULT_TIME_FORMAT,
+  use24HourFormat = false,
   showDualTimezone = false,
   scheduleViewMode = "summary",
 }: ProviderProps) {
   const value = React.useMemo<DisplayPreferences>(
-    () => ({ timeFormat, showDualTimezone, scheduleViewMode }),
-    [timeFormat, showDualTimezone, scheduleViewMode]
+    () => ({ use24HourFormat, showDualTimezone, scheduleViewMode }),
+    [use24HourFormat, showDualTimezone, scheduleViewMode]
   );
 
   return (
@@ -59,7 +55,7 @@ export function useDisplayPreferences(): DisplayPreferences {
   const context = React.useContext(DisplayPreferencesContext);
   if (!context) {
     return {
-      timeFormat: DEFAULT_TIME_FORMAT,
+      use24HourFormat: false,
       showDualTimezone: false,
       scheduleViewMode: "summary",
     };
@@ -68,8 +64,8 @@ export function useDisplayPreferences(): DisplayPreferences {
 }
 
 /**
- * Convenience hook for just the time format preference.
+ * Convenience hook for just the 24-hour format preference.
  */
-export function useTimeFormat(): TimeFormat {
-  return useDisplayPreferences().timeFormat;
+export function useUse24HourFormat(): boolean {
+  return useDisplayPreferences().use24HourFormat;
 }

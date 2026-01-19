@@ -1,25 +1,23 @@
 /**
- * Time format type and utilities for 12-hour/24-hour display.
- * This is the single source of truth for time format configuration.
+ * Time format utilities for 12-hour/24-hour display.
+ * Uses a simple boolean: true = 24-hour, false = 12-hour (default).
  */
-
-/** Time format type for 12-hour or 24-hour display */
-export type TimeFormat = "12h" | "24h";
-
-/** Default time format (matches user expectations in US locale) */
-export const DEFAULT_TIME_FORMAT: TimeFormat = "12h";
 
 /**
- * Type guard to validate time format values.
+ * Format a time string for display.
+ * @param time - Time in "HH:MM" 24-hour format
+ * @param use24Hour - If true, display as 24-hour; if false (default), display as 12-hour with AM/PM
  */
-export function isValidTimeFormat(value: unknown): value is TimeFormat {
-  return value === "12h" || value === "24h";
-}
+export function formatTimeDisplay(time: string, use24Hour = false): string {
+  const [hours, minutes] = time.split(":").map(Number);
 
-/**
- * Get a valid time format, falling back to default if invalid.
- * Useful for safely extracting time format from user preferences.
- */
-export function getValidTimeFormat(value: unknown): TimeFormat {
-  return isValidTimeFormat(value) ? value : DEFAULT_TIME_FORMAT;
+  if (use24Hour) {
+    // 24-hour format: "09:30", "14:00", "00:00"
+    return `${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}`;
+  }
+
+  // 12-hour format: "9:30 AM", "2:00 PM", "12:00 AM"
+  const period = hours >= 12 ? "PM" : "AM";
+  const displayHour = hours % 12 || 12;
+  return `${displayHour}:${minutes.toString().padStart(2, "0")} ${period}`;
 }

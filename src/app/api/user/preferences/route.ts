@@ -34,7 +34,7 @@ const preferencesSchema = z.object({
   scheduleIntensity: z.enum(["gentle", "balanced", "aggressive"]).optional(),
   showDualTimezone: z.boolean().optional(),
   scheduleViewMode: z.enum(["summary", "timeline"]).optional(),
-  timeFormat: z.enum(["12h", "24h"]).optional(),
+  use24HourFormat: z.boolean().optional(),
 });
 
 /**
@@ -63,7 +63,7 @@ export async function GET() {
       scheduleIntensity: true,
       showDualTimezone: true,
       scheduleViewMode: true,
-      timeFormat: true,
+      use24HourFormat: true,
     },
   });
 
@@ -126,7 +126,7 @@ export async function PATCH(request: Request) {
       scheduleIntensity: true,
       showDualTimezone: true,
       scheduleViewMode: true,
-      timeFormat: true,
+      use24HourFormat: true,
     },
   });
 

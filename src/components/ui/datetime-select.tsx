@@ -4,15 +4,14 @@ import * as React from "react";
 import { Calendar } from "lucide-react";
 import { TimeSelect } from "@/components/ui/time-select";
 import { cn } from "@/lib/utils";
-import type { TimeFormat } from "@/lib/time-format";
 
 interface DateTimeSelectProps {
   value: string; // "YYYY-MM-DDTHH:MM" ISO format
   onChange: (value: string) => void;
   className?: string;
   hasError?: boolean;
-  /** User preference: time format (12h or 24h) */
-  timeFormat?: TimeFormat;
+  /** If true, use 24-hour time format (default: false = 12-hour) */
+  use24Hour?: boolean;
 }
 
 /**
@@ -35,7 +34,7 @@ export function DateTimeSelect({
   onChange,
   className,
   hasError,
-  timeFormat = "12h",
+  use24Hour = false,
 }: DateTimeSelectProps) {
   const dateInputRef = React.useRef<HTMLInputElement>(null);
 
@@ -113,7 +112,7 @@ export function DateTimeSelect({
         placeholder="Time"
         className="w-32"
         hasError={hasError}
-        timeFormat={timeFormat}
+        use24Hour={use24Hour}
       />
     </div>
   );

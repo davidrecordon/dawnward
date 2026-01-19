@@ -7,7 +7,7 @@ import {
   formatFlightOffset,
   formatDualTimezones,
 } from "@/lib/intervention-utils";
-import { useTimeFormat } from "@/components/display-preferences-context";
+import { useUse24HourFormat } from "@/components/display-preferences-context";
 import type { Intervention } from "@/types/schedule";
 
 interface InFlightSleepCardProps {
@@ -27,7 +27,7 @@ export function InFlightSleepCard({
   intervention,
   showDualTimezone = false,
 }: InFlightSleepCardProps): React.JSX.Element {
-  const timeFormat = useTimeFormat();
+  const use24Hour = useUse24HourFormat();
   const flightOffset = intervention.flight_offset_hours ?? 0;
   const durationHours = intervention.duration_min
     ? intervention.duration_min / 60
@@ -35,7 +35,7 @@ export function InFlightSleepCard({
 
   // Get dual timezone times - in-flight items always have show_dual_timezone=true from Python
   // User preference can also force dual times on all items
-  const dualTimes = formatDualTimezones(intervention, showDualTimezone, timeFormat);
+  const dualTimes = formatDualTimezones(intervention, showDualTimezone, use24Hour);
 
   return (
     <Card className="overflow-hidden border-violet-200/40 bg-gradient-to-r from-violet-50/80 via-slate-50 to-violet-50/60 shadow-sm backdrop-blur-sm transition-all duration-300 hover:translate-x-1 hover:shadow-md">
@@ -76,7 +76,7 @@ export function InFlightSleepCard({
             </>
           ) : (
             <div className="text-sm font-medium text-slate-700 tabular-nums">
-              {formatTime(intervention.dest_time, timeFormat)}
+              {formatTime(intervention.dest_time, use24Hour)}
             </div>
           )}
         </div>

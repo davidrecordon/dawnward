@@ -99,14 +99,14 @@ describe("getInterventionStyle", () => {
 
 describe("formatTime", () => {
   describe("12-hour format (default)", () => {
-    it("converts 24h format to 12h AM format", () => {
+    it("converts true format to false AM format", () => {
       expect(formatTime("00:00")).toBe("12:00 AM");
       expect(formatTime("01:30")).toBe("1:30 AM");
       expect(formatTime("09:15")).toBe("9:15 AM");
       expect(formatTime("11:59")).toBe("11:59 AM");
     });
 
-    it("converts 24h format to 12h PM format", () => {
+    it("converts true format to false PM format", () => {
       expect(formatTime("12:00")).toBe("12:00 PM");
       expect(formatTime("13:30")).toBe("1:30 PM");
       expect(formatTime("18:45")).toBe("6:45 PM");
@@ -123,40 +123,40 @@ describe("formatTime", () => {
       expect(formatTime("14:00")).toBe("2:00 PM");
     });
 
-    it("uses 12h format when explicitly specified", () => {
-      expect(formatTime("14:30", "12h")).toBe("2:30 PM");
-      expect(formatTime("09:00", "12h")).toBe("9:00 AM");
+    it("uses 12-hour format when explicitly specified", () => {
+      expect(formatTime("14:30", false)).toBe("2:30 PM");
+      expect(formatTime("09:00", false)).toBe("9:00 AM");
     });
   });
 
   describe("24-hour format", () => {
     it("preserves morning hours with leading zero", () => {
-      expect(formatTime("00:00", "24h")).toBe("00:00");
-      expect(formatTime("01:30", "24h")).toBe("01:30");
-      expect(formatTime("09:15", "24h")).toBe("09:15");
-      expect(formatTime("11:59", "24h")).toBe("11:59");
+      expect(formatTime("00:00", true)).toBe("00:00");
+      expect(formatTime("01:30", true)).toBe("01:30");
+      expect(formatTime("09:15", true)).toBe("09:15");
+      expect(formatTime("11:59", true)).toBe("11:59");
     });
 
     it("preserves afternoon/evening hours", () => {
-      expect(formatTime("12:00", "24h")).toBe("12:00");
-      expect(formatTime("13:30", "24h")).toBe("13:30");
-      expect(formatTime("18:45", "24h")).toBe("18:45");
-      expect(formatTime("23:59", "24h")).toBe("23:59");
+      expect(formatTime("12:00", true)).toBe("12:00");
+      expect(formatTime("13:30", true)).toBe("13:30");
+      expect(formatTime("18:45", true)).toBe("18:45");
+      expect(formatTime("23:59", true)).toBe("23:59");
     });
 
     it("handles edge cases at midnight and noon", () => {
-      expect(formatTime("00:01", "24h")).toBe("00:01");
-      expect(formatTime("12:01", "24h")).toBe("12:01");
+      expect(formatTime("00:01", true)).toBe("00:01");
+      expect(formatTime("12:01", true)).toBe("12:01");
     });
 
     it("pads single-digit hours with leading zero", () => {
-      expect(formatTime("09:05", "24h")).toBe("09:05");
-      expect(formatTime("05:00", "24h")).toBe("05:00");
+      expect(formatTime("09:05", true)).toBe("09:05");
+      expect(formatTime("05:00", true)).toBe("05:00");
     });
 
     it("does not include AM/PM", () => {
-      const morning = formatTime("09:00", "24h");
-      const afternoon = formatTime("15:00", "24h");
+      const morning = formatTime("09:00", true);
+      const afternoon = formatTime("15:00", true);
       expect(morning).not.toContain("AM");
       expect(morning).not.toContain("PM");
       expect(afternoon).not.toContain("AM");
@@ -559,13 +559,13 @@ describe("formatDualTimezones", () => {
   });
 
   describe("24-hour format", () => {
-    it("formats times in 24h format when specified", () => {
+    it("formats times in true format when specified", () => {
       const intervention = createMockIntervention({
         origin_time: "08:45",
         dest_time: "16:45",
         show_dual_timezone: true,
       });
-      const result = formatDualTimezones(intervention, false, "24h");
+      const result = formatDualTimezones(intervention, false, true);
 
       expect(result).not.toBeNull();
       expect(result!.originTime).toContain("08:45");
@@ -574,13 +574,13 @@ describe("formatDualTimezones", () => {
       expect(result!.destTime).toContain("GMT");
     });
 
-    it("formats afternoon times without AM/PM in 24h format", () => {
+    it("formats afternoon times without AM/PM in true format", () => {
       const intervention = createMockIntervention({
         origin_time: "14:30",
         dest_time: "22:30",
         show_dual_timezone: true,
       });
-      const result = formatDualTimezones(intervention, false, "24h");
+      const result = formatDualTimezones(intervention, false, true);
 
       expect(result).not.toBeNull();
       expect(result!.originTime).not.toContain("PM");
@@ -589,20 +589,20 @@ describe("formatDualTimezones", () => {
       expect(result!.destTime).toContain("22:30");
     });
 
-    it("formats midnight correctly in 24h format", () => {
+    it("formats midnight correctly in true format", () => {
       const intervention = createMockIntervention({
         origin_time: "00:00",
         dest_time: "08:00",
         show_dual_timezone: true,
       });
-      const result = formatDualTimezones(intervention, false, "24h");
+      const result = formatDualTimezones(intervention, false, true);
 
       expect(result).not.toBeNull();
       expect(result!.originTime).toContain("00:00");
       expect(result!.destTime).toContain("08:00");
     });
 
-    it("defaults to 12h format when not specified", () => {
+    it("defaults to false format when not specified", () => {
       const intervention = createMockIntervention({
         origin_time: "14:30",
         dest_time: "22:30",

@@ -35,7 +35,6 @@ import { FormError } from "@/components/form-error";
 import { DateTimeSelect } from "@/components/ui/datetime-select";
 import { TimeSelect } from "@/components/ui/time-select";
 import type { TripFormState } from "@/types/trip-form";
-import type { TimeFormat } from "@/lib/time-format";
 
 interface TripFormProps {
   formState: TripFormState;
@@ -43,8 +42,8 @@ interface TripFormProps {
   onSubmit?: () => void;
   isSubmitting?: boolean;
   isSignedIn?: boolean;
-  /** User preference: time format (12h or 24h) */
-  timeFormat?: TimeFormat;
+  /** User preference: use 24-hour time format */
+  use24Hour?: boolean;
 }
 
 interface FormErrors {
@@ -70,7 +69,7 @@ export function TripForm({
   onSubmit,
   isSubmitting,
   isSignedIn = false,
-  timeFormat = "12h",
+  use24Hour = false,
 }: TripFormProps) {
   const router = useRouter();
   const [errors, setErrors] = React.useState<FormErrors>({});
@@ -271,7 +270,7 @@ export function TripForm({
               value={formState.departureDateTime}
               onChange={(value) => updateField("departureDateTime", value)}
               hasError={!!errors.departureDateTime}
-              timeFormat={timeFormat}
+              use24Hour={use24Hour}
             />
             <FieldError message={errors.departureDateTime} />
           </div>
@@ -281,7 +280,7 @@ export function TripForm({
               value={formState.arrivalDateTime}
               onChange={(value) => updateField("arrivalDateTime", value)}
               hasError={!!errors.arrivalDateTime}
-              timeFormat={timeFormat}
+              use24Hour={use24Hour}
             />
             <FieldError message={errors.arrivalDateTime} />
           </div>
@@ -424,7 +423,7 @@ export function TripForm({
                     value={formState.wakeTime}
                     onChange={(value) => updateField("wakeTime", value)}
                     placeholder="Select wake time"
-                    timeFormat={timeFormat}
+                    use24Hour={use24Hour}
                   />
                 </div>
                 <div className="space-y-2">
@@ -433,7 +432,7 @@ export function TripForm({
                     value={formState.sleepTime}
                     onChange={(value) => updateField("sleepTime", value)}
                     placeholder="Select sleep time"
-                    timeFormat={timeFormat}
+                    use24Hour={use24Hour}
                   />
                 </div>
               </div>

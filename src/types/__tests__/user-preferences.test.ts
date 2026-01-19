@@ -18,7 +18,7 @@ describe("User Preferences Mapping", () => {
         scheduleIntensity: "aggressive",
         showDualTimezone: false,
         scheduleViewMode: "summary" as const,
-        timeFormat: "12h" as const,
+        use24HourFormat: false,
       };
 
       const formPrefs = mapDbToFormPreferences(dbPrefs);
@@ -47,7 +47,7 @@ describe("User Preferences Mapping", () => {
         scheduleIntensity: "gentle",
         showDualTimezone: true,
         scheduleViewMode: "timeline" as const,
-        timeFormat: "24h" as const,
+        use24HourFormat: true,
       };
 
       const formPrefs = mapDbToFormPreferences(dbPrefs);
@@ -89,7 +89,7 @@ describe("User Preferences Mapping", () => {
         scheduleIntensity: "aggressive",
         showDualTimezone: false,
         scheduleViewMode: "summary",
-        timeFormat: "12h",
+        use24HourFormat: false,
       });
     });
 
@@ -105,7 +105,7 @@ describe("User Preferences Mapping", () => {
         scheduleIntensity: "balanced",
         showDualTimezone: false, // Display preference defaults to false
         scheduleViewMode: "summary" as const, // Display preference defaults to summary
-        timeFormat: "12h" as const, // Display preference defaults to 12h
+        use24HourFormat: false, // Display preference defaults to false (12-hour)
       };
 
       const formPrefs = mapDbToFormPreferences(original);

@@ -8,9 +8,8 @@ import {
   formatTime,
   formatFlightOffset,
   formatDualTimezones,
-  type TimeFormat,
 } from "@/lib/intervention-utils";
-import { useTimeFormat } from "@/components/display-preferences-context";
+import { useUse24HourFormat } from "@/components/display-preferences-context";
 import type { Intervention, InterventionActual } from "@/types/schedule";
 import {
   getDisplayTime,
@@ -41,7 +40,7 @@ interface TimeDisplayProps {
   primaryTime: string | null;
   secondaryTime: string | null;
   originalTime?: string;
-  timeFormat: TimeFormat;
+  use24Hour: boolean;
 }
 
 /**
@@ -57,7 +56,7 @@ function TimeDisplay({
   primaryTime,
   secondaryTime,
   originalTime,
-  timeFormat,
+  use24Hour,
 }: TimeDisplayProps): React.JSX.Element {
   const SecondaryIcon = isPreFlight ? PlaneLanding : PlaneTakeoff;
 
@@ -66,13 +65,13 @@ function TimeDisplay({
     return (
       <>
         <span className="text-xs text-slate-400 tabular-nums line-through">
-          {dualTimes ? dualTimes.originTime : formatTime(displayTime, timeFormat)}
+          {dualTimes ? dualTimes.originTime : formatTime(displayTime, use24Hour)}
         </span>
         <Badge
           variant="secondary"
           className="shrink-0 bg-sky-100 font-medium text-sky-600"
         >
-          {formatTime(actual.actualTime, timeFormat)}
+          {formatTime(actual.actualTime, use24Hour)}
         </Badge>
       </>
     );
@@ -111,7 +110,7 @@ function TimeDisplay({
         variant="secondary"
         className="shrink-0 bg-emerald-50 font-medium text-emerald-600"
       >
-        {formatTime(displayTime, timeFormat)}
+        {formatTime(displayTime, use24Hour)}
         <Check className="ml-1 h-3 w-3" />
       </Badge>
     );
@@ -130,7 +129,7 @@ function TimeDisplay({
         </div>
         {originalTime && (
           <div className="text-[10px] text-slate-400 italic">
-            target: {formatTime(originalTime, timeFormat)}
+            target: {formatTime(originalTime, use24Hour)}
           </div>
         )}
       </div>
@@ -145,10 +144,10 @@ function TimeDisplay({
           variant="secondary"
           className="bg-white/70 font-medium text-slate-600"
         >
-          {formatTime(displayTime, timeFormat)}
+          {formatTime(displayTime, use24Hour)}
         </Badge>
         <div className="mt-0.5 text-[10px] text-slate-400 italic">
-          target: {formatTime(originalTime, timeFormat)}
+          target: {formatTime(originalTime, use24Hour)}
         </div>
       </div>
     );
@@ -159,7 +158,7 @@ function TimeDisplay({
       variant="secondary"
       className="shrink-0 bg-white/70 font-medium text-slate-600"
     >
-      {formatTime(displayTime, timeFormat)}
+      {formatTime(displayTime, use24Hour)}
     </Badge>
   );
 }
@@ -172,7 +171,7 @@ export function InterventionCard({
   date,
   showDualTimezone = false,
 }: InterventionCardProps): React.JSX.Element {
-  const timeFormat = useTimeFormat();
+  const use24Hour = useUse24HourFormat();
   const style = getInterventionStyle(intervention.type);
   const Icon = style.icon;
   const isNested = variant === "nested";
@@ -198,7 +197,7 @@ export function InterventionCard({
   // Get dual timezone times if enabled AND not post-arrival (user has arrived)
   const dualTimes = isPostArrival
     ? null
-    : formatDualTimezones(intervention, showDualTimezone, timeFormat);
+    : formatDualTimezones(intervention, showDualTimezone, use24Hour);
 
   // Swap primary/secondary times based on phase
   const primaryTime = dualTimes
@@ -273,7 +272,7 @@ export function InterventionCard({
               primaryTime={primaryTime}
               secondaryTime={secondaryTime}
               originalTime={intervention.original_time}
-              timeFormat={timeFormat}
+              use24Hour={use24Hour}
             />
           </div>
         )}

@@ -12,7 +12,6 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { formatTime } from "@/lib/intervention-utils";
-import type { TimeFormat } from "@/lib/time-format";
 
 // 12 hours * 4 intervals (every 15 min) = 48 options for AM, 48 for PM
 const TIME_OPTIONS_PER_PERIOD = 48;
@@ -23,23 +22,23 @@ interface TimeSelectProps {
   placeholder?: string;
   className?: string;
   hasError?: boolean;
-  /** Time display format: "12h" (default) or "24h" */
-  timeFormat?: TimeFormat;
+  /** If true, use 24-hour time format (default: false = 12-hour) */
+  use24Hour?: boolean;
 }
 
 /**
  * Generate time options in 15-minute increments.
- * @param format - Display format: "12h" or "24h"
+ * @param use24Hour - If true, use 24-hour format; otherwise 12-hour
  */
 function generateTimeOptions(
-  format: TimeFormat
+  use24Hour: boolean
 ): { value: string; label: string }[] {
   const options: { value: string; label: string }[] = [];
 
   for (let hour = 0; hour < 24; hour++) {
     for (let minute = 0; minute < 60; minute += 15) {
       const value = `${hour.toString().padStart(2, "0")}:${minute.toString().padStart(2, "0")}`;
-      const label = formatTime(value, format);
+      const label = formatTime(value, use24Hour);
       options.push({ value, label });
     }
   }
@@ -48,8 +47,8 @@ function generateTimeOptions(
 }
 
 // Pre-computed options for both formats
-const TIME_OPTIONS_12H = generateTimeOptions("12h");
-const TIME_OPTIONS_24H = generateTimeOptions("24h");
+const TIME_OPTIONS_12H = generateTimeOptions(false);
+const TIME_OPTIONS_24H = generateTimeOptions(true);
 
 export function TimeSelect({
   value,
@@ -57,10 +56,9 @@ export function TimeSelect({
   placeholder = "Select time",
   className,
   hasError,
-  timeFormat = "12h",
+  use24Hour = false,
 }: TimeSelectProps) {
-  const timeOptions =
-    timeFormat === "24h" ? TIME_OPTIONS_24H : TIME_OPTIONS_12H;
+  const timeOptions = use24Hour ? TIME_OPTIONS_24H : TIME_OPTIONS_12H;
 
   return (
     <Select value={value} onValueChange={onChange}>
@@ -75,7 +73,7 @@ export function TimeSelect({
         <SelectValue placeholder={placeholder} />
       </SelectTrigger>
       <SelectContent className="max-h-60">
-        {timeFormat === "12h" ? (
+        {!use24Hour ? (
           <>
             <SelectGroup>
               <SelectLabel>AM</SelectLabel>

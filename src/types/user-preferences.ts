@@ -1,9 +1,3 @@
-import {
-  type TimeFormat,
-  DEFAULT_TIME_FORMAT,
-  getValidTimeFormat,
-} from "@/lib/time-format";
-
 /** Schedule view mode type */
 export type ScheduleViewMode = "summary" | "timeline";
 
@@ -31,16 +25,16 @@ export function getValidScheduleViewMode(value: unknown): ScheduleViewMode {
  * Used by DisplayPreferencesContext and page components.
  */
 export interface DisplayPreferences {
-  timeFormat: TimeFormat;
+  use24HourFormat: boolean;
   showDualTimezone: boolean;
   scheduleViewMode: ScheduleViewMode;
 }
 
 /**
- * Database user preferences shape (Prisma returns strings, not typed enums).
+ * Database user preferences shape.
  */
 interface DbDisplayPreferences {
-  timeFormat?: string | null;
+  use24HourFormat?: boolean | null;
   showDualTimezone?: boolean | null;
   scheduleViewMode?: string | null;
 }
@@ -53,7 +47,7 @@ export function extractDisplayPreferences(
   userPrefs: DbDisplayPreferences | null | undefined
 ): DisplayPreferences {
   return {
-    timeFormat: getValidTimeFormat(userPrefs?.timeFormat),
+    use24HourFormat: userPrefs?.use24HourFormat ?? false,
     showDualTimezone: userPrefs?.showDualTimezone ?? false,
     scheduleViewMode: getValidScheduleViewMode(userPrefs?.scheduleViewMode),
   };
@@ -74,7 +68,7 @@ export interface UserPreferences {
   // Display preferences
   showDualTimezone: boolean;
   scheduleViewMode: ScheduleViewMode;
-  timeFormat: TimeFormat;
+  use24HourFormat: boolean;
 }
 
 /**
@@ -119,6 +113,6 @@ export function mapFormToDbPreferences(form: {
     // Display preferences not in trip form - use defaults
     showDualTimezone: false,
     scheduleViewMode: DEFAULT_SCHEDULE_VIEW_MODE,
-    timeFormat: DEFAULT_TIME_FORMAT,
+    use24HourFormat: false,
   };
 }

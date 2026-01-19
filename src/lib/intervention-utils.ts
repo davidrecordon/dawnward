@@ -109,26 +109,18 @@ export function getInterventionStyle(
   }
 }
 
-// Re-export TimeFormat from central location for backward compatibility
-export {
-  type TimeFormat,
-  DEFAULT_TIME_FORMAT,
-  isValidTimeFormat,
-} from "./time-format";
-import { type TimeFormat, DEFAULT_TIME_FORMAT } from "./time-format";
+// Re-export formatTimeDisplay from time-format
+export { formatTimeDisplay } from "./time-format";
 
 /**
  * Format time from HH:MM to a more readable format
  * @param time - Time in HH:MM 24-hour format
- * @param format - Display format: "12h" (default) or "24h"
+ * @param use24Hour - If true, display as 24-hour; if false (default), display as 12-hour with AM/PM
  */
-export function formatTime(
-  time: string,
-  format: TimeFormat = DEFAULT_TIME_FORMAT
-): string {
+export function formatTime(time: string, use24Hour = false): string {
   const [hours, minutes] = time.split(":").map(Number);
 
-  if (format === "24h") {
+  if (use24Hour) {
     return `${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}`;
   }
 
@@ -240,16 +232,16 @@ export function getTimezoneAbbr(tz: string, date?: Date): string {
  * @param time - Time in HH:MM format
  * @param timezone - Optional IANA timezone
  * @param date - Optional date for DST calculation
- * @param format - Display format: "12h" (default) or "24h"
+ * @param use24Hour - If true, display as 24-hour; if false (default), display as 12-hour with AM/PM
  * @returns Formatted time like "9:00 AM PST" or "9:00 AM" (12h) or "09:00 PST" (24h)
  */
 export function formatTimeWithTimezone(
   time: string,
   timezone?: string,
   date?: Date,
-  format: TimeFormat = DEFAULT_TIME_FORMAT
+  use24Hour = false
 ): string {
-  const formattedTime = formatTime(time, format);
+  const formattedTime = formatTime(time, use24Hour);
   if (!timezone) return formattedTime;
   return `${formattedTime} ${getTimezoneAbbr(timezone, date)}`;
 }
@@ -314,14 +306,14 @@ export function isEditableIntervention(type: InterventionType): boolean {
  *
  * @param intervention - Intervention with timezone context
  * @param forceDual - If true, always show dual times (user preference)
- * @param format - Display format: "12h" (default) or "24h"
+ * @param use24Hour - If true, display as 24-hour; if false (default), display as 12-hour with AM/PM
  * @returns Object with formatted origin and destination times with abbreviations,
  *          or null if the intervention shouldn't show dual timezone or lacks required fields
  */
 export function formatDualTimezones(
   intervention: Intervention,
   forceDual = false,
-  format: TimeFormat = DEFAULT_TIME_FORMAT
+  use24Hour = false
 ): {
   originTime: string;
   destTime: string;
@@ -355,7 +347,7 @@ export function formatDualTimezones(
   const destDateObj = new Date(dest_date + "T00:00:00");
 
   return {
-    originTime: `${formatTime(origin_time, format)} ${getTimezoneAbbr(origin_tz, originDateObj)}`,
-    destTime: `${formatTime(dest_time, format)} ${getTimezoneAbbr(dest_tz, destDateObj)}`,
+    originTime: `${formatTime(origin_time, use24Hour)} ${getTimezoneAbbr(origin_tz, originDateObj)}`,
+    destTime: `${formatTime(dest_time, use24Hour)} ${getTimezoneAbbr(dest_tz, destDateObj)}`,
   };
 }

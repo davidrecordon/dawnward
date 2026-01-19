@@ -27,7 +27,7 @@ model User {
   lightExposureMinutes Int              @default(60)
   showDualTimezone     Boolean          @default(false)
   scheduleViewMode     String           @default("summary")
-  timeFormat           String           @default("12h")
+  use24HourFormat      Boolean          @default(false)
   accounts             Account[]
   calendarSyncs        CalendarSync[]
   sessions             Session[]
