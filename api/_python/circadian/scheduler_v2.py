@@ -250,33 +250,46 @@ class ScheduleGeneratorV2:
 
         enriched = []
         for intervention in interventions:
-            # Get the local time from the intervention
-            local_time_str = intervention.time
-            if not local_time_str:
-                # In-transit items may not have a time set yet
-                # Use flight_offset_hours to compute the time
-                if intervention.flight_offset_hours is not None:
-                    utc_dt = flight_context.departure_utc + timedelta(
-                        hours=intervention.flight_offset_hours
-                    )
-                else:
-                    # Skip interventions without time
-                    enriched.append(intervention)
-                    continue
-            else:
-                # Parse local time and combine with phase date
-                local_time = parse_time(local_time_str)
+            # Track if this item is "pre-landing" (post_arrival but before actual arrival)
+            # This is used for show_dual_timezone and detected BEFORE we adjust dates
+            is_pre_landing_item = False
+
+            # Compute UTC datetime for this intervention
+            # Priority: flight_offset_hours (for in-flight items) > time field
+            if intervention.flight_offset_hours is not None:
+                # In-flight items: compute UTC from departure + offset
+                # This is the most accurate since it's relative to actual departure
+                utc_dt = flight_context.departure_utc + timedelta(
+                    hours=intervention.flight_offset_hours
+                )
+            elif intervention.time:
+                # Regular items with time: use phase date + time
+                local_time = parse_time(intervention.time)
                 local_dt = datetime.combine(phase.start_datetime.date(), local_time)
 
                 if phase_tz:
                     # Normal phase with timezone
                     local_dt = local_dt.replace(tzinfo=phase_tz)
                     utc_dt = local_dt.astimezone(UTC)
+
+                    # For post_arrival, if computed time is before arrival, it must be next day
+                    # E.g., arrival 19:00, wake at 06:30 → wake is next morning, not same day
+                    # Track this BEFORE adjusting so we can set show_dual_timezone correctly
+                    is_pre_landing_item = (
+                        phase.phase_type == "post_arrival"
+                        and utc_dt < flight_context.arrival_utc
+                    )
+                    if is_pre_landing_item:
+                        utc_dt = utc_dt + timedelta(days=1)
                 else:
                     # In-transit: time is relative to destination timezone
                     # The planner already computed time in dest timezone
                     local_dt = local_dt.replace(tzinfo=dest_tz)
                     utc_dt = local_dt.astimezone(UTC)
+            else:
+                # No time info, skip
+                enriched.append(intervention)
+                continue
 
             # Compute times in both timezones
             origin_dt = utc_dt.astimezone(origin_tz)
@@ -284,10 +297,7 @@ class ScheduleGeneratorV2:
 
             # Determine if dual timezone display is needed
             is_in_transit = phase.phase_type in ("in_transit", "in_transit_ulr")
-            is_pre_landing = (
-                phase.phase_type == "post_arrival" and utc_dt < flight_context.arrival_utc
-            )
-            show_dual = is_in_transit or is_pre_landing
+            show_dual = is_in_transit or is_pre_landing_item
 
             # Convert nap window times to UTC if present
             window_end_utc = None

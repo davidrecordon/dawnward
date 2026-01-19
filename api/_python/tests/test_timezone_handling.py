@@ -857,3 +857,144 @@ class TestMidnightCrossingInterventions:
                 assert iso_date_pattern.match(item.dest_date), (
                     f"dest_date '{item.dest_date}' should be YYYY-MM-DD format"
                 )
+
+
+class TestCrossDatelineFlightDates:
+    """Test date handling for flights that cross the international date line."""
+
+    def test_inflight_nap_dest_date_computed_from_flight_offset(self, frozen_time):
+        """
+        In-flight naps with flight_offset_hours should have dest_date computed
+        from departure + offset, not from phase start date.
+
+        SFO → SIN: Departs Jan 22 09:45 LA = Jan 23 01:45 Singapore
+        A nap at 03:45 Singapore (4h into flight) should be on Jan 23, not Jan 22.
+        """
+        from circadian.scheduler_v2 import ScheduleGeneratorV2
+        from circadian.types import ScheduleRequest
+
+        request = ScheduleRequest(
+            legs=[
+                TripLeg(
+                    origin_tz="America/Los_Angeles",
+                    dest_tz="Asia/Singapore",
+                    departure_datetime="2026-01-22T09:45",
+                    arrival_datetime="2026-01-23T19:00",  # ~17h flight
+                )
+            ],
+            prep_days=3,
+            wake_time="07:00",
+            sleep_time="22:00",
+            uses_melatonin=True,
+            uses_caffeine=True,
+            nap_preference="flight_only",
+        )
+
+        scheduler = ScheduleGeneratorV2()
+        response = scheduler.generate_schedule(request)
+
+        # Find in-transit nap windows
+        for day_schedule in response.interventions:
+            if day_schedule.phase_type in ("in_transit", "in_transit_ulr"):
+                for item in day_schedule.items:
+                    if item.type == "nap_window" and item.flight_offset_hours:
+                        # Departure is Jan 22 09:45 LA = Jan 23 01:45 Singapore
+                        # Any nap during flight should be on Jan 23 Singapore time
+                        assert item.dest_date == "2026-01-23", (
+                            f"In-flight nap at {item.dest_time} Singapore should be on "
+                            f"Jan 23 (dest_date), not {item.dest_date}. "
+                            f"Flight departs Jan 22 LA = Jan 23 Singapore."
+                        )
+
+    def test_post_arrival_morning_wake_is_next_day(self, frozen_time):
+        """
+        A wake_target at 06:30 when arrival is 19:00 must be the NEXT morning,
+        not the same calendar day (which would be before arrival).
+
+        Arrival: Jan 23 19:00 Singapore
+        Wake target: 06:30 Singapore → should be Jan 24, not Jan 23
+        """
+        from circadian.scheduler_v2 import ScheduleGeneratorV2
+        from circadian.types import ScheduleRequest
+
+        request = ScheduleRequest(
+            legs=[
+                TripLeg(
+                    origin_tz="America/Los_Angeles",
+                    dest_tz="Asia/Singapore",
+                    departure_datetime="2026-01-22T09:45",
+                    arrival_datetime="2026-01-23T19:00",
+                )
+            ],
+            prep_days=2,
+            wake_time="06:30",  # Early wake time
+            sleep_time="22:00",
+            uses_melatonin=True,
+            uses_caffeine=True,
+        )
+
+        scheduler = ScheduleGeneratorV2()
+        response = scheduler.generate_schedule(request)
+
+        # Find post_arrival wake_target
+        for day_schedule in response.interventions:
+            if day_schedule.phase_type == "post_arrival":
+                for item in day_schedule.items:
+                    if item.type == "wake_target":
+                        wake_hour = int(item.dest_time.split(":")[0])
+                        # Arrival is 19:00, so any wake before 19:00 must be next day
+                        if wake_hour < 19:
+                            assert item.dest_date == "2026-01-24", (
+                                f"Post-arrival wake at {item.dest_time} should be on "
+                                f"Jan 24 (morning after 19:00 arrival), not {item.dest_date}"
+                            )
+
+    def test_westbound_cross_dateline_dates(self, frozen_time):
+        """
+        Westbound trans-Pacific flight: Tokyo → Los Angeles
+        Crosses dateline, arriving BEFORE you departed (in local time).
+
+        Departs: Jan 23 17:00 Tokyo
+        Arrives: Jan 23 10:00 LA (same calendar date but earlier local time)
+
+        In-flight naps should have correct dates in both timezones.
+        """
+        from circadian.scheduler_v2 import ScheduleGeneratorV2
+        from circadian.types import ScheduleRequest
+
+        request = ScheduleRequest(
+            legs=[
+                TripLeg(
+                    origin_tz="Asia/Tokyo",
+                    dest_tz="America/Los_Angeles",
+                    departure_datetime="2026-01-23T17:00",
+                    arrival_datetime="2026-01-23T10:00",  # ~10h flight, arrives "earlier"
+                )
+            ],
+            prep_days=2,
+            wake_time="07:00",
+            sleep_time="23:00",
+            uses_melatonin=True,
+            uses_caffeine=True,
+            nap_preference="flight_only",
+        )
+
+        scheduler = ScheduleGeneratorV2()
+        response = scheduler.generate_schedule(request)
+
+        # Find in-transit nap windows
+        for day_schedule in response.interventions:
+            if day_schedule.phase_type in ("in_transit", "in_transit_ulr"):
+                for item in day_schedule.items:
+                    if item.type == "nap_window" and item.flight_offset_hours:
+                        # Departure is Jan 23 17:00 Tokyo = Jan 23 00:00 LA (UTC+9 to UTC-8 = 17h diff)
+                        # Naps during flight are on Jan 23 in Tokyo time
+                        # but could be Jan 22 or Jan 23 in LA time depending on offset
+                        # Key check: dates should be valid and consistent
+                        assert item.origin_date is not None
+                        assert item.dest_date is not None
+                        # Origin date should be Jan 23 (Tokyo departure date)
+                        assert item.origin_date.startswith("2026-01-23"), (
+                            f"In-flight nap origin_date should be Jan 23 (Tokyo), "
+                            f"not {item.origin_date}"
+                        )
