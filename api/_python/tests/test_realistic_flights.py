@@ -471,6 +471,63 @@ class TestModerateJetLag:
             f"VS20: wake_target title should mention 'pre-landing', got '{wake_item.title}'"
         )
 
+    def test_no_duplicate_sleep_target_on_same_date(self):
+        """
+        Test that sleep_target is NOT duplicated when Day 0 and Day 1 share the same date.
+
+        For overnight flights like VS20 (depart Jan 21 evening, arrive Jan 22 morning),
+        Day 0's "After Landing" section and Day 1's adaptation phase both fall on Jan 22.
+
+        The scheduler should NOT create duplicate sleep_target entries:
+        - If Day 1 already has sleep_target on Jan 22, don't add another to Day 0
+        - Users should see exactly ONE sleep guidance per calendar date
+        """
+        generator = ScheduleGenerator()
+        base_date = datetime.now() + timedelta(days=7)
+
+        # VS20: SFO 16:30 → LHR 10:40+1
+        departure = make_flight_datetime(base_date, "16:30")
+        arrival = make_flight_datetime(base_date, "10:40", day_offset=1)
+
+        request = ScheduleRequest(
+            legs=[
+                TripLeg(
+                    origin_tz="America/Los_Angeles",
+                    dest_tz="Europe/London",
+                    departure_datetime=departure.strftime("%Y-%m-%dT%H:%M"),
+                    arrival_datetime=arrival.strftime("%Y-%m-%dT%H:%M"),
+                )
+            ],
+            prep_days=3,
+            wake_time="07:00",
+            sleep_time="22:00",
+            uses_melatonin=True,
+            uses_caffeine=True,
+        )
+
+        schedule = generator.generate_schedule(request)
+
+        # Get the arrival date (shared between Day 0 post_arrival and Day 1)
+        arrival_date = arrival.strftime("%Y-%m-%d")
+
+        # Count ALL sleep_targets on the arrival date (across all phases/days)
+        sleep_targets_on_arrival_date = [
+            item
+            for ds in schedule.interventions
+            if ds.date == arrival_date
+            for item in ds.items
+            if item.type == "sleep_target"
+        ]
+
+        # There should be exactly ONE sleep_target on the arrival date
+        # (either from Day 0 post_arrival OR Day 1, but NOT both)
+        assert len(sleep_targets_on_arrival_date) == 1, (
+            f"Expected exactly 1 sleep_target on {arrival_date}, "
+            f"found {len(sleep_targets_on_arrival_date)}. "
+            f"Duplicate prevention may have failed. "
+            f"Sleep targets found: {[s.dest_time for s in sleep_targets_on_arrival_date]}"
+        )
+
     def test_wake_target_not_capped_when_circadian_earlier(self):
         """
         Test that wake_target is NOT capped when circadian wake is earlier than pre-landing.

@@ -31,6 +31,7 @@ from ..science.prc import LightPRC, MelatoninPRC
 from ..science.shift_calculator import ShiftCalculator
 from ..science.sleep_pressure import SleepPressureModel
 from ..types import Intervention, ScheduleRequest, TravelPhase
+from .constraint_filter import SLEEP_TARGET_DEPARTURE_BUFFER_HOURS
 
 # Crew wakes passengers ~1h before landing
 CREW_WAKE_BEFORE_LANDING_HOURS = 1
@@ -263,7 +264,7 @@ class InterventionPlanner:
         """
         Cap sleep_target to phase end if it would be too close to departure.
 
-        Uses 4h buffer (consistent with SLEEP_TARGET_DEPARTURE_BUFFER_HOURS in constraint_filter).
+        Uses SLEEP_TARGET_DEPARTURE_BUFFER_HOURS (4h) from constraint_filter module.
         Pre_departure phase ends 3h before departure (airport buffer).
 
         Args:
@@ -274,7 +275,6 @@ class InterventionPlanner:
             - capped_time: The time to use (or None if should be omitted)
             - original_time: The original circadian-optimal time (set when capping occurred)
         """
-        SLEEP_BUFFER_HOURS = 4.0  # Match SLEEP_TARGET_DEPARTURE_BUFFER_HOURS
         PRE_DEPARTURE_BUFFER_HOURS = 3  # Phase ends 3h before departure
 
         first_leg = self.request.legs[0]
@@ -287,7 +287,7 @@ class InterventionPlanner:
         hours_before = (departure_minutes - sleep_minutes) / 60
 
         # If sleep is well before departure (>4h buffer), no capping needed
-        if hours_before >= SLEEP_BUFFER_HOURS:
+        if hours_before >= SLEEP_TARGET_DEPARTURE_BUFFER_HOURS:
             return (sleep_target, None)
 
         # If sleep is AFTER departure (hours_before <= 0), omit entirely
@@ -296,7 +296,7 @@ class InterventionPlanner:
         if hours_before <= 0:
             return (None, sleep_target)
 
-        # Sleep is within 4h of departure (but still before) - cap to phase end
+        # Sleep is within SLEEP_TARGET_DEPARTURE_BUFFER_HOURS of departure - cap to phase end
         # Cap to phase end (3h before departure)
         phase_end_minutes = departure_minutes - (PRE_DEPARTURE_BUFFER_HOURS * 60)
 
