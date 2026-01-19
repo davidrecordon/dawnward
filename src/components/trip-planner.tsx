@@ -8,6 +8,7 @@ import { TripForm } from "@/components/trip-form";
 import { TripPreviewCard } from "@/components/trip-preview-card";
 import { PreferencesSaveModal } from "@/components/preferences-save-modal";
 import { CalendarPreviewCard } from "@/components/calendar-preview-card";
+import { useCalendarScope } from "@/hooks/use-calendar-scope";
 import { defaultFormState, type TripFormState } from "@/types/trip-form";
 import { getFormState, saveFormState } from "@/lib/schedule-storage";
 import type { UserPreferences } from "@/types/user-preferences";
@@ -132,6 +133,7 @@ function mapDbToForm(db: UserPreferences): Pick<TripFormState, PreferenceKey> {
 export function TripPlanner() {
   const router = useRouter();
   const { data: session, status } = useSession();
+  const { hasCalendarScope } = useCalendarScope();
   const [formState, setFormState] =
     React.useState<TripFormState>(defaultFormState);
   const [isHydrated, setIsHydrated] = React.useState(false);
@@ -294,7 +296,7 @@ export function TripPlanner() {
           {/* Calendar Sync Preview */}
           <CalendarPreviewCard
             isLoggedIn={status === "authenticated"}
-            hasCalendarScope={session?.hasCalendarScope ?? false}
+            hasCalendarScope={hasCalendarScope}
           />
 
           {/* How it works */}

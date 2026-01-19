@@ -547,22 +547,38 @@ export async function createEventsForSchedule(
   const created: string[] = [];
   let failed = 0;
 
+  console.log(
+    `[Calendar] Creating events for ${interventionDays.length} days`
+  );
+
   for (const day of interventionDays) {
     // Use anchor-based grouping for reduced event density
     const groups = groupInterventionsByAnchor(day.items);
 
-    for (const [, interventions] of groups) {
+    console.log(
+      `[Calendar] Day ${day.day} (${day.date}): ${groups.size} event groups from ${day.items.length} interventions`
+    );
+
+    for (const [key, interventions] of groups) {
       try {
         const event = buildCalendarEvent(interventions);
+        console.log(
+          `[Calendar] Creating event: "${event.summary}" at ${event.start?.dateTime} (${event.start?.timeZone})`
+        );
         const eventId = await createCalendarEvent(accessToken, event);
+        console.log(`[Calendar] Created event ID: ${eventId}`);
         created.push(eventId);
       } catch (error) {
-        console.error("Error creating calendar event:", error);
+        console.error(`[Calendar] Error creating event for group ${key}:`, error);
         failed++;
         // Continue with other events even if one fails
       }
     }
   }
+
+  console.log(
+    `[Calendar] Finished: ${created.length} created, ${failed} failed`
+  );
 
   return { created, failed };
 }

@@ -41,12 +41,17 @@ export function CalendarSyncButton({ tripId }: CalendarSyncButtonProps) {
   // Use session hook for real-time auth state (updates after OAuth callback)
   const { data: session, update: updateSession } = useSession();
   const isLoggedIn = !!session?.user;
-  const hasCalendarScope = session?.hasCalendarScope ?? false;
+  const sessionHasCalendarScope = session?.hasCalendarScope ?? false;
 
   const [syncStatus, setSyncStatus] = useState<SyncStatus | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showAuthPrompt, setShowAuthPrompt] = useState(false);
+  // Track verified scope (actual token state from Google)
+  const [verifiedHasScope, setVerifiedHasScope] = useState<boolean | null>(null);
+
+  // Use verified scope if available, otherwise fall back to session
+  const hasCalendarScope = verifiedHasScope ?? sessionHasCalendarScope;
 
   // AbortController to prevent race conditions on rapid clicks
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -58,8 +63,45 @@ export function CalendarSyncButton({ tripId }: CalendarSyncButtonProps) {
     if (urlParams.has("callbackUrl") || urlParams.has("code")) {
       // Trigger session refresh to get updated calendar scope
       updateSession();
+      // Clear verified state to re-verify after OAuth
+      setVerifiedHasScope(null);
     }
   }, [updateSession]);
+
+  // Verify actual token scope when session says we have calendar access
+  // This catches cases where the stored scope is stale or revoked
+  useEffect(() => {
+    if (!isLoggedIn || !sessionHasCalendarScope) {
+      setVerifiedHasScope(null);
+      return;
+    }
+
+    // Only verify once per session (verifiedHasScope starts as null)
+    if (verifiedHasScope !== null) return;
+
+    const verifyScope = async () => {
+      try {
+        const response = await fetch("/api/calendar/verify");
+        if (response.ok) {
+          const data = await response.json();
+          setVerifiedHasScope(data.hasCalendarScope);
+
+          // If there's a mismatch, log it for debugging
+          if (data.mismatch) {
+            console.warn(
+              "[Calendar] Scope mismatch detected:",
+              `session says ${data.sessionSaysHasScope}, actual: ${data.hasCalendarScope}`
+            );
+          }
+        }
+      } catch (err) {
+        console.error("[Calendar] Failed to verify scope:", err);
+        // On error, trust the session value
+      }
+    };
+
+    verifyScope();
+  }, [isLoggedIn, sessionHasCalendarScope, verifiedHasScope]);
 
   // Fetch sync status on mount
   const fetchSyncStatus = useCallback(async () => {
@@ -113,6 +155,13 @@ export function CalendarSyncButton({ tripId }: CalendarSyncButtonProps) {
 
       const data = await response.json();
 
+      // Handle 403 (calendar access revoked or not granted) - prompt for re-auth
+      if (response.status === 403) {
+        setIsLoading(false);
+        setShowAuthPrompt(true);
+        return;
+      }
+
       if (!response.ok) {
         throw new Error(data.error || "Failed to sync");
       }
@@ -154,6 +203,13 @@ export function CalendarSyncButton({ tripId }: CalendarSyncButtonProps) {
         method: "DELETE",
         signal: abortControllerRef.current.signal,
       });
+
+      // Handle 403 (calendar access revoked) - prompt for re-auth
+      if (response.status === 403) {
+        setIsLoading(false);
+        setShowAuthPrompt(true);
+        return;
+      }
 
       if (!response.ok) {
         const data = await response.json();

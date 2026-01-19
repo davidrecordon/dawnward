@@ -110,9 +110,15 @@ export async function POST(request: Request) {
   }
 
   // Create calendar events for each day's interventions
+  console.log(
+    `[Calendar API] Creating events for trip ${tripId}, ${schedule.interventions.length} days`
+  );
   const createResult = await createEventsForSchedule(
     session.accessToken,
     schedule.interventions
+  );
+  console.log(
+    `[Calendar API] Result: ${createResult.created.length} created, ${createResult.failed} failed`
   );
 
   // Save or update the sync record with successfully created events
