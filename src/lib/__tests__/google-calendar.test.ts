@@ -286,6 +286,20 @@ describe("buildCalendarEvent", () => {
     expect(event.end?.dateTime).toContain("21:15");
   });
 
+  it("uses longest duration when grouping interventions", () => {
+    // When wake_target (15 min) groups with light_seek (60 min), use the longer duration
+    const interventions = [
+      makeIntervention("wake_target", "07:00"), // 15 min duration
+      makeIntervention("light_seek", "07:00", { duration_min: 60 }), // 60 min duration
+    ];
+
+    const event = buildCalendarEvent(interventions);
+
+    // Should use light_seek's 60 min duration, not wake_target's 15 min
+    expect(event.start?.dateTime).toContain("07:00");
+    expect(event.end?.dateTime).toContain("08:00");
+  });
+
   it("throws error for empty interventions", () => {
     expect(() => buildCalendarEvent([])).toThrow(
       "Cannot build event from empty interventions"

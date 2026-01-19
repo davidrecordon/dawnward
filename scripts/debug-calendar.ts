@@ -44,7 +44,6 @@ import { prisma } from "../src/lib/prisma";
 import {
   groupInterventionsByAnchor,
   buildCalendarEvent,
-  getEventDuration,
 } from "../src/lib/google-calendar";
 import type { ScheduleResponse, PhaseType } from "../src/types/schedule";
 
@@ -558,7 +557,11 @@ function displaySchedule(
         const eventDate = eventDateTime.split("T")[0];
         const eventTime = eventDateTime.split("T")[1]?.substring(0, 5) || "??:??";
         const anchor = interventions[0];
-        const duration = getEventDuration(anchor);
+
+        // Calculate duration from event start/end (accounts for grouped max duration)
+        const startMs = new Date(event.start?.dateTime || "").getTime();
+        const endMs = new Date(event.end?.dateTime || "").getTime();
+        const duration = Math.round((endMs - startMs) / 60000);
 
         // Show if date differs from day.date (important for cross-dateline flights)
         const dateNote = eventDate !== day.date ? ` [calendar: ${eventDate}]` : "";

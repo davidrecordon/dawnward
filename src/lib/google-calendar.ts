@@ -391,8 +391,9 @@ export function buildCalendarEvent(
     );
   }
 
-  // Calculate event duration using type-specific configuration
-  const durationMin = getEventDuration(anchor);
+  // Calculate event duration - use the longest duration among all interventions
+  // (e.g., if wake_target groups with light_seek, use light_seek's 60 min, not wake's 15 min)
+  const durationMin = Math.max(...interventions.map(getEventDuration));
 
   // Create start/end DateTimes
   const startDate = new Date(`${date}T${time}:00`);
