@@ -5,7 +5,11 @@ import {
   buildEventTitle,
   buildEventDescription,
   groupInterventionsByTime,
+  groupInterventionsByAnchor,
   buildCalendarEvent,
+  getEventDuration,
+  isStandaloneType,
+  shouldShowAsBusy,
 } from "@/lib/google-calendar";
 import type {
   Intervention,
@@ -36,24 +40,24 @@ function makeIntervention(
 }
 
 describe("getReminderMinutes", () => {
-  it("returns 30 minutes for schedule anchors", () => {
-    expect(getReminderMinutes("wake_target")).toBe(30);
-    expect(getReminderMinutes("sleep_target")).toBe(30);
-    expect(getReminderMinutes("exercise")).toBe(30);
+  it("returns 0 minutes for wake_target (immediate)", () => {
+    expect(getReminderMinutes("wake_target")).toBe(0);
   });
 
-  it("returns 15 minutes for light and activity interventions", () => {
+  it("returns 30 minutes for sleep_target", () => {
+    expect(getReminderMinutes("sleep_target")).toBe(30);
+  });
+
+  it("returns 15 minutes for exercise and caffeine_cutoff", () => {
+    expect(getReminderMinutes("exercise")).toBe(15);
+    expect(getReminderMinutes("caffeine_cutoff")).toBe(15);
+  });
+
+  it("returns 15 minutes (default) for other types", () => {
     expect(getReminderMinutes("light_seek")).toBe(15);
     expect(getReminderMinutes("light_avoid")).toBe(15);
     expect(getReminderMinutes("nap_window")).toBe(15);
     expect(getReminderMinutes("melatonin")).toBe(15);
-  });
-
-  it("returns 5 minutes for caffeine cutoff", () => {
-    expect(getReminderMinutes("caffeine_cutoff")).toBe(5);
-  });
-
-  it("returns 15 minutes for caffeine_ok (default)", () => {
     expect(getReminderMinutes("caffeine_ok")).toBe(15);
   });
 });
@@ -256,8 +260,8 @@ describe("buildCalendarEvent", () => {
 
     const event = buildCalendarEvent(interventions);
 
-    // wake_target = 30 min reminder
-    expect(event.reminders?.overrides?.[0]?.minutes).toBe(30);
+    // wake_target = 0 min reminder (immediate)
+    expect(event.reminders?.overrides?.[0]?.minutes).toBe(0);
   });
 
   it("uses intervention duration_min when provided", () => {
@@ -272,12 +276,12 @@ describe("buildCalendarEvent", () => {
     expect(event.end?.dateTime).toContain("07:45");
   });
 
-  it("defaults to 15 minute duration when not specified", () => {
+  it("uses type-specific duration for melatonin (15 min)", () => {
     const interventions = [makeIntervention("melatonin", "21:00")];
 
     const event = buildCalendarEvent(interventions);
 
-    // Start at 21:00, end 15 min later at 21:15
+    // Melatonin uses 15-minute duration (minimum for practical visibility)
     expect(event.start?.dateTime).toContain("21:00");
     expect(event.end?.dateTime).toContain("21:15");
   });
@@ -947,5 +951,406 @@ describe("Realistic Flight Calendar Events", () => {
       expect(event.start?.timeZone).toBe("Asia/Singapore");
       expect(event.start?.dateTime).toContain("2026-01-25");
     });
+  });
+});
+
+// =============================================================================
+// Event Density Optimization Tests
+// =============================================================================
+
+describe("getEventDuration", () => {
+  it("returns type-specific durations for fixed-duration types", () => {
+    expect(getEventDuration(makeIntervention("wake_target"))).toBe(15);
+    expect(getEventDuration(makeIntervention("sleep_target"))).toBe(15);
+    expect(getEventDuration(makeIntervention("melatonin"))).toBe(15);
+    expect(getEventDuration(makeIntervention("caffeine_cutoff"))).toBe(15);
+    expect(getEventDuration(makeIntervention("exercise"))).toBe(45);
+  });
+
+  it("uses duration_min for light_avoid when provided", () => {
+    const intervention = makeIntervention("light_avoid", "20:00", {
+      duration_min: 180, // 3 hours avoidance window
+    });
+    expect(getEventDuration(intervention)).toBe(180);
+  });
+
+  it("uses duration_min for light_seek when provided", () => {
+    const intervention = makeIntervention("light_seek", "07:00", {
+      duration_min: 60,
+    });
+    expect(getEventDuration(intervention)).toBe(60);
+  });
+
+  it("uses default duration for light_seek when duration_min not provided", () => {
+    const intervention = makeIntervention("light_seek", "07:00");
+    expect(getEventDuration(intervention)).toBe(15);
+  });
+
+  it("uses duration_min for nap_window when provided", () => {
+    const intervention = makeIntervention("nap_window", "14:00", {
+      duration_min: 90,
+    });
+    expect(getEventDuration(intervention)).toBe(90);
+  });
+});
+
+describe("isStandaloneType", () => {
+  it("returns true for types that should never be grouped", () => {
+    expect(isStandaloneType("caffeine_cutoff")).toBe(true);
+    expect(isStandaloneType("exercise")).toBe(true);
+    expect(isStandaloneType("nap_window")).toBe(true);
+  });
+
+  it("returns false for types that can be grouped", () => {
+    expect(isStandaloneType("wake_target")).toBe(false);
+    expect(isStandaloneType("sleep_target")).toBe(false);
+    expect(isStandaloneType("melatonin")).toBe(false);
+    expect(isStandaloneType("light_seek")).toBe(false);
+    expect(isStandaloneType("light_avoid")).toBe(false);
+  });
+});
+
+describe("shouldShowAsBusy", () => {
+  it("returns true for busy types (nap, exercise)", () => {
+    expect(shouldShowAsBusy("nap_window")).toBe(true);
+    expect(shouldShowAsBusy("exercise")).toBe(true);
+  });
+
+  it("returns false for free types (everything else)", () => {
+    expect(shouldShowAsBusy("wake_target")).toBe(false);
+    expect(shouldShowAsBusy("sleep_target")).toBe(false);
+    expect(shouldShowAsBusy("melatonin")).toBe(false);
+    expect(shouldShowAsBusy("caffeine_cutoff")).toBe(false);
+    expect(shouldShowAsBusy("light_seek")).toBe(false);
+    expect(shouldShowAsBusy("light_avoid")).toBe(false);
+  });
+});
+
+describe("groupInterventionsByAnchor", () => {
+  it("groups light_seek with wake_target when within 2h window", () => {
+    const interventions = [
+      makeIntervention("wake_target", "07:00"),
+      makeIntervention("light_seek", "07:15"), // 15 min after wake
+    ];
+
+    const groups = groupInterventionsByAnchor(interventions);
+
+    // Should have 1 group (wake anchor with light_seek)
+    expect(groups.size).toBe(1);
+    const wakeGroup = groups.get("wake:07:00");
+    expect(wakeGroup).toBeDefined();
+    expect(wakeGroup).toHaveLength(2);
+    expect(wakeGroup?.map((i) => i.type)).toContain("wake_target");
+    expect(wakeGroup?.map((i) => i.type)).toContain("light_seek");
+  });
+
+  it("groups melatonin with sleep_target when within 2h window", () => {
+    const interventions = [
+      makeIntervention("melatonin", "21:30"), // 1.5h before sleep
+      makeIntervention("sleep_target", "23:00"),
+    ];
+
+    const groups = groupInterventionsByAnchor(interventions);
+
+    expect(groups.size).toBe(1);
+    const sleepGroup = groups.get("sleep:23:00");
+    expect(sleepGroup).toBeDefined();
+    expect(sleepGroup).toHaveLength(2);
+    expect(sleepGroup?.map((i) => i.type)).toContain("sleep_target");
+    expect(sleepGroup?.map((i) => i.type)).toContain("melatonin");
+  });
+
+  it("keeps caffeine_cutoff standalone regardless of timing", () => {
+    const interventions = [
+      makeIntervention("wake_target", "07:00"),
+      makeIntervention("caffeine_cutoff", "07:30"), // Within 2h of wake but standalone
+    ];
+
+    const groups = groupInterventionsByAnchor(interventions);
+
+    // Should have 2 groups: wake anchor and standalone caffeine_cutoff
+    expect(groups.size).toBe(2);
+    expect(groups.has("wake:07:00")).toBe(true);
+    expect(groups.has("standalone:caffeine_cutoff:07:30")).toBe(true);
+
+    // Wake group should only have wake_target
+    expect(groups.get("wake:07:00")).toHaveLength(1);
+  });
+
+  it("keeps exercise standalone regardless of timing", () => {
+    const interventions = [
+      makeIntervention("wake_target", "07:00"),
+      makeIntervention("exercise", "08:00"), // Within 2h but standalone
+    ];
+
+    const groups = groupInterventionsByAnchor(interventions);
+
+    expect(groups.size).toBe(2);
+    expect(groups.has("standalone:exercise:08:00")).toBe(true);
+  });
+
+  it("keeps nap_window standalone", () => {
+    const interventions = [
+      makeIntervention("nap_window", "14:00", { flight_offset_hours: 4 }),
+    ];
+
+    const groups = groupInterventionsByAnchor(interventions);
+
+    expect(groups.size).toBe(1);
+    expect(groups.has("standalone:nap_window:14:00")).toBe(true);
+  });
+
+  it("keeps light_avoid standalone when >1h before sleep_target", () => {
+    const interventions = [
+      makeIntervention("light_avoid", "20:00"), // 3h before sleep
+      makeIntervention("sleep_target", "23:00"),
+    ];
+
+    const groups = groupInterventionsByAnchor(interventions);
+
+    expect(groups.size).toBe(2);
+    expect(groups.has("standalone:light_avoid:20:00")).toBe(true);
+    expect(groups.has("sleep:23:00")).toBe(true);
+    expect(groups.get("sleep:23:00")).toHaveLength(1); // Only sleep_target
+  });
+
+  it("groups light_avoid with sleep_target when ≤1h before", () => {
+    const interventions = [
+      makeIntervention("light_avoid", "22:00"), // 1h before sleep (exactly at boundary)
+      makeIntervention("sleep_target", "23:00"),
+    ];
+
+    const groups = groupInterventionsByAnchor(interventions);
+
+    expect(groups.size).toBe(1);
+    const sleepGroup = groups.get("sleep:23:00");
+    expect(sleepGroup).toHaveLength(2);
+    expect(sleepGroup?.map((i) => i.type)).toContain("light_avoid");
+  });
+
+  it("creates standalone events when no anchor in range", () => {
+    const interventions = [
+      makeIntervention("light_seek", "12:00"), // No anchor nearby
+    ];
+
+    const groups = groupInterventionsByAnchor(interventions);
+
+    expect(groups.size).toBe(1);
+    expect(groups.has("standalone:light_seek:12:00")).toBe(true);
+  });
+
+  it("assigns to nearest anchor when both are in range", () => {
+    const interventions = [
+      makeIntervention("wake_target", "07:00"),
+      makeIntervention("light_seek", "08:30"), // 1.5h from wake, 1.5h from melatonin
+      makeIntervention("melatonin", "10:00"), // Unusual but testing edge case
+    ];
+
+    const groups = groupInterventionsByAnchor(interventions);
+
+    // light_seek should go with wake_target (equal distance, wake checked first)
+    const wakeGroup = groups.get("wake:07:00");
+    expect(wakeGroup).toBeDefined();
+    // melatonin at 10:00 would be standalone since it's not sleep_target
+    // Actually melatonin is not an anchor - only wake_target and sleep_target are anchors
+    // So both light_seek and melatonin should try to group with wake
+  });
+
+  it("filters out non-actionable interventions (caffeine_ok)", () => {
+    const interventions = [
+      makeIntervention("wake_target", "07:00"),
+      makeIntervention("caffeine_ok", "07:00"), // Should be filtered
+    ];
+
+    const groups = groupInterventionsByAnchor(interventions);
+
+    expect(groups.size).toBe(1);
+    expect(groups.get("wake:07:00")).toHaveLength(1);
+  });
+
+  it("returns empty map for empty input", () => {
+    const groups = groupInterventionsByAnchor([]);
+    expect(groups.size).toBe(0);
+  });
+
+  it("handles complex day with multiple intervention types", () => {
+    const interventions = [
+      makeIntervention("wake_target", "07:00"),
+      makeIntervention("light_seek", "07:00", { duration_min: 30 }),
+      makeIntervention("caffeine_cutoff", "14:00"), // Standalone
+      makeIntervention("light_avoid", "20:00"), // >1h before sleep, standalone
+      makeIntervention("melatonin", "22:30"), // Within 2h of sleep
+      makeIntervention("sleep_target", "23:00"),
+    ];
+
+    const groups = groupInterventionsByAnchor(interventions);
+
+    // Expected groups:
+    // 1. wake:07:00 (wake_target + light_seek)
+    // 2. standalone:caffeine_cutoff:14:00
+    // 3. standalone:light_avoid:20:00
+    // 4. sleep:23:00 (sleep_target + melatonin)
+    expect(groups.size).toBe(4);
+
+    // Morning routine
+    const wakeGroup = groups.get("wake:07:00");
+    expect(wakeGroup).toHaveLength(2);
+    expect(wakeGroup?.map((i) => i.type).sort()).toEqual(
+      ["light_seek", "wake_target"].sort()
+    );
+
+    // Caffeine standalone
+    expect(groups.has("standalone:caffeine_cutoff:14:00")).toBe(true);
+
+    // Light avoid standalone
+    expect(groups.has("standalone:light_avoid:20:00")).toBe(true);
+
+    // Evening routine
+    const sleepGroup = groups.get("sleep:23:00");
+    expect(sleepGroup).toHaveLength(2);
+    expect(sleepGroup?.map((i) => i.type).sort()).toEqual(
+      ["melatonin", "sleep_target"].sort()
+    );
+  });
+});
+
+describe("buildCalendarEvent transparency", () => {
+  it("shows sleep_target as free (transparent)", () => {
+    const interventions = [
+      makeIntervention("sleep_target", "23:00", { title: "Bedtime" }),
+    ];
+
+    const event = buildCalendarEvent(interventions);
+
+    expect(event.transparency).toBe("transparent");
+  });
+
+  it("shows nap_window as busy (opaque)", () => {
+    const interventions = [
+      makeIntervention("nap_window", "14:00", {
+        title: "In-flight sleep",
+        flight_offset_hours: 4,
+        duration_min: 90,
+        phase_type: "in_transit",
+      }),
+    ];
+
+    const event = buildCalendarEvent(interventions);
+
+    expect(event.transparency).toBe("opaque");
+  });
+
+  it("shows exercise as busy (opaque)", () => {
+    const interventions = [makeIntervention("exercise", "08:00")];
+
+    const event = buildCalendarEvent(interventions);
+
+    expect(event.transparency).toBe("opaque");
+  });
+
+  it("shows wake_target as free (transparent)", () => {
+    const interventions = [makeIntervention("wake_target", "07:00")];
+
+    const event = buildCalendarEvent(interventions);
+
+    expect(event.transparency).toBe("transparent");
+  });
+
+  it("shows melatonin as free (transparent)", () => {
+    const interventions = [makeIntervention("melatonin", "21:00")];
+
+    const event = buildCalendarEvent(interventions);
+
+    expect(event.transparency).toBe("transparent");
+  });
+
+  it("shows light_seek as free (transparent)", () => {
+    const interventions = [
+      makeIntervention("light_seek", "07:00", { duration_min: 30 }),
+    ];
+
+    const event = buildCalendarEvent(interventions);
+
+    expect(event.transparency).toBe("transparent");
+  });
+
+  it("shows caffeine_cutoff as free (transparent)", () => {
+    const interventions = [makeIntervention("caffeine_cutoff", "14:00")];
+
+    const event = buildCalendarEvent(interventions);
+
+    expect(event.transparency).toBe("transparent");
+  });
+});
+
+describe("buildCalendarEvent type-specific durations", () => {
+  it("creates 15-minute event for sleep_target", () => {
+    const interventions = [makeIntervention("sleep_target", "23:00")];
+
+    const event = buildCalendarEvent(interventions);
+
+    // Start at 23:00, end 15 min later at 23:15
+    expect(event.start?.dateTime).toContain("23:00");
+    expect(event.end?.dateTime).toContain("23:15");
+  });
+
+  it("creates 15-minute event for melatonin", () => {
+    const interventions = [makeIntervention("melatonin", "21:00")];
+
+    const event = buildCalendarEvent(interventions);
+
+    // Start at 21:00, end 15 min later at 21:15
+    expect(event.start?.dateTime).toContain("21:00");
+    expect(event.end?.dateTime).toContain("21:15");
+  });
+
+  it("creates 45-minute event for exercise", () => {
+    const interventions = [makeIntervention("exercise", "08:00")];
+
+    const event = buildCalendarEvent(interventions);
+
+    // Start at 08:00, end 45 min later at 08:45
+    expect(event.start?.dateTime).toContain("08:00");
+    expect(event.end?.dateTime).toContain("08:45");
+  });
+
+  it("uses duration_min for light_seek", () => {
+    const interventions = [
+      makeIntervention("light_seek", "07:00", { duration_min: 60 }),
+    ];
+
+    const event = buildCalendarEvent(interventions);
+
+    // Start at 07:00, end 60 min later at 08:00
+    expect(event.start?.dateTime).toContain("07:00");
+    expect(event.end?.dateTime).toContain("08:00");
+  });
+
+  it("uses duration_min for light_avoid (PRC-calculated)", () => {
+    const interventions = [
+      makeIntervention("light_avoid", "20:00", { duration_min: 180 }), // 3h avoidance window
+    ];
+
+    const event = buildCalendarEvent(interventions);
+
+    // Start at 20:00, end 180 min later at 23:00
+    expect(event.start?.dateTime).toContain("20:00");
+    expect(event.end?.dateTime).toContain("23:00");
+  });
+
+  it("uses duration_min for nap_window", () => {
+    const interventions = [
+      makeIntervention("nap_window", "14:00", {
+        duration_min: 120,
+        flight_offset_hours: 4,
+        phase_type: "in_transit",
+      }),
+    ];
+
+    const event = buildCalendarEvent(interventions);
+
+    // Start at 14:00, end 120 min later at 16:00
+    expect(event.start?.dateTime).toContain("14:00");
+    expect(event.end?.dateTime).toContain("16:00");
   });
 });

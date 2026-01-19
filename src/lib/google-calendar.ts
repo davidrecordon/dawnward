@@ -6,6 +6,43 @@ import type {
 } from "@/types/schedule";
 import { getDisplayTime } from "@/types/schedule";
 
+// =============================================================================
+// Event Density Configuration
+// =============================================================================
+
+/** Interventions that should never be grouped - they stand alone regardless of timing */
+const STANDALONE_TYPES: Set<InterventionType> = new Set([
+  "caffeine_cutoff", // Mid-day "last chance" reminder - critical timing
+  "exercise", // Specific circadian timing, often mid-day
+  "nap_window", // In-flight only, has flight_offset_hours
+]);
+
+/**
+ * Event durations by type (minutes), or "from_intervention" to use duration_min.
+ * Standalone events still use these durations.
+ * Minimum duration is 15 minutes for practical calendar visibility.
+ */
+const EVENT_DURATION: Record<InterventionType, number | "from_intervention"> = {
+  wake_target: 15, // Point-in-time reminder
+  sleep_target: 15, // Point-in-time reminder
+  melatonin: 15, // Point-in-time reminder (take pill)
+  caffeine_cutoff: 15, // Reminder
+  exercise: 45, // Typical workout
+  light_seek: "from_intervention", // User's preference (30/45/60/90)
+  light_avoid: "from_intervention", // PRC-calculated avoidance window (2-4h)
+  nap_window: "from_intervention", // Calculated nap window
+  caffeine_ok: 0, // Not actionable - shouldn't create event
+};
+
+/** Types that block time (show as busy) */
+const SHOW_AS_BUSY: Set<InterventionType> = new Set([
+  "nap_window",
+  "exercise",
+]);
+
+/** Grouping window in minutes (interventions within this of anchor get grouped) */
+const GROUPING_WINDOW_MIN = 120;
+
 /** Default event duration in minutes when not specified */
 const DEFAULT_EVENT_DURATION_MIN = 15;
 
@@ -20,12 +57,10 @@ function formatDateTime(d: Date): string {
 
 /** Reminder time in minutes by intervention type */
 const REMINDER_MINUTES: Partial<Record<InterventionType, number>> = {
-  // Schedule anchors - 30 min to prepare
-  wake_target: 30,
-  sleep_target: 30,
-  exercise: 30,
-  // Caffeine cutoff - last chance reminder
-  caffeine_cutoff: 5,
+  wake_target: 0, // Immediate - alarm is the event itself
+  sleep_target: 30, // 30 min to wind down
+  exercise: 15, // Brief heads-up
+  caffeine_cutoff: 15, // Brief heads-up
 };
 
 const DEFAULT_REMINDER_MINUTES = 15;
@@ -180,6 +215,157 @@ export function groupInterventionsByTime(
   return groups;
 }
 
+// =============================================================================
+// Anchor-Based Grouping (Event Density Optimization)
+// =============================================================================
+
+/**
+ * Parse HH:MM time to minutes since midnight.
+ */
+function parseTimeToMinutes(time: string): number {
+  const [hours, minutes] = time.split(":").map(Number);
+  return hours * 60 + minutes;
+}
+
+/**
+ * Get event duration for an intervention based on type configuration.
+ */
+export function getEventDuration(intervention: Intervention): number {
+  const configured = EVENT_DURATION[intervention.type];
+  if (configured === "from_intervention") {
+    return intervention.duration_min ?? DEFAULT_EVENT_DURATION_MIN;
+  }
+  return configured || DEFAULT_EVENT_DURATION_MIN;
+}
+
+/**
+ * Check if an intervention type should always be standalone (never grouped).
+ */
+export function isStandaloneType(type: InterventionType): boolean {
+  return STANDALONE_TYPES.has(type);
+}
+
+/**
+ * Check if an intervention should show as busy on the calendar.
+ */
+export function shouldShowAsBusy(type: InterventionType): boolean {
+  return SHOW_AS_BUSY.has(type);
+}
+
+/**
+ * Group interventions around wake/sleep anchors for reduced event count.
+ *
+ * Strategy:
+ * 1. Identify wake_target and sleep_target as anchors
+ * 2. Group nearby interventions (within GROUPING_WINDOW_MIN) with their anchor
+ * 3. Keep standalone types (caffeine_cutoff, exercise, nap_window) separate
+ * 4. light_avoid is standalone if >1h before sleep_target, otherwise grouped
+ *
+ * Returns a map where each key is a unique identifier and value is the group.
+ * Each group creates one calendar event.
+ */
+export function groupInterventionsByAnchor(
+  interventions: Intervention[]
+): Map<string, Intervention[]> {
+  const groups = new Map<string, Intervention[]>();
+
+  // Filter to actionable interventions only
+  const actionable = interventions.filter((i) =>
+    isActionableIntervention(i.type)
+  );
+
+  if (actionable.length === 0) {
+    return groups;
+  }
+
+  // Find anchors (wake_target and sleep_target)
+  const wakeAnchor = actionable.find((i) => i.type === "wake_target");
+  const sleepAnchor = actionable.find((i) => i.type === "sleep_target");
+
+  const wakeTime = wakeAnchor ? parseTimeToMinutes(getDisplayTime(wakeAnchor)) : null;
+  const sleepTime = sleepAnchor ? parseTimeToMinutes(getDisplayTime(sleepAnchor)) : null;
+
+  // Track which interventions have been grouped
+  const grouped = new Set<Intervention>();
+
+  // Initialize anchor groups if anchors exist
+  if (wakeAnchor) {
+    const key = `wake:${getDisplayTime(wakeAnchor)}`;
+    groups.set(key, [wakeAnchor]);
+    grouped.add(wakeAnchor);
+  }
+
+  if (sleepAnchor) {
+    const key = `sleep:${getDisplayTime(sleepAnchor)}`;
+    groups.set(key, [sleepAnchor]);
+    grouped.add(sleepAnchor);
+  }
+
+  // Process remaining interventions
+  for (const intervention of actionable) {
+    if (grouped.has(intervention)) continue;
+
+    const time = parseTimeToMinutes(getDisplayTime(intervention));
+
+    // Standalone types are never grouped
+    if (isStandaloneType(intervention.type)) {
+      const key = `standalone:${intervention.type}:${getDisplayTime(intervention)}`;
+      groups.set(key, [intervention]);
+      grouped.add(intervention);
+      continue;
+    }
+
+    // Special case: light_avoid
+    // - If >1h before sleep_target, keep standalone
+    // - Otherwise, can be grouped with sleep anchor
+    if (intervention.type === "light_avoid" && sleepTime !== null) {
+      const distanceToSleep = sleepTime - time;
+      // If more than 1 hour (60 min) before sleep, standalone
+      if (distanceToSleep > 60) {
+        const key = `standalone:light_avoid:${getDisplayTime(intervention)}`;
+        groups.set(key, [intervention]);
+        grouped.add(intervention);
+        continue;
+      }
+    }
+
+    // Try to find nearest anchor within window
+    let nearestAnchorKey: string | null = null;
+    let nearestDistance = Infinity;
+
+    // Check distance to wake anchor
+    if (wakeTime !== null) {
+      const distance = Math.abs(time - wakeTime);
+      if (distance <= GROUPING_WINDOW_MIN && distance < nearestDistance) {
+        nearestDistance = distance;
+        nearestAnchorKey = `wake:${getDisplayTime(wakeAnchor!)}`;
+      }
+    }
+
+    // Check distance to sleep anchor
+    if (sleepTime !== null) {
+      const distance = Math.abs(time - sleepTime);
+      if (distance <= GROUPING_WINDOW_MIN && distance < nearestDistance) {
+        nearestDistance = distance;
+        nearestAnchorKey = `sleep:${getDisplayTime(sleepAnchor!)}`;
+      }
+    }
+
+    if (nearestAnchorKey) {
+      // Add to existing anchor group
+      groups.get(nearestAnchorKey)!.push(intervention);
+      grouped.add(intervention);
+    } else {
+      // No anchor in range - create standalone event
+      const key = `standalone:${intervention.type}:${getDisplayTime(intervention)}`;
+      groups.set(key, [intervention]);
+      grouped.add(intervention);
+    }
+  }
+
+  return groups;
+}
+
 /**
  * Convert an intervention group to a Google Calendar event.
  * Extracts timezone AND date from the intervention based on phase:
@@ -219,8 +405,8 @@ export function buildCalendarEvent(
     );
   }
 
-  // Calculate event duration (use anchor's duration or default)
-  const durationMin = anchor.duration_min ?? DEFAULT_EVENT_DURATION_MIN;
+  // Calculate event duration using type-specific configuration
+  const durationMin = getEventDuration(anchor);
 
   // Create start/end DateTimes
   const startDate = new Date(`${date}T${time}:00`);
@@ -228,6 +414,9 @@ export function buildCalendarEvent(
 
   // Use anchor's reminder time
   const reminderMinutes = getReminderMinutes(anchor.type);
+
+  // Determine if event should show as busy (opaque) or free (transparent)
+  const transparency = shouldShowAsBusy(anchor.type) ? "opaque" : "transparent";
 
   return {
     summary: buildEventTitle(interventions),
@@ -240,6 +429,7 @@ export function buildCalendarEvent(
       dateTime: formatDateTime(endDate),
       timeZone: timezone,
     },
+    transparency,
     reminders: {
       useDefault: false,
       overrides: [{ method: "popup", minutes: reminderMinutes }],
@@ -358,7 +548,7 @@ export interface CreateEventsResult {
 
 /**
  * Create calendar events for all actionable interventions in a schedule.
- * Groups interventions by time and creates one event per group.
+ * Groups interventions around wake/sleep anchors for reduced event count.
  * Each event uses the timezone from the intervention itself based on phase.
  * Returns both successful and failed event counts.
  */
@@ -370,7 +560,8 @@ export async function createEventsForSchedule(
   let failed = 0;
 
   for (const day of interventionDays) {
-    const groups = groupInterventionsByTime(day.items);
+    // Use anchor-based grouping for reduced event density
+    const groups = groupInterventionsByAnchor(day.items);
 
     for (const [, interventions] of groups) {
       try {
