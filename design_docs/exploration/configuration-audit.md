@@ -104,6 +104,15 @@ at the top of each module is the right choice for this codebase size.
 | 20   | `SLEEP_TARGET_DEPARTURE_BUFFER_HOURS` | 4.0   | Filter sleep targets near departure |
 | 219  | Early morning threshold               | 6:00  | Exception for early interventions   |
 
+#### Intervention Planner (`intervention_planner.py`)
+
+| Line | Constant                         | Value | Purpose                                     |
+| ---- | -------------------------------- | ----- | ------------------------------------------- |
+| 36   | `CREW_WAKE_BEFORE_LANDING_HOURS` | 1     | Cap wake_target to 1h before landing        |
+| 241  | `AIRPORT_BUFFER_HOURS`           | 3     | Cap pre-departure wake to 3h before flight  |
+| 277  | `SLEEP_BUFFER_HOURS`             | 4.0   | Sleep capping threshold (matches filter)    |
+| 278  | `PRE_DEPARTURE_BUFFER_HOURS`     | 3     | Phase ends 3h before departure              |
+
 #### Scheduler (`scheduler_v2.py`)
 
 | Line | Constant                           | Value | Purpose                    |
@@ -416,7 +425,7 @@ Constants are already discoverable via this audit document.
 | Category              | Count | Action                                    |
 | --------------------- | ----- | ----------------------------------------- |
 | Immutable Science     | ~36   | Leave as-is, document sources             |
-| Algorithm Config      | ~38   | Keep as module-level constants (decided)  |
+| Algorithm Config      | ~42   | Keep as module-level constants (decided)  |
 | User Preferences      | 10    | All working, 4 future candidates          |
 | Frontend Defaults     | ~26   | Mostly centralized, well-organized        |
 | Shift & Prep Days     | 4     | Prep day calculation thresholds           |
