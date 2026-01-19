@@ -32,6 +32,9 @@ from ..science.shift_calculator import ShiftCalculator
 from ..science.sleep_pressure import SleepPressureModel
 from ..types import Intervention, ScheduleRequest, TravelPhase
 
+# Crew wakes passengers ~1h before landing
+CREW_WAKE_BEFORE_LANDING_HOURS = 1
+
 
 @dataclass
 class PlannerContext:
@@ -151,6 +154,7 @@ class InterventionPlanner:
         sleep_target_for_planning = sleep_target
         sleep_original_time: str | None = None
         sleep_target_for_display: time | None = sleep_target
+        wake_original_time: str | None = None
         if phase.phase_type == "pre_departure":
             wake_target = self._cap_wake_target_for_departure(wake_target)
             capped_sleep, original_sleep = self._cap_sleep_target_for_departure(sleep_target)
@@ -163,9 +167,36 @@ class InterventionPlanner:
             else:
                 sleep_target_for_display = capped_sleep
 
+        # =================================================================
+        # WAKE TARGET HANDLING FOR POST-ARRIVAL PHASES
+        # =================================================================
+        # For arrival day, wake time might be capped to pre-landing time:
+        # - Crew wakes passengers ~1h before landing
+        # - If circadian wake is AFTER pre-landing time, cap it
+        # - If circadian wake is earlier, use it as-is
+        #
+        # Example: VS20 lands at 10:45 AM
+        # - Circadian wake: 11:00 AM (body clock says wake at 11)
+        # - But crew wakes you at 9:45 AM
+        # - So wake_target = 9:45 AM, original_time = 11:00 AM
+        # =================================================================
+        if phase.phase_type == "post_arrival":
+            capped_wake, original_wake = self._get_arrival_day_wake_target(
+                wake_target, phase.start_datetime
+            )
+            if original_wake:
+                wake_original_time = original_wake
+            wake_target = capped_wake
+
         # 1. Sleep/wake targets (always included, unless sleep_target was omitted)
         interventions.extend(
-            self._plan_sleep_wake(phase, wake_target, sleep_target_for_display, sleep_original_time)
+            self._plan_sleep_wake(
+                phase,
+                wake_target,
+                sleep_target_for_display,
+                sleep_original_time,
+                wake_original_time,
+            )
         )
 
         # 2. Light interventions (always included - primary intervention)
@@ -277,6 +308,53 @@ class InterventionPlanner:
 
         # Cap to phase end and record original
         return (minutes_to_time(phase_end_minutes), sleep_target)
+
+    def _get_arrival_day_wake_target(
+        self, circadian_wake: time, arrival_datetime: datetime
+    ) -> tuple[time, str | None]:
+        """
+        For arrival day: wake is 1h before landing (when crew wakes you).
+
+        WHY THIS EXISTS:
+        Landing forces a wake event regardless of circadian state. For VS20
+        (SFO→LHR, 10:45 AM landing), the circadian-optimal wake might be 11:00 AM.
+        But that's after landing - the user is already awake!
+
+        Crew wakes passengers ~1 hour before landing anyway,
+        so we use that as the wake time and note the circadian target.
+
+        If circadian wake is earlier than pre-landing time, use that instead
+        (user naturally wakes earlier - no need to adjust).
+
+        Args:
+            circadian_wake: Circadian-optimal wake time
+            arrival_datetime: Flight arrival/landing datetime
+
+        Returns:
+            (wake_time, original_time):
+            - wake_time: The time to use
+            - original_time: The original circadian time (set when adjustment occurred)
+        """
+        arrival_minutes = time_to_minutes(arrival_datetime.time())
+        circadian_minutes = time_to_minutes(circadian_wake)
+
+        # Pre-landing wake = 1h before arrival
+        pre_landing_minutes = arrival_minutes - int(CREW_WAKE_BEFORE_LANDING_HOURS * 60)
+
+        # Handle overnight wrap (e.g., arrival at 00:30 -> pre-landing at 23:30)
+        if pre_landing_minutes < 0:
+            pre_landing_minutes += 24 * 60
+
+        # Use whichever is earlier: circadian wake or pre-landing wake
+        # For same-day comparison, earlier means smaller minutes value
+        # But we need to handle the case where circadian wake is in early morning
+        # and pre-landing is late night (unlikely but possible)
+        if circadian_minutes < pre_landing_minutes:
+            # Circadian wake is earlier - use it as-is
+            return (circadian_wake, None)
+        else:
+            # Use pre-landing time, record circadian target
+            return (minutes_to_time(pre_landing_minutes), circadian_wake.strftime("%H:%M"))
 
     def _parse_utc_timestamp(self, iso_str: str) -> datetime | None:
         """Parse an ISO timestamp string to a timezone-aware UTC datetime."""
@@ -508,6 +586,7 @@ class InterventionPlanner:
         wake_target: time,
         sleep_target: time | None,
         sleep_original_time: str | None = None,
+        wake_original_time: str | None = None,
     ) -> list[Intervention]:
         """Plan sleep and wake target interventions.
 
@@ -516,6 +595,7 @@ class InterventionPlanner:
             wake_target: Target wake time
             sleep_target: Target sleep time (None if omitted for pre_departure)
             sleep_original_time: Original circadian-optimal sleep time if capped
+            wake_original_time: Original circadian-optimal wake time if capped to pre-landing
         """
         # Direction-specific wake advice
         if self.context.direction == "advance":
@@ -523,15 +603,29 @@ class InterventionPlanner:
         else:
             wake_advice = "Avoid bright light for the first few hours after waking."
 
+        # Determine wake title and description based on whether time was adjusted
+        if wake_original_time:
+            # Wake was capped to pre-landing time
+            wake_title = "Target wake time (pre-landing)"
+            wake_description = (
+                "Cabin crew will wake you about an hour before landing. "
+                "This is when your adaptation day begins. Get bright light as soon as "
+                "possible after landing."
+            )
+        else:
+            wake_title = "Target wake time"
+            wake_description = (
+                f"Try to wake up at this time to help shift your circadian clock. {wake_advice}"
+            )
+
         interventions = [
             Intervention(
                 time=format_time(wake_target),
                 type="wake_target",
-                title="Target wake time",
-                description=(
-                    f"Try to wake up at this time to help shift your circadian clock. {wake_advice}"
-                ),
+                title=wake_title,
+                description=wake_description,
                 duration_min=None,
+                original_time=wake_original_time,
             ),
         ]
 
