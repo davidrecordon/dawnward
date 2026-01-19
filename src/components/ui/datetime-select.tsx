@@ -48,7 +48,7 @@ export function DateTimeSelect({
   return (
     <div className={cn("flex gap-2", className)}>
       {/* Wrapper for date input with iOS placeholder fix */}
-      <div className="relative flex-1">
+      <div className="relative flex-1 overflow-hidden">
         <Input
           type="date"
           value={datePart}
@@ -66,7 +66,7 @@ export function DateTimeSelect({
         {!datePart && (
           <div className="text-muted-foreground pointer-events-none absolute inset-0 flex items-center gap-2 px-3 text-sm">
             <Calendar className="h-4 w-4 shrink-0 opacity-50" />
-            <span>Select date</span>
+            <span className="truncate">Select date</span>
           </div>
         )}
       </div>
