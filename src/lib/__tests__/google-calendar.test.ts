@@ -951,13 +951,17 @@ describe("Realistic Flight Calendar Events", () => {
 
     it("adaptation uses destination timezone", () => {
       // Day 3 in Singapore after SFO → SIN flight
-      const intervention = makeRealisticIntervention("light_seek", "adaptation", {
-        time: "08:00",
-        originTz: "America/Los_Angeles",
-        destTz: "Asia/Singapore",
-        originDate: "2026-01-24",
-        destDate: "2026-01-25",
-      });
+      const intervention = makeRealisticIntervention(
+        "light_seek",
+        "adaptation",
+        {
+          time: "08:00",
+          originTz: "America/Los_Angeles",
+          destTz: "Asia/Singapore",
+          originDate: "2026-01-24",
+          destDate: "2026-01-25",
+        }
+      );
 
       const event = buildCalendarEvent([intervention]);
 

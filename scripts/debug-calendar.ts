@@ -178,7 +178,8 @@ const FLIGHT_PRESETS: Record<string, FlightPreset> = {
     departTime: "09:15",
     arriveTime: "07:50",
     arriveDayOffset: 0,
-    description: "Singapore Airlines - Westbound dateline (arrives earlier same day)",
+    description:
+      "Singapore Airlines - Westbound dateline (arrives earlier same day)",
   },
   CX879: {
     name: "CX879 SFO-HKG",
@@ -343,18 +344,26 @@ function parseArgs(): ParsedArgs {
 function printUsage() {
   console.error("Usage:");
   console.error("  npx tsx scripts/debug-calendar.ts <trip-id> [--verbose]");
-  console.error("  npx tsx scripts/debug-calendar.ts --preset=CODE [--verbose]");
-  console.error("  npx tsx scripts/debug-calendar.ts --origin=SFO --dest=SIN --depart=... --arrive=...");
+  console.error(
+    "  npx tsx scripts/debug-calendar.ts --preset=CODE [--verbose]"
+  );
+  console.error(
+    "  npx tsx scripts/debug-calendar.ts --origin=SFO --dest=SIN --depart=... --arrive=..."
+  );
   console.error("");
   console.error("Options:");
   console.error("  <trip-id>          Load trip from database by ID");
-  console.error("  --preset=CODE      Use a flight preset (e.g., SQ31, VS20, QF74)");
+  console.error(
+    "  --preset=CODE      Use a flight preset (e.g., SQ31, VS20, QF74)"
+  );
   console.error("  --list-presets     List all available presets");
   console.error("  --origin=CODE      Origin airport code (e.g., SFO)");
   console.error("  --origin-tz=TZ     Origin IANA timezone");
   console.error("  --dest=CODE        Destination airport code");
   console.error("  --dest-tz=TZ       Destination IANA timezone");
-  console.error("  --depart=DATETIME  Departure datetime (e.g., 2026-01-22T09:45)");
+  console.error(
+    "  --depart=DATETIME  Departure datetime (e.g., 2026-01-22T09:45)"
+  );
   console.error("  --arrive=DATETIME  Arrival datetime");
   console.error("  --prep-days=N      Preparation days (default: 3)");
   console.error("  --wake=HH:MM       Wake time (default: 07:00)");
@@ -364,7 +373,9 @@ function printUsage() {
   console.error("  --verbose, -v      Show full event descriptions");
   console.error("");
   console.error("Examples:");
-  console.error("  npx tsx scripts/debug-calendar.ts cmk95fhzn000104jssj2wfm3g");
+  console.error(
+    "  npx tsx scripts/debug-calendar.ts cmk95fhzn000104jssj2wfm3g"
+  );
   console.error("  npx tsx scripts/debug-calendar.ts --preset=SQ31");
   console.error("  npx tsx scripts/debug-calendar.ts --preset=QF74 --verbose");
 }
@@ -373,14 +384,24 @@ function printPresets() {
   console.log("\n📋 Available flight presets:\n");
   console.log("  Minimal Jet Lag (3h):");
   for (const [code, preset] of Object.entries(FLIGHT_PRESETS)) {
-    if (preset.description.includes("Minimal") || preset.description.includes("Domestic")) {
-      console.log(`    --preset=${code}  ${preset.name} - ${preset.description}`);
+    if (
+      preset.description.includes("Minimal") ||
+      preset.description.includes("Domestic")
+    ) {
+      console.log(
+        `    --preset=${code}  ${preset.name} - ${preset.description}`
+      );
     }
   }
   console.log("\n  Moderate Jet Lag (8-9h):");
   for (const [code, preset] of Object.entries(FLIGHT_PRESETS)) {
-    if (preset.description.includes("overnight") || preset.description.includes("Westbound return")) {
-      console.log(`    --preset=${code}  ${preset.name} - ${preset.description}`);
+    if (
+      preset.description.includes("overnight") ||
+      preset.description.includes("Westbound return")
+    ) {
+      console.log(
+        `    --preset=${code}  ${preset.name} - ${preset.description}`
+      );
     }
   }
   console.log("\n  Severe Jet Lag (12-17h):");
@@ -393,11 +414,15 @@ function printPresets() {
       preset.description.includes("Sydney") ||
       preset.description.includes("dateline")
     ) {
-      console.log(`    --preset=${code}  ${preset.name} - ${preset.description}`);
+      console.log(
+        `    --preset=${code}  ${preset.name} - ${preset.description}`
+      );
     }
   }
   console.log("\n  Special Cases:");
-  console.log("    --preset=CX872  CX872 HKG-SFO - Arrives PREVIOUS calendar day (-1)");
+  console.log(
+    "    --preset=CX872  CX872 HKG-SFO - Arrives PREVIOUS calendar day (-1)"
+  );
   console.log("    --preset=QF74   QF74 SFO-SYD - Arrives TWO days later (+2)");
   console.log("");
 }
@@ -439,12 +464,16 @@ async function loadFromDatabase(tripId: string): Promise<{
   }
 
   // Format dates (Prisma returns Date objects)
-  const departure = trip.departureDatetime instanceof Date
-    ? trip.departureDatetime.toISOString()
-    : String(trip.departureDatetime);
-  const arrival = trip.arrivalDatetime instanceof Date
-    ? trip.arrivalDatetime.toISOString()
-    : String(trip.arrivalDatetime);
+  const depDate = trip.departureDatetime as unknown;
+  const arrDate = trip.arrivalDatetime as unknown;
+  const departure =
+    depDate instanceof Date
+      ? depDate.toISOString()
+      : String(trip.departureDatetime);
+  const arrival =
+    arrDate instanceof Date
+      ? arrDate.toISOString()
+      : String(trip.arrivalDatetime);
 
   return {
     schedule: scheduleJson as unknown as ScheduleResponse,
@@ -555,7 +584,8 @@ function displaySchedule(
         const timezone = event.start?.timeZone || "unknown";
         const eventDateTime = event.start?.dateTime || "";
         const eventDate = eventDateTime.split("T")[0];
-        const eventTime = eventDateTime.split("T")[1]?.substring(0, 5) || "??:??";
+        const eventTime =
+          eventDateTime.split("T")[1]?.substring(0, 5) || "??:??";
         const anchor = interventions[0];
 
         // Calculate duration from event start/end (accounts for grouped max duration)
@@ -564,17 +594,22 @@ function displaySchedule(
         const duration = Math.round((endMs - startMs) / 60000);
 
         // Show if date differs from day.date (important for cross-dateline flights)
-        const dateNote = eventDate !== day.date ? ` [calendar: ${eventDate}]` : "";
+        const dateNote =
+          eventDate !== day.date ? ` [calendar: ${eventDate}]` : "";
 
         // Track cross-dateline interventions
         const datesDiffer = anchor.origin_date !== anchor.dest_date;
         if (datesDiffer) crossDatelineCount++;
 
         console.log("");
-        console.log(`   ${eventTime} ${timezone} (${formatDuration(duration)})${dateNote}`);
+        console.log(
+          `   ${eventTime} ${timezone} (${formatDuration(duration)})${dateNote}`
+        );
 
         if (datesDiffer && verbose) {
-          console.log(`      📅 Cross-dateline: origin=${anchor.origin_date}, dest=${anchor.dest_date}`);
+          console.log(
+            `      📅 Cross-dateline: origin=${anchor.origin_date}, dest=${anchor.dest_date}`
+          );
         }
 
         console.log(`      ${event.summary}`);
@@ -593,13 +628,17 @@ function displaySchedule(
       } catch (error) {
         console.log("");
         console.log(`   ❌ ERROR building event`);
-        console.log(`      ${error instanceof Error ? error.message : "Unknown error"}`);
+        console.log(
+          `      ${error instanceof Error ? error.message : "Unknown error"}`
+        );
 
         for (const intervention of interventions) {
           console.log(
             `      - ${intervention.type}: origin_tz=${intervention.origin_tz}, dest_tz=${intervention.dest_tz}, phase=${intervention.phase_type}`
           );
-          console.log(`        origin_date=${intervention.origin_date}, dest_date=${intervention.dest_date}`);
+          console.log(
+            `        origin_date=${intervention.origin_date}, dest_date=${intervention.dest_date}`
+          );
         }
       }
     }
@@ -609,9 +648,13 @@ function displaySchedule(
 
   // Summary
   console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
-  console.log(`\n✅ Total calendar events that would be created: ${totalEvents}`);
+  console.log(
+    `\n✅ Total calendar events that would be created: ${totalEvents}`
+  );
   if (crossDatelineCount > 0) {
-    console.log(`📅 ${crossDatelineCount} interventions have different origin/dest dates (cross-dateline)`);
+    console.log(
+      `📅 ${crossDatelineCount} interventions have different origin/dest dates (cross-dateline)`
+    );
   }
   console.log("");
 }
@@ -648,7 +691,9 @@ async function main() {
       departure = data.departure;
       arrival = data.arrival;
     } catch (error) {
-      console.error(`❌ ${error instanceof Error ? error.message : "Unknown error"}`);
+      console.error(
+        `❌ ${error instanceof Error ? error.message : "Unknown error"}`
+      );
       process.exit(1);
     }
   }
@@ -732,7 +777,15 @@ async function main() {
     process.exit(1);
   }
 
-  displaySchedule(schedule, label, originTz, destTz, departure, arrival, args.verbose);
+  displaySchedule(
+    schedule,
+    label,
+    originTz,
+    destTz,
+    departure,
+    arrival,
+    args.verbose
+  );
 
   await prisma.$disconnect();
 }

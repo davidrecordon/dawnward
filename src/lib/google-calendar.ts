@@ -36,10 +36,7 @@ const EVENT_DURATION: Record<InterventionType, number | "from_intervention"> = {
 };
 
 /** Types that block time (show as busy) */
-const SHOW_AS_BUSY: Set<InterventionType> = new Set([
-  "nap_window",
-  "exercise",
-]);
+const SHOW_AS_BUSY: Set<InterventionType> = new Set(["nap_window", "exercise"]);
 
 /** Grouping window in minutes (interventions within this of anchor get grouped) */
 const GROUPING_WINDOW_MIN = 120;
@@ -282,8 +279,12 @@ export function groupInterventionsByAnchor(
   const wakeAnchor = actionable.find((i) => i.type === "wake_target");
   const sleepAnchor = actionable.find((i) => i.type === "sleep_target");
 
-  const wakeTime = wakeAnchor ? parseTimeToMinutes(getDisplayTime(wakeAnchor)) : null;
-  const sleepTime = sleepAnchor ? parseTimeToMinutes(getDisplayTime(sleepAnchor)) : null;
+  const wakeTime = wakeAnchor
+    ? parseTimeToMinutes(getDisplayTime(wakeAnchor))
+    : null;
+  const sleepTime = sleepAnchor
+    ? parseTimeToMinutes(getDisplayTime(sleepAnchor))
+    : null;
 
   // Track which interventions have been grouped
   const grouped = new Set<Intervention>();

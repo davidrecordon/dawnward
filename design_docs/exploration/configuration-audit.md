@@ -235,50 +235,50 @@ UI timing and display threshold constants.
 
 Anchor-based grouping reduces calendar clutter (~20 events → ~10 events per trip):
 
-| Constant              | Value                                                     | Purpose                            |
-| --------------------- | --------------------------------------------------------- | ---------------------------------- |
-| `STANDALONE_TYPES`    | caffeine_cutoff, exercise, nap_window, light_avoid        | Never grouped with anchors         |
-| `GROUPING_WINDOW_MIN` | 120                                                       | Minutes within anchor to group     |
+| Constant              | Value                                              | Purpose                        |
+| --------------------- | -------------------------------------------------- | ------------------------------ |
+| `STANDALONE_TYPES`    | caffeine_cutoff, exercise, nap_window, light_avoid | Never grouped with anchors     |
+| `GROUPING_WINDOW_MIN` | 120                                                | Minutes within anchor to group |
 
 #### Event Durations
 
-| Type             | Duration            | Notes                              |
-| ---------------- | ------------------- | ---------------------------------- |
-| `wake_target`    | 15 min              | Point-in-time reminder             |
-| `sleep_target`   | 15 min              | Point-in-time reminder             |
-| `melatonin`      | 15 min              | Point-in-time reminder             |
-| `caffeine_cutoff`| 15 min              | Reminder                           |
-| `exercise`       | 45 min              | Typical workout                    |
-| `light_seek`     | from `duration_min` | User preference (30/45/60/90)      |
-| `light_avoid`    | from `duration_min` | PRC-calculated window (2-4h)       |
-| `nap_window`     | from `duration_min` | Calculated nap window              |
+| Type              | Duration            | Notes                         |
+| ----------------- | ------------------- | ----------------------------- |
+| `wake_target`     | 15 min              | Point-in-time reminder        |
+| `sleep_target`    | 15 min              | Point-in-time reminder        |
+| `melatonin`       | 15 min              | Point-in-time reminder        |
+| `caffeine_cutoff` | 15 min              | Reminder                      |
+| `exercise`        | 45 min              | Typical workout               |
+| `light_seek`      | from `duration_min` | User preference (30/45/60/90) |
+| `light_avoid`     | from `duration_min` | PRC-calculated window (2-4h)  |
+| `nap_window`      | from `duration_min` | Calculated nap window         |
 
 #### Reminder Times (before event)
 
-| Type             | Reminder | Notes                              |
-| ---------------- | -------- | ---------------------------------- |
-| `wake_target`    | 0 min    | Immediate - alarm is the event     |
-| `sleep_target`   | 30 min   | Wind-down period                   |
-| `exercise`       | 15 min   | Brief heads-up                     |
-| `caffeine_cutoff`| 15 min   | Brief heads-up                     |
-| All others       | 15 min   | Default                            |
+| Type              | Reminder | Notes                          |
+| ----------------- | -------- | ------------------------------ |
+| `wake_target`     | 0 min    | Immediate - alarm is the event |
+| `sleep_target`    | 30 min   | Wind-down period               |
+| `exercise`        | 15 min   | Brief heads-up                 |
+| `caffeine_cutoff` | 15 min   | Brief heads-up                 |
+| All others        | 15 min   | Default                        |
 
 #### Busy/Free Status
 
-| Shows as Busy | Shows as Free                                                        |
-| ------------- | -------------------------------------------------------------------- |
-| `nap_window`  | `wake_target`, `sleep_target`, `melatonin`, `caffeine_cutoff`        |
-| `exercise`    | `light_seek`, `light_avoid`                                          |
+| Shows as Busy | Shows as Free                                                 |
+| ------------- | ------------------------------------------------------------- |
+| `nap_window`  | `wake_target`, `sleep_target`, `melatonin`, `caffeine_cutoff` |
+| `exercise`    | `light_seek`, `light_avoid`                                   |
 
 Note: `sleep_target` was intentionally kept as "free" since users may not always follow the exact bedtime.
 
 #### Other Constants
 
-| Line | Constant                     | Value | Purpose                         |
-| ---- | ---------------------------- | ----- | ------------------------------- |
-| 47   | `DEFAULT_EVENT_DURATION_MIN` | 15    | Fallback when not configured    |
-| 67   | `DEFAULT_REMINDER_MINUTES`   | 15    | Fallback reminder time          |
-| 99   | `DEFAULT_EMOJI`              | "📋"  | Fallback emoji for events       |
+| Line | Constant                     | Value | Purpose                      |
+| ---- | ---------------------------- | ----- | ---------------------------- |
+| 47   | `DEFAULT_EVENT_DURATION_MIN` | 15    | Fallback when not configured |
+| 67   | `DEFAULT_REMINDER_MINUTES`   | 15    | Fallback reminder time       |
+| 99   | `DEFAULT_EMOJI`              | "📋"  | Fallback emoji for events    |
 
 ### Flight Phase Constants (`intervention-utils.ts`)
 
@@ -480,12 +480,12 @@ Constants are already discoverable via this audit document.
 | Shift & Prep Days     | 4     | Prep day calculation thresholds           |
 | Schedule View         | 4     | UI timing and display thresholds          |
 | Calendar Integration  | ~20   | Event density, durations, reminders, busy/free |
-| Flight Phase          | 4     | Flight day timing fractions               |
-| Actuals & Tracking    | 2     | Deviation calculation constants           |
-| Storage & Persistence | 3     | localStorage keys and time constants      |
-| MCP Constants         | ~12   | New endpoint for AI integrations          |
-| Rate Limiting         | ~5    | Memory-safe sliding window implementation |
-| Duplication           | 0     | Fixed (types.py now cross-references)     |
+| Flight Phase          | 4     | Flight day timing fractions                    |
+| Actuals & Tracking    | 2     | Deviation calculation constants                |
+| Storage & Persistence | 3     | localStorage keys and time constants           |
+| MCP Constants         | ~12   | New endpoint for AI integrations               |
+| Rate Limiting         | ~5    | Memory-safe sliding window implementation      |
+| Duplication           | 0     | Fixed (types.py now cross-references)          |
 
 ### Priority Actions
 

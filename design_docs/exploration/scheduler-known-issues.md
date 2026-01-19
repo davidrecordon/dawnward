@@ -20,6 +20,7 @@ The scheduler generates pre-departure phase interventions that occur after the f
 ### Expected Behavior
 
 Pre-departure interventions should be filtered to only include times before the flight departure. The scheduler should either:
+
 1. Not generate interventions that fall after departure time
 2. Filter them out during phase generation
 3. Move the sleep_target to the in-transit phase if appropriate
@@ -27,6 +28,7 @@ Pre-departure interventions should be filtered to only include times before the 
 ### Affected Flights
 
 Most noticeable on eastbound overnight flights where the shifted sleep time approaches or exceeds the departure time:
+
 - VS20 SFO→LHR (16:30 departure, creates 18:00 sleep_target)
 - Similar pattern likely on other eastbound transatlantic flights
 
