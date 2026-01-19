@@ -136,6 +136,14 @@ export const authConfig: NextAuthConfig = {
       if (session.user && token.id) {
         session.user.id = token.id as string;
       }
+
+      // Check for token refresh errors - if refresh failed, calendar scope is invalid
+      if (token.error === "RefreshAccessTokenError") {
+        session.hasCalendarScope = false;
+        // Don't expose invalid access token
+        return session;
+      }
+
       session.hasCalendarScope = hasCalendarScope(token);
       if (session.hasCalendarScope && token.accessToken) {
         session.accessToken = token.accessToken;

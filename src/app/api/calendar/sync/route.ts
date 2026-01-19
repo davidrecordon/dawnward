@@ -83,33 +83,44 @@ export async function POST(request: Request) {
 
   const schedule = scheduleJson as unknown as ScheduleResponse;
 
-  // Delete existing calendar events if this trip was previously synced
+  // Delete existing calendar events if this trip was previously synced.
+  // NOTE: We abort on delete failure here (unlike DELETE endpoint which continues).
+  // This is intentional: if we can't clean up old events, creating new ones would
+  // result in duplicate events in the user's calendar. Better to fail and let user retry.
   const existingSync = trip.calendarSyncs[0];
   if (existingSync && existingSync.googleEventIds.length > 0) {
-    try {
-      await deleteCalendarEvents(
-        session.accessToken,
-        existingSync.googleEventIds
+    const deleteResult = await deleteCalendarEvents(
+      session.accessToken,
+      existingSync.googleEventIds
+    );
+
+    if (deleteResult.failed.length > 0) {
+      console.error(
+        `Failed to delete ${deleteResult.failed.length} calendar events:`,
+        deleteResult.failed
       );
-    } catch (error) {
-      console.error("Error deleting old calendar events:", error);
-      // Continue anyway - old events might have been manually deleted
+      return NextResponse.json(
+        {
+          error: `Failed to remove ${deleteResult.failed.length} existing calendar events. Please try again.`,
+          failedEventIds: deleteResult.failed,
+        },
+        { status: 500 }
+      );
     }
   }
 
   // Create calendar events for each day's interventions
-  const createdEventIds = await createEventsForSchedule(
+  const createResult = await createEventsForSchedule(
     session.accessToken,
-    schedule.interventions,
-    trip.destTz
+    schedule.interventions
   );
 
-  // Save or update the sync record
+  // Save or update the sync record with successfully created events
   if (existingSync) {
     await prisma.calendarSync.update({
       where: { id: existingSync.id },
       data: {
-        googleEventIds: createdEventIds,
+        googleEventIds: createResult.created,
         lastSyncedAt: new Date(),
       },
     });
@@ -118,15 +129,28 @@ export async function POST(request: Request) {
       data: {
         tripId,
         userId: session.user.id,
-        googleEventIds: createdEventIds,
+        googleEventIds: createResult.created,
         lastSyncedAt: new Date(),
       },
     });
   }
 
+  // If some events failed to create, return 207 Multi-Status with warning
+  if (createResult.failed > 0) {
+    return NextResponse.json(
+      {
+        success: true,
+        eventsCreated: createResult.created.length,
+        eventsFailed: createResult.failed,
+        warning: `${createResult.failed} event(s) could not be added to your calendar. The rest were added successfully.`,
+      },
+      { status: 207 } // Multi-Status
+    );
+  }
+
   return NextResponse.json({
     success: true,
-    eventsCreated: createdEventIds.length,
+    eventsCreated: createResult.created.length,
   });
 }
 
@@ -177,13 +201,24 @@ export async function DELETE(request: Request) {
     return NextResponse.json({ error: "Sync not found" }, { status: 404 });
   }
 
-  // Delete all calendar events
+  // Delete all calendar events (best-effort).
+  // NOTE: Unlike POST (which aborts on delete failure), we continue here even if some
+  // deletions fail. This is intentional: when removing sync, we want to clean up our
+  // database record regardless. Failed deletions just mean some orphaned events remain
+  // in the user's calendar - they can delete those manually if needed.
+  let deletedCount = 0;
   if (sync.googleEventIds.length > 0) {
-    try {
-      await deleteCalendarEvents(session.accessToken, sync.googleEventIds);
-    } catch (error) {
-      console.error("Error deleting calendar events:", error);
-      // Continue to delete the sync record even if event deletion fails
+    const deleteResult = await deleteCalendarEvents(
+      session.accessToken,
+      sync.googleEventIds
+    );
+    deletedCount = deleteResult.deleted.length;
+
+    if (deleteResult.failed.length > 0) {
+      console.error(
+        `Failed to delete ${deleteResult.failed.length} calendar events:`,
+        deleteResult.failed
+      );
     }
   }
 
@@ -194,7 +229,7 @@ export async function DELETE(request: Request) {
 
   return NextResponse.json({
     success: true,
-    eventsDeleted: sync.googleEventIds.length,
+    eventsDeleted: deletedCount,
   });
 }
 

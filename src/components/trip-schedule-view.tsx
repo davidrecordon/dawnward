@@ -75,7 +75,6 @@ interface TripScheduleViewProps {
   tripData: TripData;
   isOwner: boolean;
   isLoggedIn: boolean;
-  hasCalendarScope: boolean;
   sharerName: string | null;
 }
 
@@ -121,7 +120,6 @@ export function TripScheduleView({
   tripData,
   isOwner,
   isLoggedIn,
-  hasCalendarScope,
   sharerName,
 }: TripScheduleViewProps) {
   // Get display preferences from context (provided by page-level wrapper)
@@ -650,11 +648,7 @@ export function TripScheduleView({
           <div className="flex gap-3 pt-4">
             <ShareButton formState={formStateForShare} tripId={tripId} />
             {CALENDAR_SYNC_ENABLED ? (
-              <CalendarSyncButton
-                tripId={tripId}
-                isLoggedIn={isLoggedIn}
-                hasCalendarScope={hasCalendarScope}
-              />
+              <CalendarSyncButton tripId={tripId} />
             ) : (
               <Button
                 variant="outline"

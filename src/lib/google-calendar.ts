@@ -181,12 +181,14 @@ export function groupInterventionsByTime(
 }
 
 /**
- * Convert an intervention group to a Google Calendar event
+ * Convert an intervention group to a Google Calendar event.
+ * Extracts timezone from the intervention based on phase:
+ * - Pre-flight phases (preparation, pre_departure): use origin_tz
+ * - Other phases (in_transit, post_arrival, adaptation): use dest_tz
  */
 export function buildCalendarEvent(
   interventions: Intervention[],
-  date: string, // YYYY-MM-DD
-  timezone: string
+  date: string // YYYY-MM-DD
 ): calendar_v3.Schema$Event {
   if (interventions.length === 0) {
     throw new Error("Cannot build event from empty interventions");
@@ -194,6 +196,19 @@ export function buildCalendarEvent(
 
   const time = getDisplayTime(interventions[0]); // All interventions in group have same time
   const anchor = getAnchorIntervention(interventions);
+
+  // Get timezone based on phase - use origin_tz for pre-flight phases, dest_tz for others
+  const phase = anchor.phase_type;
+  const timezone =
+    phase === "preparation" || phase === "pre_departure"
+      ? anchor.origin_tz
+      : anchor.dest_tz;
+
+  if (!timezone) {
+    throw new Error(
+      `Intervention missing timezone context (phase: ${phase}, origin_tz: ${anchor.origin_tz}, dest_tz: ${anchor.dest_tz})`
+    );
+  }
 
   // Calculate event duration (use anchor's duration or default)
   const durationMin = anchor.duration_min ?? DEFAULT_EVENT_DURATION_MIN;
@@ -288,47 +303,80 @@ export async function deleteCalendarEvent(
   }
 }
 
+/** Result of deleting multiple calendar events */
+export interface DeleteEventsResult {
+  /** Event IDs that were successfully deleted */
+  deleted: string[];
+  /** Event IDs that failed to delete (excluding 404s which are treated as success) */
+  failed: string[];
+}
+
 /**
- * Delete multiple calendar events
+ * Delete multiple calendar events.
+ * Uses Promise.allSettled to ensure all deletions are attempted even if some fail.
+ * Returns which events were successfully deleted vs failed.
  */
 export async function deleteCalendarEvents(
   accessToken: string,
   eventIds: string[]
-): Promise<void> {
-  await Promise.all(eventIds.map((id) => deleteCalendarEvent(accessToken, id)));
+): Promise<DeleteEventsResult> {
+  const results = await Promise.allSettled(
+    eventIds.map((id) => deleteCalendarEvent(accessToken, id).then(() => id))
+  );
+
+  const deleted: string[] = [];
+  const failed: string[] = [];
+
+  for (let i = 0; i < results.length; i++) {
+    const result = results[i];
+    if (result.status === "fulfilled") {
+      deleted.push(result.value);
+    } else {
+      failed.push(eventIds[i]);
+    }
+  }
+
+  return { deleted, failed };
+}
+
+/** Result of creating calendar events for a schedule */
+export interface CreateEventsResult {
+  /** Event IDs that were successfully created */
+  created: string[];
+  /** Number of events that failed to create */
+  failed: number;
 }
 
 /**
  * Create calendar events for all actionable interventions in a schedule.
  * Groups interventions by time and creates one event per group.
- * Returns array of created event IDs.
+ * Each event uses the timezone from the intervention itself based on phase.
+ * Returns both successful and failed event counts.
  */
 export async function createEventsForSchedule(
   accessToken: string,
-  interventionDays: DaySchedule[],
-  destTz: string
-): Promise<string[]> {
-  const createdEventIds: string[] = [];
+  interventionDays: DaySchedule[]
+): Promise<CreateEventsResult> {
+  const created: string[] = [];
+  let failed = 0;
 
   for (const day of interventionDays) {
     const groups = groupInterventionsByTime(day.items);
-    // Use destTz - each intervention carries its own timezone context
-    // but for calendar events we use destination timezone for simplicity
-    const timezone = destTz;
 
     for (const [, interventions] of groups) {
       try {
-        const event = buildCalendarEvent(interventions, day.date, timezone);
+        const event = buildCalendarEvent(interventions, day.date);
         const eventId = await createCalendarEvent(accessToken, event);
-        createdEventIds.push(eventId);
+        created.push(eventId);
       } catch (error) {
         console.error("Error creating calendar event:", error);
+        failed++;
         // Continue with other events even if one fails
       }
     }
   }
 
-  return createdEventIds;
+  return { created, failed };
 }
 
 /**

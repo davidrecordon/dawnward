@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { signIn } from "next-auth/react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { signIn, useSession } from "next-auth/react";
 import {
   Calendar,
   Check,
@@ -29,8 +29,6 @@ import { CALENDAR_SCOPES } from "@/auth.config";
 
 interface CalendarSyncButtonProps {
   tripId: string;
-  isLoggedIn: boolean;
-  hasCalendarScope: boolean;
 }
 
 interface SyncStatus {
@@ -39,15 +37,29 @@ interface SyncStatus {
   eventCount: number;
 }
 
-export function CalendarSyncButton({
-  tripId,
-  isLoggedIn,
-  hasCalendarScope,
-}: CalendarSyncButtonProps) {
+export function CalendarSyncButton({ tripId }: CalendarSyncButtonProps) {
+  // Use session hook for real-time auth state (updates after OAuth callback)
+  const { data: session, update: updateSession } = useSession();
+  const isLoggedIn = !!session?.user;
+  const hasCalendarScope = session?.hasCalendarScope ?? false;
+
   const [syncStatus, setSyncStatus] = useState<SyncStatus | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showAuthPrompt, setShowAuthPrompt] = useState(false);
+
+  // AbortController to prevent race conditions on rapid clicks
+  const abortControllerRef = useRef<AbortController | null>(null);
+
+  // Refresh session after OAuth callback to get updated scope
+  useEffect(() => {
+    // Check if we just returned from OAuth (indicated by URL params)
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.has("callbackUrl") || urlParams.has("code")) {
+      // Trigger session refresh to get updated calendar scope
+      updateSession();
+    }
+  }, [updateSession]);
 
   // Fetch sync status on mount
   const fetchSyncStatus = useCallback(async () => {
@@ -82,6 +94,12 @@ export function CalendarSyncButton({
       return;
     }
 
+    // Cancel any in-flight request to prevent race conditions
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    abortControllerRef.current = new AbortController();
+
     setIsLoading(true);
     setError(null);
 
@@ -90,20 +108,30 @@ export function CalendarSyncButton({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ tripId }),
+        signal: abortControllerRef.current.signal,
       });
 
+      const data = await response.json();
+
       if (!response.ok) {
-        const data = await response.json();
         throw new Error(data.error || "Failed to sync");
       }
 
-      const data = await response.json();
       setSyncStatus({
         isSynced: true,
         lastSyncedAt: new Date().toISOString(),
         eventCount: data.eventsCreated,
       });
+
+      // Show warning if some events failed (207 Multi-Status)
+      if (data.warning) {
+        setError(data.warning);
+      }
     } catch (err) {
+      // Ignore abort errors (expected when cancelling previous request)
+      if (err instanceof Error && err.name === "AbortError") {
+        return;
+      }
       setError(err instanceof Error ? err.message : "Failed to sync");
     } finally {
       setIsLoading(false);
@@ -112,12 +140,19 @@ export function CalendarSyncButton({
 
   // Handle unsync action
   const handleUnsync = async () => {
+    // Cancel any in-flight request to prevent race conditions
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    abortControllerRef.current = new AbortController();
+
     setIsLoading(true);
     setError(null);
 
     try {
       const response = await fetch(`/api/calendar/sync?tripId=${tripId}`, {
         method: "DELETE",
+        signal: abortControllerRef.current.signal,
       });
 
       if (!response.ok) {
@@ -131,6 +166,10 @@ export function CalendarSyncButton({
         eventCount: 0,
       });
     } catch (err) {
+      // Ignore abort errors (expected when cancelling previous request)
+      if (err instanceof Error && err.name === "AbortError") {
+        return;
+      }
       setError(err instanceof Error ? err.message : "Failed to remove");
     } finally {
       setIsLoading(false);

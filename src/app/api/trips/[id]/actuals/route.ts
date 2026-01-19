@@ -34,7 +34,6 @@ async function triggerCalendarResync(
         select: {
           currentScheduleJson: true,
           initialScheduleJson: true,
-          destTz: true,
         },
       },
     },
@@ -44,10 +43,17 @@ async function triggerCalendarResync(
 
   // Delete existing events
   if (sync.googleEventIds.length > 0) {
-    try {
-      await deleteCalendarEvents(accessToken, sync.googleEventIds);
-    } catch (error) {
-      console.error("Error deleting old calendar events during resync:", error);
+    const deleteResult = await deleteCalendarEvents(
+      accessToken,
+      sync.googleEventIds
+    );
+    if (deleteResult.failed.length > 0) {
+      console.error(
+        "Failed to delete some calendar events during resync:",
+        deleteResult.failed
+      );
+      // Continue anyway for background resync - user will see duplicate events
+      // but this is better than failing silently
     }
   }
 
@@ -59,17 +65,22 @@ async function triggerCalendarResync(
   const schedule = scheduleJson as unknown as ScheduleResponse;
 
   // Recreate events using shared helper
-  const createdEventIds = await createEventsForSchedule(
+  const createResult = await createEventsForSchedule(
     accessToken,
-    schedule.interventions,
-    sync.trip.destTz
+    schedule.interventions
   );
 
-  // Update sync record
+  if (createResult.failed > 0) {
+    console.error(
+      `Failed to create ${createResult.failed} calendar events during resync`
+    );
+  }
+
+  // Update sync record with successfully created events
   await prisma.calendarSync.update({
     where: { id: sync.id },
     data: {
-      googleEventIds: createdEventIds,
+      googleEventIds: createResult.created,
       lastSyncedAt: new Date(),
     },
   });
