@@ -17,6 +17,7 @@ bun start            # Start production server
 # Testing
 bun run test         # Run Vitest in watch mode
 bun run test:run     # Run all TypeScript tests once
+bun run test:e2e     # Run Playwright E2E tests
 bun run test:python  # Run all Python pytest tests
 
 # Linting & Formatting
@@ -112,7 +113,7 @@ bun run test:python  # pytest
 - **Python Runtime**: Vercel Python Functions for circadian model (Arcascope library)
 - **Deployment**: Vercel with explicit `builds` config (Next.js + Python coexist via `vercel.json`)
 - **Analytics**: Vercel Analytics (respects GPC and DNT privacy signals)
-- **Testing**: Vitest for TypeScript, pytest for Python
+- **Testing**: Vitest for TypeScript, pytest for Python, Playwright for E2E (Desktop: Chromium + WebKit, Mobile: Pixel 7 + iPhone 15 Pro)
 - **Linting**: ESLint + Prettier for TypeScript, ruff + mypy for Python
 
 ## Architecture

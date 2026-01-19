@@ -33,9 +33,23 @@ export function DateTimeSelect({
   className,
   hasError,
 }: DateTimeSelectProps) {
+  const dateInputRef = React.useRef<HTMLInputElement>(null);
+
   // Parse the ISO datetime string into date and time parts
   const datePart = value ? value.split("T")[0] || "" : "";
   const timePart = value ? value.split("T")[1] || "" : "";
+
+  const handleDateClick = () => {
+    // Use showPicker() for Chrome desktop compatibility
+    // Falls back to focus() for browsers that don't support it
+    if (dateInputRef.current) {
+      try {
+        dateInputRef.current.showPicker();
+      } catch {
+        dateInputRef.current.focus();
+      }
+    }
+  };
 
   const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newDate = e.target.value;
@@ -61,8 +75,8 @@ export function DateTimeSelect({
 
   return (
     <div className={cn("flex gap-2", className)}>
-      {/* Date input wrapper - styled div with invisible native input on top */}
-      <div className="relative flex-1">
+      {/* Date input wrapper - click anywhere to open picker */}
+      <div className="relative flex-1 cursor-pointer" onClick={handleDateClick}>
         {/* Visible styled display that looks like an input */}
         <div
           className={cn(
@@ -78,13 +92,15 @@ export function DateTimeSelect({
             <span className="text-muted-foreground truncate">Select date</span>
           )}
         </div>
-        {/* Invisible native date input - captures clicks and triggers iOS picker */}
+        {/* Hidden native date input - showPicker() called via wrapper click */}
         <input
+          ref={dateInputRef}
           type="date"
           value={datePart}
           onChange={handleDateChange}
-          className="absolute inset-0 cursor-pointer border-0 bg-transparent opacity-0"
+          className="pointer-events-none absolute inset-0 border-0 bg-transparent opacity-0"
           aria-label="Select date"
+          tabIndex={-1}
         />
       </div>
       <TimeSelect

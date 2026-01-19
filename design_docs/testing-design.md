@@ -539,6 +539,107 @@ def frozen_time():
 
 ---
 
+## End-to-End Browser Tests (Playwright)
+
+**Objective:** Validate UI interactions and browser-specific behavior that unit tests can't catch.
+
+### Why E2E Tests?
+
+Unit tests cover logic, but can't catch:
+
+1. **Click target issues:** Overlapping elements blocking user clicks
+2. **Mobile-specific behavior:** iOS date picker interactions
+3. **Focus management:** Form navigation and accessibility
+4. **Visual regressions:** Layout breaking in specific browsers
+
+### Setup
+
+Playwright with desktop and mobile browser coverage:
+
+```bash
+bun add -d @playwright/test
+bunx playwright install chromium webkit
+```
+
+Configuration in `playwright.config.ts`:
+
+```typescript
+import { defineConfig, devices } from "@playwright/test";
+
+export default defineConfig({
+  testDir: "./e2e",
+  webServer: {
+    command: "bun dev",
+    url: "http://localhost:3000",
+    reuseExistingServer: !process.env.CI,
+  },
+  projects: [
+    {
+      name: "chromium",
+      use: { ...devices["Desktop Chrome"], baseURL: "http://localhost:3000" },
+    },
+    {
+      name: "webkit",
+      use: { ...devices["Desktop Safari"], baseURL: "http://localhost:3000" },
+    },
+    {
+      name: "mobile-chrome",
+      use: { ...devices["Pixel 7"], baseURL: "http://localhost:3000" },
+    },
+    {
+      name: "mobile-safari",
+      use: { ...devices["iPhone 15 Pro"], baseURL: "http://localhost:3000" },
+    },
+  ],
+});
+```
+
+### Running Tests
+
+```bash
+bun run test:e2e        # Run all E2E tests
+bun run test:e2e --ui   # Interactive UI mode
+```
+
+### Test File Location
+
+E2E tests live in `e2e/` directory (excluded from Vitest via `vitest.config.ts`).
+
+### Current Test Coverage
+
+| Test File               | What It Validates                                    |
+| ----------------------- | ---------------------------------------------------- |
+| `date-selector.spec.ts` | Date input clicks trigger native picker, focus works |
+
+### Writing E2E Tests
+
+Focus on user-visible behavior that unit tests can't validate:
+
+```typescript
+import { test, expect } from "@playwright/test";
+
+test("form submission creates schedule", async ({ page }) => {
+  await page.goto("/");
+
+  // Fill form
+  await page.fill('[aria-label="Origin airport"]', "SFO");
+  await page.click('text="San Francisco"');
+
+  // Submit and verify
+  await page.click('text="Generate My Schedule"');
+  await expect(page.locator("text=Your Schedule")).toBeVisible();
+});
+```
+
+### When to Add E2E Tests
+
+- Bug discovered in browser that unit tests couldn't catch
+- Complex form interactions (date pickers, autocomplete)
+- Navigation flows spanning multiple pages
+- Mobile-specific UI issues
+
+---
+
 ## Spot-Check Protocol
 
 For ongoing validation beyond automated tests, use this manual spot-check protocol:
