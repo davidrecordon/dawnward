@@ -328,6 +328,7 @@ ARRIVAL_SETTLE_IN_MINUTES = 150
 ```
 
 Combined with the 1 PM cutoff (`ARRIVAL_NAP_CUTOFF_HOUR = 13`), this means:
+
 - 10:40 AM arrival → earliest nap at 1:10 PM → after 1 PM cutoff → no nap recommended
 - 6:00 AM arrival → earliest nap at 8:30 AM → before 1 PM cutoff → nap recommended
 

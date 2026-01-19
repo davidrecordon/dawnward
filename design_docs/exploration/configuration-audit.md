@@ -61,14 +61,14 @@ These are from peer-reviewed circadian research. Changing breaks the Forger99 mo
 
 #### Nap Windows (`sleep_pressure.py`)
 
-| Line | Constant                      | Value | Purpose                            |
-| ---- | ----------------------------- | ----- | ---------------------------------- |
-| 33   | `STANDARD_NAP_START_PERCENT`  | 0.30  | 30% into wake period               |
-| 34   | `STANDARD_NAP_END_PERCENT`    | 0.50  | 50% into wake period               |
-| 35   | `HIGH_DEBT_NAP_START_PERCENT` | 0.25  | Earlier window when sleep-deprived |
-| 36   | `HIGH_DEBT_NAP_END_PERCENT`   | 0.55  | Wider window when sleep-deprived   |
-| 43   | `ARRIVAL_NAP_CUTOFF_HOUR`     | 13    | 1:00 PM - no arrival naps after                        |
-| 56   | `ARRIVAL_SETTLE_IN_MINUTES`   | 150   | 2.5h buffer for customs, baggage, transport, check-in  |
+| Line | Constant                      | Value | Purpose                                               |
+| ---- | ----------------------------- | ----- | ----------------------------------------------------- |
+| 33   | `STANDARD_NAP_START_PERCENT`  | 0.30  | 30% into wake period                                  |
+| 34   | `STANDARD_NAP_END_PERCENT`    | 0.50  | 50% into wake period                                  |
+| 35   | `HIGH_DEBT_NAP_START_PERCENT` | 0.25  | Earlier window when sleep-deprived                    |
+| 36   | `HIGH_DEBT_NAP_END_PERCENT`   | 0.55  | Wider window when sleep-deprived                      |
+| 43   | `ARRIVAL_NAP_CUTOFF_HOUR`     | 13    | 1:00 PM - no arrival naps after                       |
+| 56   | `ARRIVAL_SETTLE_IN_MINUTES`   | 150   | 2.5h buffer for customs, baggage, transport, check-in |
 
 ### Category 2: Algorithm Configuration (Keep as Module-Level Constants)
 
