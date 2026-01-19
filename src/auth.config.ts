@@ -78,6 +78,10 @@ export const authConfig: NextAuthConfig = {
           scope: BASE_SCOPES,
           access_type: "offline",
           prompt: "consent",
+          // Include any previously granted scopes (like calendar) in the token
+          // This way: new users get base scopes, returning users who granted
+          // calendar before automatically get calendar scope included
+          include_granted_scopes: "true",
         },
       },
     }),
