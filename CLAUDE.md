@@ -35,7 +35,7 @@ bun prisma migrate dev  # Run migrations in development
 bun prisma studio       # Open Prisma Studio GUI
 
 # Scripts
-npx tsx scripts/regenerate-schedules.ts  # Regenerate all stored schedules
+npx tsx scripts/regenerate-schedules.ts --help  # Show help for schedule regeneration
 ```
 
 ## Scripts
@@ -45,17 +45,29 @@ npx tsx scripts/regenerate-schedules.ts  # Regenerate all stored schedules
 Regenerates stored schedules in the database by re-running the Python scheduler. Use this after schema changes to intervention data (e.g., adding new fields like timezone enrichment).
 
 ```bash
-npx tsx scripts/regenerate-schedules.ts           # Regenerate all schedules
-npx tsx scripts/regenerate-schedules.ts --dry-run # Preview without saving
-npx tsx scripts/regenerate-schedules.ts --id=xxx  # Regenerate specific trip by ID
+# Show help
+npx tsx scripts/regenerate-schedules.ts --help
+npx tsx scripts/regenerate-schedules.ts         # No args also shows help
+
+# Regenerate modes
+npx tsx scripts/regenerate-schedules.ts --all-trips       # All future trips
+npx tsx scripts/regenerate-schedules.ts --user=<userId>   # All future trips for user
+npx tsx scripts/regenerate-schedules.ts --trip=<tripId>   # Specific trip (any date)
+
+# Options
+--dry-run        # Preview without saving
+--verbose, -v    # Show detailed output
+--include-past   # Include past trips (for --all-trips and --user)
+--reset-initial  # Also update initialScheduleJson (default: only currentScheduleJson)
 ```
 
 **What it does:**
 
-- Fetches all `SharedSchedule` records from the database
+- Fetches `SharedSchedule` records matching the filter criteria
 - Re-runs the Python scheduler with the original trip parameters
-- Updates both `initialScheduleJson` and `currentScheduleJson` with the new output
+- Updates `currentScheduleJson` with the new output (use `--reset-initial` to also update `initialScheduleJson`)
 - Validates that new schedules have expected fields before saving
+- By default, only processes future trips (trips with any intervention date >= today)
 
 **When to use:**
 
