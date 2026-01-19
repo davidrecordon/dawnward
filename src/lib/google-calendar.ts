@@ -182,13 +182,15 @@ export function groupInterventionsByTime(
 
 /**
  * Convert an intervention group to a Google Calendar event.
- * Extracts timezone from the intervention based on phase:
- * - Pre-flight phases (preparation, pre_departure): use origin_tz
- * - Other phases (in_transit, post_arrival, adaptation): use dest_tz
+ * Extracts timezone AND date from the intervention based on phase:
+ * - Pre-flight phases (preparation, pre_departure): use origin_tz + origin_date
+ * - Other phases (in_transit, post_arrival, adaptation): use dest_tz + dest_date
+ *
+ * This is critical for cross-dateline flights where the origin and destination
+ * dates differ significantly.
  */
 export function buildCalendarEvent(
-  interventions: Intervention[],
-  date: string // YYYY-MM-DD
+  interventions: Intervention[]
 ): calendar_v3.Schema$Event {
   if (interventions.length === 0) {
     throw new Error("Cannot build event from empty interventions");
@@ -197,16 +199,23 @@ export function buildCalendarEvent(
   const time = getDisplayTime(interventions[0]); // All interventions in group have same time
   const anchor = getAnchorIntervention(interventions);
 
-  // Get timezone based on phase - use origin_tz for pre-flight phases, dest_tz for others
+  // Get timezone AND date based on phase - must be consistent
+  // Pre-flight: use origin_tz + origin_date (user is at home)
+  // Other phases: use dest_tz + dest_date (user is traveling to/at destination)
   const phase = anchor.phase_type;
-  const timezone =
-    phase === "preparation" || phase === "pre_departure"
-      ? anchor.origin_tz
-      : anchor.dest_tz;
+  const isPreFlight = phase === "preparation" || phase === "pre_departure";
+  const timezone = isPreFlight ? anchor.origin_tz : anchor.dest_tz;
+  const date = isPreFlight ? anchor.origin_date : anchor.dest_date;
 
   if (!timezone) {
     throw new Error(
       `Intervention missing timezone context (phase: ${phase}, origin_tz: ${anchor.origin_tz}, dest_tz: ${anchor.dest_tz})`
+    );
+  }
+
+  if (!date) {
+    throw new Error(
+      `Intervention missing date context (phase: ${phase}, origin_date: ${anchor.origin_date}, dest_date: ${anchor.dest_date})`
     );
   }
 
@@ -365,7 +374,7 @@ export async function createEventsForSchedule(
 
     for (const [, interventions] of groups) {
       try {
-        const event = buildCalendarEvent(interventions, day.date);
+        const event = buildCalendarEvent(interventions);
         const eventId = await createCalendarEvent(accessToken, event);
         created.push(eventId);
       } catch (error) {

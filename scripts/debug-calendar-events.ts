@@ -137,14 +137,20 @@ async function main() {
 
       try {
         // Build the calendar event (without creating it)
-        const event = buildCalendarEvent(interventions, day.date);
+        const event = buildCalendarEvent(interventions);
 
-        // Extract timezone from the event
+        // Extract date and timezone from the event
         const timezone = event.start?.timeZone || "unknown";
+        const eventDate = event.start?.dateTime?.split("T")[0] || "unknown";
         const duration = interventions[0].duration_min ?? 15;
 
+        // Show if date differs from day.date (important for cross-dateline flights)
+        const dateNote = eventDate !== day.date ? ` [calendar: ${eventDate}]` : "";
+
         console.log("");
-        console.log(`   ${time} ${timezone} (${formatDuration(duration)})`);
+        console.log(
+          `   ${time} ${timezone} (${formatDuration(duration)})${dateNote}`
+        );
         console.log(`      ${event.summary}`);
 
         if (verbose && event.description) {
