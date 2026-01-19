@@ -11,6 +11,7 @@ import { PreferencesSaveModal } from "@/components/preferences-save-modal";
 import { defaultFormState, type TripFormState } from "@/types/trip-form";
 import { getFormState, saveFormState } from "@/lib/schedule-storage";
 import type { UserPreferences } from "@/types/user-preferences";
+import { detectUser24HourPreference } from "@/lib/locale-utils";
 
 /** Save trip to database and return the trip ID */
 async function saveTripToDb(formState: TripFormState): Promise<string> {
@@ -157,7 +158,7 @@ export function TripPlanner() {
     setIsHydrated(true);
   }, []);
 
-  // Fetch user preferences when signed in
+  // Fetch user preferences when signed in, or detect locale for anonymous users
   // Use session?.user?.id as primitive dependency to avoid re-runs on object recreation
   const userId = session?.user?.id;
   React.useEffect(() => {
@@ -177,8 +178,26 @@ export function TripPlanner() {
             ...prefs,
           }));
 
-          // Set time format from user preferences
-          setUse24Hour(data.use24HourFormat ?? false);
+          // For new accounts (created within last 5 minutes), auto-sync locale preference
+          // This ensures users who signed up while using the app get their detected format saved
+          const accountAgeMs = data.createdAt
+            ? Date.now() - new Date(data.createdAt).getTime()
+            : Infinity;
+          const isNewAccount = accountAgeMs < 5 * 60 * 1000;
+          const detectedPrefers24Hour = detectUser24HourPreference();
+
+          if (isNewAccount && !data.use24HourFormat && detectedPrefers24Hour) {
+            // Auto-save detected 24-hour preference for new account
+            fetch("/api/user/preferences", {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ use24HourFormat: true }),
+            });
+            setUse24Hour(true);
+          } else {
+            // Use saved preference
+            setUse24Hour(data.use24HourFormat ?? false);
+          }
         }
       } catch {
         // Silently fail - use defaults
@@ -187,6 +206,9 @@ export function TripPlanner() {
 
     if (isHydrated && status === "authenticated") {
       fetchPreferences();
+    } else if (isHydrated && status === "unauthenticated") {
+      // For anonymous users, detect locale preference
+      setUse24Hour(detectUser24HourPreference());
     }
   }, [isHydrated, status, userId]);
 

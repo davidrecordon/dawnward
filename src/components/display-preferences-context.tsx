@@ -5,6 +5,7 @@ import type {
   DisplayPreferences,
   ScheduleViewMode,
 } from "@/types/user-preferences";
+import { detectUser24HourPreference } from "@/lib/locale-utils";
 
 const DisplayPreferencesContext =
   React.createContext<DisplayPreferences | null>(null);
@@ -14,21 +15,42 @@ interface ProviderProps {
   use24HourFormat?: boolean;
   showDualTimezone?: boolean;
   scheduleViewMode?: ScheduleViewMode;
+  /** When true, auto-detect 24-hour format from browser locale (for anonymous users) */
+  detectLocale?: boolean;
 }
 
 /**
  * Provider for display preferences. Wrap schedule views with this provider,
  * passing values from the server (database) or using defaults for anonymous users.
+ *
+ * When `detectLocale` is true, the provider will detect the user's locale
+ * preference on the client and use it for the 24-hour format setting.
  */
 export function DisplayPreferencesProvider({
   children,
   use24HourFormat = false,
   showDualTimezone = false,
   scheduleViewMode = "summary",
+  detectLocale = false,
 }: ProviderProps) {
+  const [detectedFormat, setDetectedFormat] = React.useState(use24HourFormat);
+
+  React.useEffect(() => {
+    if (detectLocale) {
+      setDetectedFormat(detectUser24HourPreference());
+    }
+  }, [detectLocale]);
+
+  // Use detected format when detectLocale is enabled, otherwise use the prop
+  const effectiveFormat = detectLocale ? detectedFormat : use24HourFormat;
+
   const value = React.useMemo<DisplayPreferences>(
-    () => ({ use24HourFormat, showDualTimezone, scheduleViewMode }),
-    [use24HourFormat, showDualTimezone, scheduleViewMode]
+    () => ({
+      use24HourFormat: effectiveFormat,
+      showDualTimezone,
+      scheduleViewMode,
+    }),
+    [effectiveFormat, showDualTimezone, scheduleViewMode]
   );
 
   return (

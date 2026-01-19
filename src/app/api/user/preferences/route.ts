@@ -64,6 +64,7 @@ export async function GET() {
       showDualTimezone: true,
       scheduleViewMode: true,
       use24HourFormat: true,
+      createdAt: true,
     },
   });
 

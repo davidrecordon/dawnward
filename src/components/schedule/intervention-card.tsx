@@ -65,7 +65,9 @@ function TimeDisplay({
     return (
       <>
         <span className="text-xs text-slate-400 tabular-nums line-through">
-          {dualTimes ? dualTimes.originTime : formatTime(displayTime, use24Hour)}
+          {dualTimes
+            ? dualTimes.originTime
+            : formatTime(displayTime, use24Hour)}
         </span>
         <Badge
           variant="secondary"

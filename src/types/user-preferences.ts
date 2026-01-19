@@ -69,6 +69,8 @@ export interface UserPreferences {
   showDualTimezone: boolean;
   scheduleViewMode: ScheduleViewMode;
   use24HourFormat: boolean;
+  // Account metadata (only present when fetched from API)
+  createdAt?: string;
 }
 
 /**

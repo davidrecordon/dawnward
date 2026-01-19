@@ -38,7 +38,11 @@ export default async function SharedSchedulePage({ params }: Props) {
   const userPrefs = session?.user?.id
     ? await prisma.user.findUnique({
         where: { id: session.user.id },
-        select: { showDualTimezone: true, scheduleViewMode: true, use24HourFormat: true },
+        select: {
+          showDualTimezone: true,
+          scheduleViewMode: true,
+          use24HourFormat: true,
+        },
       })
     : null;
 
@@ -48,9 +52,10 @@ export default async function SharedSchedulePage({ params }: Props) {
   }
 
   const displayPrefs = extractDisplayPreferences(userPrefs);
+  const isAnonymous = !session?.user?.id;
 
   return (
-    <DisplayPreferencesProvider {...displayPrefs}>
+    <DisplayPreferencesProvider {...displayPrefs} detectLocale={isAnonymous}>
       <TripScheduleView
         tripId={shared.id}
         tripData={mapSharedScheduleToTripData(shared)}

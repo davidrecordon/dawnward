@@ -35,7 +35,11 @@ export function InFlightSleepCard({
 
   // Get dual timezone times - in-flight items always have show_dual_timezone=true from Python
   // User preference can also force dual times on all items
-  const dualTimes = formatDualTimezones(intervention, showDualTimezone, use24Hour);
+  const dualTimes = formatDualTimezones(
+    intervention,
+    showDualTimezone,
+    use24Hour
+  );
 
   return (
     <Card className="overflow-hidden border-violet-200/40 bg-gradient-to-r from-violet-50/80 via-slate-50 to-violet-50/60 shadow-sm backdrop-blur-sm transition-all duration-300 hover:translate-x-1 hover:shadow-md">
