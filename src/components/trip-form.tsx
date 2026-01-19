@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { formatDateTimeLocal } from "@/lib/time-utils";
 import {
+  calculateFlightDuration,
   calculateTimeShift,
   getRecommendedPrepDays,
   getShiftDirectionLabel,
@@ -194,10 +195,20 @@ export function TripForm({
       newErrors.form = "Your origin and destination can't be the same airport";
     }
 
-    if (formState.departureDateTime && formState.arrivalDateTime) {
-      const dep = new Date(formState.departureDateTime);
-      const arr = new Date(formState.arrivalDateTime);
-      if (arr <= dep) {
+    // Use timezone-aware comparison for dateline-crossing flights
+    if (
+      formState.departureDateTime &&
+      formState.arrivalDateTime &&
+      formState.origin &&
+      formState.destination
+    ) {
+      const duration = calculateFlightDuration(
+        formState.departureDateTime,
+        formState.arrivalDateTime,
+        formState.origin.tz,
+        formState.destination.tz
+      );
+      if (!duration) {
         newErrors.form = "Your arrival time needs to be after departure";
       }
     }
