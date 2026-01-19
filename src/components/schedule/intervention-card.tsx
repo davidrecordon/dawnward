@@ -10,6 +10,7 @@ import {
   formatDualTimezones,
   type TimeFormat,
 } from "@/lib/intervention-utils";
+import { useTimeFormat } from "@/components/display-preferences-context";
 import type { Intervention, InterventionActual } from "@/types/schedule";
 import {
   getDisplayTime,
@@ -29,8 +30,6 @@ interface InterventionCardProps {
   date?: string;
   /** User preference: always show both origin and destination timezones */
   showDualTimezone?: boolean;
-  /** User preference: time format (12h or 24h) */
-  timeFormat?: TimeFormat;
 }
 
 interface TimeDisplayProps {
@@ -172,8 +171,8 @@ export function InterventionCard({
   actual,
   date,
   showDualTimezone = false,
-  timeFormat = "12h",
 }: InterventionCardProps): React.JSX.Element {
+  const timeFormat = useTimeFormat();
   const style = getInterventionStyle(intervention.type);
   const Icon = style.icon;
   const isNested = variant === "nested";

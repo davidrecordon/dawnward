@@ -3,20 +3,19 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { MapPin } from "lucide-react";
-import { formatTimeWithTimezone, type TimeFormat } from "@/lib/intervention-utils";
+import { formatTimeWithTimezone } from "@/lib/intervention-utils";
+import { useTimeFormat } from "@/components/display-preferences-context";
 
 interface NowMarkerProps {
   time: string;
   timezone?: string;
-  /** User preference: time format (12h or 24h) */
-  timeFormat?: TimeFormat;
 }
 
 export function NowMarker({
   time,
   timezone,
-  timeFormat = "12h",
 }: NowMarkerProps): React.JSX.Element {
+  const timeFormat = useTimeFormat();
   return (
     <Card
       id="now-marker"

@@ -13,6 +13,7 @@ import {
   FLIGHT_DAY,
   type TimeFormat,
 } from "@/lib/intervention-utils";
+import { useTimeFormat } from "@/components/display-preferences-context";
 import { formatLongDate, formatShortDate } from "@/lib/time-utils";
 import {
   getDisplayTime,
@@ -77,8 +78,6 @@ export interface DaySummaryCardProps {
   onExpandChange?: (expanded: boolean) => void;
   /** If true, disables expand functionality (for minimal shifts) */
   disableExpand?: boolean;
-  /** User preference: time format (12h or 24h) */
-  timeFormat?: TimeFormat;
 }
 
 /**
@@ -87,11 +86,11 @@ export interface DaySummaryCardProps {
 function SummaryInterventionRow({
   intervention,
   showFlightOffset = false,
-  timeFormat = "12h",
+  timeFormat,
 }: {
   intervention: Intervention;
   showFlightOffset?: boolean;
-  timeFormat?: TimeFormat;
+  timeFormat: TimeFormat;
 }) {
   const style = getInterventionStyle(intervention.type);
   const Icon = style.icon;
@@ -174,13 +173,13 @@ function FlightEventRow({
   time,
   origin,
   destination,
-  timeFormat = "12h",
+  timeFormat,
 }: {
   type: "departure" | "arrival";
   time: string;
   origin: Airport;
   destination: Airport;
-  timeFormat?: TimeFormat;
+  timeFormat: TimeFormat;
 }) {
   const isDeparture = type === "departure";
 
@@ -247,7 +246,7 @@ function SummaryContent({
   departureTime,
   arrivalDate,
   arrivalTime,
-  timeFormat = "12h",
+  timeFormat,
 }: {
   daySchedule: DaySchedule;
   origin: Airport;
@@ -256,7 +255,7 @@ function SummaryContent({
   departureTime: string;
   arrivalDate: string;
   arrivalTime: string;
-  timeFormat?: TimeFormat;
+  timeFormat: TimeFormat;
 }) {
   const isFlightDay = daySchedule.day === FLIGHT_DAY;
   const hasDeparture = daySchedule.date === departureDate;
@@ -391,8 +390,8 @@ export function DaySummaryCard({
   isExpanded: controlledExpanded,
   onExpandChange,
   disableExpand = false,
-  timeFormat = "12h",
 }: DaySummaryCardProps) {
+  const timeFormat = useTimeFormat();
   const [internalExpanded, setInternalExpanded] = useState(false);
   const isExpanded = controlledExpanded ?? internalExpanded;
   // Allow expand if either renderExpanded or onExpandChange is provided

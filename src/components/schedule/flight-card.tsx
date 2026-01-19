@@ -3,7 +3,8 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Plane, PlaneTakeoff, PlaneLanding } from "lucide-react";
-import { formatTimeWithTimezone, type TimeFormat } from "@/lib/intervention-utils";
+import { formatTimeWithTimezone } from "@/lib/intervention-utils";
+import { useTimeFormat } from "@/components/display-preferences-context";
 import type { Airport } from "@/types/airport";
 
 interface FlightCardProps {
@@ -13,8 +14,6 @@ interface FlightCardProps {
   destination: Airport;
   /** Timezone for the time display (origin tz for departure, destination tz for arrival) */
   timezone?: string;
-  /** User preference: time format (12h or 24h) */
-  timeFormat?: TimeFormat;
 }
 
 export function FlightCard({
@@ -23,8 +22,8 @@ export function FlightCard({
   origin,
   destination,
   timezone,
-  timeFormat = "12h",
 }: FlightCardProps): React.JSX.Element {
+  const timeFormat = useTimeFormat();
   const isDeparture = type === "departure";
   const Icon = isDeparture ? PlaneTakeoff : PlaneLanding;
   const title = isDeparture
