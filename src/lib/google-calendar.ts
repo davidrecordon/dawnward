@@ -44,6 +44,9 @@ const GROUPING_WINDOW_MIN = 120;
 /** Default event duration in minutes when not specified */
 const DEFAULT_EVENT_DURATION_MIN = 15;
 
+/** Footer added to all calendar event descriptions */
+const EVENT_FOOTER = "Created by Dawnward · dawnward.app";
+
 /**
  * Format a Date as RFC3339 datetime string (without timezone offset).
  * Used for Google Calendar API.
@@ -182,10 +185,21 @@ export function buildEventTitle(interventions: Intervention[]): string {
 }
 
 /**
- * Build event description from grouped interventions
+ * Build event description from grouped interventions.
+ * Appends Dawnward footer for attribution.
  */
 export function buildEventDescription(interventions: Intervention[]): string {
-  return interventions.map((i) => `• ${i.description}`).join("\n");
+  let description: string;
+
+  if (interventions.length === 1) {
+    // Single intervention: just the description, no bullet
+    description = interventions[0].description;
+  } else {
+    // Multiple interventions: bullet list
+    description = interventions.map((i) => `• ${i.description}`).join("\n");
+  }
+
+  return `${description}\n\n${EVENT_FOOTER}`;
 }
 
 /**
@@ -498,29 +512,33 @@ export interface DeleteEventsResult {
   failed: string[];
 }
 
+/** Delay between API calls to avoid rate limiting (ms) */
+const API_THROTTLE_MS = 200;
+
+/** Sleep for specified milliseconds */
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
 /**
  * Delete multiple calendar events.
- * Uses Promise.allSettled to ensure all deletions are attempted even if some fail.
+ * Deletes sequentially with throttling to avoid rate limiting.
  * Returns which events were successfully deleted vs failed.
  */
 export async function deleteCalendarEvents(
   accessToken: string,
   eventIds: string[]
 ): Promise<DeleteEventsResult> {
-  const results = await Promise.allSettled(
-    eventIds.map((id) => deleteCalendarEvent(accessToken, id).then(() => id))
-  );
-
   const deleted: string[] = [];
   const failed: string[] = [];
 
-  for (let i = 0; i < results.length; i++) {
-    const result = results[i];
-    if (result.status === "fulfilled") {
-      deleted.push(result.value);
-    } else {
-      failed.push(eventIds[i]);
+  for (const id of eventIds) {
+    try {
+      await deleteCalendarEvent(accessToken, id);
+      deleted.push(id);
+    } catch {
+      failed.push(id);
     }
+    // Throttle to avoid rate limiting
+    await sleep(API_THROTTLE_MS);
   }
 
   return { deleted, failed };
@@ -568,6 +586,8 @@ export async function createEventsForSchedule(
         const eventId = await createCalendarEvent(accessToken, event);
         console.log(`[Calendar] Created event ID: ${eventId}`);
         created.push(eventId);
+        // Throttle to avoid rate limiting
+        await sleep(API_THROTTLE_MS);
       } catch (error) {
         console.error(`[Calendar] Error creating event for group ${key}:`, error);
         failed++;

@@ -204,7 +204,9 @@ describe("buildEventTitle", () => {
 });
 
 describe("buildEventDescription", () => {
-  it("creates bullet list of descriptions", () => {
+  const FOOTER = "Created by Dawnward · dawnward.app";
+
+  it("creates bullet list of descriptions with footer", () => {
     const interventions = [
       makeIntervention("wake_target", "07:00", {
         description: "Wake up at target time",
@@ -217,18 +219,20 @@ describe("buildEventDescription", () => {
     const description = buildEventDescription(interventions);
 
     expect(description).toBe(
-      "• Wake up at target time\n• Get 30 minutes of bright light"
+      `• Wake up at target time\n• Get 30 minutes of bright light\n\n${FOOTER}`
     );
   });
 
-  it("handles single intervention", () => {
+  it("handles single intervention without bullet but with footer", () => {
     const interventions = [
       makeIntervention("melatonin", "21:00", {
         description: "Take 0.5mg melatonin",
       }),
     ];
 
-    expect(buildEventDescription(interventions)).toBe("• Take 0.5mg melatonin");
+    expect(buildEventDescription(interventions)).toBe(
+      `Take 0.5mg melatonin\n\n${FOOTER}`
+    );
   });
 });
 
@@ -244,7 +248,9 @@ describe("buildCalendarEvent", () => {
     const event = buildCalendarEvent(interventions);
 
     expect(event.summary).toBe("💊 Take melatonin");
-    expect(event.description).toBe("• Take 0.5mg");
+    expect(event.description).toBe(
+      "Take 0.5mg\n\nCreated by Dawnward · dawnward.app"
+    );
     // Uses dest_tz from intervention (post_arrival phase)
     expect(event.start?.timeZone).toBe("Europe/London");
     expect(event.end?.timeZone).toBe("Europe/London");

@@ -19,6 +19,9 @@ import "dotenv/config";
  *   npx tsx scripts/debug-calendar.ts <trip-id> --resync  # delete + create
  *   npx tsx scripts/debug-calendar.ts <trip-id> --delete  # delete only
  *
+ *   # Resync all trips for a user (from today forward)
+ *   npx tsx scripts/debug-calendar.ts --user=<userId>
+ *
  *   # List available presets
  *   npx tsx scripts/debug-calendar.ts --list-presets
  *
@@ -39,7 +42,7 @@ import { prisma } from "../src/lib/prisma";
 import {
   groupInterventionsByAnchor,
   buildCalendarEvent,
-  createCalendarEvent,
+  createEventsForSchedule,
   deleteCalendarEvents,
 } from "../src/lib/google-calendar";
 import type { ScheduleResponse, PhaseType } from "../src/types/schedule";
@@ -262,6 +265,7 @@ function formatDuration(minutes: number): string {
 
 interface ParsedArgs {
   tripId?: string;
+  userId?: string;
   preset?: string;
   originTz?: string;
   destTz?: string;
@@ -284,6 +288,7 @@ function parseArgs(): ParsedArgs {
   const args = process.argv.slice(2);
   const result: ParsedArgs = {
     tripId: undefined,
+    userId: undefined,
     preset: undefined,
     originTz: undefined,
     destTz: undefined,
@@ -322,6 +327,8 @@ function parseArgs(): ParsedArgs {
       result.listPresets = true;
     } else if (arg.startsWith("--preset=")) {
       result.preset = arg.split("=")[1].toUpperCase();
+    } else if (arg.startsWith("--user=")) {
+      result.userId = arg.split("=")[1];
     } else if (arg.startsWith("--origin=")) {
       const code = arg.split("=")[1].toUpperCase();
       result.originTz = AIRPORT_TIMEZONES[code] || code;
@@ -355,6 +362,7 @@ function printUsage() {
   console.error("Usage:");
   console.error("  npx tsx scripts/debug-calendar.ts <trip-id> [options]");
   console.error("  npx tsx scripts/debug-calendar.ts --preset=CODE [options]");
+  console.error("  npx tsx scripts/debug-calendar.ts --user=<userId>");
   console.error(
     "  npx tsx scripts/debug-calendar.ts --origin=SFO --dest=SIN --depart=... --arrive=..."
   );
@@ -363,6 +371,9 @@ function printUsage() {
   console.error("  <trip-id>          Load trip from database by ID");
   console.error(
     "  --preset=CODE      Use a flight preset (e.g., SQ31, VS20, QF74)"
+  );
+  console.error(
+    "  --user=ID          Resync all trips for a user (from today forward)"
   );
   console.error("  --list-presets     List all available presets");
   console.error("  --origin=CODE      Origin airport code (e.g., SFO)");
@@ -577,55 +588,6 @@ async function deleteExistingEvents(
   return { deleted: result.deleted.length, failed: result.failed.length };
 }
 
-/** Create calendar events from schedule */
-async function createEvents(
-  accessToken: string,
-  schedule: ScheduleResponse,
-  verbose: boolean
-): Promise<{ created: string[]; failed: number }> {
-  console.log("\n📤 Creating calendar events...\n");
-
-  const created: string[] = [];
-  let failed = 0;
-
-  for (const day of schedule.interventions) {
-    console.log(`📅 Day ${day.day} (${day.date})`);
-
-    const groups = groupInterventionsByAnchor(day.items);
-
-    for (const [, interventions] of groups) {
-      try {
-        const event = buildCalendarEvent(interventions);
-        const startTime =
-          event.start?.dateTime?.split("T")[1]?.substring(0, 5) || "??:??";
-
-        process.stdout.write(`   ${startTime} ${event.summary}... `);
-
-        const eventId = await createCalendarEvent(accessToken, event);
-        created.push(eventId);
-
-        console.log(`✅ ${eventId}`);
-
-        if (verbose) {
-          console.log(
-            `      Types: ${interventions.map((i) => i.type).join(", ")}`
-          );
-        }
-      } catch (error) {
-        failed++;
-        console.log(`❌`);
-        console.log(
-          `      Error: ${error instanceof Error ? error.message : "Unknown error"}`
-        );
-      }
-    }
-
-    console.log("");
-  }
-
-  return { created, failed };
-}
-
 /** Update or create sync record in database */
 async function updateSyncRecord(
   tripId: string,
@@ -661,6 +623,142 @@ async function deleteSyncRecord(syncId: string) {
     where: { id: syncId },
   });
   console.log(`📝 Deleted sync record: ${syncId}`);
+}
+
+/** Resync all trips for a user (from today forward) */
+async function resyncUserTrips(userId: string) {
+  console.log(`\n🔍 Finding trips for user: ${userId}\n`);
+
+  // Get today's date at midnight for comparison
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  // Find all trips for this user that have schedules with interventions from today forward
+  const trips = await prisma.sharedSchedule.findMany({
+    where: {
+      userId,
+    },
+    include: {
+      calendarSyncs: true,
+    },
+    orderBy: {
+      departureDatetime: "asc",
+    },
+  });
+
+  if (trips.length === 0) {
+    console.log("❌ No trips found for this user");
+    return;
+  }
+
+  console.log(`📋 Found ${trips.length} total trips`);
+
+  // Filter to trips with interventions from today forward
+  const relevantTrips = trips.filter((trip) => {
+    const scheduleJson = trip.currentScheduleJson ?? trip.initialScheduleJson;
+    if (!scheduleJson) return false;
+
+    const schedule = scheduleJson as unknown as ScheduleResponse;
+    if (!schedule.interventions || schedule.interventions.length === 0)
+      return false;
+
+    // Check if any day in the schedule is today or later
+    return schedule.interventions.some((day) => {
+      const dayDate = new Date(day.date);
+      return dayDate >= today;
+    });
+  });
+
+  if (relevantTrips.length === 0) {
+    console.log("❌ No trips with events from today forward");
+    return;
+  }
+
+  console.log(
+    `✅ ${relevantTrips.length} trips have events from today forward\n`
+  );
+
+  // Get access token
+  console.log("🔑 Getting access token...");
+  let accessToken: string;
+  try {
+    accessToken = await getAccessToken(userId);
+    console.log("   ✅ Access token retrieved\n");
+  } catch (error) {
+    console.error(
+      `❌ ${error instanceof Error ? error.message : "Unknown error"}`
+    );
+    return;
+  }
+
+  // Process each trip
+  let totalCreated = 0;
+  let totalDeleted = 0;
+  let totalFailed = 0;
+
+  for (const trip of relevantTrips) {
+    const label = trip.routeLabel || trip.id;
+    console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+    console.log(`\n📅 Trip: ${label}`);
+    console.log(`   ID: ${trip.id}`);
+
+    const scheduleJson = trip.currentScheduleJson ?? trip.initialScheduleJson;
+    const schedule = scheduleJson as unknown as ScheduleResponse;
+
+    const existingSync = trip.calendarSyncs[0];
+    const existingEventIds = (existingSync?.googleEventIds as string[]) ?? [];
+
+    console.log(`   Existing events: ${existingEventIds.length}`);
+
+    // Delete existing events
+    if (existingEventIds.length > 0) {
+      const deleteResult = await deleteExistingEvents(
+        accessToken,
+        existingEventIds
+      );
+      totalDeleted += deleteResult.deleted;
+
+      if (deleteResult.failed > 0) {
+        console.error(
+          `   ❌ Failed to delete ${deleteResult.failed} events. Skipping trip to prevent duplicates.`
+        );
+        continue; // Skip this trip, move to next
+      }
+    }
+
+    // Create new events
+    const createResult = await createEventsForSchedule(
+      accessToken,
+      schedule.interventions
+    );
+    totalCreated += createResult.created.length;
+    totalFailed += createResult.failed;
+
+    // Update sync record
+    if (createResult.created.length > 0) {
+      await updateSyncRecord(
+        trip.id,
+        userId,
+        existingSync?.id ?? null,
+        createResult.created
+      );
+    } else if (existingSync) {
+      // We only reach here if all deletes succeeded (otherwise we skip with continue)
+      // Delete sync record since we deleted all old events and created no new ones
+      await deleteSyncRecord(existingSync.id);
+    }
+  }
+
+  // Summary
+  console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+  console.log(`\n🏁 User resync complete!`);
+  console.log(`   Trips processed: ${relevantTrips.length}`);
+  console.log(`   Events deleted: ${totalDeleted}`);
+  console.log(`   Events created: ${totalCreated}`);
+  if (totalFailed > 0) {
+    console.log(`   Events failed: ${totalFailed}`);
+  }
+  console.log("");
 }
 
 /** Generate schedule by calling the API */
@@ -848,6 +946,13 @@ async function main() {
   if (args.listPresets) {
     printPresets();
     process.exit(0);
+  }
+
+  // Mode: Resync all trips for a user
+  if (args.userId) {
+    await resyncUserTrips(args.userId);
+    await prisma.$disconnect();
+    return;
   }
 
   // Check if sync is requested but no tripId provided
@@ -1043,7 +1148,10 @@ async function main() {
   }
 
   // Create events
-  const createResult = await createEvents(accessToken, schedule, args.verbose);
+  const createResult = await createEventsForSchedule(
+    accessToken,
+    schedule.interventions
+  );
 
   // Update sync record
   if (createResult.created.length > 0) {
