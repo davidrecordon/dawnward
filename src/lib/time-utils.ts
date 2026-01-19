@@ -71,6 +71,18 @@ export function formatLongDate(dateStr: string): string {
 }
 
 /**
+ * Format date to short readable format for mobile (e.g., "Wed, Jan 19")
+ */
+export function formatShortDate(dateStr: string): string {
+  const date = new Date(dateStr + "T12:00:00");
+  return date.toLocaleDateString("en-US", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  });
+}
+
+/**
  * Check if current date is before schedule starts.
  * Uses the origin timezone from the schedule to determine "today".
  */
