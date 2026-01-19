@@ -10,6 +10,11 @@ import { TripPreviewCard } from "@/components/trip-preview-card";
 import { PreferencesSaveModal } from "@/components/preferences-save-modal";
 import { defaultFormState, type TripFormState } from "@/types/trip-form";
 import { getFormState, saveFormState } from "@/lib/schedule-storage";
+import {
+  type TimeFormat,
+  DEFAULT_TIME_FORMAT,
+  isValidTimeFormat,
+} from "@/lib/time-format";
 import type { UserPreferences } from "@/types/user-preferences";
 
 /** Save trip to database and return the trip ID */
@@ -144,6 +149,9 @@ export function TripPlanner() {
     PreferenceKey
   > | null>(null);
 
+  // Track time format preference (for logged-in users from DB, anonymous users use default)
+  const [timeFormat, setTimeFormat] = React.useState<TimeFormat>(DEFAULT_TIME_FORMAT);
+
   // Load saved form state on mount, merging with defaults for any missing fields
   React.useEffect(() => {
     const saved = getFormState();
@@ -173,6 +181,11 @@ export function TripPlanner() {
             ...prev,
             ...prefs,
           }));
+
+          // Set time format from user preferences (with runtime validation)
+          if (isValidTimeFormat(data.timeFormat)) {
+            setTimeFormat(data.timeFormat);
+          }
         }
       } catch {
         // Silently fail - use defaults
@@ -249,6 +262,7 @@ export function TripPlanner() {
           onSubmit={handleSubmit}
           isSubmitting={isSubmitting}
           isSignedIn={status === "authenticated"}
+          timeFormat={timeFormat}
         />
 
         {/* Right column: Preview cards */}

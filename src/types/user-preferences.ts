@@ -1,3 +1,5 @@
+import { type TimeFormat, DEFAULT_TIME_FORMAT } from "@/lib/time-format";
+
 /**
  * User preference fields that can be synced between settings and trip form.
  */
@@ -13,6 +15,7 @@ export interface UserPreferences {
   // Display preferences
   showDualTimezone: boolean;
   scheduleViewMode: "summary" | "timeline";
+  timeFormat: TimeFormat;
 }
 
 /**
@@ -57,5 +60,6 @@ export function mapFormToDbPreferences(form: {
     // Display preferences not in trip form - use defaults
     showDualTimezone: false,
     scheduleViewMode: "summary",
+    timeFormat: DEFAULT_TIME_FORMAT,
   };
 }

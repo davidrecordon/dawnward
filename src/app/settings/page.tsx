@@ -1,6 +1,7 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
+import { isValidTimeFormat, DEFAULT_TIME_FORMAT } from "@/lib/time-format";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -44,6 +45,7 @@ export default async function SettingsPage() {
       scheduleIntensity: true,
       showDualTimezone: true,
       scheduleViewMode: true,
+      timeFormat: true,
     },
   });
 
@@ -83,6 +85,7 @@ export default async function SettingsPage() {
             scheduleIntensity: user.scheduleIntensity,
             showDualTimezone: user.showDualTimezone,
             scheduleViewMode: user.scheduleViewMode,
+            timeFormat: isValidTimeFormat(user.timeFormat) ? user.timeFormat : DEFAULT_TIME_FORMAT,
           }}
         />
 

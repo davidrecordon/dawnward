@@ -6,6 +6,7 @@ import {
   getDayLabel,
   getDayLabelColor,
   isEditableIntervention,
+  type TimeFormat,
 } from "@/lib/intervention-utils";
 import {
   dayHasMultipleTimezones,
@@ -52,6 +53,8 @@ interface DaySectionProps {
   actuals?: ActualsMap;
   /** User preference: always show both origin and destination timezones */
   showDualTimezone?: boolean;
+  /** User preference: time format (12h or 24h) */
+  timeFormat?: TimeFormat;
   /** Whether this day section is expanded (true) or showing summary (false) */
   isExpanded?: boolean;
   /** Callback when expand/collapse is toggled */
@@ -115,6 +118,7 @@ export function DaySection({
   isCurrentDay,
   actuals,
   showDualTimezone = false,
+  timeFormat = "12h",
   isExpanded = true,
   onExpandChange,
   onInterventionClick,
@@ -379,6 +383,7 @@ export function DaySection({
         departureTime={departureTime}
         arrivalDate={arrivalDate}
         arrivalTime={arrivalTime}
+        timeFormat={timeFormat}
         isExpanded={false}
         onExpandChange={() => onExpandChange?.()}
       />
@@ -476,6 +481,7 @@ export function DaySection({
                       intervention={item.data}
                       totalFlightHours={totalFlightHours}
                       showDualTimezone={showDualTimezone}
+                      timeFormat={timeFormat}
                     />
                   ) : (
                     <InterventionCard
@@ -485,6 +491,7 @@ export function DaySection({
                         getActualKey(daySchedule.day, item.data.type)
                       )}
                       showDualTimezone={showDualTimezone}
+                      timeFormat={timeFormat}
                       onClick={
                         onInterventionClick &&
                         isEditableIntervention(item.data.type)
@@ -505,6 +512,7 @@ export function DaySection({
                     destination={destination}
                     actuals={actuals}
                     showDualTimezone={showDualTimezone}
+                    timeFormat={timeFormat}
                     onInterventionClick={onInterventionClick}
                     dayOffset={daySchedule.day}
                     date={daySchedule.date}
@@ -517,6 +525,7 @@ export function DaySection({
                     origin={origin}
                     destination={destination}
                     timezone={item.origin_tz}
+                    timeFormat={timeFormat}
                   />
                 )}
                 {item.kind === "arrival" && (
@@ -526,12 +535,14 @@ export function DaySection({
                     origin={origin}
                     destination={destination}
                     timezone={item.dest_tz}
+                    timeFormat={timeFormat}
                   />
                 )}
                 {item.kind === "now" && (
                   <NowMarker
                     time={item.time}
                     timezone={hasMultipleTimezones ? item.timezone : undefined}
+                    timeFormat={timeFormat}
                   />
                 )}
               </div>

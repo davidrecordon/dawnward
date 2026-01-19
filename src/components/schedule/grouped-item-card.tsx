@@ -7,7 +7,7 @@ import {
   type ActualsMap,
 } from "@/types/schedule";
 import type { Airport } from "@/types/airport";
-import { isEditableIntervention } from "@/lib/intervention-utils";
+import { isEditableIntervention, type TimeFormat } from "@/lib/intervention-utils";
 import { getActualKey } from "@/lib/actuals-utils";
 import { InterventionCard } from "./intervention-card";
 import { FlightCard } from "./flight-card";
@@ -22,6 +22,8 @@ interface GroupedItemCardProps {
   actuals?: ActualsMap;
   /** User preference: always show both origin and destination timezones */
   showDualTimezone?: boolean;
+  /** User preference: time format (12h or 24h) */
+  timeFormat?: TimeFormat;
   /** Callback when an intervention card is clicked (for recording actuals) */
   onInterventionClick?: (
     intervention: Intervention,
@@ -49,6 +51,7 @@ export function GroupedItemCard({
   destination,
   actuals,
   showDualTimezone = false,
+  timeFormat = "12h",
   onInterventionClick,
   dayOffset,
   date,
@@ -67,6 +70,7 @@ export function GroupedItemCard({
           origin={origin}
           destination={destination}
           timezone={parent.dest_tz}
+          timeFormat={timeFormat}
         />
       ) : (
         <InterventionCard
@@ -74,6 +78,7 @@ export function GroupedItemCard({
           date={date}
           actual={actuals?.get(getActualKey(dayOffset, parent.data.type))}
           showDualTimezone={showDualTimezone}
+          timeFormat={timeFormat}
           onClick={
             onInterventionClick && isEditableIntervention(parent.data.type)
               ? () =>
@@ -127,6 +132,7 @@ export function GroupedItemCard({
                       date={date}
                       actual={actuals?.get(getActualKey(dayOffset, child.type))}
                       showDualTimezone={showDualTimezone}
+                      timeFormat={timeFormat}
                       onClick={
                         onInterventionClick &&
                         isEditableIntervention(child.type)

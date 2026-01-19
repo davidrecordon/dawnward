@@ -19,6 +19,7 @@ import { PreferenceSelector } from "@/components/preference-selector";
 import { PrepDaysSlider } from "@/components/prep-days-slider";
 import { TimeSelect } from "@/components/ui/time-select";
 import { useSaveStatus } from "@/components/save-status-context";
+import type { TimeFormat } from "@/lib/time-format";
 
 interface UserPreferences {
   defaultWakeTime: string;
@@ -33,6 +34,7 @@ interface UserPreferences {
   scheduleIntensity: string;
   showDualTimezone: boolean;
   scheduleViewMode: string;
+  timeFormat: TimeFormat;
 }
 
 interface SettingsFormProps {
@@ -101,6 +103,7 @@ export function SettingsForm({ initialPreferences }: SettingsFormProps) {
               <TimeSelect
                 value={preferences.defaultWakeTime}
                 onChange={(val) => updateField("defaultWakeTime", val)}
+                timeFormat={preferences.timeFormat}
               />
             </div>
             <div className="space-y-2">
@@ -111,6 +114,7 @@ export function SettingsForm({ initialPreferences }: SettingsFormProps) {
               <TimeSelect
                 value={preferences.defaultSleepTime}
                 onChange={(val) => updateField("defaultSleepTime", val)}
+                timeFormat={preferences.timeFormat}
               />
             </div>
           </div>
@@ -288,6 +292,19 @@ export function SettingsForm({ initialPreferences }: SettingsFormProps) {
             description="Always display times in both origin and destination timezones"
             checked={preferences.showDualTimezone}
             onCheckedChange={(val) => updateField("showDualTimezone", val)}
+            colorScheme="sky"
+          />
+
+          <PreferenceSelector
+            icon={<Clock className="h-4 w-4" />}
+            title="Time format"
+            description="Display times in 12-hour or 24-hour format"
+            value={preferences.timeFormat}
+            onValueChange={(val) => updateField("timeFormat", val)}
+            options={[
+              { value: "12h", label: "12-hour", description: "9:30 AM, 5:45 PM" },
+              { value: "24h", label: "24-hour", description: "09:30, 17:45" },
+            ]}
             colorScheme="sky"
           />
         </CardContent>

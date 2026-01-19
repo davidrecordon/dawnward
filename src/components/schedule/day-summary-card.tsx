@@ -11,6 +11,7 @@ import {
   getDayLabelColor,
   getDayCardGradient,
   FLIGHT_DAY,
+  type TimeFormat,
 } from "@/lib/intervention-utils";
 import { formatLongDate, formatShortDate } from "@/lib/time-utils";
 import {
@@ -76,6 +77,8 @@ export interface DaySummaryCardProps {
   onExpandChange?: (expanded: boolean) => void;
   /** If true, disables expand functionality (for minimal shifts) */
   disableExpand?: boolean;
+  /** User preference: time format (12h or 24h) */
+  timeFormat?: TimeFormat;
 }
 
 /**
@@ -84,9 +87,11 @@ export interface DaySummaryCardProps {
 function SummaryInterventionRow({
   intervention,
   showFlightOffset = false,
+  timeFormat = "12h",
 }: {
   intervention: Intervention;
   showFlightOffset?: boolean;
+  timeFormat?: TimeFormat;
 }) {
   const style = getInterventionStyle(intervention.type);
   const Icon = style.icon;
@@ -112,11 +117,11 @@ function SummaryInterventionRow({
         <span className="text-sm font-semibold whitespace-nowrap text-slate-700 tabular-nums">
           {showFlightOffset && hasFlightOffset
             ? formatFlightOffset(intervention.flight_offset_hours!)
-            : formatTime(displayTime)}
+            : formatTime(displayTime, timeFormat)}
         </span>
         {hasOriginalTime && (
           <div className="text-[10px] text-slate-400 italic">
-            target: {formatTime(intervention.original_time!)}
+            target: {formatTime(intervention.original_time!, timeFormat)}
           </div>
         )}
       </div>
@@ -169,11 +174,13 @@ function FlightEventRow({
   time,
   origin,
   destination,
+  timeFormat = "12h",
 }: {
   type: "departure" | "arrival";
   time: string;
   origin: Airport;
   destination: Airport;
+  timeFormat?: TimeFormat;
 }) {
   const isDeparture = type === "departure";
 
@@ -187,7 +194,7 @@ function FlightEventRow({
         )}
       </div>
       <span className="w-[72px] shrink-0 text-sm font-semibold text-slate-700 tabular-nums">
-        {formatTime(time)}
+        {formatTime(time, timeFormat)}
       </span>
       <span className="text-sm text-slate-600">
         {isDeparture
@@ -240,6 +247,7 @@ function SummaryContent({
   departureTime,
   arrivalDate,
   arrivalTime,
+  timeFormat = "12h",
 }: {
   daySchedule: DaySchedule;
   origin: Airport;
@@ -248,6 +256,7 @@ function SummaryContent({
   departureTime: string;
   arrivalDate: string;
   arrivalTime: string;
+  timeFormat?: TimeFormat;
 }) {
   const isFlightDay = daySchedule.day === FLIGHT_DAY;
   const hasDeparture = daySchedule.date === departureDate;
@@ -276,6 +285,7 @@ function SummaryContent({
               <SummaryInterventionRow
                 key={`before-${item.type}-${getDisplayTime(item)}-${i}`}
                 intervention={item}
+                timeFormat={timeFormat}
               />
             ))}
             {hasDeparture && (
@@ -284,6 +294,7 @@ function SummaryContent({
                 time={departureTime}
                 origin={origin}
                 destination={destination}
+                timeFormat={timeFormat}
               />
             )}
           </>
@@ -296,7 +307,7 @@ function SummaryContent({
               title="On the Plane"
               subtitle={
                 hasDeparture
-                  ? `${formatTime(departureTime)} from ${origin.code}`
+                  ? `${formatTime(departureTime, timeFormat)} from ${origin.code}`
                   : undefined
               }
               variant="transit"
@@ -306,6 +317,7 @@ function SummaryContent({
                 key={`transit-${item.type}-${getDisplayTime(item)}-${i}`}
                 intervention={item}
                 showFlightOffset
+                timeFormat={timeFormat}
               />
             ))}
           </>
@@ -318,7 +330,7 @@ function SummaryContent({
               title="After Landing"
               subtitle={
                 hasArrival
-                  ? `${formatTime(arrivalTime)} at ${destination.code}`
+                  ? `${formatTime(arrivalTime, timeFormat)} at ${destination.code}`
                   : undefined
               }
               variant="after"
@@ -329,12 +341,14 @@ function SummaryContent({
                 time={arrivalTime}
                 origin={origin}
                 destination={destination}
+                timeFormat={timeFormat}
               />
             )}
             {groups.afterLanding.map((item, i) => (
               <SummaryInterventionRow
                 key={`after-${item.type}-${getDisplayTime(item)}-${i}`}
                 intervention={item}
+                timeFormat={timeFormat}
               />
             ))}
           </>
@@ -350,6 +364,7 @@ function SummaryContent({
         <SummaryInterventionRow
           key={`${item.type}-${getDisplayTime(item)}-${i}`}
           intervention={item}
+          timeFormat={timeFormat}
         />
       ))}
     </>
@@ -376,6 +391,7 @@ export function DaySummaryCard({
   isExpanded: controlledExpanded,
   onExpandChange,
   disableExpand = false,
+  timeFormat = "12h",
 }: DaySummaryCardProps) {
   const [internalExpanded, setInternalExpanded] = useState(false);
   const isExpanded = controlledExpanded ?? internalExpanded;
@@ -479,6 +495,7 @@ export function DaySummaryCard({
                 departureTime={departureTime}
                 arrivalDate={arrivalDate}
                 arrivalTime={arrivalTime}
+                timeFormat={timeFormat}
               />
             </CardContent>
           )}
@@ -491,11 +508,14 @@ export function DaySummaryCard({
 /**
  * Format a day's interventions as plain text (for emails/calendar).
  */
-export function formatDayForText(daySchedule: DaySchedule): string {
+export function formatDayForText(
+  daySchedule: DaySchedule,
+  timeFormat: TimeFormat = "12h"
+): string {
   return daySchedule.items
     .map((item) => {
       const emoji = getInterventionEmoji(item.type);
-      const time = formatTime(getDisplayTime(item));
+      const time = formatTime(getDisplayTime(item), timeFormat);
       const desc = getCondensedDescription(item.type);
       return `${emoji}  ${time}   ${desc}`;
     })

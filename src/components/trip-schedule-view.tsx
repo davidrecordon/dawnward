@@ -48,6 +48,7 @@ const CALENDAR_SYNC_ENABLED =
 import { EditPreferencesModal } from "@/components/trip/edit-preferences-modal";
 import { RecordActualSheet } from "@/components/trip/record-actual-sheet";
 import { getDayLabel, formatShortDate } from "@/lib/intervention-utils";
+import { type TimeFormat, DEFAULT_TIME_FORMAT } from "@/lib/time-format";
 import { mergePhasesByDate } from "@/lib/schedule-utils";
 import { getActualKey, buildActualsMap } from "@/lib/actuals-utils";
 import {
@@ -80,6 +81,8 @@ interface TripScheduleViewProps {
   showDualTimezone?: boolean;
   /** User preference: default view mode for schedule (summary or timeline) */
   scheduleViewMode?: "summary" | "timeline";
+  /** User preference: time format (12h or 24h) */
+  timeFormat?: TimeFormat;
 }
 
 // Minimal airport info for display
@@ -128,6 +131,7 @@ export function TripScheduleView({
   sharerName,
   showDualTimezone = false,
   scheduleViewMode = "summary",
+  timeFormat = DEFAULT_TIME_FORMAT,
 }: TripScheduleViewProps) {
   const [schedule, setSchedule] = useState<ScheduleResponse | null>(null);
 
@@ -625,6 +629,7 @@ export function TripScheduleView({
                   isCurrentDay={daySchedule.day === currentDayNumber}
                   actuals={actuals}
                   showDualTimezone={showDualTimezone}
+                  timeFormat={timeFormat}
                   isExpanded={expandedDays.has(daySchedule.day)}
                   onExpandChange={() => toggleDayExpanded(daySchedule.day)}
                   onInterventionClick={

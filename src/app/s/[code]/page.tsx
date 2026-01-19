@@ -5,6 +5,7 @@ import {
   mapSharedScheduleToTripData,
   incrementViewCount,
 } from "@/lib/trip-utils";
+import { isValidTimeFormat, DEFAULT_TIME_FORMAT } from "@/lib/time-format";
 import { TripScheduleView } from "@/components/trip-schedule-view";
 
 interface Props {
@@ -36,7 +37,7 @@ export default async function SharedSchedulePage({ params }: Props) {
   const userPrefs = session?.user?.id
     ? await prisma.user.findUnique({
         where: { id: session.user.id },
-        select: { showDualTimezone: true, scheduleViewMode: true },
+        select: { showDualTimezone: true, scheduleViewMode: true, timeFormat: true },
       })
     : null;
 
@@ -57,6 +58,7 @@ export default async function SharedSchedulePage({ params }: Props) {
       scheduleViewMode={
         (userPrefs?.scheduleViewMode as "summary" | "timeline") ?? "summary"
       }
+      timeFormat={isValidTimeFormat(userPrefs?.timeFormat) ? userPrefs.timeFormat : DEFAULT_TIME_FORMAT}
     />
   );
 }
