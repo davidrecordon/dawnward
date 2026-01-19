@@ -15,6 +15,7 @@ const STANDALONE_TYPES: Set<InterventionType> = new Set([
   "caffeine_cutoff", // Mid-day "last chance" reminder - critical timing
   "exercise", // Specific circadian timing, often mid-day
   "nap_window", // In-flight only, has flight_offset_hours
+  "light_avoid", // PRC-calculated duration (2-4h), needs its own event
 ]);
 
 /**
@@ -258,8 +259,7 @@ export function shouldShowAsBusy(type: InterventionType): boolean {
  * Strategy:
  * 1. Identify wake_target and sleep_target as anchors
  * 2. Group nearby interventions (within GROUPING_WINDOW_MIN) with their anchor
- * 3. Keep standalone types (caffeine_cutoff, exercise, nap_window) separate
- * 4. light_avoid is standalone if >1h before sleep_target, otherwise grouped
+ * 3. Keep standalone types (caffeine_cutoff, exercise, nap_window, light_avoid) separate
  *
  * Returns a map where each key is a unique identifier and value is the group.
  * Each group creates one calendar event.
@@ -313,20 +313,6 @@ export function groupInterventionsByAnchor(
       groups.set(key, [intervention]);
       grouped.add(intervention);
       continue;
-    }
-
-    // Special case: light_avoid
-    // - If >1h before sleep_target, keep standalone
-    // - Otherwise, can be grouped with sleep anchor
-    if (intervention.type === "light_avoid" && sleepTime !== null) {
-      const distanceToSleep = sleepTime - time;
-      // If more than 1 hour (60 min) before sleep, standalone
-      if (distanceToSleep > 60) {
-        const key = `standalone:light_avoid:${getDisplayTime(intervention)}`;
-        groups.set(key, [intervention]);
-        grouped.add(intervention);
-        continue;
-      }
     }
 
     // Try to find nearest anchor within window

@@ -1006,7 +1006,10 @@ describe("isStandaloneType", () => {
     expect(isStandaloneType("sleep_target")).toBe(false);
     expect(isStandaloneType("melatonin")).toBe(false);
     expect(isStandaloneType("light_seek")).toBe(false);
-    expect(isStandaloneType("light_avoid")).toBe(false);
+  });
+
+  it("returns true for light_avoid (PRC-calculated duration)", () => {
+    expect(isStandaloneType("light_avoid")).toBe(true);
   });
 });
 
@@ -1100,7 +1103,7 @@ describe("groupInterventionsByAnchor", () => {
     expect(groups.has("standalone:nap_window:14:00")).toBe(true);
   });
 
-  it("keeps light_avoid standalone when >1h before sleep_target", () => {
+  it("keeps light_avoid standalone regardless of distance to sleep_target", () => {
     const interventions = [
       makeIntervention("light_avoid", "20:00"), // 3h before sleep
       makeIntervention("sleep_target", "23:00"),
@@ -1114,18 +1117,19 @@ describe("groupInterventionsByAnchor", () => {
     expect(groups.get("sleep:23:00")).toHaveLength(1); // Only sleep_target
   });
 
-  it("groups light_avoid with sleep_target when ≤1h before", () => {
+  it("keeps light_avoid standalone even when close to sleep_target", () => {
+    // light_avoid is always standalone due to PRC-calculated duration (2-4h)
     const interventions = [
-      makeIntervention("light_avoid", "22:00"), // 1h before sleep (exactly at boundary)
+      makeIntervention("light_avoid", "22:00"), // 1h before sleep
       makeIntervention("sleep_target", "23:00"),
     ];
 
     const groups = groupInterventionsByAnchor(interventions);
 
-    expect(groups.size).toBe(1);
-    const sleepGroup = groups.get("sleep:23:00");
-    expect(sleepGroup).toHaveLength(2);
-    expect(sleepGroup?.map((i) => i.type)).toContain("light_avoid");
+    // Both should be separate events
+    expect(groups.size).toBe(2);
+    expect(groups.has("standalone:light_avoid:22:00")).toBe(true);
+    expect(groups.has("sleep:23:00")).toBe(true);
   });
 
   it("creates standalone events when no anchor in range", () => {

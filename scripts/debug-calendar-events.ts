@@ -15,8 +15,9 @@ import "dotenv/config";
 
 import { prisma } from "../src/lib/prisma";
 import {
-  groupInterventionsByTime,
+  groupInterventionsByAnchor,
   buildCalendarEvent,
+  getEventDuration,
 } from "../src/lib/google-calendar";
 import type {
   ScheduleResponse,
@@ -120,8 +121,8 @@ async function main() {
     console.log(`${phaseEmoji} Day ${day.day} (${day.date}) - ${phase}`);
     console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
 
-    // Group interventions by time
-    const groups = groupInterventionsByTime(day.items);
+    // Group interventions by anchor (event density optimization)
+    const groups = groupInterventionsByAnchor(day.items);
 
     if (groups.size === 0) {
       console.log("   (no actionable interventions)");
@@ -142,7 +143,8 @@ async function main() {
         // Extract date and timezone from the event
         const timezone = event.start?.timeZone || "unknown";
         const eventDate = event.start?.dateTime?.split("T")[0] || "unknown";
-        const duration = interventions[0].duration_min ?? 15;
+        const anchor = interventions[0]; // First item is the anchor
+        const duration = getEventDuration(anchor);
 
         // Show if date differs from day.date (important for cross-dateline flights)
         const dateNote = eventDate !== day.date ? ` [calendar: ${eventDate}]` : "";
