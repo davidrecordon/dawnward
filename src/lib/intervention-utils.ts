@@ -109,9 +109,6 @@ export function getInterventionStyle(
   }
 }
 
-// Re-export formatTimeDisplay from time-format
-export { formatTimeDisplay } from "./time-format";
-
 /**
  * Format time from HH:MM to a more readable format
  * @param time - Time in HH:MM 24-hour format

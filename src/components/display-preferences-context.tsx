@@ -1,28 +1,19 @@
 "use client";
 
 import * as React from "react";
-
-/**
- * Display preferences that affect how the UI renders.
- * These are user preferences fetched from the database for logged-in users.
- */
-interface DisplayPreferences {
-  use24HourFormat: boolean;
-  showDualTimezone: boolean;
-  scheduleViewMode: "summary" | "timeline";
-}
+import type {
+  DisplayPreferences,
+  ScheduleViewMode,
+} from "@/types/user-preferences";
 
 const DisplayPreferencesContext =
   React.createContext<DisplayPreferences | null>(null);
 
 interface ProviderProps {
   children: React.ReactNode;
-  /** Whether to use 24-hour time format (default: false = 12-hour) */
   use24HourFormat?: boolean;
-  /** Whether to show dual timezone display */
   showDualTimezone?: boolean;
-  /** Default view mode for schedule (summary or timeline) */
-  scheduleViewMode?: "summary" | "timeline";
+  scheduleViewMode?: ScheduleViewMode;
 }
 
 /**
