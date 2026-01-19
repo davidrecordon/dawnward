@@ -47,8 +47,8 @@ const CALENDAR_SYNC_ENABLED =
   process.env.NEXT_PUBLIC_FEATURE_CALENDAR_SYNC === "true";
 import { EditPreferencesModal } from "@/components/trip/edit-preferences-modal";
 import { RecordActualSheet } from "@/components/trip/record-actual-sheet";
+import { useDisplayPreferences } from "@/components/display-preferences-context";
 import { getDayLabel, formatShortDate } from "@/lib/intervention-utils";
-import { type TimeFormat, DEFAULT_TIME_FORMAT } from "@/lib/time-format";
 import { mergePhasesByDate } from "@/lib/schedule-utils";
 import { getActualKey, buildActualsMap } from "@/lib/actuals-utils";
 import {
@@ -77,12 +77,6 @@ interface TripScheduleViewProps {
   isLoggedIn: boolean;
   hasCalendarScope: boolean;
   sharerName: string | null;
-  /** User preference: always show both origin and destination timezones */
-  showDualTimezone?: boolean;
-  /** User preference: default view mode for schedule (summary or timeline) */
-  scheduleViewMode?: "summary" | "timeline";
-  /** User preference: time format (12h or 24h) */
-  timeFormat?: TimeFormat;
 }
 
 // Minimal airport info for display
@@ -129,10 +123,10 @@ export function TripScheduleView({
   isLoggedIn,
   hasCalendarScope,
   sharerName,
-  showDualTimezone = false,
-  scheduleViewMode = "summary",
-  timeFormat = DEFAULT_TIME_FORMAT,
 }: TripScheduleViewProps) {
+  // Get display preferences from context (provided by page-level wrapper)
+  const { showDualTimezone, scheduleViewMode } = useDisplayPreferences();
+
   const [schedule, setSchedule] = useState<ScheduleResponse | null>(null);
 
   // Track which days are expanded
@@ -629,7 +623,6 @@ export function TripScheduleView({
                   isCurrentDay={daySchedule.day === currentDayNumber}
                   actuals={actuals}
                   showDualTimezone={showDualTimezone}
-                  timeFormat={timeFormat}
                   isExpanded={expandedDays.has(daySchedule.day)}
                   onExpandChange={() => toggleDayExpanded(daySchedule.day)}
                   onInterventionClick={

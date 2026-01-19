@@ -6,6 +6,7 @@ import {
   incrementViewCount,
 } from "@/lib/trip-utils";
 import { isValidTimeFormat, DEFAULT_TIME_FORMAT } from "@/lib/time-format";
+import { DisplayPreferencesProvider } from "@/components/display-preferences-context";
 import { TripScheduleView } from "@/components/trip-schedule-view";
 
 interface Props {
@@ -55,19 +56,26 @@ export default async function TripByIdPage({ params }: Props) {
     incrementViewCount(prisma, trip.id);
   }
 
+  const timeFormat = isValidTimeFormat(userPrefs?.timeFormat)
+    ? userPrefs.timeFormat
+    : DEFAULT_TIME_FORMAT;
+
   return (
-    <TripScheduleView
-      tripId={trip.id}
-      tripData={mapSharedScheduleToTripData(trip)}
-      isOwner={isOwner}
-      isLoggedIn={!!session?.user}
-      hasCalendarScope={session?.hasCalendarScope ?? false}
-      sharerName={trip.user?.name ?? null}
+    <DisplayPreferencesProvider
+      timeFormat={timeFormat}
       showDualTimezone={userPrefs?.showDualTimezone ?? false}
       scheduleViewMode={
         (userPrefs?.scheduleViewMode as "summary" | "timeline") ?? "summary"
       }
-      timeFormat={isValidTimeFormat(userPrefs?.timeFormat) ? userPrefs.timeFormat : DEFAULT_TIME_FORMAT}
-    />
+    >
+      <TripScheduleView
+        tripId={trip.id}
+        tripData={mapSharedScheduleToTripData(trip)}
+        isOwner={isOwner}
+        isLoggedIn={!!session?.user}
+        hasCalendarScope={session?.hasCalendarScope ?? false}
+        sharerName={trip.user?.name ?? null}
+      />
+    </DisplayPreferencesProvider>
   );
 }
