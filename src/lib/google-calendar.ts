@@ -199,7 +199,7 @@ export function buildEventDescription(interventions: Intervention[]): string {
     description = interventions.map((i) => `• ${i.description}`).join("\n");
   }
 
-  return `${description}\n\n${EVENT_FOOTER}`;
+  return `${description}\n\n---\n${EVENT_FOOTER}`;
 }
 
 /**

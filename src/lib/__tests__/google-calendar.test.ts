@@ -219,7 +219,7 @@ describe("buildEventDescription", () => {
     const description = buildEventDescription(interventions);
 
     expect(description).toBe(
-      `• Wake up at target time\n• Get 30 minutes of bright light\n\n${FOOTER}`
+      `• Wake up at target time\n• Get 30 minutes of bright light\n\n---\n${FOOTER}`
     );
   });
 
@@ -231,7 +231,7 @@ describe("buildEventDescription", () => {
     ];
 
     expect(buildEventDescription(interventions)).toBe(
-      `Take 0.5mg melatonin\n\n${FOOTER}`
+      `Take 0.5mg melatonin\n\n---\n${FOOTER}`
     );
   });
 });
@@ -249,7 +249,7 @@ describe("buildCalendarEvent", () => {
 
     expect(event.summary).toBe("💊 Take melatonin");
     expect(event.description).toBe(
-      "Take 0.5mg\n\nCreated by Dawnward · dawnward.app"
+      "Take 0.5mg\n\n---\nCreated by Dawnward · dawnward.app"
     );
     // Uses dest_tz from intervention (post_arrival phase)
     expect(event.start?.timeZone).toBe("Europe/London");

@@ -36,6 +36,7 @@ import "dotenv/config";
  *   --sleep=HH:MM      Sleep time (default: 22:00)
  *   --no-melatonin     Disable melatonin
  *   --no-caffeine      Disable caffeine
+ *   --limit-days=N     Only create events for first N days (for testing)
  */
 
 import { prisma } from "../src/lib/prisma";
@@ -282,6 +283,7 @@ interface ParsedArgs {
   sync: boolean;
   resync: boolean;
   deleteOnly: boolean;
+  limitDays?: number; // Limit to first N days (for testing)
 }
 
 function parseArgs(): ParsedArgs {
@@ -349,6 +351,8 @@ function parseArgs(): ParsedArgs {
       result.wakeTime = arg.split("=")[1];
     } else if (arg.startsWith("--sleep=")) {
       result.sleepTime = arg.split("=")[1];
+    } else if (arg.startsWith("--limit-days=")) {
+      result.limitDays = parseInt(arg.split("=")[1], 10);
     } else if (!arg.startsWith("--")) {
       // Positional argument = trip ID
       result.tripId = arg;
@@ -395,6 +399,7 @@ function printUsage() {
   console.error("  --no-melatonin     Disable melatonin");
   console.error("  --no-caffeine      Disable caffeine");
   console.error("  --verbose, -v      Show full event descriptions");
+  console.error("  --limit-days=N     Only create events for first N days (for testing)");
   console.error("");
   console.error("Examples:");
   console.error(
@@ -626,8 +631,11 @@ async function deleteSyncRecord(syncId: string) {
 }
 
 /** Resync all trips for a user (from today forward) */
-async function resyncUserTrips(userId: string) {
+async function resyncUserTrips(userId: string, limitDays?: number) {
   console.log(`\n🔍 Finding trips for user: ${userId}\n`);
+  if (limitDays) {
+    console.log(`⚠️  Limiting to first ${limitDays} day(s) per trip (testing mode)\n`);
+  }
 
   // Get today's date at midnight for comparison
   const today = new Date();
@@ -726,10 +734,13 @@ async function resyncUserTrips(userId: string) {
       }
     }
 
-    // Create new events
+    // Create new events (optionally limited to first N days for testing)
+    const interventionsToSync = limitDays
+      ? schedule.interventions.slice(0, limitDays)
+      : schedule.interventions;
     const createResult = await createEventsForSchedule(
       accessToken,
-      schedule.interventions
+      interventionsToSync
     );
     totalCreated += createResult.created.length;
     totalFailed += createResult.failed;
@@ -950,7 +961,7 @@ async function main() {
 
   // Mode: Resync all trips for a user
   if (args.userId) {
-    await resyncUserTrips(args.userId);
+    await resyncUserTrips(args.userId, args.limitDays);
     await prisma.$disconnect();
     return;
   }
@@ -1147,10 +1158,16 @@ async function main() {
     }
   }
 
-  // Create events
+  // Create events (optionally limited to first N days for testing)
+  if (args.limitDays) {
+    console.log(`\n⚠️  Limiting to first ${args.limitDays} day(s) (testing mode)`);
+  }
+  const interventionsToSync = args.limitDays
+    ? schedule.interventions.slice(0, args.limitDays)
+    : schedule.interventions;
   const createResult = await createEventsForSchedule(
     accessToken,
-    schedule.interventions
+    interventionsToSync
   );
 
   // Update sync record
