@@ -27,8 +27,10 @@ model User {
   lightExposureMinutes Int              @default(60)
   showDualTimezone     Boolean          @default(false)
   use24HourFormat      Boolean          @default(false)
+  emailNotifications   Boolean          @default(false)
   accounts             Account[]
   calendarSyncs        CalendarSync[]
+  emailSchedules       EmailSchedule[]
   sessions             Session[]
   sharedSchedules      SharedSchedule[]
 }
@@ -98,6 +100,7 @@ model SharedSchedule {
   leg2DestTz            String?
   leg2OriginTz          String?
   calendarSyncs         CalendarSync[]
+  emailSchedules        EmailSchedule[]
   actuals               InterventionActual[]
   stateSnapshots        MarkerStateSnapshot[]
   user                  User?                 @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -159,5 +162,23 @@ model CalendarSync {
 
   @@unique([tripId, userId])
   @@index([tripId])
+  @@index([userId])
+}
+
+model EmailSchedule {
+  id           String         @id @default(cuid())
+  tripId       String
+  userId       String
+  emailType    String         // "flight_day" | "daily_summary" (future)
+  scheduledFor DateTime       // When to send (UTC)
+  sentAt       DateTime?      // Null until sent
+  failedAt     DateTime?
+  errorMessage String?
+
+  trip         SharedSchedule @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  user         User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([tripId, userId, emailType])
+  @@index([scheduledFor])
   @@index([userId])
 }

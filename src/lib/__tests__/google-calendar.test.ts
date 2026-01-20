@@ -148,7 +148,7 @@ describe("buildEventTitle", () => {
       makeIntervention("light_seek", "07:00", { title: "Seek bright light" }),
     ];
 
-    expect(buildEventTitle(interventions)).toBe("⏰ Wake up: Light");
+    expect(buildEventTitle(interventions)).toBe("☀️ Wake up: Light");
   });
 
   it("uses sleep_target as anchor with melatonin", () => {
@@ -168,7 +168,7 @@ describe("buildEventTitle", () => {
     ];
 
     expect(buildEventTitle(interventions)).toBe(
-      "⏰ Wake up: Light + No caffeine"
+      "☀️ Wake up: Light + No caffeine"
     );
   });
 
@@ -180,7 +180,7 @@ describe("buildEventTitle", () => {
     ];
 
     const title = buildEventTitle(interventions);
-    expect(title.startsWith("⏰")).toBe(true);
+    expect(title.startsWith("☀️")).toBe(true);
   });
 
   it("prioritizes sleep_target when no wake_target", () => {
