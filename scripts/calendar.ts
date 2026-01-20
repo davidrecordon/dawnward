@@ -1,32 +1,35 @@
 #!/usr/bin/env npx tsx
-import "dotenv/config";
-
 /**
- * Calendar Debug & Sync Script
+ * Calendar Management Script
  *
- * Preview and sync calendar events for trips. Supports three modes:
+ * Preview and sync calendar events for trips. Supports multiple modes:
  *   1. Load from database by trip ID
  *   2. Generate fresh from flight presets
  *   3. Generate from custom flight parameters
+ *   4. Check/refresh Google OAuth tokens
  *
  * Usage:
  *   # Preview events (dry-run, default)
- *   npx tsx scripts/debug-calendar.ts <trip-id>
- *   npx tsx scripts/debug-calendar.ts --preset=SQ31
+ *   npx tsx scripts/calendar.ts <trip-id>
+ *   npx tsx scripts/calendar.ts --preset=SQ31
  *
  *   # Actually sync to Google Calendar
- *   npx tsx scripts/debug-calendar.ts <trip-id> --sync
- *   npx tsx scripts/debug-calendar.ts <trip-id> --resync  # delete + create
- *   npx tsx scripts/debug-calendar.ts <trip-id> --delete  # delete only
+ *   npx tsx scripts/calendar.ts <trip-id> --sync
+ *   npx tsx scripts/calendar.ts <trip-id> --resync  # delete + create
+ *   npx tsx scripts/calendar.ts <trip-id> --delete  # delete only
  *
  *   # Resync all trips for a user (from today forward)
- *   npx tsx scripts/debug-calendar.ts --user=<userId>
+ *   npx tsx scripts/calendar.ts --user=<userId>
+ *
+ *   # Check/refresh OAuth token
+ *   npx tsx scripts/calendar.ts <trip-id> --check-auth
+ *   npx tsx scripts/calendar.ts --user=<userId> --check-auth
  *
  *   # List available presets
- *   npx tsx scripts/debug-calendar.ts --list-presets
+ *   npx tsx scripts/calendar.ts --list-presets
  *
  *   # Custom flight parameters
- *   npx tsx scripts/debug-calendar.ts --origin=SFO --dest=SIN \
+ *   npx tsx scripts/calendar.ts --origin=SFO --dest=SIN \
  *     --depart="2026-01-22T09:45" --arrive="2026-01-23T19:00"
  *
  *   # Additional options
@@ -39,14 +42,37 @@ import "dotenv/config";
  *   --limit-days=N     Only create events for first N days (for testing)
  */
 
-import { prisma } from "../src/lib/prisma";
-import {
-  groupInterventionsByAnchor,
-  buildCalendarEvent,
-  createEventsForSchedule,
-  deleteCalendarEvents,
-} from "../src/lib/google-calendar";
+import { config } from "dotenv";
 import type { ScheduleResponse, PhaseType } from "../src/types/schedule";
+import type { PrismaClient } from "../src/generated/prisma/client";
+
+// Load env files (most specific first, since dotenv doesn't override existing values)
+config({ path: ".env.development.local" });
+config({ path: ".env.development" });
+config({ path: ".env.local" });
+config({ path: ".env" });
+
+// These will be initialized via dynamic import after env is loaded
+let prisma: PrismaClient;
+let getValidAccessToken: typeof import("../src/lib/token-refresh").getValidAccessToken;
+let groupInterventionsByAnchor: typeof import("../src/lib/google-calendar").groupInterventionsByAnchor;
+let buildCalendarEvent: typeof import("../src/lib/google-calendar").buildCalendarEvent;
+let createEventsForSchedule: typeof import("../src/lib/google-calendar").createEventsForSchedule;
+let deleteCalendarEvents: typeof import("../src/lib/google-calendar").deleteCalendarEvents;
+
+async function loadDependencies() {
+  const prismaModule = await import("../src/lib/prisma");
+  prisma = prismaModule.prisma;
+
+  const tokenModule = await import("../src/lib/token-refresh");
+  getValidAccessToken = tokenModule.getValidAccessToken;
+
+  const calendarModule = await import("../src/lib/google-calendar");
+  groupInterventionsByAnchor = calendarModule.groupInterventionsByAnchor;
+  buildCalendarEvent = calendarModule.buildCalendarEvent;
+  createEventsForSchedule = calendarModule.createEventsForSchedule;
+  deleteCalendarEvents = calendarModule.deleteCalendarEvents;
+}
 
 // =============================================================================
 // Airport & Flight Presets
@@ -284,6 +310,8 @@ interface ParsedArgs {
   resync: boolean;
   deleteOnly: boolean;
   limitDays?: number; // Limit to first N days (for testing)
+  // Auth options
+  checkAuth: boolean;
 }
 
 function parseArgs(): ParsedArgs {
@@ -306,6 +334,7 @@ function parseArgs(): ParsedArgs {
     sync: false,
     resync: false,
     deleteOnly: false,
+    checkAuth: false,
   };
 
   for (const arg of args) {
@@ -317,6 +346,8 @@ function parseArgs(): ParsedArgs {
       result.resync = true;
     } else if (arg === "--delete") {
       result.deleteOnly = true;
+    } else if (arg === "--check-auth") {
+      result.checkAuth = true;
     } else if (arg === "--melatonin") {
       result.usesMelatonin = true;
     } else if (arg === "--no-melatonin") {
@@ -364,11 +395,11 @@ function parseArgs(): ParsedArgs {
 
 function printUsage() {
   console.error("Usage:");
-  console.error("  npx tsx scripts/debug-calendar.ts <trip-id> [options]");
-  console.error("  npx tsx scripts/debug-calendar.ts --preset=CODE [options]");
-  console.error("  npx tsx scripts/debug-calendar.ts --user=<userId>");
+  console.error("  npx tsx scripts/calendar.ts <trip-id> [options]");
+  console.error("  npx tsx scripts/calendar.ts --preset=CODE [options]");
+  console.error("  npx tsx scripts/calendar.ts --user=<userId>");
   console.error(
-    "  npx tsx scripts/debug-calendar.ts --origin=SFO --dest=SIN --depart=... --arrive=..."
+    "  npx tsx scripts/calendar.ts --origin=SFO --dest=SIN --depart=... --arrive=..."
   );
   console.error("");
   console.error("Schedule Source:");
@@ -387,10 +418,15 @@ function printUsage() {
   );
   console.error("  --arrive=DATETIME  Arrival datetime");
   console.error("");
-  console.error("Sync Options (requires trip-id):");
+  console.error("Sync Options (requires trip-id or --user):");
   console.error("  --sync             Create events in Google Calendar");
   console.error("  --resync           Delete existing + create new events");
   console.error("  --delete           Delete existing events only");
+  console.error("");
+  console.error("Auth Options:");
+  console.error(
+    "  --check-auth       Check OAuth token, refresh if expired (requires trip-id or --user)"
+  );
   console.error("");
   console.error("Schedule Options:");
   console.error("  --prep-days=N      Preparation days (default: 3)");
@@ -404,14 +440,15 @@ function printUsage() {
   );
   console.error("");
   console.error("Examples:");
+  console.error("  npx tsx scripts/calendar.ts cmk95fhzn000104jssj2wfm3g");
   console.error(
-    "  npx tsx scripts/debug-calendar.ts cmk95fhzn000104jssj2wfm3g"
+    "  npx tsx scripts/calendar.ts cmk95fhzn000104jssj2wfm3g --sync"
   );
   console.error(
-    "  npx tsx scripts/debug-calendar.ts cmk95fhzn000104jssj2wfm3g --sync"
+    "  npx tsx scripts/calendar.ts cmk95fhzn000104jssj2wfm3g --check-auth"
   );
-  console.error("  npx tsx scripts/debug-calendar.ts --preset=SQ31");
-  console.error("  npx tsx scripts/debug-calendar.ts --preset=QF74 --verbose");
+  console.error("  npx tsx scripts/calendar.ts --preset=SQ31");
+  console.error("  npx tsx scripts/calendar.ts --preset=QF74 --verbose");
 }
 
 function printPresets() {
@@ -528,46 +565,97 @@ async function loadFromDatabase(tripId: string): Promise<TripData> {
 // Google Calendar Sync
 // =============================================================================
 
-/** Get Google access token for a user from the Account table */
+/** Get Google access token for a user, refreshing if expired */
 async function getAccessToken(userId: string): Promise<string> {
+  // First check if the account has calendar scope
   const account = await prisma.account.findFirst({
-    where: {
-      userId,
-      provider: "google",
-    },
+    where: { userId, provider: "google" },
+    select: { scope: true },
+  });
+
+  if (account?.scope && !account.scope.includes("calendar")) {
+    throw new Error(
+      "Google account does not have calendar scope. User needs to grant calendar permission."
+    );
+  }
+
+  const { accessToken, expiresAt } = await getValidAccessToken(userId);
+  console.log(`🔑 Access token valid until ${expiresAt.toISOString()}`);
+  return accessToken;
+}
+
+/** Check and refresh OAuth token for a user */
+async function checkUserAuth(userId: string): Promise<void> {
+  console.log(`\n🔐 Checking OAuth token for user: ${userId}\n`);
+
+  // Look up user info
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { email: true, name: true },
+  });
+
+  if (!user) {
+    throw new Error(`User not found: ${userId}`);
+  }
+
+  console.log(`   User: ${user.name || user.email || "(no name)"}`);
+  if (user.email) {
+    console.log(`   Email: ${user.email}`);
+  }
+
+  // Check for Google account
+  const account = await prisma.account.findFirst({
+    where: { userId, provider: "google" },
+    select: { scope: true, expires_at: true },
   });
 
   if (!account) {
     throw new Error(`No Google account found for user: ${userId}`);
   }
 
-  if (!account.access_token) {
-    throw new Error(
-      "Google account has no access token. User may need to re-authenticate."
-    );
-  }
-
-  // Check if token might be expired
+  // Show current token status
   if (account.expires_at) {
     const expiresAt = new Date(account.expires_at * 1000);
-    if (expiresAt < new Date()) {
-      console.warn(
-        `⚠️  Access token may be expired (expired: ${expiresAt.toISOString()})`
-      );
-      console.warn(
-        "   If sync fails, user needs to sign out and back in to refresh token."
-      );
-    }
-  }
-
-  // Check if token has calendar scope
-  if (account.scope && !account.scope.includes("calendar")) {
-    throw new Error(
-      "Google account does not have calendar scope. User needs to grant calendar permission."
+    const isExpired = expiresAt < new Date();
+    console.log(
+      `   Token expires: ${expiresAt.toISOString()} ${isExpired ? "(EXPIRED)" : "(valid)"}`
     );
   }
 
-  return account.access_token;
+  // Check scope
+  const hasCalendarScope = account.scope?.includes("calendar") ?? false;
+  console.log(`   Calendar scope: ${hasCalendarScope ? "✓" : "✗ (missing)"}`);
+
+  if (!hasCalendarScope) {
+    console.log(
+      "\n⚠️  User needs to grant calendar permission by signing in again."
+    );
+    return;
+  }
+
+  // Attempt to get/refresh token
+  console.log("\n   Validating token...");
+  const { expiresAt } = await getValidAccessToken(userId);
+
+  console.log(`\n✅ Token is valid until ${expiresAt.toISOString()}`);
+}
+
+/** Get userId from a trip */
+async function getUserIdFromTrip(tripId: string): Promise<string> {
+  const trip = await prisma.sharedSchedule.findUnique({
+    where: { id: tripId },
+    select: { userId: true },
+  });
+
+  if (!trip) {
+    throw new Error(`Trip not found: ${tripId}`);
+  }
+
+  if (!trip.userId) {
+    throw new Error(`Trip ${tripId} has no associated user (anonymous trip)`);
+  }
+
+  return trip.userId;
 }
 
 /** Delete existing calendar events */
@@ -666,7 +754,7 @@ async function resyncUserTrips(userId: string, limitDays?: number) {
   console.log(`📋 Found ${trips.length} total trips`);
 
   // Filter to trips with interventions from today forward
-  const relevantTrips = trips.filter((trip) => {
+  const relevantTrips = trips.filter((trip: (typeof trips)[number]) => {
     const scheduleJson = trip.currentScheduleJson ?? trip.initialScheduleJson;
     if (!scheduleJson) return false;
 
@@ -961,6 +1049,26 @@ async function main() {
   if (args.listPresets) {
     printPresets();
     process.exit(0);
+  }
+
+  // Load dependencies that require env vars (prisma, google-calendar, etc.)
+  await loadDependencies();
+
+  // Mode: Check auth for a user or trip
+  if (args.checkAuth) {
+    let userId: string;
+    if (args.userId) {
+      userId = args.userId;
+    } else if (args.tripId) {
+      userId = await getUserIdFromTrip(args.tripId);
+    } else {
+      console.error("❌ --check-auth requires a trip ID or --user=<userId>");
+      printUsage();
+      process.exit(1);
+    }
+    await checkUserAuth(userId);
+    await prisma.$disconnect();
+    return;
   }
 
   // Mode: Resync all trips for a user

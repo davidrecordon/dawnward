@@ -77,21 +77,23 @@ npx tsx scripts/regenerate-schedules.ts --trip=<tripId>   # Specific trip (any d
 
 **Requirements:** Requires `DATABASE_URL` environment variable (uses `.env` automatically).
 
-### `scripts/debug-calendar.ts`
+### `scripts/calendar.ts`
 
-Debug and test Google Calendar event generation without making actual API calls. Supports three modes:
+Manage Google Calendar sync: preview events, sync to calendar, and check OAuth tokens.
 
 ```bash
-npx tsx scripts/debug-calendar.ts                    # Load trip from database by ID
-npx tsx scripts/debug-calendar.ts --preset=VS20     # Use preset flight (VS20, SQ31, QF74, CX872, etc.)
-npx tsx scripts/debug-calendar.ts --custom          # Define custom flight parameters
+npx tsx scripts/calendar.ts <trip-id>               # Preview events (dry-run)
+npx tsx scripts/calendar.ts <trip-id> --sync        # Sync to Google Calendar
+npx tsx scripts/calendar.ts <trip-id> --check-auth  # Check/refresh OAuth token
+npx tsx scripts/calendar.ts --user=<userId> --check-auth  # Check auth for a user
+npx tsx scripts/calendar.ts --preset=VS20           # Use preset flight for preview
 ```
 
-**What it shows:**
+**Modes:**
 
-- Grouped calendar events with anchor-based grouping applied
-- Event details: title, time, duration, busy/free status
-- Day-by-day breakdown of events that would be created
+- **Preview (default):** Shows grouped calendar events, titles, times, durations
+- **Sync:** Creates/updates events in Google Calendar (`--sync`, `--resync`, `--delete`)
+- **Auth check:** Validates OAuth token, refreshes if expired (`--check-auth`)
 
 **Available presets:** HA11 (short), VS20 (eastbound overnight), SQ31 (ultra-long-haul), QF74 (cross-dateline), CX872 (long-haul eastbound)
 
@@ -204,7 +206,7 @@ design_docs/
 
 scripts/
 ├── regenerate-schedules.ts  # Migrate stored schedules after schema changes
-└── debug-calendar.ts        # Debug calendar event generation (presets and custom flights)
+└── calendar.ts              # Calendar sync, preview, and OAuth token management
 ```
 
 ### Key Patterns
