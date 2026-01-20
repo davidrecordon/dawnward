@@ -738,16 +738,27 @@ export interface CreateEventsResult {
   failed: number;
 }
 
+/** Type for the event creation function (for dependency injection in tests) */
+export type EventCreator = (
+  accessToken: string,
+  event: calendar_v3.Schema$Event
+) => Promise<string>;
+
 /**
  * Create calendar events for all actionable interventions in a schedule.
  * Groups interventions around wake/sleep anchors for reduced event count.
  * Each event uses the timezone from the intervention itself based on phase.
  * Deduplicates wake events that land on the same calendar date (within 2h window).
  * Returns both successful and failed event counts.
+ *
+ * @param accessToken - Google OAuth access token
+ * @param interventionDays - Schedule days with interventions
+ * @param eventCreator - Optional function to create events (for testing)
  */
 export async function createEventsForSchedule(
   accessToken: string,
-  interventionDays: DaySchedule[]
+  interventionDays: DaySchedule[],
+  eventCreator: EventCreator = createCalendarEvent
 ): Promise<CreateEventsResult> {
   const created: string[] = [];
   let failed = 0;
@@ -816,7 +827,7 @@ export async function createEventsForSchedule(
                   console.log(
                     `[Calendar] Creating standalone: "${event.summary}" at ${event.start?.dateTime}`
                   );
-                  const eventId = await createCalendarEvent(accessToken, event);
+                  const eventId = await eventCreator(accessToken, event);
                   created.push(eventId);
                   await sleep(API_THROTTLE_MS);
                 } catch (error) {
@@ -865,7 +876,7 @@ export async function createEventsForSchedule(
             for (const intervention of otherInterventions) {
               try {
                 const event = buildCalendarEvent([intervention], wakeTime);
-                const eventId = await createCalendarEvent(accessToken, event);
+                const eventId = await eventCreator(accessToken, event);
                 created.push(eventId);
                 await sleep(API_THROTTLE_MS);
               } catch (error) {
@@ -893,7 +904,7 @@ export async function createEventsForSchedule(
         console.log(
           `[Calendar] Creating event: "${event.summary}" at ${event.start?.dateTime} (${event.start?.timeZone})`
         );
-        const eventId = await createCalendarEvent(accessToken, event);
+        const eventId = await eventCreator(accessToken, event);
         console.log(`[Calendar] Created event ID: ${eventId}`);
         created.push(eventId);
         // Throttle to avoid rate limiting

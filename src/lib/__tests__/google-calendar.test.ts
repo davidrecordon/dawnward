@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi, beforeEach, type Mock } from "vitest";
 import {
   getReminderMinutes,
   isActionableIntervention,
@@ -12,11 +12,14 @@ import {
   shouldShowAsBusy,
   getCalendarDate,
   getSleepCalendarDate,
+  createEventsForSchedule,
+  type EventCreator,
 } from "@/lib/google-calendar";
 import type {
   Intervention,
   InterventionType,
   PhaseType,
+  DaySchedule,
 } from "@/types/schedule";
 
 // Helper to create test interventions
@@ -1834,5 +1837,308 @@ describe("buildCalendarEvent sleep_target date placement", () => {
     // Should be Jan 22 (origin_date + 1 day for early morning)
     expect(event.start?.dateTime).toContain("2026-01-22");
     expect(event.start?.dateTime).toContain("02:30");
+  });
+});
+
+// Helper to create DaySchedule for sync tests
+function makeDaySchedule(
+  day: number,
+  date: string,
+  items: Intervention[],
+  phase_type: PhaseType = "adaptation"
+): DaySchedule {
+  return { day, date, items, phase_type };
+}
+
+describe("createEventsForSchedule", () => {
+  let mockEventCreator: Mock<EventCreator>;
+  let eventIdCounter: number;
+
+  beforeEach(() => {
+    eventIdCounter = 0;
+    // Create mock event creator that returns incrementing event IDs
+    mockEventCreator = vi.fn<EventCreator>(async () => {
+      eventIdCounter++;
+      return `event-${eventIdCounter}`;
+    });
+  });
+
+  it("creates events and returns correct counts", async () => {
+    const days: DaySchedule[] = [
+      makeDaySchedule(-1, "2026-01-19", [
+        makeIntervention("wake_target", "07:00", {
+          phase_type: "preparation",
+          origin_date: "2026-01-19",
+          dest_date: "2026-01-19",
+        }),
+        makeIntervention("caffeine_cutoff", "14:00", {
+          phase_type: "preparation",
+          origin_date: "2026-01-19",
+          dest_date: "2026-01-19",
+        }),
+      ]),
+    ];
+
+    const result = await createEventsForSchedule(
+      "fake-token",
+      days,
+      mockEventCreator
+    );
+
+    expect(result.created).toHaveLength(2);
+    expect(result.failed).toBe(0);
+    expect(mockEventCreator).toHaveBeenCalledTimes(2);
+  });
+
+  it("skips duplicate wake events on same calendar date", async () => {
+    // Two days that land on same calendar date with wake_target
+    const days: DaySchedule[] = [
+      makeDaySchedule(1, "2026-01-20", [
+        makeIntervention("wake_target", "07:00", {
+          phase_type: "adaptation",
+          origin_date: "2026-01-20",
+          dest_date: "2026-01-20",
+        }),
+      ]),
+      makeDaySchedule(2, "2026-01-20", [
+        // Same calendar date! Different schedule day
+        makeIntervention("wake_target", "07:30", {
+          // Within 2h window
+          phase_type: "adaptation",
+          origin_date: "2026-01-20",
+          dest_date: "2026-01-20",
+        }),
+      ]),
+    ];
+
+    const result = await createEventsForSchedule(
+      "fake-token",
+      days,
+      mockEventCreator
+    );
+
+    // First wake created, second skipped as duplicate
+    expect(result.created).toHaveLength(1);
+    expect(result.failed).toBe(0);
+    expect(mockEventCreator).toHaveBeenCalledTimes(1);
+  });
+
+  it("creates standalone events for grouped items when wake is skipped", async () => {
+    // First day: wake + light_seek grouped together
+    // Second day: wake + melatonin grouped together (wake is duplicate)
+    const days: DaySchedule[] = [
+      makeDaySchedule(1, "2026-01-20", [
+        makeIntervention("wake_target", "07:00", {
+          phase_type: "adaptation",
+          origin_date: "2026-01-20",
+          dest_date: "2026-01-20",
+        }),
+        makeIntervention("light_seek", "07:30", {
+          // Within 2h of wake, will be grouped
+          phase_type: "adaptation",
+          origin_date: "2026-01-20",
+          dest_date: "2026-01-20",
+          duration_min: 30,
+        }),
+      ]),
+      makeDaySchedule(2, "2026-01-20", [
+        makeIntervention("wake_target", "07:15", {
+          // Duplicate wake (same date, within 2h)
+          phase_type: "adaptation",
+          origin_date: "2026-01-20",
+          dest_date: "2026-01-20",
+        }),
+        makeIntervention("melatonin", "07:15", {
+          // Grouped with wake
+          phase_type: "adaptation",
+          origin_date: "2026-01-20",
+          dest_date: "2026-01-20",
+        }),
+      ]),
+    ];
+
+    const result = await createEventsForSchedule(
+      "fake-token",
+      days,
+      mockEventCreator
+    );
+
+    // Day 1: grouped wake+light (1 event)
+    // Day 2: wake skipped, melatonin created standalone (1 event)
+    expect(result.created).toHaveLength(2);
+    expect(result.failed).toBe(0);
+    expect(mockEventCreator).toHaveBeenCalledTimes(2);
+  });
+
+  it("does not skip wake events outside 2h dedup window", async () => {
+    const days: DaySchedule[] = [
+      makeDaySchedule(1, "2026-01-20", [
+        makeIntervention("wake_target", "06:00", {
+          phase_type: "adaptation",
+          origin_date: "2026-01-20",
+          dest_date: "2026-01-20",
+        }),
+      ]),
+      makeDaySchedule(2, "2026-01-20", [
+        makeIntervention("wake_target", "10:00", {
+          // 4h apart, outside window
+          phase_type: "adaptation",
+          origin_date: "2026-01-20",
+          dest_date: "2026-01-20",
+        }),
+      ]),
+    ];
+
+    const result = await createEventsForSchedule(
+      "fake-token",
+      days,
+      mockEventCreator
+    );
+
+    // Both wakes created (>2h apart)
+    expect(result.created).toHaveLength(2);
+    expect(mockEventCreator).toHaveBeenCalledTimes(2);
+  });
+
+  it("skips duplicate sleep events on same conceptual night", async () => {
+    // Two sleep targets on same schedule day
+    const days: DaySchedule[] = [
+      makeDaySchedule(1, "2026-01-20", [
+        makeIntervention("sleep_target", "22:00", {
+          phase_type: "adaptation",
+          origin_date: "2026-01-20",
+          dest_date: "2026-01-20",
+        }),
+      ]),
+      makeDaySchedule(2, "2026-01-20", [
+        // Same dest_date = same conceptual night
+        makeIntervention("sleep_target", "23:00", {
+          phase_type: "adaptation",
+          origin_date: "2026-01-20",
+          dest_date: "2026-01-20",
+        }),
+      ]),
+    ];
+
+    const result = await createEventsForSchedule(
+      "fake-token",
+      days,
+      mockEventCreator
+    );
+
+    // First sleep created, second skipped
+    expect(result.created).toHaveLength(1);
+    expect(mockEventCreator).toHaveBeenCalledTimes(1);
+  });
+
+  it("creates standalone events for grouped items when sleep is skipped", async () => {
+    const days: DaySchedule[] = [
+      makeDaySchedule(1, "2026-01-20", [
+        makeIntervention("sleep_target", "22:00", {
+          phase_type: "adaptation",
+          origin_date: "2026-01-20",
+          dest_date: "2026-01-20",
+        }),
+      ]),
+      makeDaySchedule(2, "2026-01-20", [
+        makeIntervention("sleep_target", "22:30", {
+          // Duplicate (same dest_date)
+          phase_type: "adaptation",
+          origin_date: "2026-01-20",
+          dest_date: "2026-01-20",
+        }),
+        makeIntervention("melatonin", "22:30", {
+          // Grouped with sleep
+          phase_type: "adaptation",
+          origin_date: "2026-01-20",
+          dest_date: "2026-01-20",
+        }),
+      ]),
+    ];
+
+    const result = await createEventsForSchedule(
+      "fake-token",
+      days,
+      mockEventCreator
+    );
+
+    // Day 1: sleep (1 event)
+    // Day 2: sleep skipped, melatonin standalone (1 event)
+    expect(result.created).toHaveLength(2);
+    expect(mockEventCreator).toHaveBeenCalledTimes(2);
+  });
+
+  it("continues creating events after one fails", async () => {
+    // Make the second call fail
+    mockEventCreator
+      .mockResolvedValueOnce("event-1")
+      .mockRejectedValueOnce(new Error("API error"))
+      .mockResolvedValueOnce("event-3");
+
+    const days: DaySchedule[] = [
+      makeDaySchedule(1, "2026-01-20", [
+        makeIntervention("wake_target", "07:00", {
+          phase_type: "adaptation",
+          origin_date: "2026-01-20",
+          dest_date: "2026-01-20",
+        }),
+        makeIntervention("caffeine_cutoff", "14:00", {
+          phase_type: "adaptation",
+          origin_date: "2026-01-20",
+          dest_date: "2026-01-20",
+        }),
+        makeIntervention("sleep_target", "22:00", {
+          phase_type: "adaptation",
+          origin_date: "2026-01-20",
+          dest_date: "2026-01-20",
+        }),
+      ]),
+    ];
+
+    const result = await createEventsForSchedule(
+      "fake-token",
+      days,
+      mockEventCreator
+    );
+
+    // 2 succeeded, 1 failed
+    expect(result.created).toHaveLength(2);
+    expect(result.failed).toBe(1);
+    expect(mockEventCreator).toHaveBeenCalledTimes(3);
+  });
+
+  it("returns empty result for empty schedule", async () => {
+    const result = await createEventsForSchedule(
+      "fake-token",
+      [],
+      mockEventCreator
+    );
+
+    expect(result.created).toHaveLength(0);
+    expect(result.failed).toBe(0);
+    expect(mockEventCreator).not.toHaveBeenCalled();
+  });
+
+  it("handles day with only non-actionable interventions", async () => {
+    const days: DaySchedule[] = [
+      makeDaySchedule(1, "2026-01-20", [
+        makeIntervention("caffeine_ok", "08:00", {
+          // Non-actionable, filtered out
+          phase_type: "adaptation",
+          origin_date: "2026-01-20",
+          dest_date: "2026-01-20",
+        }),
+      ]),
+    ];
+
+    const result = await createEventsForSchedule(
+      "fake-token",
+      days,
+      mockEventCreator
+    );
+
+    // caffeine_ok is filtered out as non-actionable
+    expect(result.created).toHaveLength(0);
+    expect(mockEventCreator).not.toHaveBeenCalled();
   });
 });
