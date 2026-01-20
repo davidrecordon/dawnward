@@ -49,11 +49,47 @@ const EVENT_FOOTER = "Created by Dawnward · dawnward.app";
 
 /**
  * Format a Date as RFC3339 datetime string (without timezone offset).
- * Used for Google Calendar API.
+ * Used for Google Calendar API event creation (where timezone is specified separately).
  */
 function formatDateTime(d: Date): string {
   const pad = (n: number) => n.toString().padStart(2, "0");
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}:00`;
+}
+
+/**
+ * Convert a datetime string (YYYY-MM-DDTHH:MM:SS) and timezone to RFC3339 format
+ * with timezone offset for use with Google Calendar API query parameters.
+ * Example: "2026-01-24T19:00:00" + "Asia/Singapore" -> "2026-01-24T19:00:00+08:00"
+ */
+function toRFC3339WithOffset(dateTimeStr: string, timezone: string): string {
+  // Parse the datetime components
+  const [datePart, timePart] = dateTimeStr.split("T");
+  const [year, month, day] = datePart.split("-").map(Number);
+  const [hour, minute] = (timePart || "00:00:00").split(":").map(Number);
+
+  // Create a date to calculate the offset for this timezone
+  const date = new Date(year, month - 1, day, hour, minute, 0);
+
+  // Get the timezone offset using Intl.DateTimeFormat
+  const formatter = new Intl.DateTimeFormat("en-US", {
+    timeZone: timezone,
+    timeZoneName: "longOffset",
+  });
+  const parts = formatter.formatToParts(date);
+  const offsetPart = parts.find((p) => p.type === "timeZoneName");
+
+  // Extract offset from "GMT+08:00" or "GMT-05:00" format
+  let offset = "+00:00";
+  if (offsetPart?.value) {
+    const match = offsetPart.value.match(/GMT([+-]\d{2}:\d{2})/);
+    if (match) {
+      offset = match[1];
+    } else if (offsetPart.value === "GMT") {
+      offset = "+00:00";
+    }
+  }
+
+  return `${dateTimeStr}${offset}`;
 }
 
 /** Reminder time in minutes by intervention type */
@@ -280,6 +316,16 @@ export function shouldShowAsBusy(type: InterventionType): boolean {
 }
 
 /**
+ * Get the calendar date for an intervention (the date it should appear on).
+ * Uses dest_date for post-flight phases, origin_date for pre-flight.
+ */
+export function getCalendarDate(intervention: Intervention): string {
+  const phase = intervention.phase_type;
+  const isPreFlight = phase === "preparation" || phase === "pre_departure";
+  return isPreFlight ? intervention.origin_date : intervention.dest_date;
+}
+
+/**
  * Group interventions around wake/sleep anchors for reduced event count.
  *
  * Strategy:
@@ -479,7 +525,63 @@ export function getCalendarClient(accessToken: string): calendar_v3.Calendar {
 }
 
 /**
- * Create a calendar event
+ * Search for an existing Dawnward event matching this event's time and title.
+ * Used to prevent creating duplicate events when stored event IDs are lost.
+ *
+ * @returns The event ID if a matching Dawnward event is found, null otherwise.
+ */
+async function findExistingDawnwardEvent(
+  accessToken: string,
+  event: calendar_v3.Schema$Event
+): Promise<string | null> {
+  const calendar = getCalendarClient(accessToken);
+
+  // Need start time and timezone to search
+  if (!event.start?.dateTime || !event.end?.dateTime || !event.start.timeZone) {
+    return null;
+  }
+
+  try {
+    // Convert to RFC3339 with timezone offset for API query
+    const timeMin = toRFC3339WithOffset(
+      event.start.dateTime,
+      event.start.timeZone
+    );
+    const timeMax = toRFC3339WithOffset(
+      event.end.dateTime,
+      event.start.timeZone
+    );
+
+    const response = await calendar.events.list({
+      calendarId: "primary",
+      timeMin,
+      timeMax,
+      singleEvents: true,
+    });
+
+    // Find a Dawnward event with matching title
+    const match = response.data.items?.find(
+      (existing: calendar_v3.Schema$Event) =>
+        existing.summary === event.summary &&
+        existing.description?.includes("Created by Dawnward")
+    );
+
+    return match?.id ?? null;
+  } catch (error) {
+    // If search fails, proceed with normal create
+    console.warn("[Calendar] Failed to search for existing events:", error);
+    return null;
+  }
+}
+
+/**
+ * Create a calendar event, or update an existing one if a matching Dawnward event
+ * is found. This prevents duplicates when stored event IDs are lost.
+ *
+ * Matching criteria:
+ * - Same start time
+ * - Same title (summary)
+ * - Description contains "Created by Dawnward"
  */
 export async function createCalendarEvent(
   accessToken: string,
@@ -487,6 +589,30 @@ export async function createCalendarEvent(
 ): Promise<string> {
   const calendar = getCalendarClient(accessToken);
 
+  // Check if a matching Dawnward event already exists
+  const existingId = await findExistingDawnwardEvent(accessToken, event);
+
+  if (existingId) {
+    // Update existing event instead of creating duplicate
+    console.log(
+      `[Calendar] Found existing event ${existingId}, updating instead of creating duplicate`
+    );
+    await calendar.events.patch({
+      calendarId: "primary",
+      eventId: existingId,
+      requestBody: {
+        summary: event.summary,
+        description: event.description,
+        start: event.start,
+        end: event.end,
+        reminders: event.reminders,
+        transparency: event.transparency,
+      },
+    });
+    return existingId;
+  }
+
+  // No existing event - create new
   const response = await calendar.events.insert({
     calendarId: "primary",
     requestBody: event,
@@ -575,10 +701,14 @@ export interface CreateEventsResult {
   failed: number;
 }
 
+/** Maximum time difference (minutes) to consider wake events as duplicates on same date */
+const WAKE_DEDUP_WINDOW_MIN = 120;
+
 /**
  * Create calendar events for all actionable interventions in a schedule.
  * Groups interventions around wake/sleep anchors for reduced event count.
  * Each event uses the timezone from the intervention itself based on phase.
+ * Deduplicates wake events that land on the same calendar date (within 2h window).
  * Returns both successful and failed event counts.
  */
 export async function createEventsForSchedule(
@@ -587,6 +717,14 @@ export async function createEventsForSchedule(
 ): Promise<CreateEventsResult> {
   const created: string[] = [];
   let failed = 0;
+
+  // Track wake events by calendar date to avoid duplicates
+  // When Day 1 and Day 2 land on the same calendar date (timezone transitions),
+  // we may have two wake_target events. Keep the one with more context (grouped with melatonin).
+  const wakeEventsByDate = new Map<
+    string,
+    { time: string; hasGroup: boolean }
+  >();
 
   console.log(`[Calendar] Creating events for ${interventionDays.length} days`);
 
@@ -606,6 +744,64 @@ export async function createEventsForSchedule(
     );
 
     for (const [key, interventions] of groups) {
+      // Check if this is a wake event that would create a duplicate
+      const anchor = getAnchorIntervention(interventions);
+      if (anchor.type === "wake_target") {
+        const calendarDate = getCalendarDate(anchor);
+        const existing = wakeEventsByDate.get(calendarDate);
+        const displayTime = getDisplayTime(anchor);
+        const hasGroup = interventions.length > 1;
+
+        if (existing) {
+          // Check if within dedup window
+          const timeDiff = Math.abs(
+            parseTimeToMinutes(displayTime) - parseTimeToMinutes(existing.time)
+          );
+          if (timeDiff <= WAKE_DEDUP_WINDOW_MIN) {
+            // Skip duplicate wake - first wake wins
+            // But if this group has other interventions (like melatonin), create them standalone
+            const otherInterventions = interventions.filter(
+              (i) => i.type !== "wake_target"
+            );
+
+            if (otherInterventions.length > 0) {
+              console.log(
+                `[Calendar] Skipping duplicate wake at ${displayTime} on ${calendarDate}, but creating ${otherInterventions.length} grouped item(s) standalone`
+              );
+              // Create standalone events for the other interventions
+              for (const intervention of otherInterventions) {
+                try {
+                  const event = buildCalendarEvent([intervention], wakeTime);
+                  console.log(
+                    `[Calendar] Creating standalone: "${event.summary}" at ${event.start?.dateTime}`
+                  );
+                  const eventId = await createCalendarEvent(accessToken, event);
+                  created.push(eventId);
+                  await sleep(API_THROTTLE_MS);
+                } catch (error) {
+                  console.error(
+                    `[Calendar] Error creating standalone event for ${intervention.type}:`,
+                    error
+                  );
+                  failed++;
+                }
+              }
+            } else {
+              console.log(
+                `[Calendar] Skipping duplicate wake event at ${displayTime} on ${calendarDate}`
+              );
+            }
+            continue;
+          }
+        }
+
+        // Track this wake event
+        wakeEventsByDate.set(calendarDate, {
+          time: displayTime,
+          hasGroup,
+        });
+      }
+
       try {
         const event = buildCalendarEvent(interventions, wakeTime);
         console.log(

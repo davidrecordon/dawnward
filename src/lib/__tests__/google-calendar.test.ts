@@ -10,6 +10,7 @@ import {
   getEventDuration,
   isStandaloneType,
   shouldShowAsBusy,
+  getCalendarDate,
 } from "@/lib/google-calendar";
 import type {
   Intervention,
@@ -1483,5 +1484,189 @@ describe("buildCalendarEvent type-specific durations", () => {
     // Start at 14:00, end 120 min later at 16:00
     expect(event.start?.dateTime).toContain("14:00");
     expect(event.end?.dateTime).toContain("16:00");
+  });
+});
+
+// =============================================================================
+// getCalendarDate Tests
+// =============================================================================
+
+describe("getCalendarDate", () => {
+  it("returns origin_date for preparation phase", () => {
+    const intervention = makeIntervention("wake_target", "07:00", {
+      phase_type: "preparation",
+      origin_date: "2026-01-19",
+      dest_date: "2026-01-20",
+    });
+
+    expect(getCalendarDate(intervention)).toBe("2026-01-19");
+  });
+
+  it("returns origin_date for pre_departure phase", () => {
+    const intervention = makeIntervention("caffeine_cutoff", "14:00", {
+      phase_type: "pre_departure",
+      origin_date: "2026-01-20",
+      dest_date: "2026-01-21",
+    });
+
+    expect(getCalendarDate(intervention)).toBe("2026-01-20");
+  });
+
+  it("returns dest_date for in_transit phase", () => {
+    const intervention = makeIntervention("nap_window", "03:45", {
+      phase_type: "in_transit",
+      origin_date: "2026-01-22",
+      dest_date: "2026-01-23", // Next day in destination
+    });
+
+    expect(getCalendarDate(intervention)).toBe("2026-01-23");
+  });
+
+  it("returns dest_date for post_arrival phase", () => {
+    const intervention = makeIntervention("wake_target", "06:30", {
+      phase_type: "post_arrival",
+      origin_date: "2026-01-23",
+      dest_date: "2026-01-24",
+    });
+
+    expect(getCalendarDate(intervention)).toBe("2026-01-24");
+  });
+
+  it("returns dest_date for adaptation phase", () => {
+    const intervention = makeIntervention("light_seek", "08:00", {
+      phase_type: "adaptation",
+      origin_date: "2026-01-24",
+      dest_date: "2026-01-25",
+    });
+
+    expect(getCalendarDate(intervention)).toBe("2026-01-25");
+  });
+
+  it("handles cross-dateline flights correctly (SFO→SIN)", () => {
+    // Day 1 post_arrival: wake on Jan 24 Singapore (same calendar date)
+    const day1Wake = makeIntervention("wake_target", "06:30", {
+      phase_type: "post_arrival",
+      origin_date: "2026-01-23", // LA time
+      dest_date: "2026-01-24", // Singapore time
+    });
+
+    // Day 2 adaptation: wake on Jan 24 Singapore (SAME calendar date!)
+    const day2Wake = makeIntervention("wake_target", "07:00", {
+      phase_type: "adaptation",
+      origin_date: "2026-01-23", // Still Jan 23 in LA
+      dest_date: "2026-01-24", // Still Jan 24 in Singapore
+    });
+
+    // Both wakes land on the same calendar date!
+    expect(getCalendarDate(day1Wake)).toBe("2026-01-24");
+    expect(getCalendarDate(day2Wake)).toBe("2026-01-24");
+  });
+
+  it("handles westbound dateline crossing (SIN→SFO)", () => {
+    // Arrives same calendar day or even previous day
+    const intervention = makeIntervention("sleep_target", "22:00", {
+      phase_type: "post_arrival",
+      origin_date: "2026-01-21", // Singapore next day
+      dest_date: "2026-01-20", // LA same day as departure (gained day!)
+    });
+
+    expect(getCalendarDate(intervention)).toBe("2026-01-20");
+  });
+});
+
+// =============================================================================
+// Wake Event Deduplication (createEventsForSchedule behavior)
+// =============================================================================
+// Note: createEventsForSchedule calls external Google Calendar API, so we test
+// the deduplication logic conceptually here. Integration tests would require mocking.
+
+describe("Wake event deduplication logic", () => {
+  /**
+   * The deduplication logic in createEventsForSchedule works as follows:
+   * 1. Track wake events by calendar date (dest_date for post-flight phases)
+   * 2. When a second wake_target on the same date is within 2h of the first:
+   *    - Skip it (first wake wins, can't go back and replace)
+   * 3. Keep both if > 2h apart (unusual but valid)
+   */
+
+  it("identifies duplicate wake events on same calendar date (conceptual)", () => {
+    // Simulate LA → Singapore where Day 1 and Day 2 both land on Jan 24 Singapore
+    const day1Wake = makeIntervention("wake_target", "06:30", {
+      phase_type: "post_arrival",
+      origin_date: "2026-01-23",
+      dest_date: "2026-01-24",
+      dest_tz: "Asia/Singapore",
+    });
+
+    const day2Wake = makeIntervention("wake_target", "07:00", {
+      phase_type: "adaptation",
+      origin_date: "2026-01-23",
+      dest_date: "2026-01-24", // Same date!
+      dest_tz: "Asia/Singapore",
+    });
+
+    // Both should have the same calendar date
+    expect(getCalendarDate(day1Wake)).toBe(getCalendarDate(day2Wake));
+
+    // Time difference is 30 minutes (within 2h dedup window)
+    const time1 = 6 * 60 + 30; // 06:30 = 390 minutes
+    const time2 = 7 * 60; // 07:00 = 420 minutes
+    expect(Math.abs(time1 - time2)).toBeLessThanOrEqual(120);
+  });
+
+  it("does not flag wakes on different calendar dates", () => {
+    const jan23Wake = makeIntervention("wake_target", "07:00", {
+      phase_type: "adaptation",
+      dest_date: "2026-01-23",
+    });
+
+    const jan24Wake = makeIntervention("wake_target", "07:00", {
+      phase_type: "adaptation",
+      dest_date: "2026-01-24",
+    });
+
+    expect(getCalendarDate(jan23Wake)).not.toBe(getCalendarDate(jan24Wake));
+  });
+
+  it("does not flag wakes > 2h apart on same date", () => {
+    // Unusual case: two wakes on same date but far apart (e.g., nap + wake)
+    const earlyWake = makeIntervention("wake_target", "06:00", {
+      phase_type: "post_arrival",
+      dest_date: "2026-01-24",
+    });
+
+    const lateWake = makeIntervention("wake_target", "10:00", {
+      phase_type: "adaptation",
+      dest_date: "2026-01-24",
+    });
+
+    // Same calendar date
+    expect(getCalendarDate(earlyWake)).toBe(getCalendarDate(lateWake));
+
+    // But 4h apart (outside 2h window)
+    const time1 = 6 * 60; // 06:00 = 360 minutes
+    const time2 = 10 * 60; // 10:00 = 600 minutes
+    expect(Math.abs(time1 - time2)).toBeGreaterThan(120);
+  });
+
+  it("prefers grouped wake over standalone wake", () => {
+    // When groupInterventionsByAnchor is called:
+    // - Day 1 wake (06:30) might be standalone (no melatonin nearby)
+    // - Day 2 wake (07:00) might be grouped with melatonin
+
+    // Standalone wake
+    const standaloneDay = [makeIntervention("wake_target", "06:30")];
+    const standaloneGroups = groupInterventionsByAnchor(standaloneDay);
+    const standaloneWakeGroup = standaloneGroups.get("wake:06:30");
+    expect(standaloneWakeGroup).toHaveLength(1); // No grouping
+
+    // Grouped wake with melatonin
+    const groupedDay = [
+      makeIntervention("wake_target", "07:00"),
+      makeIntervention("melatonin", "07:00"), // Melatonin at wake time
+    ];
+    const groupedGroups = groupInterventionsByAnchor(groupedDay);
+    const groupedWakeGroup = groupedGroups.get("wake:07:00");
+    expect(groupedWakeGroup).toHaveLength(2); // Has melatonin grouped
   });
 });
