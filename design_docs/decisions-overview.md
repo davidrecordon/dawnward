@@ -54,12 +54,14 @@
 - **OAuth scopes (Phase 1):** `openid`, `email`, `profile`
 - **OAuth scopes (Phase 2):** Add `calendar.events` for Google Calendar sync
 
-### Calendar Integration
+### Calendar Integration (Phase 2 Complete)
 
 - **Write-only** — push events, never read user's calendar
 - **Target calendar:** Primary calendar
 - **Sync strategy:** Delete-and-replace (not complex two-way sync)
 - **Event notifications:** Calendar event alerts at time of intervention
+- **Event density:** Anchor-based grouping reduces ~20 events to ~10 per trip
+- **Timezone handling:** Per-intervention timezone (origin_tz/dest_tz) for multi-leg trips
 
 ### Trip Storage & Sharing
 
@@ -216,7 +218,7 @@ Key tables (full SQL in backend design doc):
 | Minimal Shift Tips            | DONE — Simplified view for ≤2 hour shifts          |
 | Timezone Rearchitecture       | DONE — Phase-aware dual timezone display           |
 | Set up hello@dawnward.app     | TODO — Used for Google OAuth consent screen        |
-| Phase 2 Auth (Calendar sync)  | TODO — Add calendar.events scope, sync API         |
+| Phase 2 Auth (Calendar sync)  | DONE — Calendar scope, sync API, anchor grouping   |
 | Trip Editing (Phases 3-4)     | TODO — Model state snapshots, Forger99 recalc      |
 | Anonymous trip cleanup        | TODO — Cron job to clean up old anonymous trips    |
 
@@ -235,8 +237,10 @@ Key tables (full SQL in backend design doc):
 | Testing design doc | `testing-design.md`                      |
 | This decisions doc | `decisions-overview.md`                  |
 | Trip editing spec  | `completed/trip-editing-spec.md`         |
+| Calendar Phase 2   | `completed/google-calendar-phase2.md`    |
 | Eight Sleep spec   | `exploration/eight-sleep-integration.md` |
 | Actuals UX ideas   | `exploration/actuals-ux-ideas.md`        |
 | Config audit       | `exploration/configuration-audit.md`     |
+| Scheduler issues   | `exploration/scheduler-known-issues.md`  |
 | Shovel-ready specs | `shovel_ready/*.md`                      |
 | Completed designs  | `completed/*.md`                         |

@@ -2,6 +2,7 @@
   "permissions": {
     "allow": [
       "Bash(bun:*)",
+      "Bash(bunx prettier:*)",
       "Bash(bunx shadcn@latest add:*)",
       "Bash(bunx tsc:*)",
       "Bash(eslint:*)",
@@ -20,6 +21,7 @@
       "Skill(commit-commands:*)",
       "Skill(feature-dev:*)",
       "Skill(frontend-design:*)",
+      "Skill(superpowers:*)",
       "Skill(vercel-react-best-practices)",
       "WebFetch(domain:arcascope.github.io)",
       "WebSearch"
@@ -29,6 +31,7 @@
     "frontend-design@claude-plugins-official": true,
     "feature-dev@claude-plugins-official": true,
     "commit-commands@claude-plugins-official": true,
-    "code-simplifier@claude-plugins-official": true
+    "code-simplifier@claude-plugins-official": true,
+    "superpowers@claude-plugins-official": true
   }
 }

@@ -52,7 +52,12 @@ async function refreshAccessToken(token: JWT): Promise<JWT> {
       refreshToken: refreshed.refresh_token ?? token.refreshToken,
     };
   } catch (error) {
-    console.error("Error refreshing access token:", error);
+    // Only log safe error fields, not tokens or full response
+    const safeError =
+      error && typeof error === "object" && "error" in error
+        ? { error: (error as { error: string }).error }
+        : { error: "Unknown error" };
+    console.error("Error refreshing access token:", safeError);
     // Return token without access token to force re-auth
     return {
       ...token,
@@ -78,6 +83,10 @@ export const authConfig: NextAuthConfig = {
           scope: BASE_SCOPES,
           access_type: "offline",
           prompt: "consent",
+          // Include any previously granted scopes (like calendar) in the token
+          // This way: new users get base scopes, returning users who granted
+          // calendar before automatically get calendar scope included
+          include_granted_scopes: "true",
         },
       },
     }),
@@ -136,6 +145,14 @@ export const authConfig: NextAuthConfig = {
       if (session.user && token.id) {
         session.user.id = token.id as string;
       }
+
+      // Check for token refresh errors - if refresh failed, calendar scope is invalid
+      if (token.error === "RefreshAccessTokenError") {
+        session.hasCalendarScope = false;
+        // Don't expose invalid access token
+        return session;
+      }
+
       session.hasCalendarScope = hasCalendarScope(token);
       if (session.hasCalendarScope && token.accessToken) {
         session.accessToken = token.accessToken;

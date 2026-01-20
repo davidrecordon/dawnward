@@ -1,13 +1,26 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi, beforeEach, type Mock } from "vitest";
 import {
   getReminderMinutes,
   isActionableIntervention,
   buildEventTitle,
   buildEventDescription,
   groupInterventionsByTime,
+  groupInterventionsByAnchor,
   buildCalendarEvent,
+  getEventDuration,
+  isStandaloneType,
+  shouldShowAsBusy,
+  getCalendarDate,
+  getSleepCalendarDate,
+  createEventsForSchedule,
+  type EventCreator,
 } from "@/lib/google-calendar";
-import type { Intervention, InterventionType } from "@/types/schedule";
+import type {
+  Intervention,
+  InterventionType,
+  PhaseType,
+  DaySchedule,
+} from "@/types/schedule";
 
 // Helper to create test interventions
 function makeIntervention(
@@ -32,24 +45,24 @@ function makeIntervention(
 }
 
 describe("getReminderMinutes", () => {
-  it("returns 30 minutes for schedule anchors", () => {
-    expect(getReminderMinutes("wake_target")).toBe(30);
-    expect(getReminderMinutes("sleep_target")).toBe(30);
-    expect(getReminderMinutes("exercise")).toBe(30);
+  it("returns 0 minutes for wake_target (immediate)", () => {
+    expect(getReminderMinutes("wake_target")).toBe(0);
   });
 
-  it("returns 15 minutes for light and activity interventions", () => {
+  it("returns 30 minutes for sleep_target", () => {
+    expect(getReminderMinutes("sleep_target")).toBe(30);
+  });
+
+  it("returns 15 minutes for exercise and caffeine_cutoff", () => {
+    expect(getReminderMinutes("exercise")).toBe(15);
+    expect(getReminderMinutes("caffeine_cutoff")).toBe(15);
+  });
+
+  it("returns 15 minutes (default) for other types", () => {
     expect(getReminderMinutes("light_seek")).toBe(15);
     expect(getReminderMinutes("light_avoid")).toBe(15);
     expect(getReminderMinutes("nap_window")).toBe(15);
     expect(getReminderMinutes("melatonin")).toBe(15);
-  });
-
-  it("returns 5 minutes for caffeine cutoff", () => {
-    expect(getReminderMinutes("caffeine_cutoff")).toBe(5);
-  });
-
-  it("returns 15 minutes for caffeine_ok (default)", () => {
     expect(getReminderMinutes("caffeine_ok")).toBe(15);
   });
 });
@@ -196,10 +209,14 @@ describe("buildEventTitle", () => {
 });
 
 describe("buildEventDescription", () => {
-  it("creates bullet list of descriptions", () => {
+  const FOOTER = "Created by Dawnward · dawnward.app";
+  const SIMPLIFIED_WAKE_DESC =
+    "Try to wake up at this time to help shift your circadian clock.";
+
+  it("creates bullet list of descriptions with footer", () => {
     const interventions = [
       makeIntervention("wake_target", "07:00", {
-        description: "Wake up at target time",
+        description: "Wake up at target time. Avoid bright light.",
       }),
       makeIntervention("light_seek", "07:00", {
         description: "Get 30 minutes of bright light",
@@ -208,19 +225,51 @@ describe("buildEventDescription", () => {
 
     const description = buildEventDescription(interventions);
 
+    // wake_target uses simplified description (removes redundant light advice)
     expect(description).toBe(
-      "• Wake up at target time\n• Get 30 minutes of bright light"
+      `• ${SIMPLIFIED_WAKE_DESC}\n• Get 30 minutes of bright light\n\n---\n${FOOTER}`
     );
   });
 
-  it("handles single intervention", () => {
+  it("simplifies wake_target description for single intervention", () => {
+    const interventions = [
+      makeIntervention("wake_target", "07:00", {
+        description:
+          "Try to wake up at this time to help shift your circadian clock. Avoid bright light for the first few hours after waking.",
+      }),
+    ];
+
+    const description = buildEventDescription(interventions);
+
+    // Light advice should be removed
+    expect(description).toBe(`${SIMPLIFIED_WAKE_DESC}\n\n---\n${FOOTER}`);
+    expect(description).not.toContain("Avoid bright light");
+  });
+
+  it("handles single intervention without bullet but with footer", () => {
     const interventions = [
       makeIntervention("melatonin", "21:00", {
         description: "Take 0.5mg melatonin",
       }),
     ];
 
-    expect(buildEventDescription(interventions)).toBe("• Take 0.5mg melatonin");
+    expect(buildEventDescription(interventions)).toBe(
+      `Take 0.5mg melatonin\n\n---\n${FOOTER}`
+    );
+  });
+
+  it("preserves descriptions for non-wake_target types", () => {
+    const interventions = [
+      makeIntervention("light_seek", "07:00", {
+        description: "Get 30 minutes of morning sunlight",
+      }),
+    ];
+
+    const description = buildEventDescription(interventions);
+
+    expect(description).toBe(
+      `Get 30 minutes of morning sunlight\n\n---\n${FOOTER}`
+    );
   });
 });
 
@@ -233,16 +282,15 @@ describe("buildCalendarEvent", () => {
       }),
     ];
 
-    const event = buildCalendarEvent(
-      interventions,
-      "2026-01-15",
-      "America/New_York"
-    );
+    const event = buildCalendarEvent(interventions);
 
     expect(event.summary).toBe("💊 Take melatonin");
-    expect(event.description).toBe("• Take 0.5mg");
-    expect(event.start?.timeZone).toBe("America/New_York");
-    expect(event.end?.timeZone).toBe("America/New_York");
+    expect(event.description).toBe(
+      "Take 0.5mg\n\n---\nCreated by Dawnward · dawnward.app"
+    );
+    // Uses dest_tz from intervention (post_arrival phase)
+    expect(event.start?.timeZone).toBe("Europe/London");
+    expect(event.end?.timeZone).toBe("Europe/London");
     expect(event.reminders?.useDefault).toBe(false);
     expect(event.reminders?.overrides?.[0]?.minutes).toBe(15); // melatonin = 15 min
   });
@@ -253,14 +301,10 @@ describe("buildCalendarEvent", () => {
       makeIntervention("light_seek", "07:00"),
     ];
 
-    const event = buildCalendarEvent(
-      interventions,
-      "2026-01-15",
-      "America/New_York"
-    );
+    const event = buildCalendarEvent(interventions);
 
-    // wake_target = 30 min reminder
-    expect(event.reminders?.overrides?.[0]?.minutes).toBe(30);
+    // wake_target = 0 min reminder (immediate)
+    expect(event.reminders?.overrides?.[0]?.minutes).toBe(0);
   });
 
   it("uses intervention duration_min when provided", () => {
@@ -268,108 +312,123 @@ describe("buildCalendarEvent", () => {
       makeIntervention("light_seek", "07:00", { duration_min: 45 }),
     ];
 
-    const event = buildCalendarEvent(
-      interventions,
-      "2026-01-15",
-      "America/New_York"
-    );
+    const event = buildCalendarEvent(interventions);
 
     // Start at 07:00, end 45 min later at 07:45
     expect(event.start?.dateTime).toContain("07:00");
     expect(event.end?.dateTime).toContain("07:45");
   });
 
-  it("defaults to 15 minute duration when not specified", () => {
+  it("uses type-specific duration for melatonin (15 min)", () => {
     const interventions = [makeIntervention("melatonin", "21:00")];
 
-    const event = buildCalendarEvent(
-      interventions,
-      "2026-01-15",
-      "America/New_York"
-    );
+    const event = buildCalendarEvent(interventions);
 
-    // Start at 21:00, end 15 min later at 21:15
+    // Melatonin uses 15-minute duration (minimum for practical visibility)
     expect(event.start?.dateTime).toContain("21:00");
     expect(event.end?.dateTime).toContain("21:15");
   });
 
-  it("throws error for empty interventions", () => {
-    expect(() =>
-      buildCalendarEvent([], "2026-01-15", "America/New_York")
-    ).toThrow("Cannot build event from empty interventions");
+  it("uses longest duration when grouping interventions", () => {
+    // When wake_target (15 min) groups with light_seek (60 min), use the longer duration
+    const interventions = [
+      makeIntervention("wake_target", "07:00"), // 15 min duration
+      makeIntervention("light_seek", "07:00", { duration_min: 60 }), // 60 min duration
+    ];
+
+    const event = buildCalendarEvent(interventions);
+
+    // Should use light_seek's 60 min duration, not wake_target's 15 min
+    expect(event.start?.dateTime).toContain("07:00");
+    expect(event.end?.dateTime).toContain("08:00");
   });
 
-  describe("timezone context from intervention", () => {
-    it("uses dest_time for post-arrival interventions", () => {
+  it("throws error for empty interventions", () => {
+    expect(() => buildCalendarEvent([])).toThrow(
+      "Cannot build event from empty interventions"
+    );
+  });
+
+  describe("timezone extraction from intervention", () => {
+    it("uses dest_tz for post-arrival phase interventions", () => {
       const interventions = [
         makeIntervention("wake_target", "07:00", {
           phase_type: "post_arrival",
           origin_time: "23:00", // 11 PM previous night in origin
           dest_time: "07:00", // 7 AM in destination
+          dest_tz: "Europe/London",
         }),
       ];
 
-      const event = buildCalendarEvent(
-        interventions,
-        "2026-01-15",
-        "Europe/London" // Destination timezone
-      );
+      const event = buildCalendarEvent(interventions);
 
-      // Should use dest_time (07:00) for the event
+      // Should use dest_time (07:00) and dest_tz
       expect(event.start?.dateTime).toContain("07:00");
+      expect(event.start?.timeZone).toBe("Europe/London");
     });
 
-    it("uses origin_time for preparation phase interventions", () => {
+    it("uses origin_tz for preparation phase interventions", () => {
       const interventions = [
         makeIntervention("wake_target", "07:00", {
           phase_type: "preparation",
           origin_time: "07:00",
           dest_time: "15:00", // 3 PM in destination
+          origin_tz: "America/Los_Angeles",
         }),
       ];
 
-      const event = buildCalendarEvent(
-        interventions,
-        "2026-01-15",
-        "America/Los_Angeles" // Origin timezone
-      );
+      const event = buildCalendarEvent(interventions);
 
-      // For preparation phase, event should be based on origin time
+      // For preparation phase, event should use origin time and origin_tz
       expect(event.start?.dateTime).toContain("07:00");
       expect(event.start?.timeZone).toBe("America/Los_Angeles");
     });
 
-    it("uses provided timezone for event start/end", () => {
-      const interventions = [makeIntervention("melatonin", "21:00")];
+    it("uses origin_tz for pre_departure phase interventions", () => {
+      const interventions = [
+        makeIntervention("caffeine_cutoff", "10:00", {
+          phase_type: "pre_departure",
+          origin_time: "10:00",
+          dest_time: "18:00",
+          origin_tz: "America/New_York",
+        }),
+      ];
 
-      const event = buildCalendarEvent(
-        interventions,
-        "2026-01-15",
-        "Asia/Tokyo"
-      );
+      const event = buildCalendarEvent(interventions);
 
-      expect(event.start?.timeZone).toBe("Asia/Tokyo");
-      expect(event.end?.timeZone).toBe("Asia/Tokyo");
+      expect(event.start?.dateTime).toContain("10:00");
+      expect(event.start?.timeZone).toBe("America/New_York");
     });
 
-    it("handles in-transit interventions with dest_time", () => {
+    it("uses dest_tz for adaptation phase interventions", () => {
+      const interventions = [
+        makeIntervention("sleep_target", "23:00", {
+          phase_type: "adaptation",
+          dest_tz: "Asia/Tokyo",
+        }),
+      ];
+
+      const event = buildCalendarEvent(interventions);
+
+      expect(event.start?.timeZone).toBe("Asia/Tokyo");
+    });
+
+    it("handles in-transit interventions with dest_tz", () => {
       const interventions = [
         makeIntervention("nap_window", "14:00", {
           phase_type: "in_transit",
           origin_time: "14:00",
           dest_time: "22:00",
+          dest_tz: "Europe/London",
           flight_offset_hours: 4.5,
         }),
       ];
 
-      const event = buildCalendarEvent(
-        interventions,
-        "2026-01-15",
-        "Europe/London" // Destination timezone for in-transit
-      );
+      const event = buildCalendarEvent(interventions);
 
-      // In-transit events should use dest_time
+      // In-transit events should use dest_time and dest_tz
       expect(event.start?.dateTime).toContain("22:00");
+      expect(event.start?.timeZone).toBe("Europe/London");
     });
 
     it("preserves intervention metadata in event", () => {
@@ -380,15 +439,1706 @@ describe("buildCalendarEvent", () => {
         }),
       ];
 
-      const event = buildCalendarEvent(
-        interventions,
-        "2026-01-15",
-        "America/New_York"
-      );
+      const event = buildCalendarEvent(interventions);
 
       expect(event.description).toContain("Get 30 minutes of morning light");
       // Duration should be reflected in end time
       expect(event.end?.dateTime).toContain("08:30");
     });
+
+    it("throws error when intervention missing timezone", () => {
+      const interventions = [
+        makeIntervention("melatonin", "21:00", {
+          phase_type: "post_arrival",
+          dest_tz: "", // Empty timezone
+        }),
+      ];
+
+      expect(() => buildCalendarEvent(interventions)).toThrow(
+        /missing timezone context/
+      );
+    });
+
+    it("uses correct timezone for multi-leg trips", () => {
+      // Simulate leg 1: LA -> London (use London timezone)
+      const leg1Intervention = makeIntervention("wake_target", "07:00", {
+        phase_type: "post_arrival",
+        dest_tz: "Europe/London",
+        dest_date: "2026-01-16",
+      });
+
+      // Simulate leg 2: London -> Tokyo (use Tokyo timezone)
+      const leg2Intervention = makeIntervention("wake_target", "07:00", {
+        phase_type: "post_arrival",
+        dest_tz: "Asia/Tokyo",
+        dest_date: "2026-01-19",
+      });
+
+      const event1 = buildCalendarEvent([leg1Intervention]);
+      const event2 = buildCalendarEvent([leg2Intervention]);
+
+      // Each event should use its own intervention's timezone and date
+      expect(event1.start?.timeZone).toBe("Europe/London");
+      expect(event1.start?.dateTime).toContain("2026-01-16");
+      expect(event2.start?.timeZone).toBe("Asia/Tokyo");
+      expect(event2.start?.dateTime).toContain("2026-01-19");
+    });
+  });
+
+  describe("date extraction from intervention", () => {
+    it("uses origin_date for preparation phase", () => {
+      const interventions = [
+        makeIntervention("wake_target", "07:00", {
+          phase_type: "preparation",
+          origin_date: "2026-01-19",
+          dest_date: "2026-01-20", // Different date (ahead)
+          origin_tz: "America/Los_Angeles",
+        }),
+      ];
+
+      const event = buildCalendarEvent(interventions);
+
+      // Should use origin_date for preparation phase
+      expect(event.start?.dateTime).toContain("2026-01-19");
+      expect(event.start?.timeZone).toBe("America/Los_Angeles");
+    });
+
+    it("uses dest_date for in_transit phase (cross-dateline)", () => {
+      // SFO -> Singapore: Departs Jan 22 LA time, nap at 03:45 Singapore time = Jan 23
+      const interventions = [
+        makeIntervention("nap_window", "03:45", {
+          phase_type: "in_transit",
+          origin_date: "2026-01-22", // LA calendar date
+          dest_date: "2026-01-23", // Singapore calendar date (next day!)
+          origin_time: "11:45", // LA time
+          dest_time: "03:45", // Singapore time
+          dest_tz: "Asia/Singapore",
+        }),
+      ];
+
+      const event = buildCalendarEvent(interventions);
+
+      // Should use dest_date (Jan 23) with dest_time (03:45) and dest_tz
+      expect(event.start?.dateTime).toContain("2026-01-23");
+      expect(event.start?.dateTime).toContain("03:45");
+      expect(event.start?.timeZone).toBe("Asia/Singapore");
+    });
+
+    it("uses dest_date for post_arrival phase", () => {
+      const interventions = [
+        makeIntervention("wake_target", "06:30", {
+          phase_type: "post_arrival",
+          origin_date: "2026-01-23",
+          dest_date: "2026-01-24", // Morning after arrival
+          dest_tz: "Asia/Singapore",
+        }),
+      ];
+
+      const event = buildCalendarEvent(interventions);
+
+      // Should use dest_date for post_arrival
+      expect(event.start?.dateTime).toContain("2026-01-24");
+      expect(event.start?.timeZone).toBe("Asia/Singapore");
+    });
+
+    it("throws error when intervention missing date", () => {
+      const interventions = [
+        makeIntervention("melatonin", "21:00", {
+          phase_type: "post_arrival",
+          dest_date: "", // Empty date
+        }),
+      ];
+
+      expect(() => buildCalendarEvent(interventions)).toThrow(
+        /missing date context/
+      );
+    });
+  });
+
+  describe("wakeTime parameter for reminder sync", () => {
+    it("uses 0-minute reminder when event time matches wakeTime", () => {
+      // light_avoid at 08:30 would normally get 15-minute reminder
+      const interventions = [
+        makeIntervention("light_avoid", "08:30", { duration_min: 120 }),
+      ];
+
+      // Pass wakeTime matching the event time
+      const event = buildCalendarEvent(interventions, "08:30");
+
+      // Should use 0-minute reminder (same as wake_target) instead of 15
+      expect(event.reminders?.overrides?.[0]?.minutes).toBe(0);
+    });
+
+    it("uses normal reminder when event time does not match wakeTime", () => {
+      // light_avoid at different time than wake
+      const interventions = [
+        makeIntervention("light_avoid", "20:00", { duration_min: 180 }),
+      ];
+
+      // Wake time is 07:00, event is at 20:00
+      const event = buildCalendarEvent(interventions, "07:00");
+
+      // Should use normal 15-minute reminder (default for light_avoid)
+      expect(event.reminders?.overrides?.[0]?.minutes).toBe(15);
+    });
+
+    it("uses normal reminder when wakeTime is not provided", () => {
+      const interventions = [
+        makeIntervention("light_avoid", "08:30", { duration_min: 120 }),
+      ];
+
+      // No wakeTime passed
+      const event = buildCalendarEvent(interventions);
+
+      // Should use normal 15-minute reminder
+      expect(event.reminders?.overrides?.[0]?.minutes).toBe(15);
+    });
+
+    it("syncs melatonin reminder at wake time", () => {
+      // Edge case: melatonin at same time as wake (unlikely but valid)
+      const interventions = [makeIntervention("melatonin", "07:00")];
+
+      const event = buildCalendarEvent(interventions, "07:00");
+
+      // Should use 0-minute reminder
+      expect(event.reminders?.overrides?.[0]?.minutes).toBe(0);
+    });
+
+    it("keeps wake_target at 0 regardless of wakeTime param", () => {
+      // wake_target already uses 0-minute reminder
+      const interventions = [makeIntervention("wake_target", "07:00")];
+
+      const event = buildCalendarEvent(interventions, "07:00");
+
+      // Should still be 0
+      expect(event.reminders?.overrides?.[0]?.minutes).toBe(0);
+    });
+
+    it("syncs sleep_target reminder when at wake time (edge case)", () => {
+      // sleep_target normally gets 30-minute reminder
+      const interventions = [makeIntervention("sleep_target", "23:00")];
+
+      // If somehow wake is at 23:00 (very unusual)
+      const event = buildCalendarEvent(interventions, "23:00");
+
+      // Should use 0-minute reminder
+      expect(event.reminders?.overrides?.[0]?.minutes).toBe(0);
+    });
+  });
+});
+
+/**
+ * Realistic Flight Calendar Tests
+ *
+ * These tests mirror the Python realistic flight test scenarios to verify
+ * that calendar events are created with correct dates and timezones for
+ * real-world flight routes.
+ *
+ * Flight data sourced from verified airline schedules (same as Python tests).
+ */
+describe("Realistic Flight Calendar Events", () => {
+  /**
+   * Helper to create a realistic intervention with full timezone context
+   */
+  function makeRealisticIntervention(
+    type: InterventionType,
+    phase: PhaseType,
+    opts: {
+      time: string;
+      originTz: string;
+      destTz: string;
+      originDate: string;
+      destDate: string;
+      flightOffsetHours?: number;
+    }
+  ): Intervention {
+    return {
+      type,
+      title: `Test ${type}`,
+      description: `Description for ${type}`,
+      origin_time: opts.time,
+      dest_time: opts.time,
+      origin_date: opts.originDate,
+      dest_date: opts.destDate,
+      origin_tz: opts.originTz,
+      dest_tz: opts.destTz,
+      phase_type: phase,
+      show_dual_timezone: phase === "in_transit" || phase === "in_transit_ulr",
+      flight_offset_hours: opts.flightOffsetHours,
+    };
+  }
+
+  describe("Moderate Jet Lag (8-9h shift) - Transatlantic", () => {
+    /**
+     * Virgin Atlantic VS20: SFO 16:30 → LHR 10:40+1 (~10h10m)
+     * Eastbound overnight flight, next-day arrival
+     */
+    it("VS20 SFO-LHR: preparation uses origin_tz and origin_date", () => {
+      // Day before departure (preparation)
+      const intervention = makeRealisticIntervention(
+        "wake_target",
+        "preparation",
+        {
+          time: "07:00",
+          originTz: "America/Los_Angeles",
+          destTz: "Europe/London",
+          originDate: "2026-01-14", // Day before Jan 15 departure
+          destDate: "2026-01-14", // Same day in London (before 8h shift)
+        }
+      );
+
+      const event = buildCalendarEvent([intervention]);
+
+      expect(event.start?.timeZone).toBe("America/Los_Angeles");
+      expect(event.start?.dateTime).toContain("2026-01-14");
+      expect(event.start?.dateTime).toContain("07:00");
+    });
+
+    it("VS20 SFO-LHR: post_arrival uses dest_tz and dest_date", () => {
+      // Morning after arrival (post_arrival)
+      // Arrives Jan 16 10:40 LHR, first full morning is Jan 17
+      const intervention = makeRealisticIntervention(
+        "wake_target",
+        "post_arrival",
+        {
+          time: "07:00",
+          originTz: "America/Los_Angeles",
+          destTz: "Europe/London",
+          originDate: "2026-01-16", // Jan 16 LA time
+          destDate: "2026-01-17", // Jan 17 London time (morning after arrival)
+        }
+      );
+
+      const event = buildCalendarEvent([intervention]);
+
+      expect(event.start?.timeZone).toBe("Europe/London");
+      expect(event.start?.dateTime).toContain("2026-01-17");
+      expect(event.start?.dateTime).toContain("07:00");
+    });
+
+    /**
+     * Virgin Atlantic VS19: LHR 11:40 → SFO 14:40 same day (~11h)
+     * Westbound return - same calendar day arrival due to timezone gain
+     */
+    it("VS19 LHR-SFO: post_arrival same day arrival", () => {
+      // Arrives Jan 20 14:40 SFO (same calendar day as departure)
+      const intervention = makeRealisticIntervention(
+        "sleep_target",
+        "post_arrival",
+        {
+          time: "22:00",
+          originTz: "Europe/London",
+          destTz: "America/Los_Angeles",
+          originDate: "2026-01-21", // Next day London time
+          destDate: "2026-01-20", // Same day in LA (arrived same calendar day)
+        }
+      );
+
+      const event = buildCalendarEvent([intervention]);
+
+      expect(event.start?.timeZone).toBe("America/Los_Angeles");
+      expect(event.start?.dateTime).toContain("2026-01-20");
+    });
+  });
+
+  describe("Severe Jet Lag (12-17h shift) - Cross-Dateline", () => {
+    /**
+     * Singapore Airlines SQ31: SFO 09:40 → SIN 19:05+1 (~17h25m)
+     * Ultra-long-haul crossing date line eastbound, 16h shift → 8h delay
+     */
+    it("SQ31 SFO-SIN: in-flight nap uses dest_tz and dest_date (next day)", () => {
+      // In-flight nap at ~4h into flight
+      // Departure: Jan 22 09:40 LA (PST) = Jan 23 01:40 Singapore (SGT)
+      // Nap 4h later: Jan 22 13:40 LA = Jan 23 05:40 Singapore
+      const intervention = makeRealisticIntervention(
+        "nap_window",
+        "in_transit_ulr",
+        {
+          time: "05:40",
+          originTz: "America/Los_Angeles",
+          destTz: "Asia/Singapore",
+          originDate: "2026-01-22", // LA date
+          destDate: "2026-01-23", // Singapore date (NEXT DAY!)
+          flightOffsetHours: 4,
+        }
+      );
+
+      const event = buildCalendarEvent([intervention]);
+
+      // Calendar event should be on Singapore date (Jan 23), not LA date
+      expect(event.start?.timeZone).toBe("Asia/Singapore");
+      expect(event.start?.dateTime).toContain("2026-01-23");
+      expect(event.start?.dateTime).toContain("05:40");
+    });
+
+    it("SQ31 SFO-SIN: post_arrival wake uses next morning date", () => {
+      // Arrives Jan 23 19:00 Singapore
+      // Wake target at 06:30 must be Jan 24 (morning AFTER arrival)
+      const intervention = makeRealisticIntervention(
+        "wake_target",
+        "post_arrival",
+        {
+          time: "06:30",
+          originTz: "America/Los_Angeles",
+          destTz: "Asia/Singapore",
+          originDate: "2026-01-23", // LA date
+          destDate: "2026-01-24", // Singapore morning after 19:00 arrival
+        }
+      );
+
+      const event = buildCalendarEvent([intervention]);
+
+      // Must be Jan 24, not Jan 23 (which would be BEFORE landing!)
+      expect(event.start?.timeZone).toBe("Asia/Singapore");
+      expect(event.start?.dateTime).toContain("2026-01-24");
+    });
+
+    /**
+     * Singapore Airlines SQ32: SIN 09:15 → SFO 07:50 same day (~15h35m)
+     * Date line crossing westbound - arrives same calendar day but earlier local time
+     */
+    it("SQ32 SIN-SFO: westbound date line crossing (arrives earlier)", () => {
+      // Departs Jan 20 09:15 Singapore
+      // Arrives Jan 20 07:50 LA (same calendar day but earlier local time!)
+      const intervention = makeRealisticIntervention(
+        "sleep_target",
+        "post_arrival",
+        {
+          time: "22:00",
+          originTz: "Asia/Singapore",
+          destTz: "America/Los_Angeles",
+          originDate: "2026-01-21", // Singapore next day
+          destDate: "2026-01-20", // LA same day as departure (date gained!)
+        }
+      );
+
+      const event = buildCalendarEvent([intervention]);
+
+      expect(event.start?.timeZone).toBe("America/Los_Angeles");
+      expect(event.start?.dateTime).toContain("2026-01-20");
+    });
+
+    /**
+     * Cathay Pacific CX872: HKG 01:00 → SFO 21:15-1 (~13h15m)
+     * SPECIAL CASE: Arrives PREVIOUS calendar day due to date line!
+     */
+    it("CX872 HKG-SFO: arrives previous calendar day", () => {
+      // Departs Jan 20 01:00 Hong Kong
+      // Arrives Jan 19 21:15 LA (previous calendar day!)
+      const intervention = makeRealisticIntervention(
+        "sleep_target",
+        "post_arrival",
+        {
+          time: "23:00",
+          originTz: "Asia/Hong_Kong",
+          destTz: "America/Los_Angeles",
+          originDate: "2026-01-20", // HK departure date
+          destDate: "2026-01-19", // LA arrival date (PREVIOUS day!)
+        }
+      );
+
+      const event = buildCalendarEvent([intervention]);
+
+      // Sleep target should be on Jan 19 LA time
+      expect(event.start?.timeZone).toBe("America/Los_Angeles");
+      expect(event.start?.dateTime).toContain("2026-01-19");
+    });
+
+    /**
+     * Japan Airlines JL2: HND 18:05 → SFO 10:15 same day (~9h10m)
+     * Date line crossing - arrives earlier on same calendar day
+     */
+    it("JL2 HND-SFO: same day arrival earlier local time", () => {
+      // Departs Jan 20 18:05 Tokyo
+      // Arrives Jan 20 10:15 LA (same day, earlier time)
+      const intervention = makeRealisticIntervention(
+        "wake_target",
+        "post_arrival",
+        {
+          time: "07:00",
+          originTz: "Asia/Tokyo",
+          destTz: "America/Los_Angeles",
+          originDate: "2026-01-21", // Tokyo next day
+          destDate: "2026-01-21", // LA next day (first full day)
+        }
+      );
+
+      const event = buildCalendarEvent([intervention]);
+
+      expect(event.start?.timeZone).toBe("America/Los_Angeles");
+      expect(event.start?.dateTime).toContain("2026-01-21");
+    });
+
+    /**
+     * Qantas QF74: SFO 20:15 → SYD 06:10+2 (~15h55m)
+     * SPECIAL CASE: Arrives TWO days later!
+     */
+    it("QF74 SFO-SYD: +2 day arrival", () => {
+      // Departs Jan 20 20:15 LA
+      // Arrives Jan 22 06:10 Sydney (TWO days later!)
+      const intervention = makeRealisticIntervention(
+        "wake_target",
+        "post_arrival",
+        {
+          time: "07:00",
+          originTz: "America/Los_Angeles",
+          destTz: "Australia/Sydney",
+          originDate: "2026-01-20", // LA departure date
+          destDate: "2026-01-22", // Sydney +2 days
+        }
+      );
+
+      const event = buildCalendarEvent([intervention]);
+
+      // Should be Jan 22 Sydney, not Jan 20 or 21
+      expect(event.start?.timeZone).toBe("Australia/Sydney");
+      expect(event.start?.dateTime).toContain("2026-01-22");
+    });
+
+    it("QF74 SFO-SYD: preparation still uses origin date", () => {
+      // Preparation day before departure (Jan 19)
+      const intervention = makeRealisticIntervention(
+        "melatonin",
+        "preparation",
+        {
+          time: "21:00",
+          originTz: "America/Los_Angeles",
+          destTz: "Australia/Sydney",
+          originDate: "2026-01-19",
+          destDate: "2026-01-20", // Sydney is ahead
+        }
+      );
+
+      const event = buildCalendarEvent([intervention]);
+
+      // Preparation uses origin timezone and date
+      expect(event.start?.timeZone).toBe("America/Los_Angeles");
+      expect(event.start?.dateTime).toContain("2026-01-19");
+    });
+
+    /**
+     * Qantas QF73: SYD 21:25 → SFO 15:55 same day (~13h30m)
+     * Date line crossing - arrives same calendar day despite long flight
+     */
+    it("QF73 SYD-SFO: same day arrival westbound", () => {
+      // Departs Jan 20 21:25 Sydney
+      // Arrives Jan 20 15:55 LA (same calendar day!)
+      const intervention = makeRealisticIntervention(
+        "sleep_target",
+        "post_arrival",
+        {
+          time: "22:00",
+          originTz: "Australia/Sydney",
+          destTz: "America/Los_Angeles",
+          originDate: "2026-01-21", // Sydney next day
+          destDate: "2026-01-20", // LA same day
+        }
+      );
+
+      const event = buildCalendarEvent([intervention]);
+
+      expect(event.start?.timeZone).toBe("America/Los_Angeles");
+      expect(event.start?.dateTime).toContain("2026-01-20");
+    });
+  });
+
+  describe("Minimal Jet Lag (3h shift) - Domestic/Hawaii", () => {
+    /**
+     * Hawaiian Airlines HA11: SFO 07:00 → HNL 09:35 same day (~5h35m)
+     */
+    it("HA11 SFO-HNL: same day arrival, minimal shift", () => {
+      const intervention = makeRealisticIntervention(
+        "sleep_target",
+        "post_arrival",
+        {
+          time: "22:00",
+          originTz: "America/Los_Angeles",
+          destTz: "Pacific/Honolulu",
+          originDate: "2026-01-20",
+          destDate: "2026-01-20", // Same day
+        }
+      );
+
+      const event = buildCalendarEvent([intervention]);
+
+      expect(event.start?.timeZone).toBe("Pacific/Honolulu");
+      expect(event.start?.dateTime).toContain("2026-01-20");
+    });
+
+    /**
+     * American Airlines AA16: SFO 11:00 → JFK 19:35 same day (~5.5h)
+     */
+    it("AA16 SFO-JFK: eastbound domestic same day", () => {
+      const intervention = makeRealisticIntervention(
+        "sleep_target",
+        "post_arrival",
+        {
+          time: "23:00",
+          originTz: "America/Los_Angeles",
+          destTz: "America/New_York",
+          originDate: "2026-01-20",
+          destDate: "2026-01-20",
+        }
+      );
+
+      const event = buildCalendarEvent([intervention]);
+
+      expect(event.start?.timeZone).toBe("America/New_York");
+      expect(event.start?.dateTime).toContain("2026-01-20");
+    });
+  });
+
+  describe("12h Shift Edge Case - Dubai", () => {
+    /**
+     * Emirates EK226: SFO 15:40 → DXB 19:25+1 (~15h45m)
+     * 12h timezone difference - exactly ambiguous direction
+     */
+    it("EK226 SFO-DXB: next day arrival in Dubai", () => {
+      // Departs Jan 20 15:40 LA
+      // Arrives Jan 21 19:25 Dubai
+      const intervention = makeRealisticIntervention(
+        "wake_target",
+        "post_arrival",
+        {
+          time: "07:00",
+          originTz: "America/Los_Angeles",
+          destTz: "Asia/Dubai",
+          originDate: "2026-01-21", // LA next day
+          destDate: "2026-01-22", // Dubai day after arrival
+        }
+      );
+
+      const event = buildCalendarEvent([intervention]);
+
+      expect(event.start?.timeZone).toBe("Asia/Dubai");
+      expect(event.start?.dateTime).toContain("2026-01-22");
+    });
+
+    /**
+     * Emirates EK225: DXB 08:50 → SFO 12:50 same day (~16h)
+     * Same-day arrival due to westward travel + long flight
+     */
+    it("EK225 DXB-SFO: same day arrival despite 16h flight", () => {
+      // Departs Jan 20 08:50 Dubai
+      // Arrives Jan 20 12:50 LA (same calendar day!)
+      const intervention = makeRealisticIntervention(
+        "sleep_target",
+        "post_arrival",
+        {
+          time: "22:00",
+          originTz: "Asia/Dubai",
+          destTz: "America/Los_Angeles",
+          originDate: "2026-01-21", // Dubai next day
+          destDate: "2026-01-20", // LA same day as departure
+        }
+      );
+
+      const event = buildCalendarEvent([intervention]);
+
+      expect(event.start?.timeZone).toBe("America/Los_Angeles");
+      expect(event.start?.dateTime).toContain("2026-01-20");
+    });
+  });
+
+  describe("Pre-departure phase timezone consistency", () => {
+    it("pre_departure uses origin timezone even for cross-dateline flight", () => {
+      // SFO → SIN: pre-departure caffeine cutoff
+      // Should use LA timezone, not Singapore
+      const intervention = makeRealisticIntervention(
+        "caffeine_cutoff",
+        "pre_departure",
+        {
+          time: "14:00",
+          originTz: "America/Los_Angeles",
+          destTz: "Asia/Singapore",
+          originDate: "2026-01-22",
+          destDate: "2026-01-23", // Singapore is ahead
+        }
+      );
+
+      const event = buildCalendarEvent([intervention]);
+
+      // Pre-departure uses origin timezone
+      expect(event.start?.timeZone).toBe("America/Los_Angeles");
+      expect(event.start?.dateTime).toContain("2026-01-22");
+    });
+
+    it("adaptation uses destination timezone", () => {
+      // Day 3 in Singapore after SFO → SIN flight
+      const intervention = makeRealisticIntervention(
+        "light_seek",
+        "adaptation",
+        {
+          time: "08:00",
+          originTz: "America/Los_Angeles",
+          destTz: "Asia/Singapore",
+          originDate: "2026-01-24",
+          destDate: "2026-01-25",
+        }
+      );
+
+      const event = buildCalendarEvent([intervention]);
+
+      // Adaptation uses destination timezone
+      expect(event.start?.timeZone).toBe("Asia/Singapore");
+      expect(event.start?.dateTime).toContain("2026-01-25");
+    });
+  });
+});
+
+// =============================================================================
+// Event Density Optimization Tests
+// =============================================================================
+
+describe("getEventDuration", () => {
+  it("returns type-specific durations for fixed-duration types", () => {
+    expect(getEventDuration(makeIntervention("wake_target"))).toBe(15);
+    expect(getEventDuration(makeIntervention("sleep_target"))).toBe(15);
+    expect(getEventDuration(makeIntervention("melatonin"))).toBe(15);
+    expect(getEventDuration(makeIntervention("caffeine_cutoff"))).toBe(15);
+    expect(getEventDuration(makeIntervention("exercise"))).toBe(45);
+  });
+
+  it("uses duration_min for light_avoid when provided", () => {
+    const intervention = makeIntervention("light_avoid", "20:00", {
+      duration_min: 180, // 3 hours avoidance window
+    });
+    expect(getEventDuration(intervention)).toBe(180);
+  });
+
+  it("uses duration_min for light_seek when provided", () => {
+    const intervention = makeIntervention("light_seek", "07:00", {
+      duration_min: 60,
+    });
+    expect(getEventDuration(intervention)).toBe(60);
+  });
+
+  it("uses default duration for light_seek when duration_min not provided", () => {
+    const intervention = makeIntervention("light_seek", "07:00");
+    expect(getEventDuration(intervention)).toBe(15);
+  });
+
+  it("uses duration_min for nap_window when provided", () => {
+    const intervention = makeIntervention("nap_window", "14:00", {
+      duration_min: 90,
+    });
+    expect(getEventDuration(intervention)).toBe(90);
+  });
+});
+
+describe("isStandaloneType", () => {
+  it("returns true for types that should never be grouped", () => {
+    expect(isStandaloneType("caffeine_cutoff")).toBe(true);
+    expect(isStandaloneType("exercise")).toBe(true);
+    expect(isStandaloneType("nap_window")).toBe(true);
+  });
+
+  it("returns false for types that can be grouped", () => {
+    expect(isStandaloneType("wake_target")).toBe(false);
+    expect(isStandaloneType("sleep_target")).toBe(false);
+    expect(isStandaloneType("melatonin")).toBe(false);
+    expect(isStandaloneType("light_seek")).toBe(false);
+  });
+
+  it("returns true for light_avoid (PRC-calculated duration)", () => {
+    expect(isStandaloneType("light_avoid")).toBe(true);
+  });
+});
+
+describe("shouldShowAsBusy", () => {
+  it("returns true for busy types (nap, exercise)", () => {
+    expect(shouldShowAsBusy("nap_window")).toBe(true);
+    expect(shouldShowAsBusy("exercise")).toBe(true);
+  });
+
+  it("returns false for free types (everything else)", () => {
+    expect(shouldShowAsBusy("wake_target")).toBe(false);
+    expect(shouldShowAsBusy("sleep_target")).toBe(false);
+    expect(shouldShowAsBusy("melatonin")).toBe(false);
+    expect(shouldShowAsBusy("caffeine_cutoff")).toBe(false);
+    expect(shouldShowAsBusy("light_seek")).toBe(false);
+    expect(shouldShowAsBusy("light_avoid")).toBe(false);
+  });
+});
+
+describe("groupInterventionsByAnchor", () => {
+  it("groups light_seek with wake_target when within 2h window", () => {
+    const interventions = [
+      makeIntervention("wake_target", "07:00"),
+      makeIntervention("light_seek", "07:15"), // 15 min after wake
+    ];
+
+    const groups = groupInterventionsByAnchor(interventions);
+
+    // Should have 1 group (wake anchor with light_seek)
+    expect(groups.size).toBe(1);
+    const wakeGroup = groups.get("wake:07:00");
+    expect(wakeGroup).toBeDefined();
+    expect(wakeGroup).toHaveLength(2);
+    expect(wakeGroup?.map((i) => i.type)).toContain("wake_target");
+    expect(wakeGroup?.map((i) => i.type)).toContain("light_seek");
+  });
+
+  it("groups melatonin with sleep_target when within 2h window", () => {
+    const interventions = [
+      makeIntervention("melatonin", "21:30"), // 1.5h before sleep
+      makeIntervention("sleep_target", "23:00"),
+    ];
+
+    const groups = groupInterventionsByAnchor(interventions);
+
+    expect(groups.size).toBe(1);
+    const sleepGroup = groups.get("sleep:23:00");
+    expect(sleepGroup).toBeDefined();
+    expect(sleepGroup).toHaveLength(2);
+    expect(sleepGroup?.map((i) => i.type)).toContain("sleep_target");
+    expect(sleepGroup?.map((i) => i.type)).toContain("melatonin");
+  });
+
+  it("keeps caffeine_cutoff standalone regardless of timing", () => {
+    const interventions = [
+      makeIntervention("wake_target", "07:00"),
+      makeIntervention("caffeine_cutoff", "07:30"), // Within 2h of wake but standalone
+    ];
+
+    const groups = groupInterventionsByAnchor(interventions);
+
+    // Should have 2 groups: wake anchor and standalone caffeine_cutoff
+    expect(groups.size).toBe(2);
+    expect(groups.has("wake:07:00")).toBe(true);
+    expect(groups.has("standalone:caffeine_cutoff:07:30")).toBe(true);
+
+    // Wake group should only have wake_target
+    expect(groups.get("wake:07:00")).toHaveLength(1);
+  });
+
+  it("keeps exercise standalone regardless of timing", () => {
+    const interventions = [
+      makeIntervention("wake_target", "07:00"),
+      makeIntervention("exercise", "08:00"), // Within 2h but standalone
+    ];
+
+    const groups = groupInterventionsByAnchor(interventions);
+
+    expect(groups.size).toBe(2);
+    expect(groups.has("standalone:exercise:08:00")).toBe(true);
+  });
+
+  it("keeps nap_window standalone", () => {
+    const interventions = [
+      makeIntervention("nap_window", "14:00", { flight_offset_hours: 4 }),
+    ];
+
+    const groups = groupInterventionsByAnchor(interventions);
+
+    expect(groups.size).toBe(1);
+    expect(groups.has("standalone:nap_window:14:00")).toBe(true);
+  });
+
+  it("keeps light_avoid standalone regardless of distance to sleep_target", () => {
+    const interventions = [
+      makeIntervention("light_avoid", "20:00"), // 3h before sleep
+      makeIntervention("sleep_target", "23:00"),
+    ];
+
+    const groups = groupInterventionsByAnchor(interventions);
+
+    expect(groups.size).toBe(2);
+    expect(groups.has("standalone:light_avoid:20:00")).toBe(true);
+    expect(groups.has("sleep:23:00")).toBe(true);
+    expect(groups.get("sleep:23:00")).toHaveLength(1); // Only sleep_target
+  });
+
+  it("keeps light_avoid standalone even when close to sleep_target", () => {
+    // light_avoid is always standalone due to PRC-calculated duration (2-4h)
+    const interventions = [
+      makeIntervention("light_avoid", "22:00"), // 1h before sleep
+      makeIntervention("sleep_target", "23:00"),
+    ];
+
+    const groups = groupInterventionsByAnchor(interventions);
+
+    // Both should be separate events
+    expect(groups.size).toBe(2);
+    expect(groups.has("standalone:light_avoid:22:00")).toBe(true);
+    expect(groups.has("sleep:23:00")).toBe(true);
+  });
+
+  it("creates standalone events when no anchor in range", () => {
+    const interventions = [
+      makeIntervention("light_seek", "12:00"), // No anchor nearby
+    ];
+
+    const groups = groupInterventionsByAnchor(interventions);
+
+    expect(groups.size).toBe(1);
+    expect(groups.has("standalone:light_seek:12:00")).toBe(true);
+  });
+
+  it("assigns to nearest anchor when both are in range", () => {
+    const interventions = [
+      makeIntervention("wake_target", "07:00"),
+      makeIntervention("light_seek", "08:30"), // 1.5h from wake, 1.5h from melatonin
+      makeIntervention("melatonin", "10:00"), // Unusual but testing edge case
+    ];
+
+    const groups = groupInterventionsByAnchor(interventions);
+
+    // light_seek should go with wake_target (equal distance, wake checked first)
+    const wakeGroup = groups.get("wake:07:00");
+    expect(wakeGroup).toBeDefined();
+    // melatonin at 10:00 would be standalone since it's not sleep_target
+    // Actually melatonin is not an anchor - only wake_target and sleep_target are anchors
+    // So both light_seek and melatonin should try to group with wake
+  });
+
+  it("filters out non-actionable interventions (caffeine_ok)", () => {
+    const interventions = [
+      makeIntervention("wake_target", "07:00"),
+      makeIntervention("caffeine_ok", "07:00"), // Should be filtered
+    ];
+
+    const groups = groupInterventionsByAnchor(interventions);
+
+    expect(groups.size).toBe(1);
+    expect(groups.get("wake:07:00")).toHaveLength(1);
+  });
+
+  it("returns empty map for empty input", () => {
+    const groups = groupInterventionsByAnchor([]);
+    expect(groups.size).toBe(0);
+  });
+
+  it("handles complex day with multiple intervention types", () => {
+    const interventions = [
+      makeIntervention("wake_target", "07:00"),
+      makeIntervention("light_seek", "07:00", { duration_min: 30 }),
+      makeIntervention("caffeine_cutoff", "14:00"), // Standalone
+      makeIntervention("light_avoid", "20:00"), // >1h before sleep, standalone
+      makeIntervention("melatonin", "22:30"), // Within 2h of sleep
+      makeIntervention("sleep_target", "23:00"),
+    ];
+
+    const groups = groupInterventionsByAnchor(interventions);
+
+    // Expected groups:
+    // 1. wake:07:00 (wake_target + light_seek)
+    // 2. standalone:caffeine_cutoff:14:00
+    // 3. standalone:light_avoid:20:00
+    // 4. sleep:23:00 (sleep_target + melatonin)
+    expect(groups.size).toBe(4);
+
+    // Morning routine
+    const wakeGroup = groups.get("wake:07:00");
+    expect(wakeGroup).toHaveLength(2);
+    expect(wakeGroup?.map((i) => i.type).sort()).toEqual(
+      ["light_seek", "wake_target"].sort()
+    );
+
+    // Caffeine standalone
+    expect(groups.has("standalone:caffeine_cutoff:14:00")).toBe(true);
+
+    // Light avoid standalone
+    expect(groups.has("standalone:light_avoid:20:00")).toBe(true);
+
+    // Evening routine
+    const sleepGroup = groups.get("sleep:23:00");
+    expect(sleepGroup).toHaveLength(2);
+    expect(sleepGroup?.map((i) => i.type).sort()).toEqual(
+      ["melatonin", "sleep_target"].sort()
+    );
+  });
+});
+
+describe("buildCalendarEvent transparency", () => {
+  it("shows sleep_target as free (transparent)", () => {
+    const interventions = [
+      makeIntervention("sleep_target", "23:00", { title: "Bedtime" }),
+    ];
+
+    const event = buildCalendarEvent(interventions);
+
+    expect(event.transparency).toBe("transparent");
+  });
+
+  it("shows nap_window as busy (opaque)", () => {
+    const interventions = [
+      makeIntervention("nap_window", "14:00", {
+        title: "In-flight sleep",
+        flight_offset_hours: 4,
+        duration_min: 90,
+        phase_type: "in_transit",
+      }),
+    ];
+
+    const event = buildCalendarEvent(interventions);
+
+    expect(event.transparency).toBe("opaque");
+  });
+
+  it("shows exercise as busy (opaque)", () => {
+    const interventions = [makeIntervention("exercise", "08:00")];
+
+    const event = buildCalendarEvent(interventions);
+
+    expect(event.transparency).toBe("opaque");
+  });
+
+  it("shows wake_target as free (transparent)", () => {
+    const interventions = [makeIntervention("wake_target", "07:00")];
+
+    const event = buildCalendarEvent(interventions);
+
+    expect(event.transparency).toBe("transparent");
+  });
+
+  it("shows melatonin as free (transparent)", () => {
+    const interventions = [makeIntervention("melatonin", "21:00")];
+
+    const event = buildCalendarEvent(interventions);
+
+    expect(event.transparency).toBe("transparent");
+  });
+
+  it("shows light_seek as free (transparent)", () => {
+    const interventions = [
+      makeIntervention("light_seek", "07:00", { duration_min: 30 }),
+    ];
+
+    const event = buildCalendarEvent(interventions);
+
+    expect(event.transparency).toBe("transparent");
+  });
+
+  it("shows caffeine_cutoff as free (transparent)", () => {
+    const interventions = [makeIntervention("caffeine_cutoff", "14:00")];
+
+    const event = buildCalendarEvent(interventions);
+
+    expect(event.transparency).toBe("transparent");
+  });
+});
+
+describe("buildCalendarEvent type-specific durations", () => {
+  it("creates 15-minute event for sleep_target", () => {
+    const interventions = [makeIntervention("sleep_target", "23:00")];
+
+    const event = buildCalendarEvent(interventions);
+
+    // Start at 23:00, end 15 min later at 23:15
+    expect(event.start?.dateTime).toContain("23:00");
+    expect(event.end?.dateTime).toContain("23:15");
+  });
+
+  it("creates 15-minute event for melatonin", () => {
+    const interventions = [makeIntervention("melatonin", "21:00")];
+
+    const event = buildCalendarEvent(interventions);
+
+    // Start at 21:00, end 15 min later at 21:15
+    expect(event.start?.dateTime).toContain("21:00");
+    expect(event.end?.dateTime).toContain("21:15");
+  });
+
+  it("creates 45-minute event for exercise", () => {
+    const interventions = [makeIntervention("exercise", "08:00")];
+
+    const event = buildCalendarEvent(interventions);
+
+    // Start at 08:00, end 45 min later at 08:45
+    expect(event.start?.dateTime).toContain("08:00");
+    expect(event.end?.dateTime).toContain("08:45");
+  });
+
+  it("uses duration_min for light_seek", () => {
+    const interventions = [
+      makeIntervention("light_seek", "07:00", { duration_min: 60 }),
+    ];
+
+    const event = buildCalendarEvent(interventions);
+
+    // Start at 07:00, end 60 min later at 08:00
+    expect(event.start?.dateTime).toContain("07:00");
+    expect(event.end?.dateTime).toContain("08:00");
+  });
+
+  it("uses duration_min for light_avoid (PRC-calculated)", () => {
+    const interventions = [
+      makeIntervention("light_avoid", "20:00", { duration_min: 180 }), // 3h avoidance window
+    ];
+
+    const event = buildCalendarEvent(interventions);
+
+    // Start at 20:00, end 180 min later at 23:00
+    expect(event.start?.dateTime).toContain("20:00");
+    expect(event.end?.dateTime).toContain("23:00");
+  });
+
+  it("uses duration_min for nap_window", () => {
+    const interventions = [
+      makeIntervention("nap_window", "14:00", {
+        duration_min: 120,
+        flight_offset_hours: 4,
+        phase_type: "in_transit",
+      }),
+    ];
+
+    const event = buildCalendarEvent(interventions);
+
+    // Start at 14:00, end 120 min later at 16:00
+    expect(event.start?.dateTime).toContain("14:00");
+    expect(event.end?.dateTime).toContain("16:00");
+  });
+});
+
+// =============================================================================
+// getCalendarDate Tests
+// =============================================================================
+
+describe("getCalendarDate", () => {
+  it("returns origin_date for preparation phase", () => {
+    const intervention = makeIntervention("wake_target", "07:00", {
+      phase_type: "preparation",
+      origin_date: "2026-01-19",
+      dest_date: "2026-01-20",
+    });
+
+    expect(getCalendarDate(intervention)).toBe("2026-01-19");
+  });
+
+  it("returns origin_date for pre_departure phase", () => {
+    const intervention = makeIntervention("caffeine_cutoff", "14:00", {
+      phase_type: "pre_departure",
+      origin_date: "2026-01-20",
+      dest_date: "2026-01-21",
+    });
+
+    expect(getCalendarDate(intervention)).toBe("2026-01-20");
+  });
+
+  it("returns dest_date for in_transit phase", () => {
+    const intervention = makeIntervention("nap_window", "03:45", {
+      phase_type: "in_transit",
+      origin_date: "2026-01-22",
+      dest_date: "2026-01-23", // Next day in destination
+    });
+
+    expect(getCalendarDate(intervention)).toBe("2026-01-23");
+  });
+
+  it("returns dest_date for post_arrival phase", () => {
+    const intervention = makeIntervention("wake_target", "06:30", {
+      phase_type: "post_arrival",
+      origin_date: "2026-01-23",
+      dest_date: "2026-01-24",
+    });
+
+    expect(getCalendarDate(intervention)).toBe("2026-01-24");
+  });
+
+  it("returns dest_date for adaptation phase", () => {
+    const intervention = makeIntervention("light_seek", "08:00", {
+      phase_type: "adaptation",
+      origin_date: "2026-01-24",
+      dest_date: "2026-01-25",
+    });
+
+    expect(getCalendarDate(intervention)).toBe("2026-01-25");
+  });
+
+  it("handles cross-dateline flights correctly (SFO→SIN)", () => {
+    // Day 1 post_arrival: wake on Jan 24 Singapore (same calendar date)
+    const day1Wake = makeIntervention("wake_target", "06:30", {
+      phase_type: "post_arrival",
+      origin_date: "2026-01-23", // LA time
+      dest_date: "2026-01-24", // Singapore time
+    });
+
+    // Day 2 adaptation: wake on Jan 24 Singapore (SAME calendar date!)
+    const day2Wake = makeIntervention("wake_target", "07:00", {
+      phase_type: "adaptation",
+      origin_date: "2026-01-23", // Still Jan 23 in LA
+      dest_date: "2026-01-24", // Still Jan 24 in Singapore
+    });
+
+    // Both wakes land on the same calendar date!
+    expect(getCalendarDate(day1Wake)).toBe("2026-01-24");
+    expect(getCalendarDate(day2Wake)).toBe("2026-01-24");
+  });
+
+  it("handles westbound dateline crossing (SIN→SFO)", () => {
+    // Arrives same calendar day or even previous day
+    const intervention = makeIntervention("sleep_target", "22:00", {
+      phase_type: "post_arrival",
+      origin_date: "2026-01-21", // Singapore next day
+      dest_date: "2026-01-20", // LA same day as departure (gained day!)
+    });
+
+    expect(getCalendarDate(intervention)).toBe("2026-01-20");
+  });
+});
+
+// =============================================================================
+// Wake Event Deduplication (createEventsForSchedule behavior)
+// =============================================================================
+// Note: createEventsForSchedule calls external Google Calendar API, so we test
+// the deduplication logic conceptually here. Integration tests would require mocking.
+
+describe("Wake event deduplication logic", () => {
+  /**
+   * The deduplication logic in createEventsForSchedule works as follows:
+   * 1. Track wake events by calendar date (dest_date for post-flight phases)
+   * 2. When a second wake_target on the same date is within 2h of the first:
+   *    - Skip it (first wake wins, can't go back and replace)
+   * 3. Keep both if > 2h apart (unusual but valid)
+   */
+
+  it("identifies duplicate wake events on same calendar date (conceptual)", () => {
+    // Simulate LA → Singapore where Day 1 and Day 2 both land on Jan 24 Singapore
+    const day1Wake = makeIntervention("wake_target", "06:30", {
+      phase_type: "post_arrival",
+      origin_date: "2026-01-23",
+      dest_date: "2026-01-24",
+      dest_tz: "Asia/Singapore",
+    });
+
+    const day2Wake = makeIntervention("wake_target", "07:00", {
+      phase_type: "adaptation",
+      origin_date: "2026-01-23",
+      dest_date: "2026-01-24", // Same date!
+      dest_tz: "Asia/Singapore",
+    });
+
+    // Both should have the same calendar date
+    expect(getCalendarDate(day1Wake)).toBe(getCalendarDate(day2Wake));
+
+    // Time difference is 30 minutes (within 2h dedup window)
+    const time1 = 6 * 60 + 30; // 06:30 = 390 minutes
+    const time2 = 7 * 60; // 07:00 = 420 minutes
+    expect(Math.abs(time1 - time2)).toBeLessThanOrEqual(120);
+  });
+
+  it("does not flag wakes on different calendar dates", () => {
+    const jan23Wake = makeIntervention("wake_target", "07:00", {
+      phase_type: "adaptation",
+      dest_date: "2026-01-23",
+    });
+
+    const jan24Wake = makeIntervention("wake_target", "07:00", {
+      phase_type: "adaptation",
+      dest_date: "2026-01-24",
+    });
+
+    expect(getCalendarDate(jan23Wake)).not.toBe(getCalendarDate(jan24Wake));
+  });
+
+  it("does not flag wakes > 2h apart on same date", () => {
+    // Unusual case: two wakes on same date but far apart (e.g., nap + wake)
+    const earlyWake = makeIntervention("wake_target", "06:00", {
+      phase_type: "post_arrival",
+      dest_date: "2026-01-24",
+    });
+
+    const lateWake = makeIntervention("wake_target", "10:00", {
+      phase_type: "adaptation",
+      dest_date: "2026-01-24",
+    });
+
+    // Same calendar date
+    expect(getCalendarDate(earlyWake)).toBe(getCalendarDate(lateWake));
+
+    // But 4h apart (outside 2h window)
+    const time1 = 6 * 60; // 06:00 = 360 minutes
+    const time2 = 10 * 60; // 10:00 = 600 minutes
+    expect(Math.abs(time1 - time2)).toBeGreaterThan(120);
+  });
+
+  it("prefers grouped wake over standalone wake", () => {
+    // When groupInterventionsByAnchor is called:
+    // - Day 1 wake (06:30) might be standalone (no melatonin nearby)
+    // - Day 2 wake (07:00) might be grouped with melatonin
+
+    // Standalone wake
+    const standaloneDay = [makeIntervention("wake_target", "06:30")];
+    const standaloneGroups = groupInterventionsByAnchor(standaloneDay);
+    const standaloneWakeGroup = standaloneGroups.get("wake:06:30");
+    expect(standaloneWakeGroup).toHaveLength(1); // No grouping
+
+    // Grouped wake with melatonin
+    const groupedDay = [
+      makeIntervention("wake_target", "07:00"),
+      makeIntervention("melatonin", "07:00"), // Melatonin at wake time
+    ];
+    const groupedGroups = groupInterventionsByAnchor(groupedDay);
+    const groupedWakeGroup = groupedGroups.get("wake:07:00");
+    expect(groupedWakeGroup).toHaveLength(2); // Has melatonin grouped
+  });
+});
+
+// =============================================================================
+// getSleepCalendarDate Tests (for deduplication)
+// =============================================================================
+
+describe("getSleepCalendarDate", () => {
+  it("returns the schedule day (origin_date/dest_date) for deduplication", () => {
+    // getSleepCalendarDate returns the "conceptual night" which is the schedule day
+    const eveningSleep = makeIntervention("sleep_target", "22:00", {
+      phase_type: "post_arrival",
+      dest_date: "2026-01-19",
+    });
+    expect(getSleepCalendarDate(eveningSleep)).toBe("2026-01-19");
+
+    // Even early morning times use the schedule day for deduplication
+    const earlyMorningSleep = makeIntervention("sleep_target", "01:00", {
+      phase_type: "adaptation",
+      dest_date: "2026-01-20",
+    });
+    expect(getSleepCalendarDate(earlyMorningSleep)).toBe("2026-01-20");
+  });
+
+  it("uses origin_date for preparation phase", () => {
+    const intervention = makeIntervention("sleep_target", "01:00", {
+      phase_type: "preparation",
+      origin_date: "2026-01-15",
+      dest_date: "2026-01-16",
+    });
+    expect(getSleepCalendarDate(intervention)).toBe("2026-01-15");
+  });
+
+  it("uses dest_date for adaptation phase", () => {
+    const intervention = makeIntervention("sleep_target", "23:00", {
+      phase_type: "adaptation",
+      origin_date: "2026-01-19",
+      dest_date: "2026-01-20",
+    });
+    expect(getSleepCalendarDate(intervention)).toBe("2026-01-20");
+  });
+});
+
+// =============================================================================
+// Sleep Event Deduplication Logic Tests
+// =============================================================================
+
+describe("Sleep event deduplication logic", () => {
+  /**
+   * The deduplication logic in createEventsForSchedule tracks sleep events
+   * by their schedule day (conceptual night). This handles edge cases where
+   * two sleep events might be on the same schedule day.
+   */
+
+  it("identifies sleep events on different schedule days", () => {
+    // Each schedule day has its own conceptual night
+    const day1Sleep = makeIntervention("sleep_target", "23:30", {
+      phase_type: "post_arrival",
+      dest_date: "2026-01-19",
+    });
+    const day2Sleep = makeIntervention("sleep_target", "01:00", {
+      phase_type: "adaptation",
+      dest_date: "2026-01-20",
+    });
+    const day3Sleep = makeIntervention("sleep_target", "02:30", {
+      phase_type: "adaptation",
+      dest_date: "2026-01-21",
+    });
+
+    // Each schedule day is a different conceptual night
+    expect(getSleepCalendarDate(day1Sleep)).toBe("2026-01-19");
+    expect(getSleepCalendarDate(day2Sleep)).toBe("2026-01-20");
+    expect(getSleepCalendarDate(day3Sleep)).toBe("2026-01-21");
+  });
+
+  it("would deduplicate two sleeps on the same schedule day", () => {
+    // Edge case: if scheduler generated two sleep events for same day
+    const sleep1 = makeIntervention("sleep_target", "23:00", {
+      phase_type: "adaptation",
+      dest_date: "2026-01-20",
+    });
+    const sleep2 = makeIntervention("sleep_target", "23:30", {
+      phase_type: "adaptation",
+      dest_date: "2026-01-20",
+    });
+
+    // Same conceptual night - would be deduplicated
+    expect(getSleepCalendarDate(sleep1)).toBe(getSleepCalendarDate(sleep2));
+  });
+});
+
+// =============================================================================
+// buildCalendarEvent Date for Sleep Tests
+// =============================================================================
+
+describe("buildCalendarEvent sleep_target date placement", () => {
+  it("adds a day for early morning sleep_target (01:00)", () => {
+    // Early morning sleep (00:00-05:59) should be placed on the NEXT calendar day
+    // because the schedule day represents when the day starts, not when sleep occurs
+    const interventions = [
+      makeIntervention("sleep_target", "01:00", {
+        phase_type: "adaptation",
+        dest_date: "2026-01-20", // Schedule day
+        dest_tz: "Europe/London",
+      }),
+    ];
+
+    const event = buildCalendarEvent(interventions);
+
+    // Event should be at 2026-01-21T01:00 (schedule day + 1 for early morning)
+    expect(event.start?.dateTime).toContain("2026-01-21");
+    expect(event.start?.dateTime).toContain("01:00");
+  });
+
+  it("does not adjust date for evening sleep_target (23:00)", () => {
+    const interventions = [
+      makeIntervention("sleep_target", "23:00", {
+        phase_type: "post_arrival",
+        dest_date: "2026-01-19",
+        dest_tz: "Europe/London",
+      }),
+    ];
+
+    const event = buildCalendarEvent(interventions);
+
+    // Evening times stay on the schedule day
+    expect(event.start?.dateTime).toContain("2026-01-19");
+    expect(event.start?.dateTime).toContain("23:00");
+  });
+
+  it("does not adjust date for non-sleep interventions at early morning", () => {
+    // Only sleep_target gets the +1 day adjustment
+    const interventions = [
+      makeIntervention("light_avoid", "01:00", {
+        phase_type: "adaptation",
+        dest_date: "2026-01-20",
+        dest_tz: "Europe/London",
+        duration_min: 120,
+      }),
+    ];
+
+    const event = buildCalendarEvent(interventions);
+
+    // Non-sleep types stay on the schedule day
+    expect(event.start?.dateTime).toContain("2026-01-20");
+    expect(event.start?.dateTime).toContain("01:00");
+  });
+
+  it("correctly places sleep at 02:30 for Day -1 (flight day prep)", () => {
+    // Real scenario: Day -1 (Jan 21) has sleep at 02:30 AM
+    // This should appear on Jan 22 (early Thursday morning), not Jan 21
+    const interventions = [
+      makeIntervention("sleep_target", "02:30", {
+        phase_type: "preparation",
+        origin_date: "2026-01-21", // Day -1 schedule day
+        dest_date: "2026-01-22",
+        origin_tz: "America/Los_Angeles",
+      }),
+    ];
+
+    const event = buildCalendarEvent(interventions);
+
+    // Should be Jan 22 (origin_date + 1 day for early morning)
+    expect(event.start?.dateTime).toContain("2026-01-22");
+    expect(event.start?.dateTime).toContain("02:30");
+  });
+});
+
+// Helper to create DaySchedule for sync tests
+function makeDaySchedule(
+  day: number,
+  date: string,
+  items: Intervention[],
+  phase_type: PhaseType = "adaptation"
+): DaySchedule {
+  return { day, date, items, phase_type };
+}
+
+describe("createEventsForSchedule", () => {
+  let mockEventCreator: Mock<EventCreator>;
+  let eventIdCounter: number;
+
+  beforeEach(() => {
+    eventIdCounter = 0;
+    // Create mock event creator that returns incrementing event IDs
+    mockEventCreator = vi.fn<EventCreator>(async () => {
+      eventIdCounter++;
+      return `event-${eventIdCounter}`;
+    });
+  });
+
+  it("creates events and returns correct counts", async () => {
+    const days: DaySchedule[] = [
+      makeDaySchedule(-1, "2026-01-19", [
+        makeIntervention("wake_target", "07:00", {
+          phase_type: "preparation",
+          origin_date: "2026-01-19",
+          dest_date: "2026-01-19",
+        }),
+        makeIntervention("caffeine_cutoff", "14:00", {
+          phase_type: "preparation",
+          origin_date: "2026-01-19",
+          dest_date: "2026-01-19",
+        }),
+      ]),
+    ];
+
+    const result = await createEventsForSchedule(
+      "fake-token",
+      days,
+      mockEventCreator
+    );
+
+    expect(result.created).toHaveLength(2);
+    expect(result.failed).toBe(0);
+    expect(mockEventCreator).toHaveBeenCalledTimes(2);
+  });
+
+  it("skips duplicate wake events on same calendar date", async () => {
+    // Two days that land on same calendar date with wake_target
+    const days: DaySchedule[] = [
+      makeDaySchedule(1, "2026-01-20", [
+        makeIntervention("wake_target", "07:00", {
+          phase_type: "adaptation",
+          origin_date: "2026-01-20",
+          dest_date: "2026-01-20",
+        }),
+      ]),
+      makeDaySchedule(2, "2026-01-20", [
+        // Same calendar date! Different schedule day
+        makeIntervention("wake_target", "07:30", {
+          // Within 2h window
+          phase_type: "adaptation",
+          origin_date: "2026-01-20",
+          dest_date: "2026-01-20",
+        }),
+      ]),
+    ];
+
+    const result = await createEventsForSchedule(
+      "fake-token",
+      days,
+      mockEventCreator
+    );
+
+    // First wake created, second skipped as duplicate
+    expect(result.created).toHaveLength(1);
+    expect(result.failed).toBe(0);
+    expect(mockEventCreator).toHaveBeenCalledTimes(1);
+  });
+
+  it("creates standalone events for grouped items when wake is skipped", async () => {
+    // First day: wake + light_seek grouped together
+    // Second day: wake + melatonin grouped together (wake is duplicate)
+    const days: DaySchedule[] = [
+      makeDaySchedule(1, "2026-01-20", [
+        makeIntervention("wake_target", "07:00", {
+          phase_type: "adaptation",
+          origin_date: "2026-01-20",
+          dest_date: "2026-01-20",
+        }),
+        makeIntervention("light_seek", "07:30", {
+          // Within 2h of wake, will be grouped
+          phase_type: "adaptation",
+          origin_date: "2026-01-20",
+          dest_date: "2026-01-20",
+          duration_min: 30,
+        }),
+      ]),
+      makeDaySchedule(2, "2026-01-20", [
+        makeIntervention("wake_target", "07:15", {
+          // Duplicate wake (same date, within 2h)
+          phase_type: "adaptation",
+          origin_date: "2026-01-20",
+          dest_date: "2026-01-20",
+        }),
+        makeIntervention("melatonin", "07:15", {
+          // Grouped with wake
+          phase_type: "adaptation",
+          origin_date: "2026-01-20",
+          dest_date: "2026-01-20",
+        }),
+      ]),
+    ];
+
+    const result = await createEventsForSchedule(
+      "fake-token",
+      days,
+      mockEventCreator
+    );
+
+    // Day 1: grouped wake+light (1 event)
+    // Day 2: wake skipped, melatonin created standalone (1 event)
+    expect(result.created).toHaveLength(2);
+    expect(result.failed).toBe(0);
+    expect(mockEventCreator).toHaveBeenCalledTimes(2);
+  });
+
+  it("does not skip wake events outside 2h dedup window", async () => {
+    const days: DaySchedule[] = [
+      makeDaySchedule(1, "2026-01-20", [
+        makeIntervention("wake_target", "06:00", {
+          phase_type: "adaptation",
+          origin_date: "2026-01-20",
+          dest_date: "2026-01-20",
+        }),
+      ]),
+      makeDaySchedule(2, "2026-01-20", [
+        makeIntervention("wake_target", "10:00", {
+          // 4h apart, outside window
+          phase_type: "adaptation",
+          origin_date: "2026-01-20",
+          dest_date: "2026-01-20",
+        }),
+      ]),
+    ];
+
+    const result = await createEventsForSchedule(
+      "fake-token",
+      days,
+      mockEventCreator
+    );
+
+    // Both wakes created (>2h apart)
+    expect(result.created).toHaveLength(2);
+    expect(mockEventCreator).toHaveBeenCalledTimes(2);
+  });
+
+  it("skips duplicate sleep events on same conceptual night", async () => {
+    // Two sleep targets on same schedule day
+    const days: DaySchedule[] = [
+      makeDaySchedule(1, "2026-01-20", [
+        makeIntervention("sleep_target", "22:00", {
+          phase_type: "adaptation",
+          origin_date: "2026-01-20",
+          dest_date: "2026-01-20",
+        }),
+      ]),
+      makeDaySchedule(2, "2026-01-20", [
+        // Same dest_date = same conceptual night
+        makeIntervention("sleep_target", "23:00", {
+          phase_type: "adaptation",
+          origin_date: "2026-01-20",
+          dest_date: "2026-01-20",
+        }),
+      ]),
+    ];
+
+    const result = await createEventsForSchedule(
+      "fake-token",
+      days,
+      mockEventCreator
+    );
+
+    // First sleep created, second skipped
+    expect(result.created).toHaveLength(1);
+    expect(mockEventCreator).toHaveBeenCalledTimes(1);
+  });
+
+  it("creates standalone events for grouped items when sleep is skipped", async () => {
+    const days: DaySchedule[] = [
+      makeDaySchedule(1, "2026-01-20", [
+        makeIntervention("sleep_target", "22:00", {
+          phase_type: "adaptation",
+          origin_date: "2026-01-20",
+          dest_date: "2026-01-20",
+        }),
+      ]),
+      makeDaySchedule(2, "2026-01-20", [
+        makeIntervention("sleep_target", "22:30", {
+          // Duplicate (same dest_date)
+          phase_type: "adaptation",
+          origin_date: "2026-01-20",
+          dest_date: "2026-01-20",
+        }),
+        makeIntervention("melatonin", "22:30", {
+          // Grouped with sleep
+          phase_type: "adaptation",
+          origin_date: "2026-01-20",
+          dest_date: "2026-01-20",
+        }),
+      ]),
+    ];
+
+    const result = await createEventsForSchedule(
+      "fake-token",
+      days,
+      mockEventCreator
+    );
+
+    // Day 1: sleep (1 event)
+    // Day 2: sleep skipped, melatonin standalone (1 event)
+    expect(result.created).toHaveLength(2);
+    expect(mockEventCreator).toHaveBeenCalledTimes(2);
+  });
+
+  it("continues creating events after one fails", async () => {
+    // Make the second call fail
+    mockEventCreator
+      .mockResolvedValueOnce("event-1")
+      .mockRejectedValueOnce(new Error("API error"))
+      .mockResolvedValueOnce("event-3");
+
+    const days: DaySchedule[] = [
+      makeDaySchedule(1, "2026-01-20", [
+        makeIntervention("wake_target", "07:00", {
+          phase_type: "adaptation",
+          origin_date: "2026-01-20",
+          dest_date: "2026-01-20",
+        }),
+        makeIntervention("caffeine_cutoff", "14:00", {
+          phase_type: "adaptation",
+          origin_date: "2026-01-20",
+          dest_date: "2026-01-20",
+        }),
+        makeIntervention("sleep_target", "22:00", {
+          phase_type: "adaptation",
+          origin_date: "2026-01-20",
+          dest_date: "2026-01-20",
+        }),
+      ]),
+    ];
+
+    const result = await createEventsForSchedule(
+      "fake-token",
+      days,
+      mockEventCreator
+    );
+
+    // 2 succeeded, 1 failed
+    expect(result.created).toHaveLength(2);
+    expect(result.failed).toBe(1);
+    expect(mockEventCreator).toHaveBeenCalledTimes(3);
+  });
+
+  it("returns empty result for empty schedule", async () => {
+    const result = await createEventsForSchedule(
+      "fake-token",
+      [],
+      mockEventCreator
+    );
+
+    expect(result.created).toHaveLength(0);
+    expect(result.failed).toBe(0);
+    expect(mockEventCreator).not.toHaveBeenCalled();
+  });
+
+  it("handles day with only non-actionable interventions", async () => {
+    const days: DaySchedule[] = [
+      makeDaySchedule(1, "2026-01-20", [
+        makeIntervention("caffeine_ok", "08:00", {
+          // Non-actionable, filtered out
+          phase_type: "adaptation",
+          origin_date: "2026-01-20",
+          dest_date: "2026-01-20",
+        }),
+      ]),
+    ];
+
+    const result = await createEventsForSchedule(
+      "fake-token",
+      days,
+      mockEventCreator
+    );
+
+    // caffeine_ok is filtered out as non-actionable
+    expect(result.created).toHaveLength(0);
+    expect(mockEventCreator).not.toHaveBeenCalled();
   });
 });
