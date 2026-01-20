@@ -272,18 +272,18 @@ Anchor-based grouping reduces calendar clutter (~20 events → ~10 events per tr
 
 Note: `sleep_target` was intentionally kept as "free" since users may not always follow the exact bedtime.
 
-#### Sleep Event Handling
+#### Wake/Sleep Event Handling
 
 Early morning sleep times (00:00-05:59) require special handling because the scheduler's "schedule day" differs from the actual calendar day. For example, a 2:30 AM sleep at the end of Day -1's schedule should appear on the next calendar day.
 
-| Line | Constant                    | Value | Purpose                                                 |
-| ---- | --------------------------- | ----- | ------------------------------------------------------- |
-| 48   | `LATE_NIGHT_THRESHOLD_HOUR` | 6     | Hours below which sleep is considered "early morning"   |
-| 731  | `SLEEP_DEDUP_WINDOW_MIN`    | 120   | Minutes within which sleep events are deduplicated (2h) |
+| Line | Constant                    | Value               | Purpose                                               |
+| ---- | --------------------------- | ------------------- | ----------------------------------------------------- |
+| 45   | `DEDUP_WINDOW_MIN`          | GROUPING_WINDOW_MIN | Shared dedup window for wake/sleep events (2h)        |
+| 51   | `LATE_NIGHT_THRESHOLD_HOUR` | 6                   | Hours below which sleep is considered "early morning" |
 
 **Date adjustment logic:** In `buildCalendarEvent()`, sleep_target events with times before 06:00 get +1 day added to their calendar date. This ensures that "late night" sleep (end of a schedule day) appears on the correct calendar date.
 
-**Deduplication:** When sleep times shift across consecutive days (e.g., 23:30 → 01:00), both can appear within 2 hours of each other. Sleep events are tracked by their schedule day ("conceptual night") and deduplicated using the same 2-hour window as wake events.
+**Deduplication:** Both wake and sleep events use the same 2-hour window (`DEDUP_WINDOW_MIN`, which references `GROUPING_WINDOW_MIN`) to prevent duplicates when times shift across consecutive days.
 
 #### Other Constants
 

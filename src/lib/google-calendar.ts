@@ -41,6 +41,9 @@ const SHOW_AS_BUSY: Set<InterventionType> = new Set(["nap_window", "exercise"]);
 /** Grouping window in minutes (interventions within this of anchor get grouped) */
 const GROUPING_WINDOW_MIN = 120;
 
+/** Time window for deduplicating wake/sleep events on same calendar date */
+const DEDUP_WINDOW_MIN = GROUPING_WINDOW_MIN;
+
 /** Default event duration in minutes when not specified */
 const DEFAULT_EVENT_DURATION_MIN = 15;
 
@@ -155,6 +158,12 @@ const SHORT_LABELS: Partial<Record<InterventionType, string>> = {
   nap_window: "Nap",
 };
 
+/** Anchor labels for grouped event titles (when anchor has other items) */
+const ANCHOR_LABELS: Partial<Record<InterventionType, string>> = {
+  wake_target: "Wake up",
+  sleep_target: "Bedtime",
+};
+
 /**
  * Get short label for grouped event titles
  */
@@ -208,15 +217,7 @@ export function buildEventTitle(interventions: Intervention[]): string {
     .join(" + ");
 
   if (otherLabels) {
-    // Shorten anchor title for grouped display
-    let anchorLabel: string;
-    if (anchor.type === "wake_target") {
-      anchorLabel = "Wake up";
-    } else if (anchor.type === "sleep_target") {
-      anchorLabel = "Bedtime";
-    } else {
-      anchorLabel = anchor.title;
-    }
+    const anchorLabel = ANCHOR_LABELS[anchor.type] ?? anchor.title;
     return `${emoji} ${anchorLabel}: ${otherLabels}`;
   }
 
@@ -319,13 +320,20 @@ export function shouldShowAsBusy(type: InterventionType): boolean {
 }
 
 /**
+ * Check if a phase is pre-flight (user still at origin location).
+ */
+function isPreFlightPhase(phase: string): boolean {
+  return phase === "preparation" || phase === "pre_departure";
+}
+
+/**
  * Get the calendar date for an intervention (the date it should appear on).
  * Uses dest_date for post-flight phases, origin_date for pre-flight.
  */
 export function getCalendarDate(intervention: Intervention): string {
-  const phase = intervention.phase_type;
-  const isPreFlight = phase === "preparation" || phase === "pre_departure";
-  return isPreFlight ? intervention.origin_date : intervention.dest_date;
+  return isPreFlightPhase(intervention.phase_type)
+    ? intervention.origin_date
+    : intervention.dest_date;
 }
 
 /**
@@ -473,10 +481,9 @@ export function buildCalendarEvent(
   // Get timezone AND date based on phase - must be consistent
   // Pre-flight: use origin_tz + origin_date (user is at home)
   // Other phases: use dest_tz + dest_date (user is traveling to/at destination)
-  const phase = anchor.phase_type;
-  const isPreFlight = phase === "preparation" || phase === "pre_departure";
-  const timezone = isPreFlight ? anchor.origin_tz : anchor.dest_tz;
-  let date = isPreFlight ? anchor.origin_date : anchor.dest_date;
+  const preFlightPhase = isPreFlightPhase(anchor.phase_type);
+  const timezone = preFlightPhase ? anchor.origin_tz : anchor.dest_tz;
+  let date = preFlightPhase ? anchor.origin_date : anchor.dest_date;
 
   // For sleep_target with early morning times (00:00-05:59), the origin_date/dest_date
   // represents the "schedule day", but the actual calendar event should be on the NEXT day.
@@ -493,13 +500,13 @@ export function buildCalendarEvent(
 
   if (!timezone) {
     throw new Error(
-      `Intervention missing timezone context (phase: ${phase}, origin_tz: ${anchor.origin_tz}, dest_tz: ${anchor.dest_tz})`
+      `Intervention missing timezone context (phase: ${anchor.phase_type}, origin_tz: ${anchor.origin_tz}, dest_tz: ${anchor.dest_tz})`
     );
   }
 
   if (!date) {
     throw new Error(
-      `Intervention missing date context (phase: ${phase}, origin_date: ${anchor.origin_date}, dest_date: ${anchor.dest_date})`
+      `Intervention missing date context (phase: ${anchor.phase_type}, origin_date: ${anchor.origin_date}, dest_date: ${anchor.dest_date})`
     );
   }
 
@@ -731,12 +738,6 @@ export interface CreateEventsResult {
   failed: number;
 }
 
-/** Maximum time difference (minutes) to consider wake events as duplicates on same date */
-const WAKE_DEDUP_WINDOW_MIN = 120;
-
-/** Maximum time difference (minutes) to consider sleep events as duplicates */
-const SLEEP_DEDUP_WINDOW_MIN = 120; // 2 hours, same as wake
-
 /**
  * Create calendar events for all actionable interventions in a schedule.
  * Groups interventions around wake/sleep anchors for reduced event count.
@@ -797,7 +798,7 @@ export async function createEventsForSchedule(
           const timeDiff = Math.abs(
             parseTimeToMinutes(displayTime) - parseTimeToMinutes(existing.time)
           );
-          if (timeDiff <= WAKE_DEDUP_WINDOW_MIN) {
+          if (timeDiff <= DEDUP_WINDOW_MIN) {
             // Skip duplicate wake - first wake wins
             // But if this group has other interventions (like melatonin), create them standalone
             const otherInterventions = interventions.filter(
@@ -881,7 +882,10 @@ export async function createEventsForSchedule(
         }
 
         // Track this sleep event
-        sleepEventsByNight.set(conceptualNight, { time: displayTime, hasGroup });
+        sleepEventsByNight.set(conceptualNight, {
+          time: displayTime,
+          hasGroup,
+        });
       }
 
       try {
