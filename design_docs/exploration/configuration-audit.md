@@ -272,6 +272,19 @@ Anchor-based grouping reduces calendar clutter (~20 events → ~10 events per tr
 
 Note: `sleep_target` was intentionally kept as "free" since users may not always follow the exact bedtime.
 
+#### Sleep Event Handling
+
+Early morning sleep times (00:00-05:59) require special handling because the scheduler's "schedule day" differs from the actual calendar day. For example, a 2:30 AM sleep at the end of Day -1's schedule should appear on the next calendar day.
+
+| Line | Constant                    | Value | Purpose                                                 |
+| ---- | --------------------------- | ----- | ------------------------------------------------------- |
+| 48   | `LATE_NIGHT_THRESHOLD_HOUR` | 6     | Hours below which sleep is considered "early morning"   |
+| 731  | `SLEEP_DEDUP_WINDOW_MIN`    | 120   | Minutes within which sleep events are deduplicated (2h) |
+
+**Date adjustment logic:** In `buildCalendarEvent()`, sleep_target events with times before 06:00 get +1 day added to their calendar date. This ensures that "late night" sleep (end of a schedule day) appears on the correct calendar date.
+
+**Deduplication:** When sleep times shift across consecutive days (e.g., 23:30 → 01:00), both can appear within 2 hours of each other. Sleep events are tracked by their schedule day ("conceptual night") and deduplicated using the same 2-hour window as wake events.
+
 #### Other Constants
 
 | Line | Constant                     | Value | Purpose                      |
@@ -471,21 +484,21 @@ Constants are already discoverable via this audit document.
 
 ## Summary
 
-| Category              | Count | Action                                         |
-| --------------------- | ----- | ---------------------------------------------- |
-| Immutable Science     | ~36   | Leave as-is, document sources                  |
-| Algorithm Config      | ~42   | Keep as module-level constants (decided)       |
-| User Preferences      | 13    | All working, 4 future candidates               |
-| Frontend Defaults     | ~26   | Mostly centralized, well-organized             |
-| Shift & Prep Days     | 4     | Prep day calculation thresholds                |
-| Schedule View         | 4     | UI timing and display thresholds               |
-| Calendar Integration  | ~20   | Event density, durations, reminders, busy/free |
-| Flight Phase          | 4     | Flight day timing fractions                    |
-| Actuals & Tracking    | 2     | Deviation calculation constants                |
-| Storage & Persistence | 3     | localStorage keys and time constants           |
-| MCP Constants         | ~12   | New endpoint for AI integrations               |
-| Rate Limiting         | ~5    | Memory-safe sliding window implementation      |
-| Duplication           | 0     | Fixed (types.py now cross-references)          |
+| Category              | Count | Action                                              |
+| --------------------- | ----- | --------------------------------------------------- |
+| Immutable Science     | ~36   | Leave as-is, document sources                       |
+| Algorithm Config      | ~42   | Keep as module-level constants (decided)            |
+| User Preferences      | 13    | All working, 4 future candidates                    |
+| Frontend Defaults     | ~26   | Mostly centralized, well-organized                  |
+| Shift & Prep Days     | 4     | Prep day calculation thresholds                     |
+| Schedule View         | 4     | UI timing and display thresholds                    |
+| Calendar Integration  | ~22   | Event density, durations, reminders, sleep handling |
+| Flight Phase          | 4     | Flight day timing fractions                         |
+| Actuals & Tracking    | 2     | Deviation calculation constants                     |
+| Storage & Persistence | 3     | localStorage keys and time constants                |
+| MCP Constants         | ~12   | New endpoint for AI integrations                    |
+| Rate Limiting         | ~5    | Memory-safe sliding window implementation           |
+| Duplication           | 0     | Fixed (types.py now cross-references)               |
 
 ### Priority Actions
 
@@ -494,4 +507,4 @@ Constants are already discoverable via this audit document.
 
 ---
 
-_Last updated: January 18, 2026_
+_Last updated: January 19, 2026_

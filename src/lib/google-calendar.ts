@@ -44,6 +44,9 @@ const GROUPING_WINDOW_MIN = 120;
 /** Default event duration in minutes when not specified */
 const DEFAULT_EVENT_DURATION_MIN = 15;
 
+/** Hour threshold for "late night" sleep (00:00-05:59 belongs to previous day) */
+const LATE_NIGHT_THRESHOLD_HOUR = 6;
+
 /** Footer added to all calendar event descriptions */
 const EVENT_FOOTER = "Created by Dawnward · dawnward.app";
 
@@ -326,6 +329,20 @@ export function getCalendarDate(intervention: Intervention): string {
 }
 
 /**
+ * Get the conceptual "night" date for a sleep_target (for deduplication).
+ * The conceptual night is the "schedule day" (origin_date/dest_date), which represents
+ * when the user is going through that day's routine ending with sleep.
+ *
+ * Note: The actual calendar event time may be on the NEXT day for early morning times,
+ * but for deduplication we use the schedule day to identify which "night" it belongs to.
+ */
+export function getSleepCalendarDate(intervention: Intervention): string {
+  // The schedule day (origin_date for pre-flight, dest_date for post-flight)
+  // represents the conceptual night for deduplication purposes
+  return getCalendarDate(intervention);
+}
+
+/**
  * Group interventions around wake/sleep anchors for reduced event count.
  *
  * Strategy:
@@ -459,7 +476,20 @@ export function buildCalendarEvent(
   const phase = anchor.phase_type;
   const isPreFlight = phase === "preparation" || phase === "pre_departure";
   const timezone = isPreFlight ? anchor.origin_tz : anchor.dest_tz;
-  const date = isPreFlight ? anchor.origin_date : anchor.dest_date;
+  let date = isPreFlight ? anchor.origin_date : anchor.dest_date;
+
+  // For sleep_target with early morning times (00:00-05:59), the origin_date/dest_date
+  // represents the "schedule day", but the actual calendar event should be on the NEXT day.
+  // Example: Day -1 (Jan 21) has sleep at 2:30 AM - this is early Thursday morning (Jan 22),
+  // not early Wednesday morning. The web app shows it at the bottom of Wednesday's timeline.
+  if (anchor.type === "sleep_target") {
+    const [hours] = time.split(":").map(Number);
+    if (hours < LATE_NIGHT_THRESHOLD_HOUR) {
+      const adjustedDate = new Date(date + "T12:00:00"); // Use noon to avoid DST issues
+      adjustedDate.setDate(adjustedDate.getDate() + 1);
+      date = adjustedDate.toISOString().slice(0, 10);
+    }
+  }
 
   if (!timezone) {
     throw new Error(
@@ -704,6 +734,9 @@ export interface CreateEventsResult {
 /** Maximum time difference (minutes) to consider wake events as duplicates on same date */
 const WAKE_DEDUP_WINDOW_MIN = 120;
 
+/** Maximum time difference (minutes) to consider sleep events as duplicates */
+const SLEEP_DEDUP_WINDOW_MIN = 120; // 2 hours, same as wake
+
 /**
  * Create calendar events for all actionable interventions in a schedule.
  * Groups interventions around wake/sleep anchors for reduced event count.
@@ -722,6 +755,13 @@ export async function createEventsForSchedule(
   // When Day 1 and Day 2 land on the same calendar date (timezone transitions),
   // we may have two wake_target events. Keep the one with more context (grouped with melatonin).
   const wakeEventsByDate = new Map<
+    string,
+    { time: string; hasGroup: boolean }
+  >();
+
+  // Track sleep events by conceptual night to avoid duplicates
+  // When sleep shifts from 23:30 to 01:00, both are on the "same night"
+  const sleepEventsByNight = new Map<
     string,
     { time: string; hasGroup: boolean }
   >();
@@ -800,6 +840,48 @@ export async function createEventsForSchedule(
           time: displayTime,
           hasGroup,
         });
+      }
+
+      // Check if this is a sleep event that would create a duplicate
+      // (rare edge case: two sleep events on the same schedule day)
+      if (anchor.type === "sleep_target") {
+        const conceptualNight = getSleepCalendarDate(anchor);
+        const existing = sleepEventsByNight.get(conceptualNight);
+        const displayTime = getDisplayTime(anchor);
+        const hasGroup = interventions.length > 1;
+
+        if (existing) {
+          // Skip duplicate sleep on the same schedule day - first sleep wins
+          // But if this group has other interventions, create them standalone
+          const otherInterventions = interventions.filter(
+            (i) => i.type !== "sleep_target"
+          );
+
+          if (otherInterventions.length > 0) {
+            console.log(
+              `[Calendar] Skipping duplicate sleep at ${displayTime} on night of ${conceptualNight}, creating ${otherInterventions.length} grouped item(s) standalone`
+            );
+            for (const intervention of otherInterventions) {
+              try {
+                const event = buildCalendarEvent([intervention], wakeTime);
+                const eventId = await createCalendarEvent(accessToken, event);
+                created.push(eventId);
+                await sleep(API_THROTTLE_MS);
+              } catch (error) {
+                console.error(`[Calendar] Error creating standalone:`, error);
+                failed++;
+              }
+            }
+          } else {
+            console.log(
+              `[Calendar] Skipping duplicate sleep at ${displayTime} for night of ${conceptualNight}`
+            );
+          }
+          continue;
+        }
+
+        // Track this sleep event
+        sleepEventsByNight.set(conceptualNight, { time: displayTime, hasGroup });
       }
 
       try {

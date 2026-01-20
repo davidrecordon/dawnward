@@ -11,6 +11,7 @@ import {
   isStandaloneType,
   shouldShowAsBusy,
   getCalendarDate,
+  getSleepCalendarDate,
 } from "@/lib/google-calendar";
 import type {
   Intervention,
@@ -1668,5 +1669,170 @@ describe("Wake event deduplication logic", () => {
     const groupedGroups = groupInterventionsByAnchor(groupedDay);
     const groupedWakeGroup = groupedGroups.get("wake:07:00");
     expect(groupedWakeGroup).toHaveLength(2); // Has melatonin grouped
+  });
+});
+
+// =============================================================================
+// getSleepCalendarDate Tests (for deduplication)
+// =============================================================================
+
+describe("getSleepCalendarDate", () => {
+  it("returns the schedule day (origin_date/dest_date) for deduplication", () => {
+    // getSleepCalendarDate returns the "conceptual night" which is the schedule day
+    const eveningSleep = makeIntervention("sleep_target", "22:00", {
+      phase_type: "post_arrival",
+      dest_date: "2026-01-19",
+    });
+    expect(getSleepCalendarDate(eveningSleep)).toBe("2026-01-19");
+
+    // Even early morning times use the schedule day for deduplication
+    const earlyMorningSleep = makeIntervention("sleep_target", "01:00", {
+      phase_type: "adaptation",
+      dest_date: "2026-01-20",
+    });
+    expect(getSleepCalendarDate(earlyMorningSleep)).toBe("2026-01-20");
+  });
+
+  it("uses origin_date for preparation phase", () => {
+    const intervention = makeIntervention("sleep_target", "01:00", {
+      phase_type: "preparation",
+      origin_date: "2026-01-15",
+      dest_date: "2026-01-16",
+    });
+    expect(getSleepCalendarDate(intervention)).toBe("2026-01-15");
+  });
+
+  it("uses dest_date for adaptation phase", () => {
+    const intervention = makeIntervention("sleep_target", "23:00", {
+      phase_type: "adaptation",
+      origin_date: "2026-01-19",
+      dest_date: "2026-01-20",
+    });
+    expect(getSleepCalendarDate(intervention)).toBe("2026-01-20");
+  });
+});
+
+// =============================================================================
+// Sleep Event Deduplication Logic Tests
+// =============================================================================
+
+describe("Sleep event deduplication logic", () => {
+  /**
+   * The deduplication logic in createEventsForSchedule tracks sleep events
+   * by their schedule day (conceptual night). This handles edge cases where
+   * two sleep events might be on the same schedule day.
+   */
+
+  it("identifies sleep events on different schedule days", () => {
+    // Each schedule day has its own conceptual night
+    const day1Sleep = makeIntervention("sleep_target", "23:30", {
+      phase_type: "post_arrival",
+      dest_date: "2026-01-19",
+    });
+    const day2Sleep = makeIntervention("sleep_target", "01:00", {
+      phase_type: "adaptation",
+      dest_date: "2026-01-20",
+    });
+    const day3Sleep = makeIntervention("sleep_target", "02:30", {
+      phase_type: "adaptation",
+      dest_date: "2026-01-21",
+    });
+
+    // Each schedule day is a different conceptual night
+    expect(getSleepCalendarDate(day1Sleep)).toBe("2026-01-19");
+    expect(getSleepCalendarDate(day2Sleep)).toBe("2026-01-20");
+    expect(getSleepCalendarDate(day3Sleep)).toBe("2026-01-21");
+  });
+
+  it("would deduplicate two sleeps on the same schedule day", () => {
+    // Edge case: if scheduler generated two sleep events for same day
+    const sleep1 = makeIntervention("sleep_target", "23:00", {
+      phase_type: "adaptation",
+      dest_date: "2026-01-20",
+    });
+    const sleep2 = makeIntervention("sleep_target", "23:30", {
+      phase_type: "adaptation",
+      dest_date: "2026-01-20",
+    });
+
+    // Same conceptual night - would be deduplicated
+    expect(getSleepCalendarDate(sleep1)).toBe(getSleepCalendarDate(sleep2));
+  });
+});
+
+// =============================================================================
+// buildCalendarEvent Date for Sleep Tests
+// =============================================================================
+
+describe("buildCalendarEvent sleep_target date placement", () => {
+  it("adds a day for early morning sleep_target (01:00)", () => {
+    // Early morning sleep (00:00-05:59) should be placed on the NEXT calendar day
+    // because the schedule day represents when the day starts, not when sleep occurs
+    const interventions = [
+      makeIntervention("sleep_target", "01:00", {
+        phase_type: "adaptation",
+        dest_date: "2026-01-20", // Schedule day
+        dest_tz: "Europe/London",
+      }),
+    ];
+
+    const event = buildCalendarEvent(interventions);
+
+    // Event should be at 2026-01-21T01:00 (schedule day + 1 for early morning)
+    expect(event.start?.dateTime).toContain("2026-01-21");
+    expect(event.start?.dateTime).toContain("01:00");
+  });
+
+  it("does not adjust date for evening sleep_target (23:00)", () => {
+    const interventions = [
+      makeIntervention("sleep_target", "23:00", {
+        phase_type: "post_arrival",
+        dest_date: "2026-01-19",
+        dest_tz: "Europe/London",
+      }),
+    ];
+
+    const event = buildCalendarEvent(interventions);
+
+    // Evening times stay on the schedule day
+    expect(event.start?.dateTime).toContain("2026-01-19");
+    expect(event.start?.dateTime).toContain("23:00");
+  });
+
+  it("does not adjust date for non-sleep interventions at early morning", () => {
+    // Only sleep_target gets the +1 day adjustment
+    const interventions = [
+      makeIntervention("light_avoid", "01:00", {
+        phase_type: "adaptation",
+        dest_date: "2026-01-20",
+        dest_tz: "Europe/London",
+        duration_min: 120,
+      }),
+    ];
+
+    const event = buildCalendarEvent(interventions);
+
+    // Non-sleep types stay on the schedule day
+    expect(event.start?.dateTime).toContain("2026-01-20");
+    expect(event.start?.dateTime).toContain("01:00");
+  });
+
+  it("correctly places sleep at 02:30 for Day -1 (flight day prep)", () => {
+    // Real scenario: Day -1 (Jan 21) has sleep at 02:30 AM
+    // This should appear on Jan 22 (early Thursday morning), not Jan 21
+    const interventions = [
+      makeIntervention("sleep_target", "02:30", {
+        phase_type: "preparation",
+        origin_date: "2026-01-21", // Day -1 schedule day
+        dest_date: "2026-01-22",
+        origin_tz: "America/Los_Angeles",
+      }),
+    ];
+
+    const event = buildCalendarEvent(interventions);
+
+    // Should be Jan 22 (origin_date + 1 day for early morning)
+    expect(event.start?.dateTime).toContain("2026-01-22");
+    expect(event.start?.dateTime).toContain("02:30");
   });
 });
