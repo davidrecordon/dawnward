@@ -5,6 +5,7 @@ import type {
   InterventionType,
 } from "@/types/schedule";
 import { getDisplayTime } from "@/types/schedule";
+import { getInterventionEmoji } from "@/lib/intervention-formatter";
 
 // =============================================================================
 // Event Density Configuration
@@ -125,27 +126,6 @@ export function isActionableIntervention(type: InterventionType): boolean {
   return type !== "caffeine_ok";
 }
 
-/** Emoji lookup for intervention types */
-const INTERVENTION_EMOJI: Record<InterventionType, string> = {
-  wake_target: "⏰",
-  sleep_target: "😴",
-  melatonin: "💊",
-  light_seek: "🌅",
-  light_avoid: "🕶️",
-  caffeine_ok: "☕",
-  caffeine_cutoff: "🚫",
-  exercise: "🏃",
-  nap_window: "💤",
-};
-
-const DEFAULT_EMOJI = "📋";
-
-/**
- * Get emoji for intervention type
- */
-function getEmoji(type: InterventionType): string {
-  return INTERVENTION_EMOJI[type] ?? DEFAULT_EMOJI;
-}
 
 /** Short label lookup for grouped event titles */
 const SHORT_LABELS: Partial<Record<InterventionType, string>> = {
@@ -202,7 +182,7 @@ export function buildEventTitle(interventions: Intervention[]): string {
   if (interventions.length === 0) return "";
 
   const anchor = getAnchorIntervention(interventions);
-  const emoji = getEmoji(anchor.type);
+  const emoji = getInterventionEmoji(anchor.type);
 
   // Single intervention - use full title
   if (interventions.length === 1) {

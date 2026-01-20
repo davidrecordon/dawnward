@@ -12,6 +12,10 @@ import {
   getDayCardGradient,
   FLIGHT_DAY,
 } from "@/lib/intervention-utils";
+import {
+  getCondensedDescription,
+  getInterventionEmoji,
+} from "@/lib/intervention-formatter";
 import { useUse24HourFormat } from "@/components/display-preferences-context";
 import { formatLongDate, formatShortDate } from "@/lib/time-utils";
 import {
@@ -20,46 +24,8 @@ import {
   isPreFlightPhase,
   isPostArrivalPhase,
 } from "@/types/schedule";
-import type { DaySchedule, Intervention } from "@/types/schedule";
+import type { DaySchedule, Intervention, InterventionType } from "@/types/schedule";
 import type { Airport } from "@/types/airport";
-
-/**
- * Condensed descriptions for summary view.
- * Shorter, action-oriented versions of full intervention descriptions.
- */
-const CONDENSED_DESCRIPTIONS: Record<string, string> = {
-  wake_target: "Wake up to help shift your clock",
-  light_seek: "Get 30+ min bright light",
-  light_avoid: "Avoid bright light, dim screens",
-  caffeine_cutoff: "Last caffeine for today",
-  caffeine_ok: "Caffeine OK until cutoff",
-  melatonin: "Take melatonin to shift rhythm",
-  sleep_target: "Aim for sleep by this time",
-  nap_window: "Good window for a short nap",
-  exercise: "Physical activity helps shift rhythm",
-};
-
-function getCondensedDescription(type: string): string {
-  return CONDENSED_DESCRIPTIONS[type] ?? "Follow this intervention";
-}
-
-/**
- * Get emoji for intervention type (for text/email output)
- */
-function getInterventionEmoji(type: string): string {
-  const emojiMap: Record<string, string> = {
-    wake_target: "☀️",
-    light_seek: "☀️",
-    light_avoid: "😎",
-    caffeine_cutoff: "☕",
-    caffeine_ok: "☕",
-    melatonin: "💊",
-    sleep_target: "🌙",
-    nap_window: "😴",
-    exercise: "🏃",
-  };
-  return emojiMap[type] ?? "📋";
-}
 
 export interface DaySummaryCardProps {
   daySchedule: DaySchedule;
