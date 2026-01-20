@@ -13,9 +13,14 @@ async function verifyTokenScopes(
   accessToken: string
 ): Promise<{ valid: boolean; scopes: string[]; error?: string }> {
   try {
-    const response = await fetch(
-      `https://oauth2.googleapis.com/tokeninfo?access_token=${encodeURIComponent(accessToken)}`
-    );
+    // Use POST with form data to keep token out of server logs
+    const response = await fetch("https://oauth2.googleapis.com/tokeninfo", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: `access_token=${encodeURIComponent(accessToken)}`,
+    });
 
     if (!response.ok) {
       // Token is invalid or expired

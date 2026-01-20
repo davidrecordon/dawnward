@@ -52,7 +52,12 @@ async function refreshAccessToken(token: JWT): Promise<JWT> {
       refreshToken: refreshed.refresh_token ?? token.refreshToken,
     };
   } catch (error) {
-    console.error("Error refreshing access token:", error);
+    // Only log safe error fields, not tokens or full response
+    const safeError =
+      error && typeof error === "object" && "error" in error
+        ? { error: (error as { error: string }).error }
+        : { error: "Unknown error" };
+    console.error("Error refreshing access token:", safeError);
     // Return token without access token to force re-auth
     return {
       ...token,

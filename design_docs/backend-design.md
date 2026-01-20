@@ -775,7 +775,88 @@ See `src/lib/google-calendar.ts` for implementation and `design_docs/exploration
 
 ### Sync Strategy
 
-One-way push with delete-and-replace:
+One-way push with delete-and-replace, running in background:
+
+**Background sync with `waitUntil()`:**
+
+POST `/api/calendar/sync` returns immediately with status "syncing". The actual sync runs asynchronously using Vercel's `waitUntil()` function:
+
+```javascript
+import { waitUntil } from "@vercel/functions";
+
+export async function POST(request) {
+  // ... auth and validation ...
+
+  // Create sync record with "syncing" status
+  const syncRecord = await prisma.calendarSync.upsert({
+    where: { tripId_userId: { tripId, userId } },
+    create: { tripId, userId, status: "syncing", startedAt: new Date() },
+    update: { status: "syncing", startedAt: new Date() },
+  });
+
+  // Fire background task (non-blocking)
+  waitUntil(runSyncInBackground({ tripId, userId, syncId: syncRecord.id }));
+
+  // Return immediately
+  return NextResponse.json({ success: true, status: "syncing" });
+}
+```
+
+Client polls GET `/api/calendar/sync?tripId=X` every 2 seconds for status updates. Sync continues even if user closes browser.
+
+**Retry logic with exponential backoff:**
+
+Transient errors (network, rate limit) retry automatically:
+
+- Max 2 retries
+- Base delay 1000ms, doubles each retry (1s, 2s)
+- Non-retryable errors (token_revoked, calendar_not_found) fail immediately
+
+**Error classification:**
+
+| Code | Meaning | Retryable | Client Action |
+|------|---------|-----------|---------------|
+| `token_revoked` | User revoked access in Google settings | No | Prompt re-auth |
+| `rate_limit` | Google Calendar quota exceeded | Yes | Auto-retry |
+| `network` | Connection/timeout error | Yes | Auto-retry |
+| `calendar_not_found` | Calendar deleted | No | Show error |
+| `unknown` | Unexpected error | No | Show error |
+
+**Stale sync timeout:**
+
+If sync is stuck in "syncing" state for > 5 minutes (e.g., Vercel function crashed), the GET endpoint treats it as failed:
+
+```javascript
+if (status === "syncing" && Date.now() - startedAt > 5 * 60 * 1000) {
+  status = "failed";
+  errorMessage = "Sync timed out. Please try again.";
+}
+```
+
+**CalendarSync status tracking fields:**
+
+```prisma
+model CalendarSync {
+  // ... existing fields ...
+  status        String    // "syncing" | "completed" | "failed"
+  startedAt     DateTime? // For stale timeout detection
+  eventsCreated Int?      // Count of successfully created events
+  eventsFailed  Int?      // Count of failed events
+  errorMessage  String?   // Human-readable error
+  errorCode     String?   // Machine-readable code (token_revoked, etc.)
+}
+```
+
+**API routes:**
+
+```
+POST   /api/calendar/sync          → Start background sync (returns immediately)
+GET    /api/calendar/sync?tripId=X → Check sync status (for polling)
+DELETE /api/calendar/sync?tripId=X → Remove events from calendar
+GET    /api/calendar/verify        → Verify token has calendar scope
+```
+
+**Original sync logic (now runs in background):**
 
 ```javascript
 async function syncToCalendar(tripId, userId) {

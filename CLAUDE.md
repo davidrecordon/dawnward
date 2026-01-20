@@ -95,7 +95,11 @@ npx tsx scripts/calendar.ts --preset=VS20           # Use preset flight for prev
 - **Sync:** Creates/updates events in Google Calendar (`--sync`, `--resync`, `--delete`)
 - **Auth check:** Validates OAuth token, refreshes if expired (`--check-auth`)
 
-**Available presets:** HA11 (short), VS20 (eastbound overnight), SQ31 (ultra-long-haul), QF74 (cross-dateline), CX872 (long-haul eastbound)
+**Available presets:**
+
+- Minimal: HA11 (Hawaii 2h), AA16 (domestic 3h)
+- Moderate: VS20, VS19, AF83, LH455 (transatlantic 8-9h)
+- Severe: EK226 (Dubai), SQ31, SQ32 (Singapore), CX879, CX872 (Hong Kong), JL1, JL2 (Tokyo), QF74, QF73 (Sydney)
 
 ## Before Committing
 
@@ -258,10 +262,18 @@ The `DaySummaryCard` component shows:
 
 **Google Calendar:**
 
-- `CalendarSync` - Tracks synced trips: Google event IDs, calendar ID, last sync time
+- `CalendarSync` - Tracks synced trips with background sync status
+  - `googleEventIds` - Array of created Google Calendar event IDs
+  - `status` - "syncing" | "completed" | "failed" (for background sync)
+  - `startedAt` - When sync started (for stale timeout detection)
+  - `eventsCreated` / `eventsFailed` - Success/failure counts
+  - `errorCode` - "token_revoked" | "rate_limit" | "network" | etc.
+  - `errorMessage` - Human-readable error description
+- Background sync with `waitUntil()` from `@vercel/functions`
 - One-way push with delete-and-replace strategy
 - Anchor-based event grouping reduces ~20 events to ~10 per trip
 - Events use IANA timezones from intervention data (origin_tz for pre-flight, dest_tz for post-flight)
+- 5-minute stale sync timeout treats stuck syncs as failed
 
 ### Schedule Generation
 
@@ -360,8 +372,19 @@ Push schedule interventions to user's Google Calendar with one-click sync.
 
 **Files:**
 
-- `src/app/api/calendar/sync/route.ts` - Sync endpoint (POST creates/updates, DELETE removes)
+- `src/app/api/calendar/sync/route.ts` - Sync endpoint (POST starts background sync, GET polls status, DELETE removes)
+- `src/app/api/calendar/verify/route.ts` - Verify token has calendar scope with Google tokeninfo
 - `src/lib/google-calendar.ts` - Event building, grouping, and Calendar API wrapper
+- `src/lib/token-refresh.ts` - OAuth token refresh for scripts and background jobs
+
+**API Routes:**
+
+```
+POST   /api/calendar/sync          → Start background sync (returns immediately)
+GET    /api/calendar/sync?tripId=X → Check sync status (for polling)
+DELETE /api/calendar/sync?tripId=X → Remove events from calendar
+GET    /api/calendar/verify        → Verify token has calendar scope
+```
 
 **Event Density Optimization:**
 

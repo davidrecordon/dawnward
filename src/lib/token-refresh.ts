@@ -56,7 +56,11 @@ export async function getValidAccessToken(
   const data = await response.json();
 
   if (!response.ok) {
-    console.error("[TokenRefresh] Failed to refresh token:", data);
+    // Only log safe error fields, not the full response
+    console.error("[TokenRefresh] Failed to refresh token:", {
+      error: data.error,
+      error_description: data.error_description,
+    });
     throw new Error(
       `Token refresh failed: ${data.error_description || data.error || "Unknown error"}`
     );

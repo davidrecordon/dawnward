@@ -15,6 +15,9 @@ const RETRY_CONFIG = {
   baseDelayMs: 1000,
 };
 
+/** Stale sync timeout - if syncing for longer than this, treat as failed */
+const STALE_SYNC_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
+
 /** Error codes for client handling */
 type ErrorCode =
   | "token_revoked"
@@ -405,14 +408,45 @@ export async function GET(request: Request) {
     });
   }
 
+  // Check for stale sync (stuck in "syncing" state)
+  let status = sync.status;
+  let errorMessage = sync.errorMessage;
+  let errorCode = sync.errorCode;
+
+  if (
+    status === "syncing" &&
+    sync.startedAt &&
+    Date.now() - sync.startedAt.getTime() > STALE_SYNC_TIMEOUT_MS
+  ) {
+    // Treat stale sync as failed - background function likely crashed
+    status = "failed";
+    errorMessage = "Sync timed out. Please try again.";
+    errorCode = "network";
+
+    // Update the database record to reflect the timeout
+    // (fire-and-forget - don't await to keep response fast)
+    prisma.calendarSync
+      .update({
+        where: { id: sync.id },
+        data: {
+          status: "failed",
+          errorMessage,
+          errorCode,
+        },
+      })
+      .catch((err) => {
+        console.error("[CalendarSync] Failed to update stale sync status:", err);
+      });
+  }
+
   return NextResponse.json({
-    isSynced: sync.status === "completed",
-    status: sync.status,
+    isSynced: status === "completed",
+    status,
     lastSyncedAt: sync.lastSyncedAt,
     eventCount: sync.googleEventIds.length,
     eventsCreated: sync.eventsCreated,
     eventsFailed: sync.eventsFailed,
-    errorMessage: sync.errorMessage,
-    errorCode: sync.errorCode,
+    errorMessage,
+    errorCode,
   });
 }
