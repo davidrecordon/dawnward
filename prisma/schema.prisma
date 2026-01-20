@@ -146,6 +146,15 @@ model CalendarSync {
   userId         String
   googleEventIds String[]
   lastSyncedAt   DateTime       @default(now())
+
+  // Background sync status tracking
+  status         String         @default("completed") // "syncing" | "completed" | "failed"
+  errorMessage   String?
+  errorCode      String?        // "token_revoked" | "rate_limit" | "network" | etc.
+  startedAt      DateTime?
+  eventsCreated  Int?           // Track actual count
+  eventsFailed   Int?           // Track failures for warnings
+
   trip           SharedSchedule @relation(fields: [tripId], references: [id], onDelete: Cascade)
   user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
 
