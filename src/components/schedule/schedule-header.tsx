@@ -3,6 +3,7 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { CalendarSyncButton } from "@/components/calendar-sync-button";
 import { Plane, Settings2 } from "lucide-react";
 import type { ScheduleResponse } from "@/types/schedule";
 import type { Airport } from "@/types/airport";
@@ -18,6 +19,7 @@ interface ScheduleHeaderProps {
     };
     schedule: ScheduleResponse;
   };
+  tripId?: string;
   isPreTrip?: boolean;
   scheduleStartDate?: string;
   isOwner?: boolean;
@@ -27,6 +29,7 @@ interface ScheduleHeaderProps {
 
 export function ScheduleHeader({
   schedule,
+  tripId,
   isOwner,
   isLoggedIn,
   onCustomizeClick,
@@ -44,6 +47,7 @@ export function ScheduleHeader({
       : "bg-violet-100 text-violet-700 hover:bg-violet-100";
 
   const showCustomizeButton = isOwner && isLoggedIn && onCustomizeClick;
+  const showCalendarButton = tripId !== undefined;
 
   return (
     <Card className="overflow-hidden border-white/50 bg-white/90 shadow-sm backdrop-blur-sm">
@@ -98,16 +102,21 @@ export function ScheduleHeader({
             </p>
           </div>
 
-          {/* Right column - customize button for owners */}
-          {showCustomizeButton && (
-            <Button
-              variant="outline"
-              className="bg-white/70"
-              onClick={onCustomizeClick}
-            >
-              <Settings2 className="mr-2 h-4 w-4" />
-              Customize Trip
-            </Button>
+          {/* Right column - action buttons */}
+          {(showCustomizeButton || showCalendarButton) && (
+            <div className="flex flex-col gap-2">
+              {showCustomizeButton && (
+                <Button
+                  variant="outline"
+                  className="bg-white/70"
+                  onClick={onCustomizeClick}
+                >
+                  <Settings2 className="mr-2 h-4 w-4" />
+                  Customize Trip
+                </Button>
+              )}
+              {showCalendarButton && <CalendarSyncButton tripId={tripId} />}
+            </div>
           )}
         </div>
       </CardContent>

@@ -505,6 +505,7 @@ export function TripScheduleView({
         {/* Schedule header */}
         <ScheduleHeader
           schedule={data}
+          tripId={tripId}
           isOwner={isOwner}
           isLoggedIn={isLoggedIn}
           onCustomizeClick={() => setShowEditModal(true)}
