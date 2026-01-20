@@ -26,6 +26,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { requestCalendarPermission } from "@/lib/calendar-auth";
+import { useCalendarScope } from "@/hooks/use-calendar-scope";
 
 interface CalendarSyncButtonProps {
   tripId: string;
@@ -41,19 +42,14 @@ export function CalendarSyncButton({ tripId }: CalendarSyncButtonProps) {
   // Use session hook for real-time auth state (updates after OAuth callback)
   const { data: session, update: updateSession } = useSession();
   const isLoggedIn = !!session?.user;
-  const sessionHasCalendarScope = session?.hasCalendarScope ?? false;
+
+  // Use verified scope from hook (verifies actual token with Google)
+  const { hasCalendarScope } = useCalendarScope();
 
   const [syncStatus, setSyncStatus] = useState<SyncStatus | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showAuthPrompt, setShowAuthPrompt] = useState(false);
-  // Track verified scope (actual token state from Google)
-  const [verifiedHasScope, setVerifiedHasScope] = useState<boolean | null>(
-    null
-  );
-
-  // Use verified scope if available, otherwise fall back to session
-  const hasCalendarScope = verifiedHasScope ?? sessionHasCalendarScope;
 
   // AbortController to prevent race conditions on rapid clicks
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -65,45 +61,17 @@ export function CalendarSyncButton({ tripId }: CalendarSyncButtonProps) {
     if (urlParams.has("callbackUrl") || urlParams.has("code")) {
       // Trigger session refresh to get updated calendar scope
       updateSession();
-      // Clear verified state to re-verify after OAuth
-      setVerifiedHasScope(null);
     }
   }, [updateSession]);
 
-  // Verify actual token scope when session says we have calendar access
-  // This catches cases where the stored scope is stale or revoked
+  // Cleanup abort controller on unmount
   useEffect(() => {
-    if (!isLoggedIn || !sessionHasCalendarScope) {
-      setVerifiedHasScope(null);
-      return;
-    }
-
-    // Only verify once per session (verifiedHasScope starts as null)
-    if (verifiedHasScope !== null) return;
-
-    const verifyScope = async () => {
-      try {
-        const response = await fetch("/api/calendar/verify");
-        if (response.ok) {
-          const data = await response.json();
-          setVerifiedHasScope(data.hasCalendarScope);
-
-          // If there's a mismatch, log it for debugging
-          if (data.mismatch) {
-            console.warn(
-              "[Calendar] Scope mismatch detected:",
-              `session says ${data.sessionSaysHasScope}, actual: ${data.hasCalendarScope}`
-            );
-          }
-        }
-      } catch (err) {
-        console.error("[Calendar] Failed to verify scope:", err);
-        // On error, trust the session value
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
       }
     };
-
-    verifyScope();
-  }, [isLoggedIn, sessionHasCalendarScope, verifiedHasScope]);
+  }, []);
 
   // Fetch sync status on mount
   const fetchSyncStatus = useCallback(async () => {
@@ -300,34 +268,44 @@ export function CalendarSyncButton({ tripId }: CalendarSyncButtonProps) {
 
   // Synced - show dropdown with options
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button
-          variant="outline"
-          className="flex-1 border-emerald-200 bg-emerald-50/70 text-emerald-700 hover:bg-emerald-100"
-          disabled={isLoading}
-        >
-          {isLoading ? (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          ) : (
-            <Check className="mr-2 h-4 w-4" />
-          )}
-          Synced to Calendar
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-48">
-        <DropdownMenuItem onClick={handleSync}>
-          <RefreshCw className="mr-2 h-4 w-4" />
-          Re-sync
-        </DropdownMenuItem>
-        <DropdownMenuItem
-          onClick={handleUnsync}
-          className="text-red-600 focus:text-red-600"
-        >
-          <Trash2 className="mr-2 h-4 w-4" />
-          Remove from Calendar
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            variant="outline"
+            className="flex-1 border-emerald-200 bg-emerald-50/70 text-emerald-700 hover:bg-emerald-100"
+            disabled={isLoading}
+          >
+            {isLoading ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Check className="mr-2 h-4 w-4" />
+            )}
+            Synced to Calendar
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-48">
+          <DropdownMenuItem onClick={handleSync}>
+            <RefreshCw className="mr-2 h-4 w-4" />
+            Re-sync
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onClick={handleUnsync}
+            className="text-red-600 focus:text-red-600"
+          >
+            <Trash2 className="mr-2 h-4 w-4" />
+            Remove from Calendar
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      {/* Error display - same pattern as unsynced state */}
+      {error && (
+        <div className="mt-2 flex items-center gap-2 text-sm text-red-600">
+          <AlertCircle className="h-4 w-4" />
+          {error}
+        </div>
+      )}
+    </>
   );
 }

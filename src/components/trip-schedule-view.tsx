@@ -707,7 +707,6 @@ export function TripScheduleView({
             nestedChildren={selectedIntervention.nestedChildren}
           />
         )}
-
       </div>
     </div>
   );

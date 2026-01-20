@@ -71,7 +71,6 @@ export async function GET() {
   return NextResponse.json({
     hasCalendarScope,
     reason: hasCalendarScope ? "verified" : "scope_missing",
-    grantedScopes: verification.scopes,
     sessionSaysHasScope: session.hasCalendarScope ?? false,
     // Flag if there's a mismatch between session and actual
     mismatch: hasCalendarScope !== (session.hasCalendarScope ?? false),
