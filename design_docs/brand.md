@@ -216,6 +216,94 @@ forcing an unrealistic schedule.
 
 ---
 
+## Email Design
+
+### Design Philosophy
+
+Emails are a critical touchpoint—they arrive when users need guidance most. The design prioritizes clarity and scannability over visual flair.
+
+| Principle              | Implementation                                                           |
+| ---------------------- | ------------------------------------------------------------------------ |
+| Plain text aesthetic   | No images, no HTML-heavy layouts. Works in any email client.             |
+| One CTA maximum        | "View your full schedule" link only. No social, no upsells.              |
+| Mobile-first           | 600px max width, large tap targets, readable on small screens            |
+| Monospace for schedule | Schedule blocks use monospace font for alignment and quick scanning      |
+| Emoji as icons         | Sparingly used (sun, coffee, pill, moon) to aid visual scanning          |
+| Respectful timing      | Never before 6 AM or after 10 PM in the user's timezone                  |
+
+### Email Structure
+
+All transactional emails follow this structure:
+
+1. **Greeting** — Personalized if name available, otherwise omitted
+2. **Context line** — What this email is about (flight route, date)
+3. **Schedule content** — The interventions, formatted for scannability
+4. **Single CTA** — Link to view full schedule in app (optional)
+5. **Sign-off** — "—Dawnward" (no marketing footer, no social links)
+6. **Footer** — Unsubscribe link, legal text (minimal)
+
+### Email Visual Style
+
+```
+┌─────────────────────────────────────────────────┐
+│                                                 │
+│  DAWNWARD                          (text logo)  │
+│                                                 │
+│  ─────────────────────────────────────────────  │
+│                                                 │
+│  Hi David,                                      │
+│                                                 │
+│  Your jet lag plan for LAX → LHR                │
+│  Today, January 20                              │
+│                                                 │
+│  ┌─────────────────────────────────────────┐   │
+│  │  ☀️  7:00 AM   Seek bright light        │   │
+│  │  ☕  2:00 PM   Last caffeine            │   │
+│  │  💊  9:00 PM   Take melatonin           │   │
+│  │  🌙 10:00 PM   Target bedtime           │   │
+│  └─────────────────────────────────────────┘   │
+│                                                 │
+│  [ View full schedule → ]                       │
+│                                                 │
+│  Safe travels,                                  │
+│  —Dawnward                                      │
+│                                                 │
+│  ─────────────────────────────────────────────  │
+│  Unsubscribe · Privacy                          │
+│                                                 │
+└─────────────────────────────────────────────────┘
+```
+
+### Email Colors
+
+Emails use a minimal subset of the brand palette:
+
+| Element             | Color                        | Notes                          |
+| ------------------- | ---------------------------- | ------------------------------ |
+| Background          | `#f8fafc` (slate-50)         | Soft gray, not harsh white     |
+| Content card        | `#ffffff`                    | White card on gray background  |
+| Body text           | `#334155` (slate-700)        | Dark enough for readability    |
+| Primary link/button | `#3B9CC9` (Sky)              | Matches app primary color      |
+| Schedule background | `#f1f5f9` (slate-100)        | Subtle highlight for schedule  |
+| Dividers            | `#e2e8f0` (slate-200)        | Thin, unobtrusive              |
+
+### Send Timing
+
+Flight day emails are timed to arrive when useful:
+
+| Scenario                     | Send time                    | Rationale                                  |
+| ---------------------------- | ---------------------------- | ------------------------------------------ |
+| Default                      | 5:00 AM local (departure TZ) | Catch users as they wake on travel day     |
+| Early first intervention     | 7:00 PM night before         | If <3h between 5 AM and first intervention |
+| Adaptation days              | Not sent                     | Users check the app; no inbox clutter      |
+
+**Never send:**
+- Before 6:00 AM or after 10:00 PM in user's local timezone
+- More than one email per trip per day
+- Marketing content in transactional emails
+
+---
+
 ## Component Guidelines
 
 ### Buttons
