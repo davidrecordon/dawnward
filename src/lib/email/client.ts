@@ -12,6 +12,20 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 // Email sender configuration
 const FROM_EMAIL = "Dawnward <notifications@dawnward.app>";
 
+/**
+ * Mask email address for logging (PII protection).
+ * "user@example.com" -> "u***r@example.com"
+ */
+function maskEmail(email: string): string {
+  const [local, domain] = email.split("@");
+  if (!domain) return "***";
+  const maskedLocal =
+    local.length > 2
+      ? `${local[0]}***${local[local.length - 1]}`
+      : "***";
+  return `${maskedLocal}@${domain}`;
+}
+
 export interface SendEmailOptions {
   to: string;
   subject: string;
@@ -59,7 +73,7 @@ export async function sendEmail(
       };
     }
 
-    console.log(`[Email] Sent successfully to ${options.to}, id: ${data?.id}`);
+    console.log(`[Email] Sent successfully to ${maskEmail(options.to)}, id: ${data?.id}`);
     return {
       success: true,
       id: data?.id,

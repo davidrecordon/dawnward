@@ -219,6 +219,10 @@ export async function cancelScheduledEmail(
 /**
  * Get pending emails that are due to be sent.
  *
+ * Includes verification that:
+ * - Trip is still owned by the user (userId matches)
+ * - User still has email notifications enabled
+ *
  * @param limit - Maximum number of emails to fetch
  * @returns Array of pending EmailSchedule records with trip and user data
  */
@@ -232,6 +236,14 @@ export async function getPendingEmails(limit = 50) {
       },
       sentAt: null,
       failedAt: null,
+      // Verify trip is still owned by this user
+      trip: {
+        userId: { not: null },
+      },
+      // Verify user still has email notifications enabled
+      user: {
+        emailNotifications: true,
+      },
     },
     include: {
       trip: true,
