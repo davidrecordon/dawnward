@@ -14,17 +14,12 @@ import {
 } from "@/lib/intervention-utils";
 import {
   getCondensedDescription,
-  getInterventionEmoji,
+  groupByFlightPhase,
 } from "@/lib/intervention-formatter";
 import { useUse24HourFormat } from "@/components/display-preferences-context";
 import { formatLongDate, formatShortDate } from "@/lib/time-utils";
-import {
-  getDisplayTime,
-  isInTransitPhase,
-  isPreFlightPhase,
-  isPostArrivalPhase,
-} from "@/types/schedule";
-import type { DaySchedule, Intervention, InterventionType } from "@/types/schedule";
+import { getDisplayTime } from "@/types/schedule";
+import type { DaySchedule, Intervention } from "@/types/schedule";
 import type { Airport } from "@/types/airport";
 
 export interface DaySummaryCardProps {
@@ -169,36 +164,6 @@ function FlightEventRow({
   );
 }
 
-/**
- * Groups interventions by phase for flight day.
- */
-function groupByFlightPhase(items: Intervention[]): {
-  beforeBoarding: Intervention[];
-  inTransit: Intervention[];
-  afterLanding: Intervention[];
-} {
-  const result = {
-    beforeBoarding: [] as Intervention[],
-    inTransit: [] as Intervention[],
-    afterLanding: [] as Intervention[],
-  };
-
-  for (const item of items) {
-    if (isInTransitPhase(item.phase_type)) {
-      result.inTransit.push(item);
-    } else if (isPreFlightPhase(item.phase_type)) {
-      result.beforeBoarding.push(item);
-    } else if (isPostArrivalPhase(item.phase_type)) {
-      result.afterLanding.push(item);
-    } else {
-      // Defensive: unexpected phase types on flight day go to afterLanding
-      console.warn(`Unexpected phase type on flight day: ${item.phase_type}`);
-      result.afterLanding.push(item);
-    }
-  }
-
-  return result;
-}
 
 /**
  * Summary content renderer - used both collapsed and when no renderExpanded provided
@@ -265,7 +230,7 @@ function SummaryContent({
         )}
 
         {/* On the Plane */}
-        {groups.inTransit.length > 0 && (
+        {groups.onThePlane.length > 0 && (
           <>
             <FlightSubSectionHeader
               title="On the Plane"
@@ -276,7 +241,7 @@ function SummaryContent({
               }
               variant="transit"
             />
-            {groups.inTransit.map((item, i) => (
+            {groups.onThePlane.map((item, i) => (
               <SummaryInterventionRow
                 key={`transit-${item.type}-${getDisplayTime(item)}-${i}`}
                 intervention={item}
@@ -469,19 +434,3 @@ export function DaySummaryCard({
   );
 }
 
-/**
- * Format a day's interventions as plain text (for emails/calendar).
- */
-export function formatDayForText(
-  daySchedule: DaySchedule,
-  use24Hour = false
-): string {
-  return daySchedule.items
-    .map((item) => {
-      const emoji = getInterventionEmoji(item.type);
-      const time = formatTime(getDisplayTime(item), use24Hour);
-      const desc = getCondensedDescription(item);
-      return `${emoji}  ${time}   ${desc}`;
-    })
-    .join("\n");
-}

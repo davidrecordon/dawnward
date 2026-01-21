@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
-import { DaySummaryCard, formatDayForText } from "../day-summary-card";
+import { DaySummaryCard } from "../day-summary-card";
+import { formatDayForText } from "@/lib/intervention-formatter";
 import type { DaySchedule, Intervention } from "@/types/schedule";
 import { FLIGHT_DAY } from "@/lib/intervention-utils";
 
@@ -634,13 +635,13 @@ describe("formatDayForText", () => {
     expect(result).toContain("Caffeine OK until cutoff");
   });
 
-  it("returns empty string for empty day", () => {
+  it("returns message for empty day", () => {
     const daySchedule = createMockDaySchedule({
       items: [],
     });
 
     const result = formatDayForText(daySchedule);
 
-    expect(result).toBe("");
+    expect(result).toContain("No scheduled interventions");
   });
 });

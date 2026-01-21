@@ -16,7 +16,7 @@ const FROM_EMAIL = "Dawnward <notifications@dawnward.app>";
  * Mask email address for logging (PII protection).
  * "user@example.com" -> "u***r@example.com"
  */
-function maskEmail(email: string): string {
+export function maskEmail(email: string): string {
   const [local, domain] = email.split("@");
   if (!domain) return "***";
   const maskedLocal =

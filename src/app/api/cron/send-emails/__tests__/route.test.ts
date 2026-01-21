@@ -26,6 +26,12 @@ vi.mock("@/lib/prisma", () => ({
 // Mock email client
 vi.mock("@/lib/email/client", () => ({
   sendEmail: vi.fn(),
+  maskEmail: vi.fn((email: string) => {
+    const [local, domain] = email.split("@");
+    if (!domain) return "***";
+    const maskedLocal = local.length > 2 ? `${local[0]}***${local[local.length - 1]}` : "***";
+    return `${maskedLocal}@${domain}`;
+  }),
 }));
 
 // Mock scheduler functions
@@ -195,7 +201,8 @@ describe("GET /api/cron/send-emails", () => {
             interventions: [
               {
                 day: 0,
-                interventions: [
+                date: "2026-01-20",
+                items: [
                   { type: "wake_target", title: "Wake", description: "Time to wake" },
                 ],
               },
@@ -239,7 +246,8 @@ describe("GET /api/cron/send-emails", () => {
             interventions: [
               {
                 day: 0,
-                interventions: [
+                date: "2026-01-20",
+                items: [
                   { type: "wake_target", title: "Wake", description: "Time to wake" },
                 ],
               },
