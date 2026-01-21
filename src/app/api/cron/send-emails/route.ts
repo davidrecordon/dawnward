@@ -18,26 +18,29 @@ import {
 } from "@/lib/email/templates/flight-day";
 import type { ScheduleResponse, DaySchedule } from "@/types/schedule";
 
-// Feature flag for email notifications (disabled by default in production)
-const EMAIL_NOTIFICATIONS_ENABLED =
-  process.env.ENABLE_FLIGHT_DAY_EMAILS === "true";
-
-// Verify cron secret to prevent unauthorized access
-const CRON_SECRET = process.env.CRON_SECRET;
-
 // Flight day constant
 const FLIGHT_DAY = 0;
 
 export async function GET(request: Request) {
+  // Read env vars at runtime for testability
+  const emailNotificationsEnabled =
+    process.env.ENABLE_FLIGHT_DAY_EMAILS === "true";
+  const cronSecret = process.env.CRON_SECRET;
+
   // Check feature flag
-  if (!EMAIL_NOTIFICATIONS_ENABLED) {
+  if (!emailNotificationsEnabled) {
     console.log("[Cron] Email notifications disabled, skipping");
     return NextResponse.json({ success: true, skipped: true, reason: "disabled" });
   }
 
-  // Verify authorization
+  // Verify authorization - fail securely if CRON_SECRET is not configured
+  if (!cronSecret) {
+    console.error("[Cron] CRON_SECRET not configured");
+    return NextResponse.json({ error: "Server misconfiguration" }, { status: 500 });
+  }
+
   const authHeader = request.headers.get("authorization");
-  if (CRON_SECRET && authHeader !== `Bearer ${CRON_SECRET}`) {
+  if (authHeader !== `Bearer ${cronSecret}`) {
     console.error("[Cron] Unauthorized request");
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -88,10 +91,12 @@ export async function GET(request: Request) {
       const departureTime = extractTime(trip.departureDatetime);
       const arrivalTime = extractTime(trip.arrivalDatetime);
 
-      // Determine if this is night-before email
-      const now = new Date();
-      const departureDate = new Date(trip.departureDatetime);
-      const isNightBefore = departureDate.toDateString() !== now.toDateString();
+      // Determine if this is night-before email (compare dates in origin timezone)
+      const departureLocalDate = trip.departureDatetime.split("T")[0];
+      const nowInOriginTz = new Date().toLocaleDateString("en-CA", {
+        timeZone: trip.originTz,
+      });
+      const isNightBefore = departureLocalDate !== nowInOriginTz;
 
       // Build email props
       const emailProps = {

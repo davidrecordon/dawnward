@@ -17,10 +17,7 @@ import {
   Text,
 } from "@react-email/components";
 import type { DaySchedule } from "@/types/schedule";
-import {
-  formatFlightDayForEmail,
-  formatDayForText,
-} from "@/lib/intervention-formatter";
+import { formatFlightDayForEmail } from "@/lib/intervention-formatter";
 
 export interface FlightDayEmailProps {
   /** User's name for greeting */
