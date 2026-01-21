@@ -44,19 +44,14 @@ export function calculateEmailSendTime(
   originTz: string,
   firstInterventionTime?: string
 ): { sendAt: Date; isNightBefore: boolean } {
-  // Parse departure datetime
-  const departure = new Date(departureDatetime);
-
-  // Create default send time (5 AM on departure day in origin timezone)
-  const departureDate = departure.toLocaleDateString("en-CA", {
-    timeZone: originTz,
-  }); // YYYY-MM-DD format
+  // Extract date directly from the datetime string (it's already in origin timezone)
+  // Format: "2026-01-20T10:00:00" -> "2026-01-20"
+  const departureDate = departureDatetime.split("T")[0];
 
   // Build 5 AM local time string
   const defaultSendLocal = `${departureDate}T${String(DEFAULT_SEND_HOUR).padStart(2, "0")}:${String(DEFAULT_SEND_MINUTE).padStart(2, "0")}:00`;
 
   // Convert to UTC by parsing in the origin timezone context
-  // We need to calculate the UTC offset for this datetime in the origin timezone
   const defaultSendDate = parseDateInTimezone(defaultSendLocal, originTz);
 
   // Check if we have enough notice before first intervention
@@ -78,10 +73,16 @@ export function calculateEmailSendTime(
 
     // If not enough notice, send night before
     if (hoursNotice < MIN_HOURS_NOTICE) {
-      // Get the day before departure
-      const dayBefore = new Date(departure);
-      dayBefore.setDate(dayBefore.getDate() - 1);
-      const dayBeforeDate = dayBefore.toLocaleDateString("en-CA", {
+      // Get the day before departure by subtracting 24 hours from midnight on departure day
+      const departureMidnight = parseDateInTimezone(
+        `${departureDate}T00:00:00`,
+        originTz
+      );
+      const dayBeforeMidnight = new Date(
+        departureMidnight.getTime() - 24 * 60 * 60 * 1000
+      );
+      // Format the date in the origin timezone
+      const dayBeforeDate = dayBeforeMidnight.toLocaleDateString("en-CA", {
         timeZone: originTz,
       });
 
@@ -103,15 +104,15 @@ export function calculateEmailSendTime(
  * @returns Date object in UTC
  */
 function parseDateInTimezone(localDatetime: string, timezone: string): Date {
-  // Get the UTC offset for this datetime in the given timezone
-  const date = new Date(localDatetime);
+  // Parse the datetime as UTC first (append 'Z' to treat it as UTC)
+  const asUTC = new Date(localDatetime + "Z");
 
-  // Use Intl to get the offset
+  // Use Intl to get the timezone offset for this datetime
   const formatter = new Intl.DateTimeFormat("en-US", {
     timeZone: timezone,
     timeZoneName: "longOffset",
   });
-  const parts = formatter.formatToParts(date);
+  const parts = formatter.formatToParts(asUTC);
   const offsetPart = parts.find((p) => p.type === "timeZoneName");
 
   let offsetMinutes = 0;
@@ -126,8 +127,9 @@ function parseDateInTimezone(localDatetime: string, timezone: string): Date {
     }
   }
 
-  // Adjust the date by subtracting the offset to get UTC
-  const utcTime = date.getTime() - offsetMinutes * 60 * 1000;
+  // Convert local time in target timezone to UTC
+  // UTC = localTime - offset (where offset is positive for east, negative for west)
+  const utcTime = asUTC.getTime() - offsetMinutes * 60 * 1000;
   return new Date(utcTime);
 }
 
