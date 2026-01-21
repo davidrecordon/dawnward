@@ -7,7 +7,7 @@
 
 import { timingSafeEqual } from "crypto";
 import { NextResponse } from "next/server";
-import { sendEmail } from "@/lib/email/client";
+import { sendEmail, maskEmail } from "@/lib/email/client";
 import {
   getPendingEmails,
   markEmailSent,
@@ -21,20 +21,6 @@ import type { ScheduleResponse, DaySchedule } from "@/types/schedule";
 
 // Flight day constant
 const FLIGHT_DAY = 0;
-
-/**
- * Mask email address for logging (PII protection).
- * "user@example.com" -> "u***r@example.com"
- */
-function maskEmail(email: string): string {
-  const [local, domain] = email.split("@");
-  if (!domain) return "***";
-  const maskedLocal =
-    local.length > 2
-      ? `${local[0]}***${local[local.length - 1]}`
-      : "***";
-  return `${maskedLocal}@${domain}`;
-}
 
 export async function GET(request: Request) {
   // Read env vars at runtime for testability
