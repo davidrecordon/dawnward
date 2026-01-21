@@ -62,12 +62,16 @@ const tripRequestSchema = z.object({
 /**
  * Schedule flight day email in background (non-blocking).
  * Checks user preference and creates EmailSchedule record if enabled.
+ *
+ * @param wakeTime - User's wake time (HH:MM), used as proxy for first intervention
+ *                   to determine if email should go out night before
  */
 async function scheduleEmailInBackground(
   tripId: string,
   userId: string,
   departureDatetime: string,
-  originTz: string
+  originTz: string,
+  wakeTime: string
 ): Promise<void> {
   try {
     // Check if user has email notifications enabled
@@ -77,12 +81,15 @@ async function scheduleEmailInBackground(
     }
 
     // Schedule the flight day email
+    // Use wake_time as proxy for first intervention time - if user wakes early,
+    // the email will go out the night before to ensure they see it in time
     await scheduleFlightDayEmail({
       tripId,
       userId,
       emailType: "flight_day",
       departureDatetime,
       originTz,
+      firstInterventionTime: wakeTime,
     });
   } catch (error) {
     // Log but don't fail - email scheduling is non-critical
@@ -169,7 +176,8 @@ export async function POST(request: Request) {
           trip.id,
           userId,
           data.departure_datetime,
-          data.origin_tz
+          data.origin_tz,
+          data.wake_time
         )
       );
     }
