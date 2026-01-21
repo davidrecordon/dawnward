@@ -20,6 +20,7 @@ Dawnward is a free, open-source web app for jet lag optimization. It uses the Ar
 | Framework      | Next.js 16+ (App Router) | Vercel-native, React Server Components |
 | Auth           | NextAuth.js v5           | Google provider with Calendar scope    |
 | Database       | Prisma Postgres          | With `@prisma/adapter-pg` driver       |
+| Email          | Resend + React Email     | Transactional emails with templates    |
 | Python Runtime | Vercel Python Functions  | For Arcascope circadian library        |
 | Analytics      | Vercel Analytics         | Free tier                              |
 | Repo           | GitHub                   | Vercel auto-deploys from main          |
@@ -128,6 +129,22 @@ CREATE TABLE calendar_syncs (
   last_synced_at TIMESTAMPTZ DEFAULT NOW(),
 
   UNIQUE(trip_id, user_id)
+);
+
+-- Email schedule tracking
+CREATE TABLE email_schedules (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  trip_id UUID NOT NULL REFERENCES trips(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  email_type VARCHAR(50) NOT NULL,          -- 'flight_day', etc.
+  scheduled_for TIMESTAMPTZ NOT NULL,       -- When to send
+  sent_at TIMESTAMPTZ,                      -- When actually sent (NULL = pending)
+  failed_at TIMESTAMPTZ,                    -- When failed (NULL = not failed)
+  error_message TEXT,                       -- Failure reason if applicable
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+
+  UNIQUE(trip_id, user_id, email_type)
 );
 
 -- Trip feedback (for future model improvement)
@@ -305,6 +322,25 @@ Event creation guidelines:
 ```
 POST /api/trips/[id]/feedback     → Submit trip feedback
 GET  /api/trips/[id]/feedback     → Get feedback if exists
+```
+
+### Cron Jobs
+
+```
+GET /api/cron/send-emails         → Process pending email notifications
+```
+
+Requires `Authorization: Bearer {CRON_SECRET}` header. Configured in `vercel.json`:
+
+```json
+{
+  "crons": [
+    {
+      "path": "/api/cron/send-emails",
+      "schedule": "*/15 * * * *"
+    }
+  ]
+}
 ```
 
 ---
@@ -906,6 +942,125 @@ async function syncToCalendar(tripId, userId) {
 
 ---
 
+## Email Notifications
+
+Send flight day reminder emails to users with their schedule for the departure day.
+
+### Architecture
+
+**Files:**
+
+```
+src/lib/email/
+├── client.ts              # Resend API wrapper with PII masking
+├── scheduler.ts           # Send time calculation, EmailSchedule CRUD
+├── templates/
+│   └── flight-day.tsx     # React Email template (HTML + plain text)
+└── __tests__/
+    └── scheduler.test.ts  # Timezone calculations, send time logic
+
+src/lib/
+└── intervention-formatter.ts  # Shared formatting for emails and UI
+```
+
+### Flow
+
+1. **Trip Creation** → `scheduleFlightDayEmail()` runs in background via `waitUntil()`
+2. **EmailSchedule Created** → Record with calculated send time stored in DB
+3. **Cron Runs** → `/api/cron/send-emails` every 15 minutes
+4. **Email Sent** → Template rendered, sent via Resend, marked as sent/failed
+
+### Send Time Calculation
+
+```typescript
+function calculateEmailSendTime(
+  departureDatetime: string,
+  originTz: string,
+  firstInterventionTime?: string
+): { sendAt: Date; isNightBefore: boolean }
+```
+
+**Logic:**
+
+- Default: 5:00 AM local time on departure day (origin timezone)
+- Fallback: 7:00 PM night before if <3h between 5 AM and first intervention
+- Uses user's `wake_time` as proxy for first intervention time
+
+**Examples:**
+
+| Departure | First Intervention | Send Time | Why |
+|-----------|-------------------|-----------|-----|
+| 10:00 AM | 07:00 (wake) | 05:00 AM same day | 5h notice is sufficient |
+| 06:30 AM | 05:30 (wake) | 07:00 PM night before | Only 30min between 5AM and wake |
+| 11:00 PM | 07:00 (wake) | 05:00 AM same day | Late flight, plenty of time |
+
+### Email Template
+
+React Email template with HTML and plain text versions:
+
+```tsx
+// src/lib/email/templates/flight-day.tsx
+export async function renderFlightDayEmail(props: FlightDayEmailProps): Promise<string>
+export function renderFlightDayEmailText(props: FlightDayEmailProps): string
+```
+
+**Structure:**
+
+1. Header with logo
+2. Greeting (personalized if name available)
+3. Route info (LAX → LHR, Today/Tomorrow)
+4. Schedule table (emoji + time + intervention)
+5. CTA link to full schedule
+6. Sign-off and unsubscribe
+
+### Cron Endpoint
+
+```typescript
+// GET /api/cron/send-emails
+// Requires: Authorization: Bearer {CRON_SECRET}
+
+export async function GET(request: Request) {
+  // 1. Check feature flag
+  if (process.env.ENABLE_FLIGHT_DAY_EMAILS !== "true") {
+    return { skipped: true, reason: "disabled" };
+  }
+
+  // 2. Verify CRON_SECRET (timing-safe comparison)
+  // 3. Fetch pending emails (scheduledFor <= now, not sent, not failed)
+  // 4. For each: render template, send via Resend, mark sent/failed
+  // 5. Return counts: { sent, failed, processed }
+}
+```
+
+### Security
+
+- **Auth**: `CRON_SECRET` required, uses `crypto.timingSafeEqual()`
+- **PII**: Email addresses masked in logs (`u***r@example.com`)
+- **Ownership**: Verified via Prisma relation (trip must belong to user)
+- **Feature Flag**: `ENABLE_FLIGHT_DAY_EMAILS` must be `"true"` to send
+
+### EmailSchedule Model
+
+```prisma
+model EmailSchedule {
+  id           String    @id @default(cuid())
+  tripId       String
+  userId       String
+  emailType    String    // "flight_day"
+  scheduledFor DateTime  // When to send
+  sentAt       DateTime? // When sent (null = pending)
+  failedAt     DateTime? // When failed (null = not failed)
+  errorMessage String?   // Failure reason
+
+  trip         SharedSchedule @relation(...)
+  user         User           @relation(...)
+
+  @@unique([tripId, userId, emailType])
+}
+```
+
+---
+
 ## Environment Variables
 
 ```bash
@@ -918,6 +1073,11 @@ AUTH_SECRET=  # Generate with: openssl rand -base64 32
 # Google OAuth
 GOOGLE_CLIENT_ID=
 GOOGLE_CLIENT_SECRET=
+
+# Email (Resend)
+RESEND_API_KEY=           # Resend API key for sending emails
+CRON_SECRET=              # Secret for authenticating cron requests
+ENABLE_FLIGHT_DAY_EMAILS= # Set to "true" to enable email sending
 
 # Optional
 RATE_LIMIT_DISABLED=false  # For development

@@ -158,6 +158,7 @@ Without migrations, schema changes work locally but fail in production and for n
 - **Styling**: Tailwind CSS v4 with shadcn/ui components
 - **Python Runtime**: Vercel Python Functions for circadian model (Arcascope library)
 - **Deployment**: Vercel with explicit `builds` config (Next.js + Python coexist via `vercel.json`)
+- **Email**: Resend for transactional emails, React Email for templates
 - **Analytics**: Vercel Analytics (respects GPC and DNT privacy signals)
 - **Testing**: Vitest for TypeScript, pytest for Python, Playwright for E2E (Desktop: Chromium + WebKit, Mobile: Pixel 7 + iPhone 15 Pro)
 - **Linting**: ESLint + Prettier for TypeScript, ruff + mypy for Python
@@ -171,6 +172,7 @@ src/
 ├── app/              # Next.js App Router pages and API routes
 │   ├── auth/         # Sign-in and error pages
 │   ├── api/auth/     # NextAuth route handlers
+│   ├── api/cron/     # Vercel cron jobs (send-emails)
 │   ├── api/trips/    # Trip CRUD and sharing endpoints
 │   ├── api/user/     # User preferences endpoint
 │   ├── api/share/    # Shared trip lookup
@@ -184,7 +186,8 @@ src/
 │   ├── auth/         # Auth components (SignInButton, UserMenu, etc.)
 │   └── schedule/     # Schedule display components
 ├── lib/              # Shared utilities (cn() for Tailwind class merging)
-│   └── __tests__/    # Vitest unit tests for utilities
+│   ├── __tests__/    # Vitest unit tests for utilities
+│   └── email/        # Email infrastructure (client, scheduler, templates)
 ├── test/             # Test setup and configuration
 ├── types/            # TypeScript type definitions
 └── generated/prisma/ # Prisma client (generated, do not edit)
@@ -275,6 +278,17 @@ The `DaySummaryCard` component shows:
 - Anchor-based event grouping reduces ~20 events to ~10 per trip
 - Events use IANA timezones from intervention data (origin_tz for pre-flight, dest_tz for post-flight)
 - 5-minute stale sync timeout treats stuck syncs as failed
+
+**Email Notifications:**
+
+- `EmailSchedule` - Tracks scheduled email notifications
+  - `tripId` / `userId` / `emailType` - Unique composite key
+  - `scheduledFor` - When to send (calculated from departure time)
+  - `sentAt` / `failedAt` - Delivery status
+  - `errorMessage` - Failure reason if applicable
+- Emails scheduled in background via `waitUntil()` when trips are created
+- Cron job (`/api/cron/send-emails`) processes pending emails every 15 minutes
+- Feature flag `ENABLE_FLIGHT_DAY_EMAILS` controls sending (disabled by default)
 
 ### Schedule Generation
 
@@ -406,6 +420,43 @@ Anchor-based grouping reduces calendar clutter (~20 events → ~10 per trip):
 
 **Configuration:** See `design_docs/exploration/configuration-audit.md` for all calendar constants.
 
+### Email Notifications
+
+Send flight day reminder emails to users with their schedule for the day.
+
+**Files:**
+
+- `src/lib/email/client.ts` - Resend API wrapper with PII masking
+- `src/lib/email/scheduler.ts` - Send time calculation, EmailSchedule management
+- `src/lib/email/templates/flight-day.tsx` - React Email template (HTML + plain text)
+- `src/lib/intervention-formatter.ts` - Shared formatting for emails and UI
+- `src/app/api/cron/send-emails/route.ts` - Cron endpoint for sending pending emails
+
+**Flow:**
+
+1. User creates trip → `scheduleFlightDayEmail()` runs in background via `waitUntil()`
+2. EmailSchedule record created with calculated send time
+3. Vercel cron hits `/api/cron/send-emails` every 15 minutes
+4. Cron job fetches pending emails, renders templates, sends via Resend
+5. EmailSchedule marked as sent or failed
+
+**Send Time Calculation:**
+
+- Default: 5:00 AM local time on departure day (origin timezone)
+- Fallback: 7:00 PM night before if <3h between 5 AM and first intervention
+- User's `wake_time` used as proxy for first intervention time
+
+**Security:**
+
+- Cron endpoint requires `Authorization: Bearer {CRON_SECRET}` header
+- Uses timing-safe comparison (`crypto.timingSafeEqual`) to prevent timing attacks
+- PII (email addresses) masked in logs
+- Trip ownership verified before sending (prevents orphaned emails)
+
+**Feature Flag:**
+
+Set `ENABLE_FLIGHT_DAY_EMAILS=true` to enable sending. When disabled, cron returns early without processing.
+
 ## Security Considerations
 
 **Trip Access Control:**
@@ -433,6 +484,12 @@ Required:
 - `DATABASE_URL` - PostgreSQL connection string
 - `AUTH_SECRET` - Session encryption key (Auth.js v5 uses AUTH_SECRET, not NEXTAUTH_SECRET)
 - `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` - Google OAuth credentials
+
+Email (optional):
+
+- `RESEND_API_KEY` - Resend API key for sending emails
+- `CRON_SECRET` - Secret for authenticating cron job requests
+- `ENABLE_FLIGHT_DAY_EMAILS` - Set to `"true"` to enable email sending (disabled by default)
 
 Note: `NEXTAUTH_URL` is no longer required—Auth.js v5 infers the URL from request headers.
 
@@ -575,7 +632,7 @@ export default function MyFeatureDemo() {
 
 ## Testing
 
-**TypeScript (Vitest)**: ~525 tests covering utility functions and components
+**TypeScript (Vitest)**: ~732 tests covering utility functions and components
 
 - `src/lib/__tests__/time-utils.test.ts` - Date/time formatting, timezone-aware operations
 - `src/lib/__tests__/timezone-utils.test.ts` - Flight duration calculation, timezone shifts, prep days recommendations
@@ -604,6 +661,9 @@ export default function MyFeatureDemo() {
 - `src/components/schedule/__tests__/intervention-card.test.tsx` - Intervention card rendering, dual timezone display
 - `src/components/schedule/__tests__/inflight-sleep-card.test.tsx` - In-flight sleep card, flight offset display
 - `src/lib/__tests__/google-calendar.test.ts` - Calendar event building, anchor-based grouping, reminder timing, duration calculations
+- `src/lib/__tests__/intervention-formatter.test.ts` - Unified intervention formatting for emails and UI
+- `src/lib/email/__tests__/scheduler.test.ts` - Email scheduling, timezone calculations, send time logic
+- `src/app/api/cron/send-emails/__tests__/route.test.ts` - Cron endpoint auth, feature flag, email processing
 - `src/types/__tests__/user-preferences.test.ts` - User preference type validation
 
 **Python (pytest)**: ~345 tests covering schedule generation (6-layer validation strategy)
