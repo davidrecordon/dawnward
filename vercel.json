@@ -22,5 +22,11 @@
   "routes": [
     { "src": "/api/schedule/generate", "dest": "api/schedule/generate.py" },
     { "src": "/api/mcp/tools", "dest": "api/mcp/tools.py" }
+  ],
+  "crons": [
+    {
+      "path": "/api/cron/send-emails",
+      "schedule": "*/15 * * * *"
+    }
   ]
 }
