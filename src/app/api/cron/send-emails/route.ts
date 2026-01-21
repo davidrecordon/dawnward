@@ -5,6 +5,7 @@
  * Processes pending EmailSchedule records and sends emails.
  */
 
+import { timingSafeEqual } from "crypto";
 import { NextResponse } from "next/server";
 import { sendEmail } from "@/lib/email/client";
 import {
@@ -20,6 +21,20 @@ import type { ScheduleResponse, DaySchedule } from "@/types/schedule";
 
 // Flight day constant
 const FLIGHT_DAY = 0;
+
+/**
+ * Mask email address for logging (PII protection).
+ * "user@example.com" -> "u***r@example.com"
+ */
+function maskEmail(email: string): string {
+  const [local, domain] = email.split("@");
+  if (!domain) return "***";
+  const maskedLocal =
+    local.length > 2
+      ? `${local[0]}***${local[local.length - 1]}`
+      : "***";
+  return `${maskedLocal}@${domain}`;
+}
 
 export async function GET(request: Request) {
   // Read env vars at runtime for testability
@@ -39,8 +54,14 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Server misconfiguration" }, { status: 500 });
   }
 
-  const authHeader = request.headers.get("authorization");
-  if (authHeader !== `Bearer ${cronSecret}`) {
+  // Use timing-safe comparison to prevent timing attacks
+  const authHeader = request.headers.get("authorization") ?? "";
+  const expectedAuth = `Bearer ${cronSecret}`;
+  const isValidAuth =
+    authHeader.length === expectedAuth.length &&
+    timingSafeEqual(Buffer.from(authHeader), Buffer.from(expectedAuth));
+
+  if (!isValidAuth) {
     console.error("[Cron] Unauthorized request");
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -133,7 +154,7 @@ export async function GET(request: Request) {
           await markEmailSent(emailSchedule.id);
           sent++;
           console.log(
-            `[Cron] Sent email ${emailSchedule.id} to ${user.email}`
+            `[Cron] Sent email ${emailSchedule.id} to ${maskEmail(user.email)}`
           );
         } else {
           await markEmailFailed(emailSchedule.id, result.error ?? "Unknown error");
