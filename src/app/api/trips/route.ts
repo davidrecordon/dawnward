@@ -1,7 +1,12 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { waitUntil } from "@vercel/functions";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import {
+  scheduleFlightDayEmail,
+  userHasEmailNotifications,
+} from "@/lib/email/scheduler";
 
 // Validation patterns (same as schedule generation)
 const DATETIME_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/;
@@ -53,6 +58,37 @@ const tripRequestSchema = z.object({
     .default("balanced"),
   route_label: z.string().optional(),
 });
+
+/**
+ * Schedule flight day email in background (non-blocking).
+ * Checks user preference and creates EmailSchedule record if enabled.
+ */
+async function scheduleEmailInBackground(
+  tripId: string,
+  userId: string,
+  departureDatetime: string,
+  originTz: string
+): Promise<void> {
+  try {
+    // Check if user has email notifications enabled
+    const hasNotifications = await userHasEmailNotifications(userId);
+    if (!hasNotifications) {
+      return;
+    }
+
+    // Schedule the flight day email
+    await scheduleFlightDayEmail({
+      tripId,
+      userId,
+      emailType: "flight_day",
+      departureDatetime,
+      originTz,
+    });
+  } catch (error) {
+    // Log but don't fail - email scheduling is non-critical
+    console.error("[Trips] Background email scheduling failed:", error);
+  }
+}
 
 /**
  * POST /api/trips - Save a trip.
@@ -125,6 +161,18 @@ export async function POST(request: Request) {
         routeLabel: data.route_label,
       },
     });
+
+    // Schedule email in background (non-blocking)
+    if (userId) {
+      waitUntil(
+        scheduleEmailInBackground(
+          trip.id,
+          userId,
+          data.departure_datetime,
+          data.origin_tz
+        )
+      );
+    }
 
     return NextResponse.json({
       id: trip.id,
