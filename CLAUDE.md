@@ -281,7 +281,7 @@ Schedules are computed by Python functions using the Arcascope `circadian` libra
 
 - **Preparation** - Full days before departure
 - **Pre-Departure** - Departure day, before flight (ends 3h before departure)
-- **In-Transit** - On the plane (with sleep windows for 12+ hour flights)
+- **In-Transit** - On the plane (full-flight sleep for overnight red-eyes, dual windows for 12+ hour flights)
 - **Post-Arrival** - Arrival day, after landing
 - **Adaptation** - Full days at destination
 
@@ -291,7 +291,7 @@ Key intervention types:
 - `melatonin` - Optimal melatonin timing
 - `caffeine_ok` / `caffeine_cutoff` / `caffeine_boost` - Caffeine strategy
 - `sleep_target` / `wake_target` - Target sleep schedule
-- `nap_window` - In-flight sleep opportunities (for ultra-long-haul flights)
+- `nap_window` - In-flight sleep opportunities (overnight red-eyes and ultra-long-haul flights)
 
 ### Intervention Timezone Architecture
 

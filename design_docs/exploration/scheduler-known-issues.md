@@ -4,41 +4,27 @@ Issues identified in the Python scheduler that should be addressed in future wor
 
 ---
 
-## Pre-departure interventions after flight departure
+## ~~Pre-departure interventions after flight departure~~ (Fixed)
 
 **Severity:** Medium
 **Discovered:** 2026-01-18 (Calendar Phase 2)
+**Fixed:** 2026-02-02
 
-### Problem
+### Problem (Resolved)
 
-The scheduler generates pre-departure phase interventions that occur after the flight has already departed. For example:
+The scheduler generated pre-departure phase interventions that occurred after the flight had already departed. For example, VS20 SFO→LHR (16:30 departure) would create a `sleep_target` at 18:00.
 
-- **VS20 SFO→LHR**: Flight departs at 16:30 LA time
-- Scheduler creates `sleep_target` at 18:00 LA time on departure day
-- User will be on the plane at 18:00, so this intervention is impossible
+### Fix Applied
 
-### Expected Behavior
+Two layers of fixes now handle this:
 
-Pre-departure interventions should be filtered to only include times before the flight departure. The scheduler should either:
+1. **Sleep target capping** (`intervention_planner.py:_cap_sleep_target_for_departure`): Caps or omits sleep_target when within 4h of departure. Omitted sleep guidance moves to "After Landing" section via `_include_post_arrival_sleep_in_flight_day()`.
 
-1. Not generate interventions that fall after departure time
-2. Filter them out during phase generation
-3. Move the sleep_target to the in-transit phase if appropriate
+2. **Overnight flight detection** (`phase_generator.py:_is_overnight_flight`): For red-eye flights (departing 7 PM–1 AM, arriving morning), the pre-departure sleep_target is always omitted and replaced with full-flight sleep guidance in the in-transit phase. This prevents impractical recommendations like "sleep at 6:30 PM" before a 9:30 PM departure.
 
-### Affected Flights
+### Remaining Edge Case
 
-Most noticeable on eastbound overnight flights where the shifted sleep time approaches or exceeds the departure time:
-
-- VS20 SFO→LHR (16:30 departure, creates 18:00 sleep_target)
-- Similar pattern likely on other eastbound transatlantic flights
-
-### Location in Code
-
-The pre-departure phase is generated in `api/_python/circadian/scheduling/phase_generator.py`. The filtering logic would need to compare intervention times against the departure datetime.
-
-### Workaround
-
-Users can ignore pre-departure sleep_target events that occur after their departure time. The calendar sync will still create these events, but they can be manually deleted.
+Late afternoon transatlantic flights (departing 5-7 PM) are NOT classified as overnight, so they still use the capping logic. For VS20 (4:30 PM), sleep_target is omitted because the phase ends at 1:30 PM (3h before departure) and the circadian target (~7 PM) is after that. This is correct behavior — the user gets sleep guidance in "After Landing" instead. If users report issues with this window, consider adding circadian-aligned sleep detection (Option B from the original analysis).
 
 ---
 
