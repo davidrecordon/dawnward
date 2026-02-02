@@ -519,7 +519,7 @@ export function formatDayForText(
     .map((item) => {
       const emoji = getInterventionEmoji(item.type);
       const time = formatTime(getDisplayTime(item), use24Hour);
-      const desc = getCondensedDescription(item.type);
+      const desc = getCondensedDescription(item);
       return `${emoji}  ${time}   ${desc}`;
     })
     .join("\n");
