@@ -32,6 +32,11 @@ from ..science.shift_calculator import ShiftCalculator
 from ..science.sleep_pressure import SleepPressureModel
 from ..types import Intervention, ScheduleRequest, TravelPhase
 from .constraint_filter import SLEEP_TARGET_DEPARTURE_BUFFER_HOURS
+from .phase_generator import (
+    OVERNIGHT_ARRIVAL_LATEST_HOUR,
+    OVERNIGHT_DEPARTURE_EARLIEST_HOUR,
+    OVERNIGHT_DEPARTURE_LATEST_HOUR,
+)
 
 # Crew wakes passengers ~1h before landing
 CREW_WAKE_BEFORE_LANDING_HOURS = 1
@@ -39,6 +44,11 @@ CREW_WAKE_BEFORE_LANDING_HOURS = 1
 # Buffer time for airport transit (user needs this time before departure)
 # Used for both wake_target and sleep_target capping
 AIRPORT_BUFFER_HOURS = 3
+
+# Overnight flight sleep timing
+# Red-eye flights have a shorter initial service (~45 min) vs daytime (~2h)
+OVERNIGHT_SETTLING_HOURS = 0.75  # 45 min: taxi, takeoff, brief meal/drink service
+OVERNIGHT_PRE_LANDING_HOURS = 0.5  # 30 min: crew prep, lights on before descent
 
 
 @dataclass
@@ -260,6 +270,31 @@ class InterventionPlanner:
 
         return wake_target
 
+    def _is_overnight_departure(self) -> bool:
+        """
+        Check if the flight is an overnight/red-eye departure.
+
+        Uses the same criteria as PhaseGenerator._is_overnight_flight:
+        evening departure + morning arrival + crosses midnight.
+        """
+        first_leg = self.request.legs[0]
+        departure = parse_iso_datetime(first_leg.departure_datetime)
+        arrival = parse_iso_datetime(first_leg.arrival_datetime)
+
+        dep_hour = departure.hour
+        arr_hour = arrival.hour
+
+        is_evening = (
+            dep_hour >= OVERNIGHT_DEPARTURE_EARLIEST_HOUR
+            or dep_hour <= OVERNIGHT_DEPARTURE_LATEST_HOUR
+        )
+        is_morning_arrival = arr_hour < OVERNIGHT_ARRIVAL_LATEST_HOUR
+        crosses_midnight = (
+            arrival.date() > departure.date() or dep_hour <= OVERNIGHT_DEPARTURE_LATEST_HOUR
+        )
+
+        return is_evening and is_morning_arrival and crosses_midnight
+
     def _cap_sleep_target_for_departure(
         self, sleep_target: time
     ) -> tuple[time | None, time | None]:
@@ -268,6 +303,10 @@ class InterventionPlanner:
 
         Uses SLEEP_TARGET_DEPARTURE_BUFFER_HOURS (4h) from constraint_filter module.
         Pre_departure phase ends 3h before departure (airport buffer).
+
+        For overnight flights, the sleep_target is always omitted because
+        the flight itself is the sleep opportunity. Users get "Sleep for
+        the flight" guidance in the in-transit phase instead.
 
         Args:
             sleep_target: Circadian-optimal sleep time
@@ -281,6 +320,12 @@ class InterventionPlanner:
         departure = parse_iso_datetime(first_leg.departure_datetime)
         departure_minutes = time_to_minutes(departure.time())
         sleep_minutes = time_to_minutes(sleep_target)
+
+        # For overnight flights, always omit the pre-departure sleep target.
+        # The flight IS the sleep — showing "sleep at 6:30 PM" before a 9:30 PM
+        # red-eye is impractical. The in-transit phase handles sleep guidance.
+        if self._is_overnight_departure():
+            return (None, sleep_target)
 
         # Calculate hours before departure
         # Handle same-day comparison (sleep after midnight handled separately)
@@ -365,6 +410,7 @@ class InterventionPlanner:
 
         Routes to appropriate helper based on flight type:
         - ULR flights (12h+): circadian-timed sleep windows via _plan_ulr_sleep_windows
+        - Overnight flights (6h+): full-flight sleep via _plan_overnight_flight_sleep
         - Regular flights (6h+): generic nap suggestion via _plan_regular_flight_nap
         - Short flights (<6h): no interventions (phase skipped in scheduler)
         """
@@ -374,6 +420,8 @@ class InterventionPlanner:
         # Suggest sleep for flights 6h+ - even non-ULR overnight flights
         # benefit from sleep suggestions
         if phase.flight_duration_hours and phase.flight_duration_hours >= 6:
+            if phase.is_overnight_flight:
+                return self._plan_overnight_flight_sleep(phase)
             return self._plan_regular_flight_nap(phase)
 
         return []
@@ -425,8 +473,51 @@ class InterventionPlanner:
         offset_hours = (utc_time - departure_utc).total_seconds() / 3600
         return max(0, round(offset_hours, 1))
 
+    def _plan_overnight_flight_sleep(self, phase: TravelPhase) -> list[Intervention]:
+        """Plan full-flight sleep for overnight/red-eye flights.
+
+        Overnight flights (departing evening, arriving morning) are natural
+        sleep opportunities. Airlines dim the cabin and serve a brief meal
+        before turning lights off. Recommends sleeping most of the flight.
+        """
+        flight_hours = phase.flight_duration_hours or 8
+
+        # Sleep starts after brief settling period (taxi, takeoff, light meal)
+        sleep_offset_hours = OVERNIGHT_SETTLING_HOURS
+
+        # Sleep duration = flight minus settling and pre-landing buffer
+        sleep_hours = flight_hours - OVERNIGHT_SETTLING_HOURS - OVERNIGHT_PRE_LANDING_HOURS
+        sleep_hours = max(sleep_hours, flight_hours * 0.5)  # At least 50% of flight
+
+        # Calculate display time in destination timezone
+        dest_tz = ZoneInfo(self.request.legs[0].dest_tz)
+        departure_utc = phase.start_datetime
+        if departure_utc.tzinfo is None:
+            origin_tz = ZoneInfo(self.request.legs[0].origin_tz)
+            departure_utc = departure_utc.replace(tzinfo=origin_tz)
+        departure_utc = departure_utc.astimezone(UTC)
+
+        sleep_utc = departure_utc + timedelta(hours=sleep_offset_hours)
+        sleep_local = sleep_utc.astimezone(dest_tz)
+        display_time = sleep_local.strftime("%H:%M")
+
+        return [
+            Intervention(
+                time=display_time,
+                type="nap_window",
+                title="Sleep for the flight",
+                description=(
+                    "This is an overnight flight — sleep as much as you can. "
+                    "The cabin lights will dim after a brief meal service. "
+                    "Use an eye mask and earplugs for better rest."
+                ),
+                duration_min=int(sleep_hours * 60),
+                flight_offset_hours=round(sleep_offset_hours, 1),
+            )
+        ]
+
     def _plan_regular_flight_nap(self, phase: TravelPhase) -> list[Intervention]:
-        """Plan a single nap suggestion for flights 6+ hours.
+        """Plan a single nap suggestion for daytime flights 6+ hours.
 
         Places nap window roughly 2 hours into flight (after meal service).
         """

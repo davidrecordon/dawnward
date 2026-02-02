@@ -49,6 +49,7 @@ class TravelPhase:
     # Optional in-transit metadata
     flight_duration_hours: float | None = None
     sleep_windows: list[dict[str, Any]] | None = None  # For ULR flights
+    is_overnight_flight: bool = False  # Departs evening, arrives morning
 
     @property
     def duration_hours(self) -> float:
