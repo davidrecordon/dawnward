@@ -584,6 +584,166 @@ class TestModerateJetLag:
                 "Title should not mention pre-landing when no adjustment was made"
             )
 
+    def test_virgin_vs10_jfk_to_london(self):
+        """
+        Virgin Atlantic VS10: JFK 21:30 → LHR 09:20+1 (~6h50m).
+
+        Classic red-eye transatlantic. Tests overnight flight handling:
+        - No pre-departure sleep_target (flight IS the sleep)
+        - Full-flight sleep recommendation instead of short nap
+        - Post-arrival sleep guidance in "After Landing" section
+        """
+        generator = ScheduleGenerator()
+        base_date = datetime.now() + timedelta(days=7)
+
+        # VS10: JFK 21:30 → LHR 09:20+1
+        departure = make_flight_datetime(base_date, "21:30")
+        arrival = make_flight_datetime(base_date, "09:20", day_offset=1)
+
+        request = ScheduleRequest(
+            legs=[
+                TripLeg(
+                    origin_tz="America/New_York",
+                    dest_tz="Europe/London",
+                    departure_datetime=departure.strftime("%Y-%m-%dT%H:%M"),
+                    arrival_datetime=arrival.strftime("%Y-%m-%dT%H:%M"),
+                )
+            ],
+            prep_days=3,
+            wake_time="07:00",
+            sleep_time="22:00",
+            uses_melatonin=True,
+            uses_caffeine=True,
+        )
+
+        schedule = generator.generate_schedule(request)
+
+        flight = FlightInfo(
+            departure_datetime=departure,
+            arrival_datetime=arrival,
+            origin_tz="America/New_York",
+            dest_tz="Europe/London",
+        )
+
+        # 5h east = advance direction
+        assert schedule.direction == "advance", (
+            f"Expected advance direction, got {schedule.direction}"
+        )
+
+        issues = run_all_validations(schedule, flight)
+        errors = [i for i in issues if i.severity == "error"]
+
+        assert len(errors) == 0, f"Found {len(errors)} errors:\n" + "\n".join(
+            f"  - {e.category}: {e.message}" for e in errors
+        )
+
+    def test_vs10_no_pre_departure_sleep(self):
+        """
+        VS10 regression test: overnight red-eye should NOT have pre-departure sleep_target.
+
+        For VS10 (9:30 PM departure):
+        - The flight IS the sleep opportunity
+        - Showing "sleep at 6:30 PM" before a red-eye is impractical
+        - User gets "Sleep for the flight" in the in-transit phase instead
+        """
+        generator = ScheduleGenerator()
+        base_date = datetime.now() + timedelta(days=7)
+
+        departure = make_flight_datetime(base_date, "21:30")
+        arrival = make_flight_datetime(base_date, "09:20", day_offset=1)
+
+        request = ScheduleRequest(
+            legs=[
+                TripLeg(
+                    origin_tz="America/New_York",
+                    dest_tz="Europe/London",
+                    departure_datetime=departure.strftime("%Y-%m-%dT%H:%M"),
+                    arrival_datetime=arrival.strftime("%Y-%m-%dT%H:%M"),
+                )
+            ],
+            prep_days=3,
+            wake_time="07:00",
+            sleep_time="22:00",
+            uses_melatonin=True,
+            uses_caffeine=True,
+        )
+
+        schedule = generator.generate_schedule(request)
+
+        # No pre-departure sleep_target on day 0
+        day_0_phases = [ds for ds in schedule.interventions if ds.day == 0]
+        pre_departure_sleep = [
+            item
+            for ds in day_0_phases
+            for item in ds.items
+            if item.type == "sleep_target" and item.phase_type == "pre_departure"
+        ]
+
+        assert len(pre_departure_sleep) == 0, (
+            f"VS10: No sleep_target should appear in pre_departure phase on Day 0. "
+            f"Found {len(pre_departure_sleep)} items: {[i.time for i in pre_departure_sleep]}"
+        )
+
+    def test_vs10_full_flight_sleep(self):
+        """
+        VS10 test: overnight flight should recommend full-flight sleep, not a short nap.
+
+        For VS10 (~6h50m red-eye):
+        - Should have "Sleep for the flight" title (not "In-flight sleep")
+        - Sleep duration should be most of the flight (>= 80% of flight time)
+        - Sleep offset should be ~45 min (brief settling, not 2h meal service)
+        """
+        from helpers import get_interventions_by_type
+
+        generator = ScheduleGenerator()
+        base_date = datetime.now() + timedelta(days=7)
+
+        departure = make_flight_datetime(base_date, "21:30")
+        arrival = make_flight_datetime(base_date, "09:20", day_offset=1)
+
+        request = ScheduleRequest(
+            legs=[
+                TripLeg(
+                    origin_tz="America/New_York",
+                    dest_tz="Europe/London",
+                    departure_datetime=departure.strftime("%Y-%m-%dT%H:%M"),
+                    arrival_datetime=arrival.strftime("%Y-%m-%dT%H:%M"),
+                )
+            ],
+            prep_days=3,
+            wake_time="07:00",
+            sleep_time="22:00",
+            uses_melatonin=True,
+            uses_caffeine=True,
+        )
+
+        schedule = generator.generate_schedule(request)
+
+        # Find in-flight sleep suggestion
+        naps = get_interventions_by_type(schedule, "nap_window")
+        in_flight_naps = [n for n in naps if n.flight_offset_hours is not None]
+
+        assert len(in_flight_naps) >= 1, "VS10: Should have in-flight sleep recommendation"
+
+        nap = in_flight_naps[0]
+
+        # Title should indicate full-flight sleep, not a short nap
+        assert "Sleep for the flight" in nap.title, (
+            f"VS10: Expected 'Sleep for the flight' title, got '{nap.title}'"
+        )
+
+        # Duration should be most of the flight (~6h50m flight, expect 5+ hours)
+        assert nap.duration_min is not None
+        assert nap.duration_min >= 300, (  # At least 5 hours
+            f"VS10: Expected >= 300 min sleep, got {nap.duration_min} min"
+        )
+
+        # Offset should be ~45 min (brief settling), not 2h
+        assert nap.flight_offset_hours is not None
+        assert nap.flight_offset_hours <= 1.0, (
+            f"VS10: Expected <= 1h offset for overnight flight, got {nap.flight_offset_hours}h"
+        )
+
     def test_british_ba286_sfo_to_london(self):
         """
         British Airways BA286: SFO 20:40 → LHR 03:10+1 (~7h30m).
@@ -1838,7 +1998,8 @@ class TestPracticalValidation:
             ("HA12 HNL-SFO", "Pacific/Honolulu", "America/Los_Angeles", "12:30", "20:30", 0),
             ("AA16 SFO-JFK", "America/Los_Angeles", "America/New_York", "11:00", "19:35", 0),
             ("AA177 JFK-SFO", "America/New_York", "America/Los_Angeles", "19:35", "23:21", 0),
-            # Moderate jet lag (8-9h)
+            # Moderate jet lag (5-9h)
+            ("VS10 JFK-LHR", "America/New_York", "Europe/London", "21:30", "09:20", 1),
             ("VS20 SFO-LHR", "America/Los_Angeles", "Europe/London", "16:30", "10:40", 1),
             ("VS19 LHR-SFO", "Europe/London", "America/Los_Angeles", "11:40", "14:40", 0),
             ("AF83 SFO-CDG", "America/Los_Angeles", "Europe/Paris", "15:40", "11:35", 1),
@@ -1909,6 +2070,7 @@ class TestPracticalValidation:
         "flight_name,origin_tz,dest_tz,depart_time,arrive_time,arrive_day",
         [
             # Next-day arrivals (overnight flights)
+            ("VS10 JFK-LHR", "America/New_York", "Europe/London", "21:30", "09:20", 1),
             ("VS20 SFO-LHR", "America/Los_Angeles", "Europe/London", "16:30", "10:40", 1),
             ("AF83 SFO-CDG", "America/Los_Angeles", "Europe/Paris", "15:40", "11:35", 1),
             ("LH455 SFO-FRA", "America/Los_Angeles", "Europe/Berlin", "14:40", "10:30", 1),
@@ -1981,7 +2143,8 @@ FLIGHT_CONFIGS = [
     ("HA12 HNL-SFO", "Pacific/Honolulu", "America/Los_Angeles", "12:30", "20:30", 0),
     ("AA16 SFO-JFK", "America/Los_Angeles", "America/New_York", "11:00", "19:35", 0),
     ("AA177 JFK-SFO", "America/New_York", "America/Los_Angeles", "19:35", "23:21", 0),
-    # Moderate jet lag (8-9h)
+    # Moderate jet lag (5-9h)
+    ("VS10 JFK-LHR", "America/New_York", "Europe/London", "21:30", "09:20", 1),
     ("VS20 SFO-LHR", "America/Los_Angeles", "Europe/London", "16:30", "10:40", 1),
     ("VS19 LHR-SFO", "Europe/London", "America/Los_Angeles", "11:40", "14:40", 0),
     ("AF83 SFO-CDG", "America/Los_Angeles", "Europe/Paris", "15:40", "11:35", 1),
@@ -2282,6 +2445,7 @@ class TestInterventionPresence:
         "flight_name,origin_tz,dest_tz,depart_time,arrive_time,arrive_day,flight_hours",
         [
             # Flights 6h+ should have sleep suggestion
+            ("VS10 JFK-LHR", "America/New_York", "Europe/London", "21:30", "09:20", 1, 7),
             ("VS20 SFO-LHR", "America/Los_Angeles", "Europe/London", "16:30", "10:40", 1, 10),
             ("AF83 SFO-CDG", "America/Los_Angeles", "Europe/Paris", "15:40", "11:35", 1, 11),
             # Flights < 6h should NOT have sleep suggestion

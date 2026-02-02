@@ -33,6 +33,11 @@ from ..types import PhaseType, ScheduleIntensity, TravelPhase, TripLeg
 PRE_DEPARTURE_BUFFER_HOURS = 3.0  # End interventions 3h before flight
 ULR_FLIGHT_THRESHOLD_HOURS = 12.0  # Ultra-long-range threshold
 
+# Overnight flight detection: departure local hour range (inclusive)
+OVERNIGHT_DEPARTURE_EARLIEST_HOUR = 19  # 7 PM
+OVERNIGHT_DEPARTURE_LATEST_HOUR = 1  # 1 AM (next day)
+OVERNIGHT_ARRIVAL_LATEST_HOUR = 14  # 2 PM (destination local)
+
 
 class PhaseGenerator:
     """
@@ -301,6 +306,41 @@ class PhaseGenerator:
             available_for_interventions=True,
         )
 
+    def _is_overnight_flight(self, departure_local: datetime, arrival_local: datetime) -> bool:
+        """
+        Detect if a flight is an overnight/red-eye flight.
+
+        Overnight flights depart in the evening (7 PM - 1 AM) and arrive
+        the next morning/early afternoon. For these flights, sleeping the
+        entire flight is the natural and practical strategy.
+
+        Args:
+            departure_local: Departure time in origin timezone
+            arrival_local: Arrival time in destination timezone
+
+        Returns:
+            True if flight is overnight
+        """
+        dep_hour = departure_local.hour
+        arr_hour = arrival_local.hour
+
+        # Departure must be evening (19-23) or very late night (0-1)
+        is_evening_departure = (
+            dep_hour >= OVERNIGHT_DEPARTURE_EARLIEST_HOUR
+            or dep_hour <= OVERNIGHT_DEPARTURE_LATEST_HOUR
+        )
+
+        # Arrival must be morning/early afternoon (before 2 PM destination local)
+        is_morning_arrival = arr_hour < OVERNIGHT_ARRIVAL_LATEST_HOUR
+
+        # Must arrive on a different calendar day (or very early same day for late departures)
+        crosses_midnight = (
+            arrival_local.date() > departure_local.date()
+            or dep_hour <= OVERNIGHT_DEPARTURE_LATEST_HOUR
+        )
+
+        return is_evening_departure and is_morning_arrival and crosses_midnight
+
     def _generate_in_transit_phases(self) -> list[TravelPhase]:
         """
         Generate in-transit phase(s) based on flight duration.
@@ -320,6 +360,8 @@ class PhaseGenerator:
         flight_hours = (arrival_utc - departure_utc).total_seconds() / 3600
 
         cumulative_shift = self._get_cumulative_shift_at_day(0)
+
+        overnight = self._is_overnight_flight(departure_local, arrival_local)
 
         if flight_hours >= ULR_FLIGHT_THRESHOLD_HOURS:
             return self._generate_ulr_transit_phase(
@@ -343,6 +385,7 @@ class PhaseGenerator:
                 available_for_interventions=False,
                 flight_duration_hours=flight_hours,
                 sleep_windows=[{"recommended": flight_hours >= 8}],
+                is_overnight_flight=overnight,
             )
         ]
 
