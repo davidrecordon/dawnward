@@ -39,8 +39,13 @@ const CONDENSED_DESCRIPTIONS: Record<string, string> = {
   exercise: "Physical activity helps shift rhythm",
 };
 
-function getCondensedDescription(type: string): string {
-  return CONDENSED_DESCRIPTIONS[type] ?? "Follow this intervention";
+function getCondensedDescription(intervention: Intervention): string {
+  // nap_window titles are dynamic (e.g., "Sleep for the flight" for overnight
+  // red-eyes vs "In-flight sleep" for daytime flights), so use the scheduler's title
+  if (intervention.type === "nap_window") {
+    return intervention.title;
+  }
+  return CONDENSED_DESCRIPTIONS[intervention.type] ?? "Follow this intervention";
 }
 
 /**
@@ -126,7 +131,7 @@ function SummaryInterventionRow({
 
       {/* Description */}
       <span className="text-sm leading-snug text-slate-600">
-        {getCondensedDescription(intervention.type)}
+        {getCondensedDescription(intervention)}
       </span>
     </div>
   );
