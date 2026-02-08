@@ -27,6 +27,66 @@ test.describe("Date selector cross-browser", () => {
     await expect(dateInput).toBeAttached();
   });
 
+  test("empty date input gets positioned to ~1 week from now on click", async ({
+    page,
+  }) => {
+    await page.goto("/");
+
+    // The departure date input (first one)
+    const dateInput = page.locator('input[type="date"]').first();
+
+    // Before clicking, value should be empty
+    await expect(dateInput).toHaveValue("");
+
+    // Click the wrapper div to trigger handleDateClick
+    const wrapper = dateInput.locator("..");
+    await wrapper.click();
+
+    // After clicking, the native input value should be set to ~7 days from now
+    // (this positions the browser's date picker to a useful date)
+    const inputValue = await dateInput.inputValue();
+
+    // Parse the value and verify it's approximately 7 days from now
+    const pickerDate = new Date(inputValue + "T00:00:00");
+    const now = new Date();
+    const diffDays =
+      (pickerDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24);
+
+    // Should be ~7 days from now (allow ±1 day for timezone edge cases)
+    expect(diffDays).toBeGreaterThanOrEqual(5.5);
+    expect(diffDays).toBeLessThanOrEqual(8.5);
+
+    // Close any picker that opened
+    await page.keyboard.press("Escape");
+  });
+
+  test("date input with existing value is not overridden on click", async ({
+    page,
+  }) => {
+    await page.goto("/");
+
+    // Use the "Show me" example to fill in dates
+    await page.getByRole("button", { name: /Show me/i }).click();
+
+    // Wait for the form to fill in
+    await page.waitForTimeout(300);
+
+    // The departure date input should now have a value
+    const dateInput = page.locator('input[type="date"]').first();
+    const originalValue = await dateInput.inputValue();
+    expect(originalValue).not.toBe("");
+
+    // Click the wrapper
+    const wrapper = dateInput.locator("..");
+    await wrapper.click();
+
+    // Value should not have been changed to a week from now
+    const afterClickValue = await dateInput.inputValue();
+    expect(afterClickValue).toBe(originalValue);
+
+    await page.keyboard.press("Escape");
+  });
+
   test("date input is keyboard accessible", async ({ page }) => {
     await page.goto("/");
 
