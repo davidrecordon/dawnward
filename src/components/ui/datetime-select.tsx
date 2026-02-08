@@ -46,6 +46,15 @@ export function DateTimeSelect({
     // Use showPicker() for Chrome desktop compatibility
     // Falls back to focus() for browsers that don't support it
     if (dateInputRef.current) {
+      // If no date is selected, position the picker to ~1 week from now
+      // This sets the native input value (invisible, opacity-0) so the browser
+      // opens the calendar to a useful date instead of January or distant past.
+      // React will reset it on next render if the user cancels without selecting.
+      if (!datePart) {
+        const weekFromNow = new Date();
+        weekFromNow.setDate(weekFromNow.getDate() + 7);
+        dateInputRef.current.value = weekFromNow.toISOString().split("T")[0];
+      }
       try {
         dateInputRef.current.showPicker();
       } catch {
