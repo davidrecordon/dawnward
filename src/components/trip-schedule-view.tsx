@@ -17,6 +17,7 @@ import {
   User,
   X,
 } from "lucide-react";
+import { useMediaQuery, MD_BREAKPOINT_QUERY } from "@/hooks/use-media-query";
 import { Button } from "@/components/ui/button";
 import { ScheduleHeader } from "@/components/schedule/schedule-header";
 import {
@@ -118,6 +119,9 @@ export function TripScheduleView({
 }: TripScheduleViewProps) {
   // Get display preferences from context (provided by page-level wrapper)
   const { showDualTimezone, scheduleViewMode } = useDisplayPreferences();
+
+  // On mobile, always default to collapsed summaries regardless of preference
+  const isDesktop = useMediaQuery(MD_BREAKPOINT_QUERY);
 
   const [schedule, setSchedule] = useState<ScheduleResponse | null>(null);
 
@@ -350,23 +354,24 @@ export function TripScheduleView({
     return () => clearTimeout(timer);
   }, [schedule, isLoading]);
 
-  // Reset initialization flag when view mode preference changes
+  // Reset initialization flag when view mode preference or viewport changes
   useEffect(() => {
     hasInitializedExpandedDays.current = false;
-  }, [scheduleViewMode]);
+  }, [scheduleViewMode, isDesktop]);
 
   // Initialize expanded days based on user preference when schedule loads
+  // On mobile, always use summary behavior (collapsed cards) regardless of preference
   useEffect(() => {
     if (!schedule || hasInitializedExpandedDays.current) return;
 
     hasInitializedExpandedDays.current = true;
 
-    if (scheduleViewMode === "timeline") {
-      // Timeline mode: start with all days expanded
+    if (scheduleViewMode === "timeline" && isDesktop) {
+      // Timeline mode on desktop: start with all days expanded
       const allDays = new Set(schedule.interventions.map((d) => d.day));
       setExpandedDays(allDays);
     } else {
-      // Summary mode: auto-expand today's day (if it exists in the schedule)
+      // Summary mode (or mobile): auto-expand today's day only
       const today = getCurrentDateInTimezone(tripData.originTz);
       const todaySchedule = schedule.interventions.find(
         (d) => d.date === today
@@ -375,7 +380,7 @@ export function TripScheduleView({
         setExpandedDays(new Set([todaySchedule.day]));
       }
     }
-  }, [schedule, scheduleViewMode, tripData.originTz]);
+  }, [schedule, scheduleViewMode, isDesktop, tripData.originTz]);
 
   if (isLoading) {
     return (
