@@ -7,6 +7,8 @@
       "Bash(bunx tsc:*)",
       "Bash(eslint:*)",
       "Bash(mypy:*)",
+      "Bash(npm info:*)",
+      "Bash(npm outdated:*)",
       "Bash(npx tsx:*)",
       "Bash(pip:*)",
       "Bash(pip3:*)",
@@ -24,6 +26,8 @@
       "Skill(superpowers:*)",
       "Skill(vercel-react-best-practices)",
       "WebFetch(domain:arcascope.github.io)",
+      "WebFetch(domain:vercel.com)"
+      "WebFetch(domain:www.prisma.io)",
       "WebSearch"
     ]
   },
