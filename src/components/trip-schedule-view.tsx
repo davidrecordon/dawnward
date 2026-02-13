@@ -17,6 +17,7 @@ import {
   User,
   X,
 } from "lucide-react";
+import { useMediaQuery, MD_BREAKPOINT_QUERY } from "@/hooks/use-media-query";
 import { Button } from "@/components/ui/button";
 import { ScheduleHeader } from "@/components/schedule/schedule-header";
 import {
@@ -117,12 +118,14 @@ export function TripScheduleView({
   sharerName,
 }: TripScheduleViewProps) {
   // Get display preferences from context (provided by page-level wrapper)
-  const { showDualTimezone, scheduleViewMode } = useDisplayPreferences();
+  const { showDualTimezone } = useDisplayPreferences();
+
+  // On mobile, default to collapsed summaries; on desktop, expand all days
+  const isDesktop = useMediaQuery(MD_BREAKPOINT_QUERY);
 
   const [schedule, setSchedule] = useState<ScheduleResponse | null>(null);
 
-  // Track which days are expanded
-  // Initialize based on scheduleViewMode preference (populated when schedule loads)
+  // Track which days are expanded (viewport-driven: desktop=expanded, mobile=collapsed)
   const [expandedDays, setExpandedDays] = useState<Set<number>>(new Set());
   const hasInitializedExpandedDays = useRef(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -350,23 +353,24 @@ export function TripScheduleView({
     return () => clearTimeout(timer);
   }, [schedule, isLoading]);
 
-  // Reset initialization flag when view mode preference changes
+  // Reset initialization flag when viewport changes
   useEffect(() => {
     hasInitializedExpandedDays.current = false;
-  }, [scheduleViewMode]);
+  }, [isDesktop]);
 
-  // Initialize expanded days based on user preference when schedule loads
+  // Initialize expanded days based on viewport when schedule loads
+  // Desktop: all days expanded; Mobile: only today's day expanded
   useEffect(() => {
     if (!schedule || hasInitializedExpandedDays.current) return;
 
     hasInitializedExpandedDays.current = true;
 
-    if (scheduleViewMode === "timeline") {
-      // Timeline mode: start with all days expanded
+    if (isDesktop) {
+      // Desktop: start with all days expanded
       const allDays = new Set(schedule.interventions.map((d) => d.day));
       setExpandedDays(allDays);
     } else {
-      // Summary mode: auto-expand today's day (if it exists in the schedule)
+      // Mobile: auto-expand today's day only (if it exists in the schedule)
       const today = getCurrentDateInTimezone(tripData.originTz);
       const todaySchedule = schedule.interventions.find(
         (d) => d.date === today
@@ -375,7 +379,7 @@ export function TripScheduleView({
         setExpandedDays(new Set([todaySchedule.day]));
       }
     }
-  }, [schedule, scheduleViewMode, tripData.originTz]);
+  }, [schedule, isDesktop, tripData.originTz]);
 
   if (isLoading) {
     return (
