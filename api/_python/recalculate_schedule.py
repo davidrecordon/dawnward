@@ -37,6 +37,7 @@ def schedule_response_from_dict(data: dict) -> ScheduleResponse:
                 description=item["description"],
                 duration_min=item.get("duration_minutes") or item.get("duration_min"),
                 window_end=item.get("end_time") or item.get("window_end"),
+                summary=item.get("summary"),
             )
             for item in day_data.get("items", [])
         ]
