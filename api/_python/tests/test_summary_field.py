@@ -14,7 +14,14 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from circadian.scheduler_v2 import ScheduleGeneratorV2
-from circadian.types import ScheduleRequest, TripLeg, format_duration_short
+from circadian.scheduling.constraint_filter import ConstraintFilter
+from circadian.types import (
+    Intervention,
+    ScheduleRequest,
+    TravelPhase,
+    TripLeg,
+    format_duration_short,
+)
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -285,4 +292,209 @@ class TestSummaryLength:
             assert item.summary is not None
             assert len(item.summary) <= 60, (
                 f"{item.type} summary too long ({len(item.summary)} chars): {item.summary}"
+            )
+
+
+# ---------------------------------------------------------------------------
+# Variant coverage: direction-dependent and duration-dependent summaries
+# ---------------------------------------------------------------------------
+
+
+class TestSummaryVariants:
+    """Test that summaries vary correctly with direction and configuration."""
+
+    def test_wake_target_advance_says_get_light(self) -> None:
+        """Advance wake_target says 'get light after'."""
+        gen = ScheduleGeneratorV2()
+        schedule = gen.generate_schedule(_make_request("advance"))
+        wakes = [i for i in _flatten_interventions(schedule) if i.type == "wake_target"]
+        assert len(wakes) > 0
+        for w in wakes:
+            assert "get light after" in w.summary.lower(), (
+                f"Advance wake_target should say 'get light after': {w.summary}"
+            )
+
+    def test_wake_target_delay_says_avoid_light(self) -> None:
+        """Delay wake_target says 'avoid light first'."""
+        gen = ScheduleGeneratorV2()
+        schedule = gen.generate_schedule(_make_request("delay"))
+        wakes = [i for i in _flatten_interventions(schedule) if i.type == "wake_target"]
+        assert len(wakes) > 0
+        for w in wakes:
+            assert "avoid light first" in w.summary.lower(), (
+                f"Delay wake_target should say 'avoid light first': {w.summary}"
+            )
+
+    def test_wake_target_advance_and_delay_differ(self) -> None:
+        """Advance and delay wake_target summaries are different."""
+        gen = ScheduleGeneratorV2()
+        adv = gen.generate_schedule(_make_request("advance"))
+        dly = gen.generate_schedule(_make_request("delay"))
+        adv_wakes = {i.summary for i in _flatten_interventions(adv) if i.type == "wake_target"}
+        dly_wakes = {i.summary for i in _flatten_interventions(dly) if i.type == "wake_target"}
+        assert adv_wakes != dly_wakes, "Advance and delay should produce different wake summaries"
+
+    def test_light_seek_reflects_30_min_duration(self) -> None:
+        """light_seek summary reflects 30 min configuration."""
+        gen = ScheduleGeneratorV2()
+        schedule = gen.generate_schedule(_make_request("advance", light_exposure_minutes=30))
+        lights = [i for i in _flatten_interventions(schedule) if i.type == "light_seek"]
+        assert len(lights) > 0
+        for ls in lights:
+            assert "30" in ls.summary, f"Should include '30': {ls.summary}"
+
+    def test_light_seek_reflects_60_min_duration(self) -> None:
+        """light_seek summary reflects 60 min configuration."""
+        gen = ScheduleGeneratorV2()
+        schedule = gen.generate_schedule(_make_request("advance", light_exposure_minutes=60))
+        lights = [i for i in _flatten_interventions(schedule) if i.type == "light_seek"]
+        assert len(lights) > 0
+        for ls in lights:
+            assert "60" in ls.summary, f"Should include '60': {ls.summary}"
+
+    def test_light_seek_reflects_90_min_duration(self) -> None:
+        """light_seek summary reflects 90 min configuration."""
+        gen = ScheduleGeneratorV2()
+        schedule = gen.generate_schedule(_make_request("advance", light_exposure_minutes=90))
+        lights = [i for i in _flatten_interventions(schedule) if i.type == "light_seek"]
+        assert len(lights) > 0
+        for ls in lights:
+            assert "90" in ls.summary, f"Should include '90': {ls.summary}"
+
+    def test_light_seek_different_durations_produce_different_summaries(self) -> None:
+        """Different light durations produce different summary text."""
+        gen = ScheduleGeneratorV2()
+        s30 = gen.generate_schedule(_make_request("advance", light_exposure_minutes=30))
+        s90 = gen.generate_schedule(_make_request("advance", light_exposure_minutes=90))
+        sums_30 = {i.summary for i in _flatten_interventions(s30) if i.type == "light_seek"}
+        sums_90 = {i.summary for i in _flatten_interventions(s90) if i.type == "light_seek"}
+        assert sums_30 != sums_90, "30 min and 90 min should produce different light_seek summaries"
+
+    def test_sleep_target_advance_and_delay_differ(self) -> None:
+        """Advance says 'earlier', delay says 'later'."""
+        gen = ScheduleGeneratorV2()
+        adv = gen.generate_schedule(_make_request("advance"))
+        dly = gen.generate_schedule(_make_request("delay"))
+        adv_sleeps = {i.summary for i in _flatten_interventions(adv) if i.type == "sleep_target"}
+        dly_sleeps = {i.summary for i in _flatten_interventions(dly) if i.type == "sleep_target"}
+        assert adv_sleeps != dly_sleeps, (
+            "Advance and delay should produce different sleep summaries"
+        )
+
+
+# ---------------------------------------------------------------------------
+# Pipeline preservation: summary survives constraint filter and enrichment
+# ---------------------------------------------------------------------------
+
+
+class TestSummaryPipelinePreservation:
+    """Verify summary field is preserved through the scheduling pipeline."""
+
+    def test_constraint_filter_preserves_summary_on_clamp_to_start(self) -> None:
+        """When constraint filter clamps light_seek to phase start, summary is preserved."""
+        cf = ConstraintFilter()
+        # Create a light_seek before the phase start — will be clamped
+        intervention = Intervention(
+            time="05:00",
+            type="light_seek",
+            title="Bright Light",
+            description="Get bright light exposure",
+            duration_min=60,
+            summary="Bright light for 60 min",
+        )
+        phase = TravelPhase(
+            phase_type="preparation",
+            start_datetime=datetime(2026, 1, 20, 7, 0),
+            end_datetime=datetime(2026, 1, 20, 23, 0),
+            timezone="America/Los_Angeles",
+            cumulative_shift=0.0,
+            remaining_shift=8.0,
+            day_number=-2,
+        )
+        result = cf.filter_phase([intervention], phase)
+        assert len(result) == 1
+        assert result[0].summary == "Bright light for 60 min"
+        assert result[0].time == "07:00"  # Clamped to phase start
+
+    def test_constraint_filter_preserves_summary_on_clamp_to_end(self) -> None:
+        """When constraint filter clamps caffeine_cutoff to phase end, summary is preserved."""
+        cf = ConstraintFilter()
+        # Create a caffeine_cutoff after phase end — will be clamped
+        intervention = Intervention(
+            time="18:00",
+            type="caffeine_cutoff",
+            title="Caffeine Cutoff",
+            description="Stop caffeine",
+            duration_min=None,
+            summary="Last caffeine \u2014 protect tonight's sleep",
+        )
+        phase = TravelPhase(
+            phase_type="pre_departure",
+            start_datetime=datetime(2026, 1, 20, 7, 0),
+            end_datetime=datetime(2026, 1, 20, 15, 0),
+            timezone="America/Los_Angeles",
+            cumulative_shift=2.0,
+            remaining_shift=6.0,
+            day_number=0,
+        )
+        result = cf.filter_phase(
+            [intervention], phase, departure_datetime=datetime(2026, 1, 20, 18, 0)
+        )
+        assert len(result) == 1
+        assert result[0].summary == "Last caffeine \u2014 protect tonight's sleep"
+        assert result[0].time == "15:00"  # Clamped to phase end
+
+    def test_constraint_filter_preserves_summary_on_passthrough(self) -> None:
+        """Interventions within bounds keep their summary unchanged."""
+        cf = ConstraintFilter()
+        intervention = Intervention(
+            time="10:00",
+            type="melatonin",
+            title="Melatonin",
+            description="Take melatonin",
+            summary="Take 0.5mg melatonin",
+        )
+        phase = TravelPhase(
+            phase_type="adaptation",
+            start_datetime=datetime(2026, 1, 21, 7, 0),
+            end_datetime=datetime(2026, 1, 21, 23, 0),
+            timezone="Europe/London",
+            cumulative_shift=4.0,
+            remaining_shift=4.0,
+            day_number=1,
+        )
+        result = cf.filter_phase([intervention], phase)
+        assert len(result) == 1
+        assert result[0].summary == "Take 0.5mg melatonin"
+
+    def test_full_pipeline_all_summaries_survive(self) -> None:
+        """End-to-end: every intervention from generate_schedule has a summary.
+
+        This verifies that summaries generated by the planner survive through
+        constraint filtering and timezone enrichment.
+        """
+        gen = ScheduleGeneratorV2()
+        schedule = gen.generate_schedule(_make_request("advance"))
+
+        for day_schedule in schedule.interventions:
+            for item in day_schedule.items:
+                assert item.summary is not None, (
+                    f"Day {day_schedule.day} {item.type} lost summary in pipeline"
+                )
+                assert len(item.summary) > 0, (
+                    f"Day {day_schedule.day} {item.type} has empty summary after pipeline"
+                )
+
+    def test_full_pipeline_summaries_are_personalized(self) -> None:
+        """End-to-end: summaries from the full pipeline are personalized, not generic."""
+        gen = ScheduleGeneratorV2()
+        schedule = gen.generate_schedule(_make_request("advance", light_exposure_minutes=45))
+
+        light_seeks = [
+            i for day in schedule.interventions for i in day.items if i.type == "light_seek"
+        ]
+        assert len(light_seeks) > 0
+        for ls in light_seeks:
+            assert "45" in ls.summary, (
+                f"Post-pipeline light_seek should still include configured duration '45': {ls.summary}"
             )
