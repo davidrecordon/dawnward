@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { flushSync } from "react-dom";
 import { Calendar } from "lucide-react";
 import { TimeSelect } from "@/components/ui/time-select";
 import { cn } from "@/lib/utils";
@@ -37,6 +38,7 @@ export function DateTimeSelect({
   use24Hour = false,
 }: DateTimeSelectProps) {
   const dateInputRef = React.useRef<HTMLInputElement>(null);
+  const [pickerHint, setPickerHint] = React.useState("");
 
   // Parse the ISO datetime string into date and time parts
   const datePart = value ? value.split("T")[0] || "" : "";
@@ -46,14 +48,15 @@ export function DateTimeSelect({
     // Use showPicker() for Chrome desktop compatibility
     // Falls back to focus() for browsers that don't support it
     if (dateInputRef.current) {
-      // If no date is selected, position the picker to ~1 week from now
-      // This sets the native input value (invisible, opacity-0) so the browser
-      // opens the calendar to a useful date instead of January or distant past.
-      // React will reset it on next render if the user cancels without selecting.
+      // If no date is selected, set a temporary hint so the native picker
+      // opens to ~1 week from now instead of January or distant past.
+      // Uses flushSync to ensure the DOM updates before showPicker() reads it.
       if (!datePart) {
         const weekFromNow = new Date();
         weekFromNow.setDate(weekFromNow.getDate() + 7);
-        dateInputRef.current.value = weekFromNow.toISOString().split("T")[0];
+        flushSync(() => {
+          setPickerHint(weekFromNow.toISOString().split("T")[0]);
+        });
       }
       try {
         dateInputRef.current.showPicker();
@@ -64,6 +67,7 @@ export function DateTimeSelect({
   };
 
   const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (pickerHint) setPickerHint("");
     const newDate = e.target.value;
     if (newDate && timePart) {
       onChange(`${newDate}T${timePart}`);
@@ -108,7 +112,7 @@ export function DateTimeSelect({
         <input
           ref={dateInputRef}
           type="date"
-          value={datePart}
+          value={datePart || pickerHint}
           onChange={handleDateChange}
           className="absolute inset-0 border-0 bg-transparent opacity-0"
           aria-label="Select date"
