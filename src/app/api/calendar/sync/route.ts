@@ -435,7 +435,10 @@ export async function GET(request: Request) {
         },
       })
       .catch((err) => {
-        console.error("[CalendarSync] Failed to update stale sync status:", err);
+        console.error(
+          "[CalendarSync] Failed to update stale sync status:",
+          err
+        );
       });
   }
 

@@ -45,7 +45,9 @@ function getCondensedDescription(intervention: Intervention): string {
   if (intervention.type === "nap_window") {
     return intervention.title;
   }
-  return CONDENSED_DESCRIPTIONS[intervention.type] ?? "Follow this intervention";
+  return (
+    CONDENSED_DESCRIPTIONS[intervention.type] ?? "Follow this intervention"
+  );
 }
 
 /**

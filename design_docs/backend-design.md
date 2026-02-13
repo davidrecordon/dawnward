@@ -814,13 +814,13 @@ Transient errors (network, rate limit) retry automatically:
 
 **Error classification:**
 
-| Code | Meaning | Retryable | Client Action |
-|------|---------|-----------|---------------|
-| `token_revoked` | User revoked access in Google settings | No | Prompt re-auth |
-| `rate_limit` | Google Calendar quota exceeded | Yes | Auto-retry |
-| `network` | Connection/timeout error | Yes | Auto-retry |
-| `calendar_not_found` | Calendar deleted | No | Show error |
-| `unknown` | Unexpected error | No | Show error |
+| Code                 | Meaning                                | Retryable | Client Action  |
+| -------------------- | -------------------------------------- | --------- | -------------- |
+| `token_revoked`      | User revoked access in Google settings | No        | Prompt re-auth |
+| `rate_limit`         | Google Calendar quota exceeded         | Yes       | Auto-retry     |
+| `network`            | Connection/timeout error               | Yes       | Auto-retry     |
+| `calendar_not_found` | Calendar deleted                       | No        | Show error     |
+| `unknown`            | Unexpected error                       | No        | Show error     |
 
 **Stale sync timeout:**
 

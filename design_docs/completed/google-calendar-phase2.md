@@ -27,13 +27,13 @@ Transient errors (network, rate limit) retry with exponential backoff:
 
 Errors are classified for appropriate client handling:
 
-| Code | Meaning | Retryable | Client Action |
-|------|---------|-----------|---------------|
-| `token_revoked` | User revoked access in Google settings | No | Prompt re-auth |
-| `rate_limit` | Google Calendar quota exceeded | Yes | Auto-retry |
-| `network` | Connection/timeout error | Yes | Auto-retry |
-| `calendar_not_found` | Calendar deleted | No | Show error |
-| `unknown` | Unexpected error | No | Show error |
+| Code                 | Meaning                                | Retryable | Client Action  |
+| -------------------- | -------------------------------------- | --------- | -------------- |
+| `token_revoked`      | User revoked access in Google settings | No        | Prompt re-auth |
+| `rate_limit`         | Google Calendar quota exceeded         | Yes       | Auto-retry     |
+| `network`            | Connection/timeout error               | Yes       | Auto-retry     |
+| `calendar_not_found` | Calendar deleted                       | No        | Show error     |
+| `unknown`            | Unexpected error                       | No        | Show error     |
 
 ### CalendarSync Status Tracking
 
@@ -52,23 +52,23 @@ model CalendarSync {
 
 ## Bugs Fixed
 
-| # | Issue | Solution |
-|---|-------|----------|
-| 1 | Token refresh failure - sync proceeds with invalid token | Check `token.error` in session callback, clear `hasCalendarScope` |
-| 2 | Partial deletion creates duplicates | Use `Promise.allSettled()`, continue sync, log failures |
-| 3 | Race condition on double-click | AbortController cancels in-flight requests |
-| 4 | Missing JWT type field | Added `error?: string` to JWT interface |
-| 5 | Partial success reported as success | Return `{ created, failed }` counts, track in CalendarSync |
-| 6 | Stale session after re-auth | Use `useSession()` hook, refresh after OAuth callback |
-| 7 | Multi-leg trips use wrong timezone | Use per-intervention `dest_tz` instead of trip-wide |
+| #   | Issue                                                    | Solution                                                          |
+| --- | -------------------------------------------------------- | ----------------------------------------------------------------- |
+| 1   | Token refresh failure - sync proceeds with invalid token | Check `token.error` in session callback, clear `hasCalendarScope` |
+| 2   | Partial deletion creates duplicates                      | Use `Promise.allSettled()`, continue sync, log failures           |
+| 3   | Race condition on double-click                           | AbortController cancels in-flight requests                        |
+| 4   | Missing JWT type field                                   | Added `error?: string` to JWT interface                           |
+| 5   | Partial success reported as success                      | Return `{ created, failed }` counts, track in CalendarSync        |
+| 6   | Stale session after re-auth                              | Use `useSession()` hook, refresh after OAuth callback             |
+| 7   | Multi-leg trips use wrong timezone                       | Use per-intervention `dest_tz` instead of trip-wide               |
 
 ## Security Fixes (Pre-Merge Review)
 
-| Issue | Fix |
-|-------|-----|
-| Token in URL parameter for tokeninfo | Changed to POST with form body |
+| Issue                                    | Fix                                      |
+| ---------------------------------------- | ---------------------------------------- |
+| Token in URL parameter for tokeninfo     | Changed to POST with form body           |
 | OAuth response logging could leak tokens | Only log `error` and `error_description` |
-| OAuth error logging could leak tokens | Sanitize error object before logging |
+| OAuth error logging could leak tokens    | Sanitize error object before logging     |
 
 ## API Routes
 
@@ -116,20 +116,21 @@ Remove all calendar events for a trip.
 
 ## Files Modified
 
-| File | Changes |
-|------|---------|
-| `src/app/api/calendar/sync/route.ts` | Background sync with `waitUntil()`, retry logic, status tracking |
-| `src/app/api/calendar/verify/route.ts` | Verify token scopes with Google, POST for tokeninfo |
-| `src/components/calendar-sync-button.tsx` | Polling for sync status, AbortController, useSession() |
-| `src/lib/google-calendar.ts` | Per-intervention timezone, deletion handling, event grouping |
-| `src/lib/token-refresh.ts` | Sanitized error logging |
-| `src/auth.config.ts` | Token error handling in session callback, sanitized logging |
-| `src/types/next-auth.d.ts` | Added `error` field to JWT type |
-| `prisma/schema.prisma` | Added CalendarSync status tracking fields |
+| File                                      | Changes                                                          |
+| ----------------------------------------- | ---------------------------------------------------------------- |
+| `src/app/api/calendar/sync/route.ts`      | Background sync with `waitUntil()`, retry logic, status tracking |
+| `src/app/api/calendar/verify/route.ts`    | Verify token scopes with Google, POST for tokeninfo              |
+| `src/components/calendar-sync-button.tsx` | Polling for sync status, AbortController, useSession()           |
+| `src/lib/google-calendar.ts`              | Per-intervention timezone, deletion handling, event grouping     |
+| `src/lib/token-refresh.ts`                | Sanitized error logging                                          |
+| `src/auth.config.ts`                      | Token error handling in session callback, sanitized logging      |
+| `src/types/next-auth.d.ts`                | Added `error` field to JWT type                                  |
+| `prisma/schema.prisma`                    | Added CalendarSync status tracking fields                        |
 
 ## Testing
 
 Run all tests:
+
 ```bash
 bun run typecheck    # TypeScript passes
 bun run test:run     # All tests pass
@@ -137,6 +138,7 @@ bun run lint         # No lint errors
 ```
 
 Manual testing:
+
 1. New user clicks "Add to Calendar" - OAuth flow - Events created
 2. Re-sync - Old events deleted, new events created
 3. Remove from calendar - Events deleted

@@ -79,16 +79,16 @@ at the top of each module is the right choice for this codebase size.
 
 #### Phase Generation (`phase_generator.py`)
 
-| Line    | Constant                          | Value | Purpose                                |
-| ------- | --------------------------------- | ----- | -------------------------------------- |
-| 33      | `PRE_DEPARTURE_BUFFER_HOURS`      | 3.0   | Airport arrival buffer                 |
-| 34      | `ULR_FLIGHT_THRESHOLD_HOURS`      | 12.0  | Ultra-long-range flight classification |
-| 37      | `OVERNIGHT_DEPARTURE_EARLIEST_HOUR` | 19  | 7 PM — start of red-eye window         |
-| 38      | `OVERNIGHT_DEPARTURE_LATEST_HOUR`   | 1   | 1 AM — end of red-eye window           |
-| 39      | `OVERNIGHT_ARRIVAL_LATEST_HOUR`     | 14  | 2 PM — latest arrival for overnight    |
-| 181     | Layover threshold (short)         | 48h   | Aim-through strategy                   |
-| 183     | Layover threshold (medium)        | 96h   | Partial adaptation                     |
-| 369-374 | In-flight sleep windows           | 2h/4h | Window offsets and max durations       |
+| Line    | Constant                            | Value | Purpose                                |
+| ------- | ----------------------------------- | ----- | -------------------------------------- |
+| 33      | `PRE_DEPARTURE_BUFFER_HOURS`        | 3.0   | Airport arrival buffer                 |
+| 34      | `ULR_FLIGHT_THRESHOLD_HOURS`        | 12.0  | Ultra-long-range flight classification |
+| 37      | `OVERNIGHT_DEPARTURE_EARLIEST_HOUR` | 19    | 7 PM — start of red-eye window         |
+| 38      | `OVERNIGHT_DEPARTURE_LATEST_HOUR`   | 1     | 1 AM — end of red-eye window           |
+| 39      | `OVERNIGHT_ARRIVAL_LATEST_HOUR`     | 14    | 2 PM — latest arrival for overnight    |
+| 181     | Layover threshold (short)           | 48h   | Aim-through strategy                   |
+| 183     | Layover threshold (medium)          | 96h   | Partial adaptation                     |
+| 369-374 | In-flight sleep windows             | 2h/4h | Window offsets and max durations       |
 
 #### Shift Calculator (`shift_calculator.py`)
 

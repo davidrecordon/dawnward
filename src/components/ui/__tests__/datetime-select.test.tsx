@@ -54,9 +54,7 @@ describe("DateTimeSelect", () => {
     });
 
     it("does NOT override input value when a date is already selected", () => {
-      render(
-        <DateTimeSelect value="2026-03-01T16:30" onChange={onChange} />
-      );
+      render(<DateTimeSelect value="2026-03-01T16:30" onChange={onChange} />);
 
       const dateInput = screen.getByLabelText("Select date");
       const wrapper = dateInput.closest(".relative")!;
@@ -91,9 +89,7 @@ describe("DateTimeSelect", () => {
     });
 
     it("calls onChange preserving existing time when date changes", () => {
-      render(
-        <DateTimeSelect value="2026-02-15T16:30" onChange={onChange} />
-      );
+      render(<DateTimeSelect value="2026-02-15T16:30" onChange={onChange} />);
 
       const dateInput = screen.getByLabelText("Select date");
       fireEvent.change(dateInput, { target: { value: "2026-02-20" } });
@@ -102,9 +98,7 @@ describe("DateTimeSelect", () => {
     });
 
     it("calls onChange with empty string when date is cleared", () => {
-      render(
-        <DateTimeSelect value="2026-02-15T16:30" onChange={onChange} />
-      );
+      render(<DateTimeSelect value="2026-02-15T16:30" onChange={onChange} />);
 
       const dateInput = screen.getByLabelText("Select date");
       fireEvent.change(dateInput, { target: { value: "" } });
@@ -115,9 +109,7 @@ describe("DateTimeSelect", () => {
 
   describe("time selection", () => {
     it("calls onChange combining existing date with new time", () => {
-      render(
-        <DateTimeSelect value="2026-02-15T12:00" onChange={onChange} />
-      );
+      render(<DateTimeSelect value="2026-02-15T12:00" onChange={onChange} />);
 
       const timeSelect = screen.getByTestId("time-select");
       fireEvent.change(timeSelect, { target: { value: "16:30" } });
@@ -142,9 +134,7 @@ describe("DateTimeSelect", () => {
     });
 
     it("shows formatted date when date is selected", () => {
-      render(
-        <DateTimeSelect value="2026-02-15T16:30" onChange={onChange} />
-      );
+      render(<DateTimeSelect value="2026-02-15T16:30" onChange={onChange} />);
       expect(screen.getByText("Feb 15, 2026")).toBeInTheDocument();
     });
   });
