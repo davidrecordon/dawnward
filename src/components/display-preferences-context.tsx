@@ -1,10 +1,7 @@
 "use client";
 
 import * as React from "react";
-import type {
-  DisplayPreferences,
-  ScheduleViewMode,
-} from "@/types/user-preferences";
+import type { DisplayPreferences } from "@/types/user-preferences";
 import { detectUser24HourPreference } from "@/lib/locale-utils";
 
 const DisplayPreferencesContext =
@@ -14,7 +11,6 @@ interface ProviderProps {
   children: React.ReactNode;
   use24HourFormat?: boolean;
   showDualTimezone?: boolean;
-  scheduleViewMode?: ScheduleViewMode;
   /** When true, auto-detect 24-hour format from browser locale (for anonymous users) */
   detectLocale?: boolean;
 }
@@ -30,7 +26,6 @@ export function DisplayPreferencesProvider({
   children,
   use24HourFormat = false,
   showDualTimezone = false,
-  scheduleViewMode = "summary",
   detectLocale = false,
 }: ProviderProps) {
   const [detectedFormat, setDetectedFormat] = React.useState(use24HourFormat);
@@ -48,9 +43,8 @@ export function DisplayPreferencesProvider({
     () => ({
       use24HourFormat: effectiveFormat,
       showDualTimezone,
-      scheduleViewMode,
     }),
-    [effectiveFormat, showDualTimezone, scheduleViewMode]
+    [effectiveFormat, showDualTimezone]
   );
 
   return (
@@ -70,7 +64,6 @@ export function useDisplayPreferences(): DisplayPreferences {
     return {
       use24HourFormat: false,
       showDualTimezone: false,
-      scheduleViewMode: "summary",
     };
   }
   return context;
