@@ -422,7 +422,7 @@ lightExposureMinutes Int     @default(60)
 
 // Display preferences (3 fields)
 showDualTimezone     Boolean @default(false)
-scheduleViewMode     String  @default("summary")
+// scheduleViewMode removed — now viewport-driven (desktop=expanded, mobile=collapsed)
 use24HourFormat      Boolean @default(false)
 ```
 
@@ -441,7 +441,7 @@ use24HourFormat      Boolean @default(false)
 | caffeineCutoffHours  | ✅     | ✅    | ✅  | ✅  | Working |
 | lightExposureMinutes | ✅     | ✅    | ✅  | ✅  | Working |
 | showDualTimezone     | ✅     | ✅    | ✅  | ✅  | Working |
-| scheduleViewMode     | ✅     | ✅    | ✅  | ✅  | Working |
+| scheduleViewMode     | —      | —     | —   | —   | Removed (viewport-driven) |
 | use24HourFormat      | ✅     | ✅    | ✅  | ✅  | Working |
 
 ### Future Preference Candidates (Not Yet Implemented)

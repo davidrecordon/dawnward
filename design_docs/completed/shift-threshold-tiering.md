@@ -192,10 +192,7 @@ The expand/collapse behavior in `DaySummaryCard` may need tier-aware adjustments
 - **Light tier**: May auto-expand all days since schedule is simpler
 - **Moderate+**: Current behavior (summary mode with today expanded)
 
-The `scheduleViewMode` user preference ("summary" vs "timeline") should interact with tier:
-
-- Minimal tier might override user preference to always show tips-only view
-- User preference applies normally for Light tier and above
+> **Note:** `scheduleViewMode` was removed. View mode is now viewport-driven (desktop=expanded, mobile=collapsed). Tier interactions apply to the mobile collapsed view only.
 
 ## Success Criteria
 

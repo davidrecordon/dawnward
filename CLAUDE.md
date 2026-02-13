@@ -229,10 +229,10 @@ scripts/
 - `wake_target` at 00:00-05:59 sorts as "early morning" (start of day)
 - In-transit items with `flight_offset_hours` sort by offset, not time
 
-**Schedule View Modes**: Two display modes controlled by `scheduleViewMode` user preference:
+**Schedule View Modes**: Viewport-driven behavior (no user preference):
 
-- **Summary mode** (default): Shows `DaySummaryCard` with condensed intervention list. Today's day auto-expands. Users can expand/collapse individual days.
-- **Timeline mode**: All days start expanded showing full `DaySection` detail view.
+- **Desktop**: All days start expanded showing full `DaySection` detail view.
+- **Mobile**: All days start collapsed showing `DaySummaryCard`. Today's day auto-expands. Users can expand/collapse individual days.
 
 **Minimal Shift Tips**: For small timezone shifts (≤2 hours), the schedule view shows a `MinimalShiftTips` card by default instead of the full day-by-day schedule. Users can click "View full schedule" to see the detailed timeline. The 2-hour threshold is defined by `MINIMAL_SHIFT_THRESHOLD_HOURS` in `timezone-utils.ts`. The `ScheduleResponse` includes `shift_magnitude` (rounded absolute hours) and `is_minimal_shift` (boolean) to control this behavior.
 
@@ -247,7 +247,7 @@ The `DaySummaryCard` component shows:
 
 **Auth (NextAuth.js):**
 
-- `User` - id, email, name, image, preferences (wake/sleep times, melatonin/caffeine, intensity, scheduleViewMode)
+- `User` - id, email, name, image, preferences (wake/sleep times, melatonin/caffeine, intensity)
 - `Account` - OAuth provider accounts (Google tokens, scopes)
 - `Session` - Database sessions (though JWT strategy is used)
 - `VerificationToken` - For email verification (future use)

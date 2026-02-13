@@ -407,13 +407,13 @@ Add new preference:
 ```typescript
 export interface UserPreferences {
   // ... existing
-  scheduleViewMode?: "summary" | "detailed"; // NEW - default: 'summary'
+  // scheduleViewMode was removed — view mode is now viewport-driven
 }
 ```
 
 **File:** `prisma/schema.prisma`
 
-Update User model to include `scheduleViewMode` in preferences JSON.
+> **Note:** `scheduleViewMode` was removed. View mode is now viewport-driven (desktop=expanded, mobile=collapsed).
 
 **File:** `src/app/settings/page.tsx`
 
@@ -539,7 +539,7 @@ Delete after integration is complete.
 | `src/app/trip/[id]/page.tsx`                                  | Modify       | Add expand state, use DaySummaryCard                      |
 | `src/app/s/[code]/page.tsx`                                   | Modify       | Same as trip page                                         |
 | `src/components/schedule/day-section.tsx`                     | Modify       | Accept expanded state, delegate to summary when collapsed |
-| `src/types/user-preferences.ts`                               | Modify       | Add `scheduleViewMode` preference                         |
+| `src/types/user-preferences.ts`                               | N/A          | `scheduleViewMode` removed (now viewport-driven)          |
 | `prisma/schema.prisma`                                        | Modify       | Include new preference field                              |
 | `src/app/settings/page.tsx`                                   | Modify       | Add view mode toggle                                      |
 | `src/app/api/user/preferences/route.ts`                       | Modify       | Handle new preference                                     |
@@ -554,7 +554,7 @@ Delete after integration is complete.
 - **Reduced scroll depth** on schedule pages (measure scroll distance)
 - **Faster time-to-comprehension** for daily plan (qualitative feedback)
 - **Email open/engagement rates** once emails ship
-- **User preference adoption** (how many keep summary vs switch to detailed)
+- **Mobile expand/collapse usage** (how often users expand days on mobile)
 
 ---
 

@@ -247,27 +247,21 @@ When multiple interventions occur at the same time as a `wake_target`, they disp
 
 ### Schedule View Modes
 
-Users can toggle between two display modes via the `scheduleViewMode` preference:
+Viewport-driven behavior (no user preference toggle):
 
-**Summary Mode (default):**
+**Desktop:**
+
+- All days start expanded showing full `DaySection` detail view
+- Shows complete intervention cards with descriptions
+- Progress bar visible for each day
+
+**Mobile:**
 
 - Uses `DaySummaryCard` component for each day
 - Shows condensed intervention list with icons and times
 - Today's day auto-expands on load
 - Users can expand/collapse individual days via "View details" / "Summarize" buttons
 - Flight Day shows sub-sections: Before Boarding, On the Plane, After Landing
-
-**Timeline Mode:**
-
-- All days start expanded showing full `DaySection` detail view
-- Shows complete intervention cards with descriptions
-- Progress bar visible for each day
-
-**View Mode Toggle:**
-
-- Located in schedule header
-- Persists to user preferences (if signed in)
-- Local state for anonymous users
 
 ---
 
