@@ -127,7 +127,6 @@ export function TripScheduleView({
 
   // Track which days are expanded (viewport-driven: desktop=expanded, mobile=collapsed)
   const [expandedDays, setExpandedDays] = useState<Set<number>>(new Set());
-  const hasInitializedExpandedDays = useRef(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -353,31 +352,20 @@ export function TripScheduleView({
     return () => clearTimeout(timer);
   }, [schedule, isLoading]);
 
-  // Reset initialization flag when viewport changes
+  // Initialize expanded days based on viewport when schedule loads or viewport changes.
+  // Desktop: all days expanded; Mobile: only today's day expanded.
   useEffect(() => {
-    hasInitializedExpandedDays.current = false;
-  }, [isDesktop]);
-
-  // Initialize expanded days based on viewport when schedule loads
-  // Desktop: all days expanded; Mobile: only today's day expanded
-  useEffect(() => {
-    if (!schedule || hasInitializedExpandedDays.current) return;
-
-    hasInitializedExpandedDays.current = true;
+    if (!schedule) return;
 
     if (isDesktop) {
-      // Desktop: start with all days expanded
       const allDays = new Set(schedule.interventions.map((d) => d.day));
       setExpandedDays(allDays);
     } else {
-      // Mobile: auto-expand today's day only (if it exists in the schedule)
       const today = getCurrentDateInTimezone(tripData.originTz);
       const todaySchedule = schedule.interventions.find(
         (d) => d.date === today
       );
-      if (todaySchedule) {
-        setExpandedDays(new Set([todaySchedule.day]));
-      }
+      setExpandedDays(todaySchedule ? new Set([todaySchedule.day]) : new Set());
     }
   }, [schedule, isDesktop, tripData.originTz]);
 

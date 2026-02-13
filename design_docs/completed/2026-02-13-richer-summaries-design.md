@@ -36,35 +36,39 @@ interface Intervention {
 function getCondensedDescription(intervention: Intervention): string {
   if (intervention.summary) return intervention.summary;
   if (intervention.type === "nap_window") return intervention.title;
-  return CONDENSED_DESCRIPTIONS[intervention.type] ?? "Follow this intervention";
+  return (
+    CONDENSED_DESCRIPTIONS[intervention.type] ?? "Follow this intervention"
+  );
 }
 ```
 
 **Summary text per type:**
 
-| Type | Template | Example |
-|------|----------|---------|
-| `wake_target` | "Target wake — {light_hint}" | "Target wake — get light after" |
-| `light_seek` | "Bright light for {duration}min" | "Bright light for 60 min" |
-| `light_avoid` | "Avoid bright light until {end_time}" | "Avoid bright light until 2:30 PM" |
-| `melatonin` | "Take 0.5mg melatonin" | "Take 0.5mg melatonin" |
-| `caffeine_ok` | "Caffeine OK" | "Caffeine OK" |
-| `caffeine_cutoff` | "Last caffeine — protect tonight's sleep" | same |
-| `sleep_target` | "Target sleep — shifting {direction}" | "Target sleep — shifting earlier" |
-| `nap_window` (in-flight) | "Sleep opportunity (~{hours}h)" | "Sleep opportunity (~4h)" |
-| `nap_window` (recovery) | "Recovery nap (up to {duration})" | "Recovery nap (up to 1.5h)" |
-| `nap_window` (optional) | "Optional nap (up to {duration})" | "Optional nap (up to 30 min)" |
-| `exercise` | "30 min activity to help shift rhythm" | same |
+| Type                     | Template                                  | Example                            |
+| ------------------------ | ----------------------------------------- | ---------------------------------- |
+| `wake_target`            | "Target wake — {light_hint}"              | "Target wake — get light after"    |
+| `light_seek`             | "Bright light for {duration}min"          | "Bright light for 60 min"          |
+| `light_avoid`            | "Avoid bright light until {end_time}"     | "Avoid bright light until 2:30 PM" |
+| `melatonin`              | "Take 0.5mg melatonin"                    | "Take 0.5mg melatonin"             |
+| `caffeine_ok`            | "Caffeine OK"                             | "Caffeine OK"                      |
+| `caffeine_cutoff`        | "Last caffeine — protect tonight's sleep" | same                               |
+| `sleep_target`           | "Target sleep — shifting {direction}"     | "Target sleep — shifting earlier"  |
+| `nap_window` (in-flight) | "Sleep opportunity (~{hours}h)"           | "Sleep opportunity (~4h)"          |
+| `nap_window` (recovery)  | "Recovery nap (up to {duration})"         | "Recovery nap (up to 1.5h)"        |
+| `nap_window` (optional)  | "Optional nap (up to {duration})"         | "Optional nap (up to 30 min)"      |
+| `exercise`               | "30 min activity to help shift rhythm"    | same                               |
 
 **Duration formatting rule:** >= 60 min uses hours (1.5h, 4h), < 60 min uses minutes (30 min).
 
 ### 2. Remove `scheduleViewMode` Preference
 
 Replace the preference with viewport-driven behavior:
+
 - **Desktop:** All days start expanded (timeline detail view)
 - **Mobile:** All days start collapsed (summary cards), today auto-expands
 
 **What gets removed:**
+
 - `scheduleViewMode` column from User model (DB migration)
 - Settings UI toggle for schedule view
 - `DisplayPreferencesContext` provider and `useScheduleViewMode` hook
@@ -73,6 +77,7 @@ Replace the preference with viewport-driven behavior:
 - References in CLAUDE.md documentation
 
 **What stays:**
+
 - `DaySummaryCard` component (still used for collapsed state)
 - Per-day expand/collapse toggle (user can still manually expand/collapse)
 - Mobile detection via `useMediaQuery` (already exists)
@@ -80,16 +85,18 @@ Replace the preference with viewport-driven behavior:
 ## Files Changed
 
 ### Part 1: Summary field
-| File | Change |
-|------|--------|
-| `api/_python/circadian/types.py` | Add `summary` field |
+
+| File                                                       | Change                                    |
+| ---------------------------------------------------------- | ----------------------------------------- |
+| `api/_python/circadian/types.py`                           | Add `summary` field                       |
 | `api/_python/circadian/scheduling/intervention_planner.py` | Generate `summary=` for all interventions |
-| `src/types/schedule.ts` | Add `summary?: string` |
-| `src/components/schedule/day-summary-card.tsx` | Use `intervention.summary` with fallback |
-| Python tests | Verify summary populated for each type |
-| TypeScript tests | Update mocks, test fallback |
+| `src/types/schedule.ts`                                    | Add `summary?: string`                    |
+| `src/components/schedule/day-summary-card.tsx`             | Use `intervention.summary` with fallback  |
+| Python tests                                               | Verify summary populated for each type    |
+| TypeScript tests                                           | Update mocks, test fallback               |
 
 ### Part 2: Remove scheduleViewMode
+
 ~19 files touched (DB, types, API, settings UI, context, pages, tests, docs).
 
 ## Migration

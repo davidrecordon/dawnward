@@ -17,6 +17,7 @@
 ### Task 1: Add `summary` field to Python Intervention dataclass
 
 **Files:**
+
 - Modify: `api/_python/circadian/types.py:135-183` (Intervention dataclass)
 
 **Step 1: Add the field**
@@ -62,6 +63,7 @@ feat: add summary field to Intervention dataclass
 ### Task 2: Write tests for summary generation
 
 **Files:**
+
 - Create: `api/_python/tests/test_summary_field.py`
 
 **Step 1: Write tests for each intervention type's summary**
@@ -267,6 +269,7 @@ test: add tests for intervention summary field generation
 ### Task 3: Generate summaries in InterventionPlanner
 
 **Files:**
+
 - Modify: `api/_python/circadian/scheduling/intervention_planner.py`
 
 **Context:** Every `Intervention(...)` constructor call in this file needs a `summary=` parameter. The planner has access to `self.context.direction`, `self.request.light_exposure_minutes`, `duration_min`, and computed end times.
@@ -284,104 +287,125 @@ from circadian.types import format_duration_short
 Here are the summary strings for each intervention creation site. The planner creates interventions in these methods:
 
 **`_plan_overnight_flight_nap` (line ~508):**
+
 ```python
 summary=f"Sleep opportunity (~{format_duration_short(int(sleep_hours * 60))})",
 ```
 
 **`_plan_regular_flight_nap` (line ~545):**
+
 ```python
 summary=f"Sleep opportunity (~{format_duration_short(int(flight_hours * 0.5 * 60))})",
 ```
 
 **`_plan_single_recommendation` — wake_target (line ~595):**
+
 ```python
 summary=("Target wake \u2014 get light after" if self.context.direction == "advance" else "Target wake \u2014 avoid light first"),
 ```
 
 **`_plan_single_recommendation` — light_seek advance (line ~619):**
+
 ```python
 summary=f"Bright light for {self.request.light_exposure_minutes} min",
 ```
 
 **`_plan_single_recommendation` — melatonin delay (line ~641):**
+
 ```python
 summary="Take 0.5mg melatonin",
 ```
 
 **`_plan_single_recommendation` — light_seek delay (line ~657):**
+
 ```python
 summary=f"Bright light for {self.request.light_exposure_minutes} min",
 ```
 
 **`_plan_sleep_wake` — wake_target (line ~709):**
+
 ```python
 summary=("Target wake \u2014 get light after" if self.context.direction == "advance" else "Target wake \u2014 avoid light first"),
 ```
 
 **`_plan_sleep_wake` — sleep_target (line ~732):**
+
 ```python
 summary=f"Target sleep \u2014 shifting {'earlier' if self.context.direction == 'advance' else 'later'}",
 ```
 
 **`_plan_light` — light_seek advance (line ~770):**
+
 ```python
 summary=f"Bright light for {self.request.light_exposure_minutes} min",
 ```
 
 **`_plan_light` — light_avoid advance (line ~789):**
+
 ```python
 summary=f"Avoid bright light until {format_time_12h(adj_end)}",
 ```
 
 **`_plan_light` — light_seek delay (line ~809):**
+
 ```python
 summary=f"Bright light for {self.request.light_exposure_minutes} min",
 ```
 
 **`_plan_light` — light_avoid delay (line ~828):**
+
 ```python
 summary=f"Avoid bright light until {format_time_12h(adj_end)}",
 ```
 
 **`_plan_melatonin` — advance (line ~855):**
+
 ```python
 summary="Take 0.5mg melatonin",
 ```
 
 **`_plan_melatonin` — delay (line ~879):**
+
 ```python
 summary="Take 0.5mg melatonin",
 ```
 
 **`_plan_caffeine` — caffeine_ok (line ~902):**
+
 ```python
 summary="Caffeine OK",
 ```
 
 **`_plan_caffeine` — caffeine_cutoff (line ~922):**
+
 ```python
 summary="Last caffeine \u2014 protect tonight's sleep",
 ```
 
 **`_plan_nap` — recovery nap (line ~954):**
+
 ```python
 summary=f"Recovery nap (up to {format_duration_short(nap_rec.max_duration_min)})",
 ```
 
 **`_plan_nap` — optional nap (line ~972):**
+
 ```python
 summary=f"Optional nap (up to {format_duration_short(nap_rec.max_duration_min)})",
 ```
 
 **`_plan_exercise` (find this method):**
+
 ```python
 summary="30 min activity to help shift rhythm",
 ```
 
 **ULR flight nap windows (line ~453, inside loop):**
+
 ```python
 summary=f"Sleep opportunity (~{format_duration_short(window_duration_min)})",
 ```
+
 where `window_duration_min` is computed from the window data.
 
 **Step 3: Run tests**
@@ -410,6 +434,7 @@ feat: generate personalized summary text for all intervention types
 ### Task 4: Add `summary` to TypeScript type and use it in frontend
 
 **Files:**
+
 - Modify: `src/types/schedule.ts` (~line 85, in Intervention interface)
 - Modify: `src/components/schedule/day-summary-card.tsx` (lines 30-49)
 
@@ -432,7 +457,9 @@ function getCondensedDescription(intervention: Intervention): string {
   if (intervention.summary) return intervention.summary;
   // Fallback for older schedules without summary field
   if (intervention.type === "nap_window") return intervention.title;
-  return CONDENSED_DESCRIPTIONS[intervention.type] ?? "Follow this intervention";
+  return (
+    CONDENSED_DESCRIPTIONS[intervention.type] ?? "Follow this intervention"
+  );
 }
 ```
 
@@ -462,6 +489,7 @@ that haven't been regenerated.
 ### Task 5: Create DB migration to drop scheduleViewMode column
 
 **Files:**
+
 - Modify: `prisma/schema.prisma` (line 29)
 - Create: new migration in `prisma/migrations/`
 
@@ -497,11 +525,13 @@ chore: remove scheduleViewMode column from User model
 ### Task 6: Remove scheduleViewMode from types and utilities
 
 **Files:**
+
 - Modify: `src/types/user-preferences.ts` (remove type, constants, validators, interface properties)
 
 **Step 1: Remove the type, constants, and validators (lines 1-21)**
 
 Delete:
+
 - Line 2: `export type ScheduleViewMode = "summary" | "timeline";`
 - Line 5: `export const DEFAULT_SCHEDULE_VIEW_MODE: ScheduleViewMode = "summary";`
 - Lines 7-21: `isValidScheduleViewMode()` and `getValidScheduleViewMode()` functions
@@ -542,6 +572,7 @@ refactor: remove ScheduleViewMode type and utilities
 ### Task 7: Remove scheduleViewMode from DisplayPreferencesContext
 
 **Files:**
+
 - Modify: `src/components/display-preferences-context.tsx`
 
 **Step 1: Remove import**
@@ -579,15 +610,19 @@ refactor: remove scheduleViewMode from display preferences context
 ### Task 8: Simplify trip-schedule-view.tsx to use viewport-only logic
 
 **Files:**
+
 - Modify: `src/components/trip-schedule-view.tsx` (lines 121, 129, 357-383)
 
 **Step 1: Remove scheduleViewMode from destructure (line 121)**
 
 Change:
+
 ```typescript
 const { showDualTimezone, scheduleViewMode } = useDisplayPreferences();
 ```
+
 To:
+
 ```typescript
 const { showDualTimezone } = useDisplayPreferences();
 ```
@@ -595,21 +630,25 @@ const { showDualTimezone } = useDisplayPreferences();
 **Step 2: Simplify the reset effect (lines 357-360)**
 
 Change:
+
 ```typescript
 useEffect(() => {
-    hasInitializedExpandedDays.current = false;
+  hasInitializedExpandedDays.current = false;
 }, [scheduleViewMode, isDesktop]);
 ```
+
 To:
+
 ```typescript
 useEffect(() => {
-    hasInitializedExpandedDays.current = false;
+  hasInitializedExpandedDays.current = false;
 }, [isDesktop]);
 ```
 
 **Step 3: Simplify the initialization effect (lines 362-383)**
 
 Replace:
+
 ```typescript
 if (scheduleViewMode === "timeline" && isDesktop) {
     // Timeline mode on desktop: start with all days expanded
@@ -618,7 +657,9 @@ if (scheduleViewMode === "timeline" && isDesktop) {
 } else {
     // Summary mode (or mobile): auto-expand today's day only
 ```
+
 With:
+
 ```typescript
 if (isDesktop) {
     // Desktop: start with all days expanded
@@ -643,6 +684,7 @@ refactor: use viewport-only logic for day expansion (desktop=expanded, mobile=co
 ### Task 9: Remove scheduleViewMode from settings form and API
 
 **Files:**
+
 - Modify: `src/components/settings-form.tsx` (lines 35, 267-286)
 - Modify: `src/app/api/user/preferences/route.ts` (lines 36, 65, 129)
 - Modify: `src/app/settings/page.tsx` (lines 46, 86)
@@ -690,6 +732,7 @@ refactor: remove scheduleViewMode from settings UI and preferences API
 ### Task 10: Remove scheduleViewMode from trip page providers
 
 **Files:**
+
 - Modify: `src/app/trip/[id]/page.tsx` (line 38)
 - Modify: `src/app/s/[code]/page.tsx` (line 43)
 
@@ -714,6 +757,7 @@ refactor: remove scheduleViewMode from trip page data fetching
 ### Task 11: Update tests
 
 **Files:**
+
 - Modify: `src/types/__tests__/user-preferences.test.ts`
 - Modify: `src/components/__tests__/display-preferences-context.test.tsx`
 - Modify: `src/app/api/user/preferences/__tests__/route.test.ts` (if it tests scheduleViewMode)
@@ -756,6 +800,7 @@ test: update tests after scheduleViewMode removal
 ### Task 12: Update documentation
 
 **Files:**
+
 - Modify: `CLAUDE.md` (lines ~232, ~250)
 - Modify: `design_docs/decisions-overview.md` (line ~77)
 - Modify: `design_docs/frontend-design.md` (line ~250)
@@ -767,6 +812,7 @@ Replace the "Schedule View Modes" section with:
 
 ```markdown
 **Schedule View Modes**: Viewport-driven behavior:
+
 - **Desktop**: All days start expanded showing full `DaySection` detail view
 - **Mobile**: All days start collapsed showing `DaySummaryCard`. Today's day auto-expands. Users can expand/collapse individual days.
 ```

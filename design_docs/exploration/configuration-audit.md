@@ -428,21 +428,21 @@ use24HourFormat      Boolean @default(false)
 
 ### Implementation Status
 
-| Field                | Schema | Types | API | UI  | Status  |
-| -------------------- | ------ | ----- | --- | --- | ------- |
-| defaultWakeTime      | ✅     | ✅    | ✅  | ✅  | Working |
-| defaultSleepTime     | ✅     | ✅    | ✅  | ✅  | Working |
-| defaultPrepDays      | ✅     | ✅    | ✅  | ✅  | Working |
-| usesMelatonin        | ✅     | ✅    | ✅  | ✅  | Working |
-| usesCaffeine         | ✅     | ✅    | ✅  | ✅  | Working |
-| usesExercise         | ✅     | ✅    | ✅  | ✅  | Working |
-| napPreference        | ✅     | ✅    | ✅  | ✅  | Working |
-| scheduleIntensity    | ✅     | ✅    | ✅  | ✅  | Working |
-| caffeineCutoffHours  | ✅     | ✅    | ✅  | ✅  | Working |
-| lightExposureMinutes | ✅     | ✅    | ✅  | ✅  | Working |
-| showDualTimezone     | ✅     | ✅    | ✅  | ✅  | Working |
+| Field                | Schema | Types | API | UI  | Status                    |
+| -------------------- | ------ | ----- | --- | --- | ------------------------- |
+| defaultWakeTime      | ✅     | ✅    | ✅  | ✅  | Working                   |
+| defaultSleepTime     | ✅     | ✅    | ✅  | ✅  | Working                   |
+| defaultPrepDays      | ✅     | ✅    | ✅  | ✅  | Working                   |
+| usesMelatonin        | ✅     | ✅    | ✅  | ✅  | Working                   |
+| usesCaffeine         | ✅     | ✅    | ✅  | ✅  | Working                   |
+| usesExercise         | ✅     | ✅    | ✅  | ✅  | Working                   |
+| napPreference        | ✅     | ✅    | ✅  | ✅  | Working                   |
+| scheduleIntensity    | ✅     | ✅    | ✅  | ✅  | Working                   |
+| caffeineCutoffHours  | ✅     | ✅    | ✅  | ✅  | Working                   |
+| lightExposureMinutes | ✅     | ✅    | ✅  | ✅  | Working                   |
+| showDualTimezone     | ✅     | ✅    | ✅  | ✅  | Working                   |
 | scheduleViewMode     | —      | —     | —   | —   | Removed (viewport-driven) |
-| use24HourFormat      | ✅     | ✅    | ✅  | ✅  | Working |
+| use24HourFormat      | ✅     | ✅    | ✅  | ✅  | Working                   |
 
 ### Future Preference Candidates (Not Yet Implemented)
 

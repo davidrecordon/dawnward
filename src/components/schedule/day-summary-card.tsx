@@ -35,7 +35,6 @@ const CONDENSED_DESCRIPTIONS: Record<string, string> = {
   caffeine_ok: "Caffeine OK until cutoff",
   melatonin: "Take melatonin to shift rhythm",
   sleep_target: "Aim for sleep by this time",
-  nap_window: "Good window for a short nap",
   exercise: "Physical activity helps shift rhythm",
 };
 
@@ -44,7 +43,9 @@ function getCondensedDescription(intervention: Intervention): string {
   if (intervention.summary) return intervention.summary;
   // Fallback for older schedules without summary field
   if (intervention.type === "nap_window") return intervention.title;
-  return CONDENSED_DESCRIPTIONS[intervention.type] ?? "Follow this intervention";
+  return (
+    CONDENSED_DESCRIPTIONS[intervention.type] ?? "Follow this intervention"
+  );
 }
 
 /**

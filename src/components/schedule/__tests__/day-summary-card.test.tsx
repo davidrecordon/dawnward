@@ -457,6 +457,143 @@ describe("DaySummaryCard", () => {
   });
 });
 
+describe("getCondensedDescription fallback chain", () => {
+  /**
+   * Tests the fallback: summary → title (nap_window) → CONDENSED_DESCRIPTIONS → default.
+   * Tested via formatDayForText which calls getCondensedDescription internally.
+   */
+
+  it("prefers scheduler-generated summary when present", () => {
+    const daySchedule = createMockDaySchedule({
+      items: [
+        createMockIntervention({
+          type: "wake_target",
+          summary: "Wake at 6 AM — 1h earlier than usual",
+        }),
+      ],
+    });
+
+    const result = formatDayForText(daySchedule);
+
+    expect(result).toContain("Wake at 6 AM — 1h earlier than usual");
+    expect(result).not.toContain("Wake up to help shift your clock");
+  });
+
+  it("uses summary for all intervention types when present", () => {
+    const daySchedule = createMockDaySchedule({
+      items: [
+        createMockIntervention({
+          type: "light_seek",
+          summary: "Get bright light after 7:30 AM",
+        }),
+        createMockIntervention({
+          type: "melatonin",
+          summary: "Take melatonin at 9 PM tonight",
+        }),
+      ],
+    });
+
+    const result = formatDayForText(daySchedule);
+
+    expect(result).toContain("Get bright light after 7:30 AM");
+    expect(result).toContain("Take melatonin at 9 PM tonight");
+  });
+
+  it("falls back to intervention.title for nap_window type", () => {
+    const daySchedule = createMockDaySchedule({
+      items: [
+        createMockIntervention({
+          type: "nap_window",
+          title: "Nap: 4h into flight",
+        }),
+      ],
+    });
+
+    const result = formatDayForText(daySchedule);
+
+    expect(result).toContain("Nap: 4h into flight");
+  });
+
+  it("falls back to CONDENSED_DESCRIPTIONS when no summary", () => {
+    const daySchedule = createMockDaySchedule({
+      items: [
+        createMockIntervention({ type: "light_seek" }),
+        createMockIntervention({ type: "caffeine_cutoff" }),
+        createMockIntervention({ type: "sleep_target" }),
+      ],
+    });
+
+    const result = formatDayForText(daySchedule);
+
+    expect(result).toContain("Get 30+ min bright light");
+    expect(result).toContain("Last caffeine for today");
+    expect(result).toContain("Aim for sleep by this time");
+  });
+
+  it("falls back to default for unknown intervention types", () => {
+    const daySchedule = createMockDaySchedule({
+      items: [
+        createMockIntervention({
+          type: "some_future_type" as Intervention["type"],
+          title: "Future Type",
+        }),
+      ],
+    });
+
+    const result = formatDayForText(daySchedule);
+
+    expect(result).toContain("Follow this intervention");
+  });
+
+  it("summary takes priority over CONDENSED_DESCRIPTIONS entry", () => {
+    const daySchedule = createMockDaySchedule({
+      items: [
+        createMockIntervention({
+          type: "light_avoid",
+          summary: "Stay indoors until 2 PM — avoid shifting too fast",
+        }),
+      ],
+    });
+
+    const result = formatDayForText(daySchedule);
+
+    expect(result).toContain(
+      "Stay indoors until 2 PM — avoid shifting too fast"
+    );
+    expect(result).not.toContain("Avoid bright light, dim screens");
+  });
+
+  it("renders summary in component when present", () => {
+    const daySchedule = createMockDaySchedule({
+      items: [
+        createMockIntervention({
+          type: "wake_target",
+          summary: "Wake at 6:30 AM — shifting 1h earlier",
+        }),
+      ],
+    });
+
+    render(
+      <DaySummaryCard
+        daySchedule={daySchedule}
+        origin={mockOrigin}
+        destination={mockDestination}
+        departureDate="2026-01-20"
+        departureTime="10:00"
+        arrivalDate="2026-01-21"
+        arrivalTime="06:00"
+      />
+    );
+
+    expect(
+      screen.getByText("Wake at 6:30 AM — shifting 1h earlier")
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText("Wake up to help shift your clock")
+    ).not.toBeInTheDocument();
+  });
+});
+
 describe("formatDayForText", () => {
   it("formats day schedule as plain text", () => {
     const daySchedule = createMockDaySchedule({
