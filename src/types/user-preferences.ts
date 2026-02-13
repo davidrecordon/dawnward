@@ -1,25 +1,3 @@
-/** Schedule view mode type */
-export type ScheduleViewMode = "summary" | "timeline";
-
-/** Default schedule view mode */
-export const DEFAULT_SCHEDULE_VIEW_MODE: ScheduleViewMode = "summary";
-
-/**
- * Type guard to validate schedule view mode values.
- */
-export function isValidScheduleViewMode(
-  value: unknown
-): value is ScheduleViewMode {
-  return value === "summary" || value === "timeline";
-}
-
-/**
- * Get a valid schedule view mode, falling back to default if invalid.
- */
-export function getValidScheduleViewMode(value: unknown): ScheduleViewMode {
-  return isValidScheduleViewMode(value) ? value : DEFAULT_SCHEDULE_VIEW_MODE;
-}
-
 /**
  * Display preferences for schedule rendering.
  * Used by DisplayPreferencesContext and page components.
@@ -27,7 +5,6 @@ export function getValidScheduleViewMode(value: unknown): ScheduleViewMode {
 export interface DisplayPreferences {
   use24HourFormat: boolean;
   showDualTimezone: boolean;
-  scheduleViewMode: ScheduleViewMode;
 }
 
 /**
@@ -36,7 +13,6 @@ export interface DisplayPreferences {
 interface DbDisplayPreferences {
   use24HourFormat?: boolean | null;
   showDualTimezone?: boolean | null;
-  scheduleViewMode?: string | null;
 }
 
 /**
@@ -49,7 +25,6 @@ export function extractDisplayPreferences(
   return {
     use24HourFormat: userPrefs?.use24HourFormat ?? false,
     showDualTimezone: userPrefs?.showDualTimezone ?? false,
-    scheduleViewMode: getValidScheduleViewMode(userPrefs?.scheduleViewMode),
   };
 }
 
@@ -67,7 +42,6 @@ export interface UserPreferences {
   scheduleIntensity: string;
   // Display preferences
   showDualTimezone: boolean;
-  scheduleViewMode: ScheduleViewMode;
   use24HourFormat: boolean;
   // Account metadata (only present when fetched from API)
   createdAt?: string;
@@ -114,7 +88,6 @@ export function mapFormToDbPreferences(form: {
     scheduleIntensity: form.scheduleIntensity,
     // Display preferences not in trip form - use defaults
     showDualTimezone: false,
-    scheduleViewMode: DEFAULT_SCHEDULE_VIEW_MODE,
     use24HourFormat: false,
   };
 }
