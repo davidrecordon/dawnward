@@ -40,14 +40,11 @@ const CONDENSED_DESCRIPTIONS: Record<string, string> = {
 };
 
 function getCondensedDescription(intervention: Intervention): string {
-  // nap_window titles are dynamic (e.g., "Sleep for the flight" for overnight
-  // red-eyes vs "In-flight sleep" for daytime flights), so use the scheduler's title
-  if (intervention.type === "nap_window") {
-    return intervention.title;
-  }
-  return (
-    CONDENSED_DESCRIPTIONS[intervention.type] ?? "Follow this intervention"
-  );
+  // Prefer scheduler-generated summary (personalized)
+  if (intervention.summary) return intervention.summary;
+  // Fallback for older schedules without summary field
+  if (intervention.type === "nap_window") return intervention.title;
+  return CONDENSED_DESCRIPTIONS[intervention.type] ?? "Follow this intervention";
 }
 
 /**
