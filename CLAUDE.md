@@ -648,11 +648,11 @@ function createMockIntervention(overrides = {}): Intervention {
 
 ## Design Documents
 
-See `design_docs/` for detailed specifications:
+All design documents, plans, and specs live in `design_docs/`. **Do not create a separate `docs/` or `docs/plans/` directory** — use the subdirectories below.
 
 ```
 design_docs/
-├── completed/           # Implemented features (archived)
+├── completed/           # Implemented features (archived, do not edit)
 ├── exploration/         # Future ideas, rough scopes, cleanup notes
 ├── shovel_ready/        # Scoped and ready to implement
 │
@@ -666,3 +666,5 @@ design_docs/
 ├── testing-design.md        # 6-layer validation strategy
 └── vercel-design.md         # Vercel deployment: Next.js + Python coexistence
 ```
+
+**Workflow:** New designs start in `exploration/` or `shovel_ready/` depending on readiness. Once implemented, move to `completed/`.
