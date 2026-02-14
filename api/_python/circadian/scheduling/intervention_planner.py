@@ -30,7 +30,7 @@ from ..science.markers import CircadianMarkerTracker
 from ..science.prc import LightPRC, MelatoninPRC
 from ..science.shift_calculator import ShiftCalculator
 from ..science.sleep_pressure import SleepPressureModel
-from ..types import Intervention, ScheduleRequest, TravelPhase
+from ..types import Intervention, ScheduleRequest, TravelPhase, format_duration_short
 from .constraint_filter import SLEEP_TARGET_DEPARTURE_BUFFER_HOURS
 from .phase_generator import (
     OVERNIGHT_ARRIVAL_LATEST_HOUR,
@@ -446,6 +446,7 @@ class InterventionPlanner:
                 display_time = start_iso.split("T")[1][:5]
 
             duration_hours = window.get("duration_hours", 4)
+            window_duration_min = int(duration_hours * 60)
             interventions.append(
                 Intervention(
                     time=display_time,
@@ -455,8 +456,9 @@ class InterventionPlanner:
                         f"Your body clock makes sleep easier during this window. "
                         f"Aim for ~{duration_hours:.0f} hours if possible."
                     ),
-                    duration_min=int(duration_hours * 60),
+                    duration_min=window_duration_min,
                     flight_offset_hours=flight_offset,
+                    summary=f"Sleep opportunity (~{format_duration_short(window_duration_min)})",
                 )
             )
 
@@ -507,12 +509,13 @@ class InterventionPlanner:
                 type="nap_window",
                 title="Sleep for the flight",
                 description=(
-                    "This is an overnight flight — sleep as much as you can. "
+                    "This is an overnight flight \u2014 sleep as much as you can. "
                     "The cabin lights will dim after a brief meal service. "
                     "Use an eye mask and earplugs for better rest."
                 ),
                 duration_min=int(sleep_hours * 60),
                 flight_offset_hours=round(sleep_offset_hours, 1),
+                summary=f"Sleep opportunity (~{format_duration_short(int(sleep_hours * 60))})",
             )
         ]
 
@@ -549,6 +552,7 @@ class InterventionPlanner:
                 ),
                 duration_min=int(flight_hours * 0.5 * 60),  # ~50% of flight
                 flight_offset_hours=round(nap_offset_hours, 1),
+                summary=f"Sleep opportunity (~{format_duration_short(int(flight_hours * 0.5 * 60))})",
             )
         ]
 
@@ -588,6 +592,11 @@ class InterventionPlanner:
                 # Cap wake_target for pre_departure phases (need time for airport)
                 capped_wake = self._cap_wake_target_for_departure(wake_target)
                 # Only include wake_target for departure day
+                wake_summary = (
+                    "Target wake \u2014 get light after"
+                    if self.context.direction == "advance"
+                    else "Target wake \u2014 avoid light first"
+                )
                 interventions.append(
                     Intervention(
                         time=format_time(capped_wake),
@@ -598,6 +607,7 @@ class InterventionPlanner:
                             f"{'Get bright light soon after waking.' if self.context.direction == 'advance' else 'Avoid bright light for the first few hours after waking.'}"
                         ),
                         duration_min=None,
+                        summary=wake_summary,
                     )
                 )
             else:
@@ -618,10 +628,11 @@ class InterventionPlanner:
                     type="light_seek",
                     title="Get bright light",
                     description=(
-                        "Your departure day is short—focus on this one thing. "
+                        "Your departure day is short\u2014focus on this one thing. "
                         "Bright morning light helps shift your clock forward."
                     ),
                     duration_min=30,
+                    summary=f"Bright light for {self.request.light_exposure_minutes} min",
                 )
             )
         else:
@@ -640,10 +651,11 @@ class InterventionPlanner:
                         type="melatonin",
                         title="Take melatonin",
                         description=(
-                            "Your departure day is short—focus on this one thing. "
+                            "Your departure day is short\u2014focus on this one thing. "
                             "Morning melatonin helps shift your clock back."
                         ),
                         duration_min=None,
+                        summary="Take 0.5mg melatonin",
                     )
                 )
             else:
@@ -655,10 +667,11 @@ class InterventionPlanner:
                         type="light_seek",
                         title="Get bright light",
                         description=(
-                            "Your departure day is short—focus on this one thing. "
+                            "Your departure day is short\u2014focus on this one thing. "
                             "Evening light helps shift your clock back."
                         ),
                         duration_min=30,
+                        summary=f"Bright light for {self.request.light_exposure_minutes} min",
                     )
                 )
 
@@ -702,6 +715,11 @@ class InterventionPlanner:
                 f"Try to wake up at this time to help shift your circadian clock. {wake_advice}"
             )
 
+        wake_summary = (
+            "Target wake \u2014 get light after"
+            if self.context.direction == "advance"
+            else "Target wake \u2014 avoid light first"
+        )
         interventions = [
             Intervention(
                 time=format_time(wake_target),
@@ -710,6 +728,7 @@ class InterventionPlanner:
                 description=wake_description,
                 duration_min=None,
                 original_time=wake_original_time,
+                summary=wake_summary,
             ),
         ]
 
@@ -725,6 +744,7 @@ class InterventionPlanner:
                     f"Earlier sleep before your flight helps. "
                     f"Your shifted target is {sleep_original_time}."
                 )
+            sleep_direction = "earlier" if self.context.direction == "advance" else "later"
             interventions.append(
                 Intervention(
                     time=format_time(sleep_target),
@@ -733,6 +753,7 @@ class InterventionPlanner:
                     description=sleep_description,
                     duration_min=None,
                     original_time=sleep_original_time,
+                    summary=f"Target sleep \u2014 shifting {sleep_direction}",
                 )
             )
 
@@ -773,6 +794,7 @@ class InterventionPlanner:
                         "This helps advance your circadian clock for eastward travel."
                     ),
                     duration_min=self.request.light_exposure_minutes,
+                    summary=f"Bright light for {self.request.light_exposure_minutes} min",
                 )
             )
 
@@ -792,6 +814,7 @@ class InterventionPlanner:
                             "Light now would shift your clock the wrong direction."
                         ),
                         duration_min=adj_duration,
+                        summary=f"Avoid bright light until {format_time_12h(adj_end)}",
                     )
                 )
 
@@ -812,6 +835,7 @@ class InterventionPlanner:
                         "Evening light helps delay your circadian clock for westward travel."
                     ),
                     duration_min=self.request.light_exposure_minutes,
+                    summary=f"Bright light for {self.request.light_exposure_minutes} min",
                 )
             )
 
@@ -831,6 +855,7 @@ class InterventionPlanner:
                             "Morning light would shift your clock the wrong direction."
                         ),
                         duration_min=adj_duration,
+                        summary=f"Avoid bright light until {format_time_12h(adj_end)}",
                     )
                 )
 
@@ -855,10 +880,11 @@ class InterventionPlanner:
                 title="Take melatonin",
                 description=(
                     "Take 0.5mg fast-release melatonin now. "
-                    "This timing shifts your body clock earlier — "
+                    "This timing shifts your body clock earlier \u2014 "
                     "it's not meant to make you sleepy right now."
                 ),
                 duration_min=None,
+                summary="Take 0.5mg melatonin",
             )
         else:
             # Delay: melatonin less commonly recommended
@@ -882,6 +908,7 @@ class InterventionPlanner:
                         "Morning melatonin can help delay your clock, but may cause drowsiness."
                     ),
                     duration_min=None,
+                    summary="Take 0.5mg melatonin",
                 )
             return None
 
@@ -905,6 +932,7 @@ class InterventionPlanner:
                     "Caffeine can help with alertness during adjustment."
                 ),
                 duration_min=None,
+                summary="Caffeine OK",
             )
         )
 
@@ -925,6 +953,7 @@ class InterventionPlanner:
                         "Caffeine's half-life is ~6 hours, so late consumption disrupts sleep."
                     ),
                     duration_min=None,
+                    summary="Last caffeine \u2014 protect tonight's sleep",
                 )
             )
 
@@ -959,6 +988,7 @@ class InterventionPlanner:
                     duration_min=nap_rec.max_duration_min,
                     window_end=format_time(nap_rec.window_end),
                     ideal_time=format_time(nap_rec.ideal_time),
+                    summary=f"Recovery nap (up to {format_duration_short(nap_rec.max_duration_min)})",
                 )
             return None
 
@@ -977,6 +1007,7 @@ class InterventionPlanner:
                 duration_min=nap_rec.max_duration_min,
                 window_end=format_time(nap_rec.window_end),
                 ideal_time=format_time(nap_rec.ideal_time),
+                summary=f"Optional nap (up to {format_duration_short(nap_rec.max_duration_min)})",
             )
 
         return None

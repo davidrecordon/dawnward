@@ -74,10 +74,10 @@
 
 ### Schedule View Modes
 
-Two display modes controlled by `scheduleViewMode` user preference:
+Viewport-driven behavior (no user preference):
 
-- **Summary mode (default)** — Condensed `DaySummaryCard` per day, today auto-expands, expand/collapse per day
-- **Timeline mode** — Full `DaySection` with all intervention cards visible
+- **Desktop** — Full `DaySection` with all intervention cards visible (all days expanded)
+- **Mobile** — Condensed `DaySummaryCard` per day, today auto-expands, expand/collapse per day
 
 ### Minimal Shift Tips
 
@@ -94,7 +94,6 @@ For timezone shifts ≤2 hours (`MINIMAL_SHIFT_THRESHOLD_HOURS`), show a simplif
 - Uses melatonin (boolean)
 - Uses caffeine (boolean)
 - Caffeine cutoff hours before sleep
-- Schedule view mode (summary/timeline)
 - Show dual timezone (boolean)
 - Use 24-hour time format (boolean)
 
@@ -214,7 +213,7 @@ Key tables (full SQL in backend design doc):
 | Phase 1 Auth (Google sign-in) | DONE — JWT sessions, protected routes, user prefs  |
 | Shareable URLs                | DONE — `/s/[code]` short links, trip history page  |
 | Trip Editing (Phases 1-2)     | DONE — Preference editing, actuals recording UI    |
-| Schedule View Modes           | DONE — Summary/timeline toggle, DaySummaryCard     |
+| Schedule View Modes           | DONE — Viewport-driven, personalized summaries     |
 | Minimal Shift Tips            | DONE — Simplified view for ≤2 hour shifts          |
 | Timezone Rearchitecture       | DONE — Phase-aware dual timezone display           |
 | Set up hello@dawnward.app     | TODO — Used for Google OAuth consent screen        |

@@ -40,7 +40,6 @@ export default async function SharedSchedulePage({ params }: Props) {
         where: { id: session.user.id },
         select: {
           showDualTimezone: true,
-          scheduleViewMode: true,
           use24HourFormat: true,
         },
       })

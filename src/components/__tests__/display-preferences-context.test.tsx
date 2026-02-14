@@ -18,7 +18,6 @@ function TestConsumer() {
       <span data-testid="showDualTimezone">
         {prefs.showDualTimezone.toString()}
       </span>
-      <span data-testid="scheduleViewMode">{prefs.scheduleViewMode}</span>
     </div>
   );
 }
@@ -42,9 +41,6 @@ describe("DisplayPreferencesContext", () => {
 
       expect(screen.getByTestId("use24HourFormat")).toHaveTextContent("false");
       expect(screen.getByTestId("showDualTimezone")).toHaveTextContent("false");
-      expect(screen.getByTestId("scheduleViewMode")).toHaveTextContent(
-        "summary"
-      );
     });
 
     it("provides custom use24HourFormat when specified", () => {
@@ -67,24 +63,11 @@ describe("DisplayPreferencesContext", () => {
       expect(screen.getByTestId("showDualTimezone")).toHaveTextContent("true");
     });
 
-    it("provides custom scheduleViewMode when specified", () => {
-      render(
-        <DisplayPreferencesProvider scheduleViewMode="timeline">
-          <TestConsumer />
-        </DisplayPreferencesProvider>
-      );
-
-      expect(screen.getByTestId("scheduleViewMode")).toHaveTextContent(
-        "timeline"
-      );
-    });
-
     it("provides all custom values together", () => {
       render(
         <DisplayPreferencesProvider
           use24HourFormat={true}
           showDualTimezone={true}
-          scheduleViewMode="timeline"
         >
           <TestConsumer />
         </DisplayPreferencesProvider>
@@ -92,9 +75,6 @@ describe("DisplayPreferencesContext", () => {
 
       expect(screen.getByTestId("use24HourFormat")).toHaveTextContent("true");
       expect(screen.getByTestId("showDualTimezone")).toHaveTextContent("true");
-      expect(screen.getByTestId("scheduleViewMode")).toHaveTextContent(
-        "timeline"
-      );
     });
   });
 
@@ -104,9 +84,6 @@ describe("DisplayPreferencesContext", () => {
 
       expect(screen.getByTestId("use24HourFormat")).toHaveTextContent("false");
       expect(screen.getByTestId("showDualTimezone")).toHaveTextContent("false");
-      expect(screen.getByTestId("scheduleViewMode")).toHaveTextContent(
-        "summary"
-      );
     });
   });
 

@@ -258,7 +258,10 @@ export function formatFlightOffset(hours: number): string {
     }
     return `~${minutes} minutes into flight`;
   }
-  return `~${hours} hours into flight`;
+  // Round to nearest 0.5h for cleaner display
+  const rounded = Math.round(hours * 2) / 2;
+  const display = rounded === Math.floor(rounded) ? `${rounded}` : `${rounded}`;
+  return `~${display} hours into flight`;
 }
 
 /**

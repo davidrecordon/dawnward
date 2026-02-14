@@ -33,7 +33,6 @@ const preferencesSchema = z.object({
   napPreference: z.enum(["no", "flight_only", "all_days"]).optional(),
   scheduleIntensity: z.enum(["gentle", "balanced", "aggressive"]).optional(),
   showDualTimezone: z.boolean().optional(),
-  scheduleViewMode: z.enum(["summary", "timeline"]).optional(),
   use24HourFormat: z.boolean().optional(),
 });
 
@@ -62,7 +61,6 @@ export async function GET() {
       napPreference: true,
       scheduleIntensity: true,
       showDualTimezone: true,
-      scheduleViewMode: true,
       use24HourFormat: true,
       createdAt: true,
     },
@@ -126,7 +124,6 @@ export async function PATCH(request: Request) {
       napPreference: true,
       scheduleIntensity: true,
       showDualTimezone: true,
-      scheduleViewMode: true,
       use24HourFormat: true,
     },
   });

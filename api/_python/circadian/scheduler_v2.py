@@ -345,6 +345,7 @@ class ScheduleGeneratorV2:
                     ideal_time_utc=ideal_time_utc,
                     flight_offset_hours=intervention.flight_offset_hours,
                     original_time=intervention.original_time,  # Preserve capping info
+                    summary=intervention.summary,  # Preserve planner-generated summary
                 )
             )
 
@@ -522,6 +523,7 @@ class ScheduleGeneratorV2:
             dest_tz=post_arrival_sleep.dest_tz,
             phase_type="post_arrival",
             show_dual_timezone=False,
+            summary=post_arrival_sleep.summary,  # Preserve planner-generated summary
         )
 
         # Create a new DaySchedule for the post_arrival phase of Day 0

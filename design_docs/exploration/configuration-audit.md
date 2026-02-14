@@ -422,27 +422,27 @@ lightExposureMinutes Int     @default(60)
 
 // Display preferences (3 fields)
 showDualTimezone     Boolean @default(false)
-scheduleViewMode     String  @default("summary")
+// scheduleViewMode removed — now viewport-driven (desktop=expanded, mobile=collapsed)
 use24HourFormat      Boolean @default(false)
 ```
 
 ### Implementation Status
 
-| Field                | Schema | Types | API | UI  | Status  |
-| -------------------- | ------ | ----- | --- | --- | ------- |
-| defaultWakeTime      | ✅     | ✅    | ✅  | ✅  | Working |
-| defaultSleepTime     | ✅     | ✅    | ✅  | ✅  | Working |
-| defaultPrepDays      | ✅     | ✅    | ✅  | ✅  | Working |
-| usesMelatonin        | ✅     | ✅    | ✅  | ✅  | Working |
-| usesCaffeine         | ✅     | ✅    | ✅  | ✅  | Working |
-| usesExercise         | ✅     | ✅    | ✅  | ✅  | Working |
-| napPreference        | ✅     | ✅    | ✅  | ✅  | Working |
-| scheduleIntensity    | ✅     | ✅    | ✅  | ✅  | Working |
-| caffeineCutoffHours  | ✅     | ✅    | ✅  | ✅  | Working |
-| lightExposureMinutes | ✅     | ✅    | ✅  | ✅  | Working |
-| showDualTimezone     | ✅     | ✅    | ✅  | ✅  | Working |
-| scheduleViewMode     | ✅     | ✅    | ✅  | ✅  | Working |
-| use24HourFormat      | ✅     | ✅    | ✅  | ✅  | Working |
+| Field                | Schema | Types | API | UI  | Status                    |
+| -------------------- | ------ | ----- | --- | --- | ------------------------- |
+| defaultWakeTime      | ✅     | ✅    | ✅  | ✅  | Working                   |
+| defaultSleepTime     | ✅     | ✅    | ✅  | ✅  | Working                   |
+| defaultPrepDays      | ✅     | ✅    | ✅  | ✅  | Working                   |
+| usesMelatonin        | ✅     | ✅    | ✅  | ✅  | Working                   |
+| usesCaffeine         | ✅     | ✅    | ✅  | ✅  | Working                   |
+| usesExercise         | ✅     | ✅    | ✅  | ✅  | Working                   |
+| napPreference        | ✅     | ✅    | ✅  | ✅  | Working                   |
+| scheduleIntensity    | ✅     | ✅    | ✅  | ✅  | Working                   |
+| caffeineCutoffHours  | ✅     | ✅    | ✅  | ✅  | Working                   |
+| lightExposureMinutes | ✅     | ✅    | ✅  | ✅  | Working                   |
+| showDualTimezone     | ✅     | ✅    | ✅  | ✅  | Working                   |
+| scheduleViewMode     | —      | —     | —   | —   | Removed (viewport-driven) |
+| use24HourFormat      | ✅     | ✅    | ✅  | ✅  | Working                   |
 
 ### Future Preference Candidates (Not Yet Implemented)
 

@@ -252,9 +252,12 @@ describe("formatFlightOffset", () => {
     expect(formatFlightOffset(12)).toBe("~12 hours into flight");
   });
 
-  it("formats fractional hours >= 1", () => {
+  it("rounds fractional hours >= 1 to nearest 0.5", () => {
     expect(formatFlightOffset(4.5)).toBe("~4.5 hours into flight");
-    expect(formatFlightOffset(2.25)).toBe("~2.25 hours into flight");
+    expect(formatFlightOffset(2.25)).toBe("~2.5 hours into flight");
+    expect(formatFlightOffset(2.1)).toBe("~2 hours into flight");
+    expect(formatFlightOffset(2.8)).toBe("~3 hours into flight");
+    expect(formatFlightOffset(5.7)).toBe("~5.5 hours into flight");
   });
 
   it("rounds minutes to nearest whole number", () => {

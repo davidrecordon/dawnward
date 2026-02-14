@@ -6,7 +6,6 @@ import {
   Coffee,
   Gauge,
   Globe,
-  List,
   Moon,
   Pill,
   Clock,
@@ -32,7 +31,6 @@ interface UserPreferences {
   napPreference: string;
   scheduleIntensity: string;
   showDualTimezone: boolean;
-  scheduleViewMode: string;
   use24HourFormat: boolean;
 }
 
@@ -264,27 +262,6 @@ export function SettingsForm({ initialPreferences }: SettingsFormProps) {
           <CardTitle className="text-lg">Display</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
-          <PreferenceSelector
-            icon={<List className="h-4 w-4" />}
-            title="Schedule view default"
-            description="How to display your daily schedule"
-            value={preferences.scheduleViewMode}
-            onValueChange={(val) => updateField("scheduleViewMode", val)}
-            options={[
-              {
-                value: "summary",
-                label: "Hybrid",
-                description: "Adjusted based upon your schedule",
-              },
-              {
-                value: "timeline",
-                label: "Detailed",
-                description: "Detailed cards with full descriptions",
-              },
-            ]}
-            colorScheme="sky"
-          />
-
           <PreferenceToggle
             icon={<Globe className="h-4 w-4" />}
             title="Show dual timezones"

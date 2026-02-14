@@ -192,6 +192,7 @@ class ConstraintFilter:
                     title=intervention.title,
                     description=intervention.description,
                     duration_min=intervention.duration_min,
+                    summary=intervention.summary,
                 )
                 result.append(clamped)
                 self.violations.append(
@@ -216,6 +217,7 @@ class ConstraintFilter:
                     title=intervention.title,
                     description=intervention.description,
                     duration_min=intervention.duration_min,
+                    summary=intervention.summary,
                 )
                 result.append(clamped)
                 self.violations.append(

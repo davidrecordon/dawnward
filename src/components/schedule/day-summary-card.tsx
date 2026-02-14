@@ -35,16 +35,14 @@ const CONDENSED_DESCRIPTIONS: Record<string, string> = {
   caffeine_ok: "Caffeine OK until cutoff",
   melatonin: "Take melatonin to shift rhythm",
   sleep_target: "Aim for sleep by this time",
-  nap_window: "Good window for a short nap",
   exercise: "Physical activity helps shift rhythm",
 };
 
 function getCondensedDescription(intervention: Intervention): string {
-  // nap_window titles are dynamic (e.g., "Sleep for the flight" for overnight
-  // red-eyes vs "In-flight sleep" for daytime flights), so use the scheduler's title
-  if (intervention.type === "nap_window") {
-    return intervention.title;
-  }
+  // Prefer scheduler-generated summary (personalized)
+  if (intervention.summary) return intervention.summary;
+  // Fallback for older schedules without summary field
+  if (intervention.type === "nap_window") return intervention.title;
   return (
     CONDENSED_DESCRIPTIONS[intervention.type] ?? "Follow this intervention"
   );

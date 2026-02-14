@@ -26,7 +26,6 @@ model User {
   usesExercise         Boolean          @default(false)
   lightExposureMinutes Int              @default(60)
   showDualTimezone     Boolean          @default(false)
-  scheduleViewMode     String           @default("summary")
   use24HourFormat      Boolean          @default(false)
   accounts             Account[]
   calendarSyncs        CalendarSync[]
