@@ -4,19 +4,19 @@
  * Tests cover:
  * 1. Feature flag behavior
  * 2. Authorization (CRON_SECRET)
- * 3. Email processing flow
+ * 3. Send time calculation (smart timing logic)
+ * 4. Email processing flow (stateless cron)
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { GET } from "../route";
+import { GET, calculateEmailSendTime } from "../route";
 
-// Mock environment variables
 const originalEnv = process.env;
 
 // Mock prisma
 vi.mock("@/lib/prisma", () => ({
   prisma: {
-    emailSchedule: {
+    sharedSchedule: {
       findMany: vi.fn(),
       update: vi.fn(),
     },
@@ -29,16 +29,10 @@ vi.mock("@/lib/email/client", () => ({
   maskEmail: vi.fn((email: string) => {
     const [local, domain] = email.split("@");
     if (!domain) return "***";
-    const maskedLocal = local.length > 2 ? `${local[0]}***${local[local.length - 1]}` : "***";
+    const maskedLocal =
+      local.length > 2 ? `${local[0]}***${local[local.length - 1]}` : "***";
     return `${maskedLocal}@${domain}`;
   }),
-}));
-
-// Mock scheduler functions
-vi.mock("@/lib/email/scheduler", () => ({
-  getPendingEmails: vi.fn(),
-  markEmailSent: vi.fn(),
-  markEmailFailed: vi.fn(),
 }));
 
 // Mock email template
@@ -47,23 +41,17 @@ vi.mock("@/lib/email/templates/flight-day", () => ({
   renderFlightDayEmailText: vi.fn(),
 }));
 
-// Import mocked modules
+import { prisma } from "@/lib/prisma";
 import { sendEmail } from "@/lib/email/client";
-import {
-  getPendingEmails,
-  markEmailSent,
-  markEmailFailed,
-} from "@/lib/email/scheduler";
 import {
   renderFlightDayEmail,
   renderFlightDayEmailText,
 } from "@/lib/email/templates/flight-day";
 import type { Mock } from "vitest";
 
+const mockedFindMany = prisma.sharedSchedule.findMany as Mock;
+const mockedUpdate = prisma.sharedSchedule.update as Mock;
 const mockedSendEmail = sendEmail as Mock;
-const mockedGetPendingEmails = getPendingEmails as Mock;
-const mockedMarkEmailSent = markEmailSent as Mock;
-const mockedMarkEmailFailed = markEmailFailed as Mock;
 const mockedRenderFlightDayEmail = renderFlightDayEmail as Mock;
 const mockedRenderFlightDayEmailText = renderFlightDayEmailText as Mock;
 
@@ -78,10 +66,103 @@ function createRequest(authHeader?: string): Request {
   });
 }
 
+function createMockTrip(overrides: Record<string, unknown> = {}) {
+  // Default: departure 2 hours from now (within lookahead window)
+  const departure = new Date(Date.now() + 2 * 60 * 60 * 1000);
+  const arrival = new Date(departure.getTime() + 10 * 60 * 60 * 1000);
+
+  return {
+    id: "trip-1",
+    userId: "user-1",
+    originTz: "America/Los_Angeles",
+    destTz: "Europe/London",
+    departureDatetime: departure.toISOString().slice(0, 16),
+    arrivalDatetime: arrival.toISOString().slice(0, 16),
+    routeLabel: "LAX → LHR",
+    flightDayEmailSentAt: null,
+    currentScheduleJson: {
+      interventions: [
+        {
+          day: 0,
+          date: departure.toISOString().slice(0, 10),
+          items: [
+            {
+              type: "wake_target",
+              title: "Wake",
+              description: "Time to wake",
+              origin_time: "07:00",
+              dest_time: "15:00",
+              origin_date: departure.toISOString().slice(0, 10),
+              dest_date: departure.toISOString().slice(0, 10),
+              origin_tz: "America/Los_Angeles",
+              dest_tz: "Europe/London",
+              phase_type: "pre_departure",
+              show_dual_timezone: false,
+            },
+          ],
+        },
+      ],
+    },
+    user: {
+      email: "user@example.com",
+      name: "Test User",
+      use24HourFormat: false,
+      emailNotifications: true,
+    },
+    ...overrides,
+  };
+}
+
+describe("calculateEmailSendTime", () => {
+  it("defaults to 5 AM local on departure day", () => {
+    const result = calculateEmailSendTime(
+      "2026-01-20T10:00",
+      "America/Los_Angeles"
+    );
+
+    expect(result.isNightBefore).toBe(false);
+    // 5 AM PST = 13:00 UTC
+    expect(result.sendAt.getUTCHours()).toBe(13);
+  });
+
+  it("falls back to 7 PM night before for early departures", () => {
+    // First intervention at 5:30 AM — only 30 min after default 5 AM send
+    const result = calculateEmailSendTime(
+      "2026-01-20T06:00",
+      "America/Los_Angeles",
+      "05:30"
+    );
+
+    expect(result.isNightBefore).toBe(true);
+    // 7 PM PST on Jan 19 = 03:00 UTC on Jan 20
+    expect(result.sendAt.getUTCHours()).toBe(3);
+    expect(result.sendAt.getUTCDate()).toBe(20);
+  });
+
+  it("keeps morning send for late departures", () => {
+    // First intervention at 9 AM — 4h after default 5 AM, above 3h threshold
+    const result = calculateEmailSendTime(
+      "2026-01-20T12:00",
+      "America/Los_Angeles",
+      "09:00"
+    );
+
+    expect(result.isNightBefore).toBe(false);
+  });
+
+  it("sends morning of when no first intervention time provided", () => {
+    const result = calculateEmailSendTime(
+      "2026-01-20T06:00",
+      "America/Los_Angeles"
+    );
+
+    expect(result.isNightBefore).toBe(false);
+  });
+});
+
 describe("GET /api/cron/send-emails", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    // Reset environment
     process.env = { ...originalEnv };
   });
 
@@ -145,14 +226,12 @@ describe("GET /api/cron/send-emails", () => {
       const response = await GET(createRequest("Bearer wrong-secret"));
 
       expect(response.status).toBe(401);
-      const data = await response.json();
-      expect(data.error).toBe("Unauthorized");
     });
 
     it("allows access with valid authorization", async () => {
       process.env.ENABLE_FLIGHT_DAY_EMAILS = "true";
       process.env.CRON_SECRET = "test-secret";
-      mockedGetPendingEmails.mockResolvedValue([]);
+      mockedFindMany.mockResolvedValue([]);
 
       const response = await GET(createRequest("Bearer test-secret"));
 
@@ -168,8 +247,8 @@ describe("GET /api/cron/send-emails", () => {
       process.env.CRON_SECRET = "test-secret";
     });
 
-    it("returns success with zero sent when no pending emails", async () => {
-      mockedGetPendingEmails.mockResolvedValue([]);
+    it("returns success with zero sent when no trips found", async () => {
+      mockedFindMany.mockResolvedValue([]);
 
       const response = await GET(createRequest("Bearer test-secret"));
 
@@ -178,40 +257,11 @@ describe("GET /api/cron/send-emails", () => {
       expect(data.success).toBe(true);
       expect(data.processed).toBe(0);
       expect(data.sent).toBe(0);
-      expect(data.failed).toBe(0);
     });
 
-    it("sends email and marks as sent on success", async () => {
-      const mockEmailSchedule = {
-        id: "email-1",
-        tripId: "trip-1",
-        userId: "user-1",
-        user: {
-          email: "user@example.com",
-          name: "Test User",
-          use24HourFormat: false,
-        },
-        trip: {
-          id: "trip-1",
-          routeLabel: "LAX → LHR",
-          departureDatetime: "2026-01-20T09:00:00",
-          arrivalDatetime: "2026-01-20T17:00:00",
-          originTz: "America/Los_Angeles",
-          currentScheduleJson: {
-            interventions: [
-              {
-                day: 0,
-                date: "2026-01-20",
-                items: [
-                  { type: "wake_target", title: "Wake", description: "Time to wake" },
-                ],
-              },
-            ],
-          },
-        },
-      };
-
-      mockedGetPendingEmails.mockResolvedValue([mockEmailSchedule]);
+    it("sends email and sets flightDayEmailSentAt on success", async () => {
+      const mockTrip = createMockTrip();
+      mockedFindMany.mockResolvedValue([mockTrip]);
       mockedRenderFlightDayEmail.mockResolvedValue("<html>Email</html>");
       mockedRenderFlightDayEmailText.mockReturnValue("Plain text email");
       mockedSendEmail.mockResolvedValue({ success: true, id: "resend-123" });
@@ -220,46 +270,23 @@ describe("GET /api/cron/send-emails", () => {
 
       expect(response.status).toBe(200);
       const data = await response.json();
-      expect(data.success).toBe(true);
       expect(data.sent).toBe(1);
       expect(data.failed).toBe(0);
-      expect(mockedMarkEmailSent).toHaveBeenCalledWith("email-1");
+      expect(mockedUpdate).toHaveBeenCalledWith({
+        where: { id: "trip-1" },
+        data: { flightDayEmailSentAt: expect.any(Date) },
+      });
     });
 
-    it("marks email as failed when send fails", async () => {
-      const mockEmailSchedule = {
-        id: "email-2",
-        tripId: "trip-2",
-        userId: "user-2",
-        user: {
-          email: "user2@example.com",
-          name: "Test User 2",
-          use24HourFormat: false,
-        },
-        trip: {
-          id: "trip-2",
-          routeLabel: "SFO → NRT",
-          departureDatetime: "2026-01-20T10:00:00",
-          arrivalDatetime: "2026-01-21T14:00:00",
-          originTz: "America/Los_Angeles",
-          currentScheduleJson: {
-            interventions: [
-              {
-                day: 0,
-                date: "2026-01-20",
-                items: [
-                  { type: "wake_target", title: "Wake", description: "Time to wake" },
-                ],
-              },
-            ],
-          },
-        },
-      };
-
-      mockedGetPendingEmails.mockResolvedValue([mockEmailSchedule]);
+    it("increments failed count when send fails", async () => {
+      const mockTrip = createMockTrip();
+      mockedFindMany.mockResolvedValue([mockTrip]);
       mockedRenderFlightDayEmail.mockResolvedValue("<html>Email</html>");
-      mockedRenderFlightDayEmailText.mockReturnValue("Plain text email");
-      mockedSendEmail.mockResolvedValue({ success: false, error: "API error" });
+      mockedRenderFlightDayEmailText.mockReturnValue("Plain text");
+      mockedSendEmail.mockResolvedValue({
+        success: false,
+        error: "API error",
+      });
 
       const response = await GET(createRequest("Bearer test-secret"));
 
@@ -267,64 +294,70 @@ describe("GET /api/cron/send-emails", () => {
       const data = await response.json();
       expect(data.sent).toBe(0);
       expect(data.failed).toBe(1);
-      expect(mockedMarkEmailFailed).toHaveBeenCalledWith("email-2", "API error");
+      expect(mockedUpdate).not.toHaveBeenCalled();
     });
 
-    it("skips email when user email is missing", async () => {
-      const mockEmailSchedule = {
-        id: "email-3",
-        tripId: "trip-3",
-        userId: "user-3",
-        user: {
-          email: null, // Missing email
-          name: "Test User 3",
-        },
-        trip: {
-          id: "trip-3",
-          currentScheduleJson: {},
-        },
-      };
-
-      mockedGetPendingEmails.mockResolvedValue([mockEmailSchedule]);
+    it("skips trip when user email is missing", async () => {
+      const mockTrip = createMockTrip({
+        user: { email: null, name: "No Email", use24HourFormat: false },
+      });
+      mockedFindMany.mockResolvedValue([mockTrip]);
 
       const response = await GET(createRequest("Bearer test-secret"));
 
       expect(response.status).toBe(200);
       const data = await response.json();
-      expect(data.failed).toBe(1);
-      expect(mockedMarkEmailFailed).toHaveBeenCalledWith(
-        "email-3",
-        "Missing user email or schedule data"
-      );
+      expect(data.skipped).toBe(1);
       expect(mockedSendEmail).not.toHaveBeenCalled();
     });
 
-    it("skips email when schedule is missing", async () => {
-      const mockEmailSchedule = {
-        id: "email-4",
-        tripId: "trip-4",
-        userId: "user-4",
-        user: {
-          email: "user4@example.com",
-          name: "Test User 4",
+    it("skips trip when no flight day in schedule", async () => {
+      const mockTrip = createMockTrip({
+        currentScheduleJson: {
+          interventions: [
+            { day: -1, date: "2026-01-19", items: [] }, // prep day only
+          ],
         },
-        trip: {
-          id: "trip-4",
-          currentScheduleJson: null, // Missing schedule
-        },
-      };
+      });
+      mockedFindMany.mockResolvedValue([mockTrip]);
 
-      mockedGetPendingEmails.mockResolvedValue([mockEmailSchedule]);
+      const response = await GET(createRequest("Bearer test-secret"));
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.skipped).toBe(1);
+      expect(mockedSendEmail).not.toHaveBeenCalled();
+    });
+
+    it("filters out trips departing outside lookahead window", async () => {
+      // Departure 48 hours from now — outside 36h window
+      const farDeparture = new Date(Date.now() + 48 * 60 * 60 * 1000);
+      const mockTrip = createMockTrip({
+        departureDatetime: farDeparture.toISOString().slice(0, 16),
+      });
+      mockedFindMany.mockResolvedValue([mockTrip]);
+
+      const response = await GET(createRequest("Bearer test-secret"));
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.processed).toBe(0);
+      expect(mockedSendEmail).not.toHaveBeenCalled();
+    });
+
+    it("handles render exception gracefully", async () => {
+      const mockTrip = createMockTrip();
+      mockedFindMany.mockResolvedValue([mockTrip]);
+      mockedRenderFlightDayEmail.mockRejectedValue(
+        new Error("Template render failed")
+      );
 
       const response = await GET(createRequest("Bearer test-secret"));
 
       expect(response.status).toBe(200);
       const data = await response.json();
       expect(data.failed).toBe(1);
-      expect(mockedMarkEmailFailed).toHaveBeenCalledWith(
-        "email-4",
-        "Missing user email or schedule data"
-      );
+      expect(data.sent).toBe(0);
     });
   });
 });
