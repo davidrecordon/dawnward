@@ -71,10 +71,13 @@ export const CONDENSED_DESCRIPTIONS: Record<InterventionType, string> = {
 const DEFAULT_DESCRIPTION = "Follow this intervention";
 
 /**
- * Get condensed description for an intervention type.
+ * Get condensed description for an intervention.
+ * Prefers scheduler-generated `summary` (personalized), falls back to static descriptions.
  */
-export function getCondensedDescription(type: InterventionType): string {
-  return CONDENSED_DESCRIPTIONS[type] ?? DEFAULT_DESCRIPTION;
+export function getCondensedDescription(intervention: Intervention): string {
+  if (intervention.summary) return intervention.summary;
+  if (intervention.type === "nap_window") return intervention.title;
+  return CONDENSED_DESCRIPTIONS[intervention.type] ?? DEFAULT_DESCRIPTION;
 }
 
 // =============================================================================
@@ -105,7 +108,7 @@ export function formatInterventionForText(
 ): string {
   const emoji = getInterventionEmoji(intervention.type);
   const time = formatTimeForText(getDisplayTime(intervention), use24Hour);
-  const desc = getCondensedDescription(intervention.type);
+  const desc = getCondensedDescription(intervention);
   return `${emoji}  ${time}   ${desc}`;
 }
 
@@ -179,7 +182,7 @@ function formatFlightDaySection(
 
   for (const intervention of interventions) {
     const emoji = getInterventionEmoji(intervention.type);
-    const desc = getCondensedDescription(intervention.type);
+    const desc = getCondensedDescription(intervention);
 
     // For in-flight items with flight_offset_hours, show offset instead of time
     if (showFlightOffset && intervention.flight_offset_hours != null) {
@@ -251,7 +254,7 @@ export function formatFlightDayForEmail(
       for (const intervention of sections.afterLanding) {
         const emoji = getInterventionEmoji(intervention.type);
         const time = formatTimeForText(getDisplayTime(intervention), use24Hour);
-        const desc = getCondensedDescription(intervention.type);
+        const desc = getCondensedDescription(intervention);
         afterSection += `${emoji}  ${time}   ${desc}\n`;
       }
     }

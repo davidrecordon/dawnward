@@ -105,16 +105,41 @@ describe("getInterventionEmoji", () => {
 
 describe("getCondensedDescription", () => {
   it("returns the correct description for each type", () => {
-    expect(getCondensedDescription("wake_target")).toBe(
+    expect(getCondensedDescription(makeIntervention("wake_target", "07:00"))).toBe(
       "Wake up to help shift your clock"
     );
-    expect(getCondensedDescription("light_seek")).toBe("Get 30+ min bright light");
+    expect(getCondensedDescription(makeIntervention("light_seek", "07:00"))).toBe(
+      "Get 30+ min bright light"
+    );
   });
 
   it("returns default description for unknown type", () => {
     // @ts-expect-error - testing invalid type
-    expect(getCondensedDescription("unknown_type")).toBe(
+    expect(getCondensedDescription(makeIntervention("unknown_type", "07:00"))).toBe(
       "Follow this intervention"
+    );
+  });
+
+  it("prefers scheduler-generated summary over static description", () => {
+    const intervention = makeIntervention("wake_target", "07:00", {
+      summary: "Wake at 6:30 AM — shifting 1h earlier",
+    });
+    expect(getCondensedDescription(intervention)).toBe(
+      "Wake at 6:30 AM — shifting 1h earlier"
+    );
+  });
+
+  it("falls back to title for nap_window without summary", () => {
+    const intervention = makeIntervention("nap_window", "10:00", {
+      title: "Sleep opportunity (~5h)",
+    });
+    expect(getCondensedDescription(intervention)).toBe("Sleep opportunity (~5h)");
+  });
+
+  it("falls back to static description when no summary", () => {
+    const intervention = makeIntervention("melatonin", "21:00");
+    expect(getCondensedDescription(intervention)).toBe(
+      "Take melatonin to shift rhythm"
     );
   });
 });
