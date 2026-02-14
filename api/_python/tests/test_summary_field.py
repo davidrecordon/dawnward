@@ -98,6 +98,14 @@ class TestFormatDurationShort:
         assert format_duration_short(90) == "1.5h"
         assert format_duration_short(150) == "2.5h"
 
+    def test_rounds_to_nearest_half_hour(self) -> None:
+        """Durations round to nearest 0.5h for cleaner display."""
+        assert format_duration_short(310) == "5h"  # 5.17h → 5h
+        assert format_duration_short(320) == "5.5h"  # 5.33h → 5.5h
+        assert format_duration_short(350) == "6h"  # 5.83h → 6h
+        assert format_duration_short(225) == "4h"  # 3.75h → 4h
+        assert format_duration_short(200) == "3.5h"  # 3.33h → 3.5h
+
 
 # ---------------------------------------------------------------------------
 # Summary field presence

@@ -132,11 +132,11 @@ class FlightContext:
 
 
 def format_duration_short(minutes: int | None) -> str:
-    """Format duration for summary display: >=60 min as hours, <60 as minutes."""
+    """Format duration for summary display: >=60 min as hours (rounded to nearest 0.5h), <60 as minutes."""
     if minutes is None:
         return ""
     if minutes >= 60:
-        hours = minutes / 60
+        hours = round(minutes / 60 * 2) / 2  # Round to nearest 0.5
         if hours == int(hours):
             return f"{int(hours)}h"
         return f"{hours:.1f}h"
