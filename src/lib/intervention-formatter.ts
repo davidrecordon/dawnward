@@ -119,7 +119,9 @@ export function formatInterventionForText(
 export function formatFlightOffset(hours: number): string {
   const wholeHours = Math.floor(hours);
   const hasHalf = hours - wholeHours >= 0.25;
-  return hasHalf ? `~${wholeHours}.5h into flight` : `~${wholeHours}h into flight`;
+  return hasHalf
+    ? `~${wholeHours}.5h into flight`
+    : `~${wholeHours}h into flight`;
 }
 
 // =============================================================================
@@ -232,7 +234,12 @@ export function formatFlightDayForEmail(
   // On the Plane section
   if (sections.onThePlane.length > 0) {
     parts.push(
-      formatFlightDaySection("On the Plane", sections.onThePlane, use24Hour, true)
+      formatFlightDaySection(
+        "On the Plane",
+        sections.onThePlane,
+        use24Hour,
+        true
+      )
     );
   }
 

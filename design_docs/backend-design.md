@@ -977,7 +977,7 @@ function calculateEmailSendTime(
   departureDatetime: string,
   originTz: string,
   firstInterventionTime?: string
-): { sendAt: Date; isNightBefore: boolean }
+): { sendAt: Date; isNightBefore: boolean };
 ```
 
 **Logic:**
@@ -988,11 +988,11 @@ function calculateEmailSendTime(
 
 **Examples:**
 
-| Departure | First Intervention | Send Time | Why |
-|-----------|-------------------|-----------|-----|
-| 10:00 AM | 07:00 (wake) | 05:00 AM same day | 5h notice is sufficient |
-| 06:30 AM | 05:30 (wake) | 07:00 PM night before | Only 30min between 5AM and wake |
-| 11:00 PM | 07:00 (wake) | 05:00 AM same day | Late flight, plenty of time |
+| Departure | First Intervention | Send Time             | Why                             |
+| --------- | ------------------ | --------------------- | ------------------------------- |
+| 10:00 AM  | 07:00 (wake)       | 05:00 AM same day     | 5h notice is sufficient         |
+| 06:30 AM  | 05:30 (wake)       | 07:00 PM night before | Only 30min between 5AM and wake |
+| 11:00 PM  | 07:00 (wake)       | 05:00 AM same day     | Late flight, plenty of time     |
 
 ### Email Template
 
@@ -1000,8 +1000,10 @@ React Email template with HTML and plain text versions:
 
 ```tsx
 // src/lib/email/templates/flight-day.tsx
-export async function renderFlightDayEmail(props: FlightDayEmailProps): Promise<string>
-export function renderFlightDayEmailText(props: FlightDayEmailProps): string
+export async function renderFlightDayEmail(
+  props: FlightDayEmailProps
+): Promise<string>;
+export function renderFlightDayEmailText(props: FlightDayEmailProps): string;
 ```
 
 **Structure:**

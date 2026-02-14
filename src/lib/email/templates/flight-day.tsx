@@ -169,10 +169,19 @@ export async function renderFlightDayEmail(
 /**
  * Generate plain text version of the email.
  */
-export function renderFlightDayEmailText(
-  props: FlightDayEmailProps
-): string {
-  const { userName, flightDaySchedule, routeLabel, departureTime, arrivalTime, originCode, destCode, use24Hour, isNightBefore, tripId } = props;
+export function renderFlightDayEmailText(props: FlightDayEmailProps): string {
+  const {
+    userName,
+    flightDaySchedule,
+    routeLabel,
+    departureTime,
+    arrivalTime,
+    originCode,
+    destCode,
+    use24Hour,
+    isNightBefore,
+    tripId,
+  } = props;
   const greeting = userName ? `Hi ${userName.split(" ")[0]},` : "Hi,";
   const dayLabel = isNightBefore ? "Tomorrow" : "Today";
   const tripUrl = `${baseUrl}/trip/${tripId}`;
@@ -190,9 +199,11 @@ export function renderFlightDayEmailText(
 
 ${greeting}
 
-${isNightBefore
+${
+  isNightBefore
     ? "Here's your jet lag plan for tomorrow's flight. Follow these timed interventions to help your body adapt faster."
-    : "Here's your jet lag plan for today. Follow these timed interventions to help your body adapt faster."}
+    : "Here's your jet lag plan for today. Follow these timed interventions to help your body adapt faster."
+}
 
 ${scheduleContent}
 

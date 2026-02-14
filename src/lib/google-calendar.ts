@@ -126,7 +126,6 @@ export function isActionableIntervention(type: InterventionType): boolean {
   return type !== "caffeine_ok";
 }
 
-
 /** Short label lookup for grouped event titles */
 const SHORT_LABELS: Partial<Record<InterventionType, string>> = {
   light_seek: "Light",

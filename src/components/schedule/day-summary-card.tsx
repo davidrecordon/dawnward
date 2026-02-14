@@ -164,7 +164,6 @@ function FlightEventRow({
   );
 }
 
-
 /**
  * Summary content renderer - used both collapsed and when no renderExpanded provided
  */
@@ -433,4 +432,3 @@ export function DaySummaryCard({
     </section>
   );
 }
-

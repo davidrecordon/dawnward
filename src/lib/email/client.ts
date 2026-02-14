@@ -20,9 +20,7 @@ export function maskEmail(email: string): string {
   const [local, domain] = email.split("@");
   if (!domain) return "***";
   const maskedLocal =
-    local.length > 2
-      ? `${local[0]}***${local[local.length - 1]}`
-      : "***";
+    local.length > 2 ? `${local[0]}***${local[local.length - 1]}` : "***";
   return `${maskedLocal}@${domain}`;
 }
 
@@ -73,7 +71,9 @@ export async function sendEmail(
       };
     }
 
-    console.log(`[Email] Sent successfully to ${maskEmail(options.to)}, id: ${data?.id}`);
+    console.log(
+      `[Email] Sent successfully to ${maskEmail(options.to)}, id: ${data?.id}`
+    );
     return {
       success: true,
       id: data?.id,

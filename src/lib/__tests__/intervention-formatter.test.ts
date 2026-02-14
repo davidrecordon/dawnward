@@ -11,7 +11,11 @@ import {
   formatFlightDayForEmail,
   formatDayForText,
 } from "../intervention-formatter";
-import type { Intervention, InterventionType, DaySchedule } from "@/types/schedule";
+import type {
+  Intervention,
+  InterventionType,
+  DaySchedule,
+} from "@/types/schedule";
 
 // All intervention types from the schema
 const ALL_INTERVENTION_TYPES: InterventionType[] = [
@@ -105,19 +109,20 @@ describe("getInterventionEmoji", () => {
 
 describe("getCondensedDescription", () => {
   it("returns the correct description for each type", () => {
-    expect(getCondensedDescription(makeIntervention("wake_target", "07:00"))).toBe(
-      "Wake up to help shift your clock"
-    );
-    expect(getCondensedDescription(makeIntervention("light_seek", "07:00"))).toBe(
-      "Get 30+ min bright light"
-    );
+    expect(
+      getCondensedDescription(makeIntervention("wake_target", "07:00"))
+    ).toBe("Wake up to help shift your clock");
+    expect(
+      getCondensedDescription(makeIntervention("light_seek", "07:00"))
+    ).toBe("Get 30+ min bright light");
   });
 
   it("returns default description for unknown type", () => {
-    // @ts-expect-error - testing invalid type
-    expect(getCondensedDescription(makeIntervention("unknown_type", "07:00"))).toBe(
-      "Follow this intervention"
-    );
+    expect(
+      getCondensedDescription(
+        makeIntervention("unknown_type" as InterventionType, "07:00")
+      )
+    ).toBe("Follow this intervention");
   });
 
   it("prefers scheduler-generated summary over static description", () => {
@@ -133,7 +138,9 @@ describe("getCondensedDescription", () => {
     const intervention = makeIntervention("nap_window", "10:00", {
       title: "Sleep opportunity (~5h)",
     });
-    expect(getCondensedDescription(intervention)).toBe("Sleep opportunity (~5h)");
+    expect(getCondensedDescription(intervention)).toBe(
+      "Sleep opportunity (~5h)"
+    );
   });
 
   it("falls back to static description when no summary", () => {
@@ -230,7 +237,9 @@ describe("groupByFlightPhase", () => {
 
   it("handles preparation phase as before boarding", () => {
     const items: Intervention[] = [
-      makeIntervention("caffeine_cutoff", "14:00", { phase_type: "preparation" }),
+      makeIntervention("caffeine_cutoff", "14:00", {
+        phase_type: "preparation",
+      }),
     ];
 
     const groups = groupByFlightPhase(items);
@@ -269,12 +278,16 @@ describe("formatFlightDayForEmail", () => {
       day: 0,
       date: "2026-01-20",
       items: [
-        makeIntervention("light_seek", "06:00", { phase_type: "pre_departure" }),
+        makeIntervention("light_seek", "06:00", {
+          phase_type: "pre_departure",
+        }),
         makeIntervention("nap_window", "10:00", {
           phase_type: "in_transit",
           flight_offset_hours: 4,
         }),
-        makeIntervention("light_avoid", "20:00", { phase_type: "post_arrival" }),
+        makeIntervention("light_avoid", "20:00", {
+          phase_type: "post_arrival",
+        }),
       ],
     };
 
@@ -315,7 +328,9 @@ describe("formatFlightDayForEmail", () => {
       day: 0,
       date: "2026-01-20",
       items: [
-        makeIntervention("wake_target", "07:00", { phase_type: "pre_departure" }),
+        makeIntervention("wake_target", "07:00", {
+          phase_type: "pre_departure",
+        }),
       ],
     };
 
