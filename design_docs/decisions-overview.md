@@ -213,7 +213,7 @@ Key tables (full SQL in backend design doc):
 | Phase 1 Auth (Google sign-in) | DONE — JWT sessions, protected routes, user prefs  |
 | Shareable URLs                | DONE — `/s/[code]` short links, trip history page  |
 | Trip Editing (Phases 1-2)     | DONE — Preference editing, actuals recording UI    |
-| Schedule View Modes           | DONE — Summary/timeline toggle, DaySummaryCard     |
+| Schedule View Modes           | DONE — Viewport-driven, personalized summaries     |
 | Minimal Shift Tips            | DONE — Simplified view for ≤2 hour shifts          |
 | Timezone Rearchitecture       | DONE — Phase-aware dual timezone display           |
 | Set up hello@dawnward.app     | TODO — Used for Google OAuth consent screen        |
