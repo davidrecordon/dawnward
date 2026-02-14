@@ -279,15 +279,11 @@ The `DaySummaryCard` component shows:
 - Events use IANA timezones from intervention data (origin_tz for pre-flight, dest_tz for post-flight)
 - 5-minute stale sync timeout treats stuck syncs as failed
 
-**Email Notifications:**
+**Email Notifications:** See `design_docs/email-design.md` for full details.
 
-- `EmailSchedule` - Tracks scheduled email notifications
-  - `tripId` / `userId` / `emailType` - Unique composite key
-  - `scheduledFor` - When to send (calculated from departure time)
-  - `sentAt` / `failedAt` - Delivery status
-  - `errorMessage` - Failure reason if applicable
-- Emails scheduled in background via `waitUntil()` when trips are created
-- Cron job (`/api/cron/send-emails`) processes pending emails every 15 minutes
+- Stateless cron (`/api/cron/send-emails`) queries `SharedSchedule` directly every 15 minutes
+- `flightDayEmailSentAt` column on `SharedSchedule` prevents duplicate sends
+- Send time calculated at runtime (no pre-scheduled rows)
 - Feature flag `ENABLE_FLIGHT_DAY_EMAILS` controls sending (disabled by default)
 
 ### Schedule Generation
@@ -422,40 +418,7 @@ Anchor-based grouping reduces calendar clutter (~20 events → ~10 per trip):
 
 ### Email Notifications
 
-Send flight day reminder emails to users with their schedule for the day.
-
-**Files:**
-
-- `src/lib/email/client.ts` - Resend API wrapper with PII masking
-- `src/lib/email/scheduler.ts` - Send time calculation, EmailSchedule management
-- `src/lib/email/templates/flight-day.tsx` - React Email template (HTML + plain text)
-- `src/lib/intervention-formatter.ts` - Shared formatting for emails and UI
-- `src/app/api/cron/send-emails/route.ts` - Cron endpoint for sending pending emails
-
-**Flow:**
-
-1. User creates trip → `scheduleFlightDayEmail()` runs in background via `waitUntil()`
-2. EmailSchedule record created with calculated send time
-3. Vercel cron hits `/api/cron/send-emails` every 15 minutes
-4. Cron job fetches pending emails, renders templates, sends via Resend
-5. EmailSchedule marked as sent or failed
-
-**Send Time Calculation:**
-
-- Default: 5:00 AM local time on departure day (origin timezone)
-- Fallback: 7:00 PM night before if <3h between 5 AM and first intervention
-- User's `wake_time` used as proxy for first intervention time
-
-**Security:**
-
-- Cron endpoint requires `Authorization: Bearer {CRON_SECRET}` header
-- Uses timing-safe comparison (`crypto.timingSafeEqual`) to prevent timing attacks
-- PII (email addresses) masked in logs
-- Trip ownership verified before sending (prevents orphaned emails)
-
-**Feature Flag:**
-
-Set `ENABLE_FLIGHT_DAY_EMAILS=true` to enable sending. When disabled, cron returns early without processing.
+Flight day reminder emails sent via Resend with React Email templates. Stateless cron queries `SharedSchedule` directly -- no separate scheduling table. See `design_docs/email-design.md` for architecture, send time calculation, template structure, and configuration.
 
 ## Security Considerations
 
@@ -662,8 +625,7 @@ export default function MyFeatureDemo() {
 - `src/components/schedule/__tests__/inflight-sleep-card.test.tsx` - In-flight sleep card, flight offset display
 - `src/lib/__tests__/google-calendar.test.ts` - Calendar event building, anchor-based grouping, reminder timing, duration calculations
 - `src/lib/__tests__/intervention-formatter.test.ts` - Unified intervention formatting for emails and UI
-- `src/lib/email/__tests__/scheduler.test.ts` - Email scheduling, timezone calculations, send time logic
-- `src/app/api/cron/send-emails/__tests__/route.test.ts` - Cron endpoint auth, feature flag, email processing
+- `src/app/api/cron/send-emails/__tests__/route.test.ts` - Cron endpoint auth, feature flag, send time calculation, email processing
 - `src/types/__tests__/user-preferences.test.ts` - User preference type validation
 
 **Python (pytest)**: ~345 tests covering schedule generation (6-layer validation strategy)
@@ -721,6 +683,7 @@ design_docs/
 ├── brand.md                 # Color, tone, and style guidelines
 ├── debugging-tips.md        # Scheduler debugging lessons learned
 ├── decisions-overview.md    # All key decisions in one place
+├── email-design.md          # Email notifications, Resend, cron architecture
 ├── frontend-design.md       # Screen structure, components, user flows
 ├── science-methodology.md   # Circadian science foundation
 ├── testing-design.md        # 6-layer validation strategy
