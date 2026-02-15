@@ -47,7 +47,7 @@
 ### Authentication
 
 - **Google only** via NextAuth.js v5
-- **Phase 1 complete:** Sign-in, protected routes (`/history`, `/settings`), user preferences
+- **Phase 1 complete:** Sign-in, protected routes (`/trips`, `/settings`), user preferences
 - **Session strategy:** JWT (for Edge Runtime compatibility with Next.js middleware)
 - **Progressive signup:** Anonymous users can generate schedules (saved to DB), sign in to access history
 - **localStorage:** Form draft state only; all saved trips live in database
@@ -178,6 +178,8 @@ Key tables (full SQL in backend design doc):
 - `schedules` — Generated plans with model_version, inputs_hash for cache invalidation
 - `calendar_syncs` — Track which Google Calendar events we created
 - `trip_feedback` — User ratings for completed trips (future model improvement)
+
+> **Note:** The Prisma implementation uses different model names (e.g., `User`, `SharedSchedule`, `CalendarSync`) — see `prisma/schema.prisma` for the canonical schema.
 
 ---
 

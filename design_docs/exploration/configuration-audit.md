@@ -23,6 +23,15 @@ These are from peer-reviewed circadian research. Changing breaks the Forger99 mo
 | 23   | `DLMO_BEFORE_SLEEP`  | 2.0h  | Burgess et al. 2010         |
 | 24   | `DLMO_TO_CBTMIN`     | 6.0h  | Core circadian relationship |
 
+#### Sleep Target Caps (`markers.py`)
+
+| Line | Constant                   | Value | Purpose                                               |
+| ---- | -------------------------- | ----- | ----------------------------------------------------- |
+| 42   | `MAX_SLEEP_TARGET_HOUR`    | 24    | Midnight cap for post-arrival sleep (eastward travel) |
+| 43   | `MAX_SLEEP_TARGET_MINUTES` | 1440  | Derived from above (24 × 60)                          |
+
+Prevents impractical late-night sleep recommendations (e.g., "sleep at 2 AM") by capping to midnight. Users get melatonin + light avoidance to help their body catch up over subsequent days.
+
 #### Light Phase Response Curve (`prc.py`)
 
 | Line | Constant              | Value | Source      |
@@ -131,16 +140,18 @@ at the top of each module is the right choice for this codebase size.
 | 59    | `MIN_EFFECTIVENESS_FLOOR`    | 0.5   | Minimum effectiveness multiplier       |
 | 62-73 | `COMPLIANCE_MULTIPLIERS`     | dict  | Intervention-type compliance penalties |
 
-**COMPLIANCE_MULTIPLIERS values:**
+**COMPLIANCE_MULTIPLIERS values** (nested structure with `skipped` and `modified_penalty_per_hour`):
 
 ```python
 COMPLIANCE_MULTIPLIERS = {
-    "light_seek": 0.8,     # Missed light = 80% effective
-    "light_avoid": 0.9,    # Missed avoid = 90% effective
-    "melatonin": 0.7,      # Missed melatonin = 70% effective
-    "caffeine_cutoff": 0.95,  # Caffeine slip = 95% effective
-    "sleep_target": 0.6,   # Wrong sleep time = 60% effective
-    "wake_target": 0.7,    # Wrong wake time = 70% effective
+    "light_seek":       {"skipped": 0.5,  "modified_penalty_per_hour": 0.1},
+    "light_avoid":      {"skipped": 0.7,  "modified_penalty_per_hour": 0.1},
+    "melatonin":        {"skipped": 0.85, "modified_penalty_per_hour": 0.05},
+    "wake_target":      {"skipped": 0.6,  "modified_penalty_per_hour": 0.15},
+    "sleep_target":     {"skipped": 0.6,  "modified_penalty_per_hour": 0.15},
+    "caffeine_ok":      {"skipped": 1.0,  "modified_penalty_per_hour": 0.0},   # No impact
+    "caffeine_cutoff":  {"skipped": 0.95, "modified_penalty_per_hour": 0.02},
+    "caffeine_boost":   {"skipped": 0.95, "modified_penalty_per_hour": 0.02},
 }
 ```
 
@@ -190,10 +201,10 @@ export const defaultFormState: TripFormState = {
 | 119    | Evening   | 17-21 | 5:00 PM - 8:59 PM  |
 | (else) | Night     | 21-5  | 9:00 PM - 4:59 AM  |
 
-### Phase Ordering (`schedule-utils.ts:36-43`)
+### Phase Ordering (`schedule-utils.ts:43-50`)
 
 ```typescript
-const PHASE_ORDER: Record<Phase, number> = {
+export const PHASE_ORDER: Record<PhaseType, number> = {
   preparation: 0,
   pre_departure: 1,
   in_transit: 2,
@@ -324,13 +335,15 @@ Early morning sleep times (00:00-05:59) require special handling because the sch
 
 ### Demo/Example Values (`trip-form.tsx`)
 
+Uses VS20 SFO→LHR as the example flight.
+
 | Line | Value   | Purpose                    |
 | ---- | ------- | -------------------------- |
-| 86   | +2 days | "Show me" departure offset |
-| 87   | "20:45" | "Show me" departure time   |
-| 90   | +3 days | "Show me" arrival offset   |
-| 91   | "15:15" | "Show me" arrival time     |
-| 103  | 500ms   | Scroll timeout             |
+| 118  | +2 days | "Show me" departure offset |
+| 119  | "16:30" | "Show me" departure time   |
+| 121  | +3 days | "Show me" arrival offset   |
+| 123  | "10:45" | "Show me" arrival time     |
+| 135  | 500ms   | Scroll timeout             |
 
 ### Color Schemes (`preference-colors.ts`)
 
@@ -491,7 +504,7 @@ Constants are already discoverable via this audit document.
 
 | Category              | Count | Action                                              |
 | --------------------- | ----- | --------------------------------------------------- |
-| Immutable Science     | ~36   | Leave as-is, document sources                       |
+| Immutable Science     | ~38   | Leave as-is, document sources                       |
 | Algorithm Config      | ~42   | Keep as module-level constants (decided)            |
 | User Preferences      | 13    | All working, 4 future candidates                    |
 | Frontend Defaults     | ~26   | Mostly centralized, well-organized                  |
@@ -512,4 +525,4 @@ Constants are already discoverable via this audit document.
 
 ---
 
-_Last updated: February 2, 2026_
+_Last updated: February 15, 2026_

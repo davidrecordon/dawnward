@@ -99,7 +99,7 @@ profile
 │  - Can create trips                                         │
 │  - Can generate schedules                                   │
 │  - Can view/interact with schedule                          │
-│  - Data stored in localStorage only                         │
+│  - Trips stored in database (userId: null)                   │
 │  - Cannot access from other devices                         │
 │  - Cannot sync to Calendar (Phase 2)                        │
 └─────────────────────────────────────────────────────────────┘
@@ -232,7 +232,7 @@ export const authConfig: NextAuthConfig = {
     authorized({ auth, request: { nextUrl } }) {
       const isLoggedIn = !!auth?.user;
       const isProtectedRoute =
-        nextUrl.pathname.startsWith("/history") ||
+        nextUrl.pathname.startsWith("/trips") ||
         nextUrl.pathname.startsWith("/settings");
       if (isProtectedRoute && !isLoggedIn) {
         const signInUrl = new URL("/auth/signin", nextUrl);
@@ -323,7 +323,7 @@ import { authConfig } from "@/auth.config";
 export default NextAuth(authConfig).auth;
 
 export const config = {
-  matcher: ["/history/:path*", "/settings/:path*"],
+  matcher: ["/trips/:path*", "/settings/:path*"],
 };
 ```
 
@@ -614,7 +614,7 @@ export function UserMenu({ user }: UserMenuProps) {
         </div>
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
-          <Link href="/history" className="flex items-center gap-2">
+          <Link href="/trips" className="flex items-center gap-2">
             <History className="h-4 w-4" />
             Trip History
           </Link>
@@ -759,15 +759,15 @@ GOOGLE_CLIENT_SECRET=  # From Google Cloud Console
 
 ### Protected Routes
 
-| Route                    | Auth Required | Notes                                   |
-| ------------------------ | ------------- | --------------------------------------- |
-| `/`                      | No            | Landing / new trip form                 |
-| `/trip`                  | No            | Schedule view (works with localStorage) |
-| `/history`               | Yes           | Trip history                            |
-| `/settings`              | Yes           | User preferences                        |
-| `/api/auth/*`            | No            | NextAuth handlers                       |
-| `/api/schedule/generate` | No            | Generate schedule (stateless)           |
-| `/api/mcp/*`             | No            | Public MCP interface                    |
+| Route                    | Auth Required | Notes                         |
+| ------------------------ | ------------- | ----------------------------- |
+| `/`                      | No            | Landing / new trip form       |
+| `/trip`                  | No            | DB-backed trip view           |
+| `/trips`                 | Yes           | Trip history                  |
+| `/settings`              | Yes           | User preferences              |
+| `/api/auth/*`            | No            | NextAuth handlers             |
+| `/api/schedule/generate` | No            | Generate schedule (stateless) |
+| `/api/mcp/*`             | No            | Public MCP interface          |
 
 ---
 
@@ -976,8 +976,8 @@ model CalendarSync {
    - Header shows user avatar menu
 
 2. **Protected Routes**
-   - Visit `/history` while logged out → Redirect to sign-in
-   - Visit `/history` while logged in → See page
+   - Visit `/trips` while logged out → Redirect to sign-in
+   - Visit `/trips` while logged in → See page
 
 3. **Session Persistence**
    - Sign in, close browser, reopen → Still signed in
@@ -1018,7 +1018,7 @@ bun run build          # Production build succeeds
 | `src/components/auth/sign-in-prompt.tsx`  | Sign-in prompt card (client)       |
 | `src/components/auth/user-menu.tsx`       | User dropdown menu                 |
 | `src/types/next-auth.d.ts`                | TypeScript declarations            |
-| `src/app/history/page.tsx`                | Trip history page (auth-protected) |
+| `src/app/trips/page.tsx`                  | Trip history page (auth-protected) |
 
 ### Modify (4 files)
 

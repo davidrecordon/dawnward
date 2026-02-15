@@ -16,10 +16,13 @@ Production (Vercel)
 │                                                              │
 │   /api/schedule/generate  ──────►  Python Function           │
 │         (via routes)               (api/schedule/generate.py)│
+│   /api/mcp/tools          ──────►  Python Function           │
+│         (via routes)               (api/mcp/tools.py)        │
 │                                                              │
 │   /api/auth/*             ──────►  Next.js                   │
 │   /api/trips/*                     (src/app/api/*)           │
 │   /api/user/*                                                │
+│   /api/calendar/*                                            │
 │   /* (all other routes)                                      │
 │                                                              │
 └─────────────────────────────────────────────────────────────┘
@@ -65,14 +68,22 @@ Use explicit `builds` and `routes` configuration in `vercel.json` to control rou
     },
     {
       "src": "api/schedule/generate.py",
-      "use": "@vercel/python@5.0.2",
+      "use": "@vercel/python",
+      "config": {
+        "includeFiles": "api/_python/**"
+      }
+    },
+    {
+      "src": "api/mcp/tools.py",
+      "use": "@vercel/python",
       "config": {
         "includeFiles": "api/_python/**"
       }
     }
   ],
   "routes": [
-    { "src": "/api/schedule/generate", "dest": "api/schedule/generate.py" }
+    { "src": "/api/schedule/generate", "dest": "api/schedule/generate.py" },
+    { "src": "/api/mcp/tools", "dest": "api/mcp/tools.py" }
   ]
 }
 ```
@@ -81,7 +92,7 @@ Use explicit `builds` and `routes` configuration in `vercel.json` to control rou
 
 1. **`builds` array**: Explicitly tells Vercel what to build
    - `@vercel/next` for the Next.js app (handles all routes by default)
-   - `@vercel/python@5.0.2` for the specific Python function
+   - `@vercel/python` for the Python functions
 
 2. **`routes` array**: Explicitly routes `/api/schedule/generate` to the Python function
    - All other `/api/*` routes fall through to Next.js
@@ -98,6 +109,8 @@ dawnward/
 ├── api/                              # Python serverless functions (Vercel)
 │   ├── schedule/
 │   │   └── generate.py               # POST /api/schedule/generate
+│   ├── mcp/
+│   │   └── tools.py                  # POST /api/mcp/tools (internal, called by route.ts)
 │   └── _python/                      # Shared Python library (bundled)
 │       └── circadian/
 │
@@ -139,10 +152,10 @@ To add another Python endpoint:
        { "src": "package.json", "use": "@vercel/next" },
        {
          "src": "api/schedule/generate.py",
-         "use": "@vercel/python@5.0.2",
+         "use": "@vercel/python",
          "config": { "includeFiles": "api/_python/**" }
        },
-       { "src": "api/newfunction/handler.py", "use": "@vercel/python@5.0.2" }
+       { "src": "api/newfunction/handler.py", "use": "@vercel/python" }
      ],
      "routes": [
        { "src": "/api/schedule/generate", "dest": "api/schedule/generate.py" },
@@ -166,10 +179,10 @@ To add another Python endpoint:
 - Vercel only auto-detects Python in the `api/` directory
 - Moving Python to other directories requires explicit `builds` config
 
-**Pin Python runtime version:**
+**Python runtime version:**
 
-- Use `@vercel/python@5.0.2` (or specific version) for reproducibility
-- Avoid `@vercel/python` (latest) to prevent surprise breaking changes
+- Uses `@vercel/python` (unpinned) — version pin was intentionally removed to stay on latest stable
+- If a breaking change occurs, pin to a specific version (e.g., `@vercel/python@5.0.2`)
 
 ---
 

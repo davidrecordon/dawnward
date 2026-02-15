@@ -34,6 +34,7 @@ The app generates a day-by-day schedule starting several days before your flight
 - **User accounts** — Sign in with Google to save trips and preferences
 - **Trip history** — View and manage your saved trips
 - **Shareable URLs** — Share your schedule with travel companions
+- **Google Calendar sync** — Push your schedule to Google Calendar with one click
 - **Saved preferences** — Set default wake/sleep times and intervention preferences
 
 ---
@@ -79,9 +80,8 @@ For auth features, create `.env.development.local` with:
 # Database (Prisma Postgres)
 DATABASE_URL="postgres://..."
 
-# NextAuth.js
-NEXTAUTH_SECRET="<generate with: openssl rand -base64 32>"
-NEXTAUTH_URL="http://localhost:3000"
+# Auth.js v5
+AUTH_SECRET="<generate with: openssl rand -base64 32>"
 
 # Google OAuth
 GOOGLE_CLIENT_ID="<from Google Cloud Console>"

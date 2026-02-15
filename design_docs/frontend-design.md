@@ -129,7 +129,7 @@ background: linear-gradient(
 
 ### 2. Trip History
 
-**URL:** `/history`
+**URL:** `/trips`
 
 **Layout:** Single column, card list
 
@@ -368,7 +368,7 @@ For small timezone shifts (≤2 hours), the schedule view shows a simplified `Mi
 
 ### Auth State
 
-- Anonymous: can generate 1 schedule, stored in localStorage
+- Anonymous: can generate unlimited schedules, stored in database (userId: null)
 - Signed in: schedules stored in database, preferences synced
 
 ---

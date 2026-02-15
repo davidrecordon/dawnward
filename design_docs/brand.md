@@ -264,18 +264,17 @@ forcing an unrealistic schedule.
 - README should explain the science briefly
 - Credit Arcascope for the circadian library
 - "Not medical advice" in footer
-- Credit Arcascope for the circadian library
 
 ---
 
 ## File Reference
 
 ```
-/src
-  /components/ui    — shadcn/ui base components
-  /components       — Dawnward-specific components
-  index.css         — Theme colors and gradient utilities
-  App.tsx           — Main app with routing
+src/
+  app/globals.css     — Theme colors and gradient utilities
+  app/layout.tsx      — Root layout with providers
+  components/ui/      — shadcn/ui base components
+  components/         — Dawnward-specific components
 ```
 
 ---

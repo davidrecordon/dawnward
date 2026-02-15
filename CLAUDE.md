@@ -35,7 +35,7 @@ bun prisma migrate dev  # Run migrations in development
 bun prisma studio       # Open Prisma Studio GUI
 
 # Scripts
-npx tsx scripts/regenerate-schedules.ts --help  # Show help for schedule regeneration
+bunx tsx scripts/regenerate-schedules.ts --help  # Show help for schedule regeneration
 ```
 
 ## Scripts
@@ -46,13 +46,13 @@ Regenerates stored schedules in the database by re-running the Python scheduler.
 
 ```bash
 # Show help
-npx tsx scripts/regenerate-schedules.ts --help
-npx tsx scripts/regenerate-schedules.ts         # No args also shows help
+bunx tsx scripts/regenerate-schedules.ts --help
+bunx tsx scripts/regenerate-schedules.ts         # No args also shows help
 
 # Regenerate modes
-npx tsx scripts/regenerate-schedules.ts --all-trips       # All future trips
-npx tsx scripts/regenerate-schedules.ts --user=<userId>   # All future trips for user
-npx tsx scripts/regenerate-schedules.ts --trip=<tripId>   # Specific trip (any date)
+bunx tsx scripts/regenerate-schedules.ts --all-trips       # All future trips
+bunx tsx scripts/regenerate-schedules.ts --user=<userId>   # All future trips for user
+bunx tsx scripts/regenerate-schedules.ts --trip=<tripId>   # Specific trip (any date)
 
 # Options
 --dry-run        # Preview without saving
@@ -82,11 +82,11 @@ npx tsx scripts/regenerate-schedules.ts --trip=<tripId>   # Specific trip (any d
 Manage Google Calendar sync: preview events, sync to calendar, and check OAuth tokens.
 
 ```bash
-npx tsx scripts/calendar.ts <trip-id>               # Preview events (dry-run)
-npx tsx scripts/calendar.ts <trip-id> --sync        # Sync to Google Calendar
-npx tsx scripts/calendar.ts <trip-id> --check-auth  # Check/refresh OAuth token
-npx tsx scripts/calendar.ts --user=<userId> --check-auth  # Check auth for a user
-npx tsx scripts/calendar.ts --preset=VS20           # Use preset flight for preview
+bunx tsx scripts/calendar.ts <trip-id>               # Preview events (dry-run)
+bunx tsx scripts/calendar.ts <trip-id> --sync        # Sync to Google Calendar
+bunx tsx scripts/calendar.ts <trip-id> --check-auth  # Check/refresh OAuth token
+bunx tsx scripts/calendar.ts --user=<userId> --check-auth  # Check auth for a user
+bunx tsx scripts/calendar.ts --preset=VS20           # Use preset flight for preview
 ```
 
 **Modes:**
@@ -173,16 +173,21 @@ src/
 │   ├── api/auth/     # NextAuth route handlers
 │   ├── api/trips/    # Trip CRUD and sharing endpoints
 │   ├── api/user/     # User preferences endpoint
+│   ├── api/calendar/ # Calendar sync and verify endpoints
+│   ├── api/mcp/      # MCP JSON-RPC endpoint
 │   ├── api/share/    # Shared trip lookup
 │   ├── trip/[id]/    # DB-backed trip view
 │   ├── s/[code]/     # Shared trip view (public)
 │   ├── trips/        # User's trip history (auth required)
 │   ├── settings/     # User preferences (auth required)
-│   └── science/      # Science explainer page
+│   ├── science/      # Science explainer page
+│   ├── privacy/      # Privacy policy page
+│   └── terms/        # Terms of service page
 ├── components/
 │   ├── ui/           # shadcn/ui components (Button, Card, Input, etc.)
 │   ├── auth/         # Auth components (SignInButton, UserMenu, etc.)
 │   └── schedule/     # Schedule display components
+├── hooks/            # Custom React hooks (use-media-query, use-calendar-scope)
 ├── lib/              # Shared utilities (cn() for Tailwind class merging)
 │   └── __tests__/    # Vitest unit tests for utilities
 ├── test/             # Test setup and configuration
@@ -576,7 +581,7 @@ export default function MyFeatureDemo() {
 
 ## Testing
 
-**TypeScript (Vitest)**: ~525 tests covering utility functions and components
+**TypeScript (Vitest)**: ~706 tests covering utility functions and components
 
 - `src/lib/__tests__/time-utils.test.ts` - Date/time formatting, timezone-aware operations
 - `src/lib/__tests__/timezone-utils.test.ts` - Flight duration calculation, timezone shifts, prep days recommendations
@@ -606,8 +611,15 @@ export default function MyFeatureDemo() {
 - `src/components/schedule/__tests__/inflight-sleep-card.test.tsx` - In-flight sleep card, flight offset display
 - `src/lib/__tests__/google-calendar.test.ts` - Calendar event building, anchor-based grouping, reminder timing, duration calculations
 - `src/types/__tests__/user-preferences.test.ts` - User preference type validation
+- `src/lib/__tests__/trip-duplicate-detection.test.ts` - Trip deduplication logic
+- `src/lib/__tests__/actuals-utils.test.ts` - Actuals tracking utilities
+- `src/lib/__tests__/effective-time-utils.test.ts` - Effective time calculation
+- `src/lib/__tests__/locale-utils.test.ts` - Locale/24h formatting utilities
+- `src/lib/__tests__/trip-validation.test.ts` - Trip input validation
+- `src/app/api/mcp/__tests__/route.test.ts` - MCP API route handler
+- `src/components/ui/__tests__/datetime-select.test.tsx` - DateTime select component
 
-**Python (pytest)**: ~345 tests covering schedule generation (6-layer validation strategy)
+**Python (pytest)**: ~407 tests covering schedule generation (6-layer validation strategy)
 
 - `test_model_parity.py` - CBTmin trajectory, phase shift magnitude, daily shift targets
 - `test_physiological_bounds.py` - Max shift rates, antidromic risk, sleep duration, melatonin timing
@@ -621,6 +633,10 @@ export default function MyFeatureDemo() {
 - `test_mcp_tools.py` - MCP tool implementations (phase shift, adaptation plan)
 - `test_summary_field.py` - Summary field generation for all intervention types, variants, and pipeline preservation
 - `conftest.py` - Shared fixtures including `frozen_time` for deterministic date testing
+- `test_recalculation.py` - Schedule recalculation, compliance multipliers, state snapshots
+- `test_shift_rates.py` - Daily shift rate calculations by intensity
+- `test_user_preferences.py` - User preference handling in scheduler
+- `test_timezone_context.py` - Timezone context enrichment
 
 **Time Mocking (Python)**: Uses `time-machine` for C-level time mocking that catches all `datetime.now()` calls including in dependencies like Arcascope. Tests with hardcoded dates use the `frozen_time` fixture (freezes to Jan 1, 2026). Tests needing flexibility use relative dates (`datetime.now() + timedelta(days=N)`).
 

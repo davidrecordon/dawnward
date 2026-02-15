@@ -28,6 +28,41 @@ Late afternoon transatlantic flights (departing 5-7 PM) are NOT classified as ov
 
 ---
 
-## Future Issues
+## ~~Cross-dateline phase ordering in merged schedules~~ (Fixed)
 
-(Add additional scheduler issues here as they're discovered)
+**Severity:** High
+**Discovered:** 2026-02-15
+**Fixed:** 2026-02-15 (#25)
+
+### Problem (Resolved)
+
+For same-day cross-dateline flights (e.g., CX 870 HKG→SFO, departs Feb 15, arrives Feb 15), interventions appeared in the wrong order on the schedule view. Pre-departure items could appear after post-arrival items, and within-phase sorting was incorrect.
+
+Two bugs in the TypeScript display layer (`schedule-utils.ts` and `day-section.tsx`):
+
+1. **`mergePhasesByDate()` didn't sort by phase type.** The comparator returned 0 when phases differed, relying on insertion order instead of explicitly sorting by `PHASE_ORDER`. This broke when multiple phases merged into a single calendar day.
+
+2. **Within-phase sorting used `dest_time` for all phases.** For pre-departure items on cross-dateline flights, `dest_time` could be numerically larger than post-arrival `dest_time` (e.g., HKG→SFO with a 16-hour offset), causing incorrect chronological ordering.
+
+### Fix Applied
+
+- Sort by `PHASE_ORDER` when phases differ (preparation → pre_departure → in_transit → post_arrival → adaptation)
+- Use `origin_time` for pre-flight phase sorting, `dest_time` for post-flight phase sorting — matching `getDisplayTime()` logic
+- Applied the same fix to `DaySection` component rendering
+
+---
+
+## Known Limitations
+
+### Multi-leg trips use aim-through fallback
+
+**Severity:** Low (uncommon use case)
+**Location:** `phase_generator.py:_generate_partial_adaptation_phases`, `_generate_restart_phases`
+
+Two multi-leg strategies are stubbed but not yet implemented:
+
+1. **Partial adaptation** (48-96h layover): Should partially adapt to layover timezone while maintaining trajectory toward final destination. Currently falls back to aim-through (treats the final destination as the only target).
+
+2. **Restart logic** (>96h layover or opposite-direction legs): Should treat each leg as an independent trip. For example, NYC→London→LA should generate separate adaptation schedules for each leg. Currently falls back to aim-through.
+
+Users hitting these scenarios get a functional schedule, but it won't account for intermediate timezone adaptation opportunities or the compounding effects of multi-leg travel.

@@ -30,8 +30,8 @@ Next.js and Python serverless functions coexist via explicit `vercel.json` confi
 
 **Key points:**
 
-- Uses `builds` array to explicitly specify `@vercel/next` and `@vercel/python@5.0.2`
-- Uses `routes` to direct `/api/schedule/generate` to the Python function
+- Uses `builds` array to explicitly specify `@vercel/next` and `@vercel/python`
+- Uses `routes` to direct `/api/schedule/generate` and `/api/mcp/tools` to Python functions
 - All other `/api/*` routes are handled by Next.js (including auth)
 - Local development uses a TypeScript wrapper that spawns Python
 
