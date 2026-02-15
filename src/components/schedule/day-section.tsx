@@ -10,6 +10,7 @@ import {
 import {
   dayHasMultipleTimezones,
   groupTimedItems,
+  PHASE_ORDER,
   toSortableMinutes,
   type GroupableItem,
 } from "@/lib/schedule-utils";
@@ -259,11 +260,11 @@ export function DaySection({
         return 1;
       }
 
-      // Different phases: preserve phase order (pre_departure → in_transit → post_arrival)
+      // Different phases: sort by phase order (pre_departure → in_transit → post_arrival)
       // Only when BOTH items have defined phases - undefined phases (like "now" marker)
       // fall through to time-based sorting
       if (phaseA !== phaseB && phaseA !== undefined && phaseB !== undefined) {
-        return 0;
+        return (PHASE_ORDER[phaseA] ?? 99) - (PHASE_ORDER[phaseB] ?? 99);
       }
 
       // In-transit interventions: sort by flight_offset_hours

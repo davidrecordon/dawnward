@@ -40,7 +40,7 @@ export function toSortableMinutes(time: string, type?: string): number {
  * Phase order for chronological sorting.
  * Earlier phases come before later phases in the day.
  */
-const PHASE_ORDER: Record<PhaseType, number> = {
+export const PHASE_ORDER: Record<PhaseType, number> = {
   preparation: 0,
   pre_departure: 1,
   in_transit: 2,
@@ -119,12 +119,14 @@ export function mergePhasesByDate(interventions: DaySchedule[]): DaySchedule[] {
     }
   }
 
-  // Sort items within each day: maintain phase order, sort by time within same phase
+  // Sort items within each day by phase order, then by time within same phase
   for (const day of byDate.values()) {
     day.items.sort((a, b) => {
-      // If different phases, keep the phase order (items were added in phase order)
+      // Different phases: sort by phase order (preparation → pre_departure → in_transit → post_arrival → adaptation)
       if (a.phase_type !== b.phase_type) {
-        return 0;
+        const orderA = a.phase_type ? (PHASE_ORDER[a.phase_type] ?? 99) : 99;
+        const orderB = b.phase_type ? (PHASE_ORDER[b.phase_type] ?? 99) : 99;
+        return orderA - orderB;
       }
       // In-transit items: sort by flight position
       if (
@@ -133,10 +135,13 @@ export function mergePhasesByDate(interventions: DaySchedule[]): DaySchedule[] {
       ) {
         return a.flight_offset_hours - b.flight_offset_hours;
       }
-      // Regular items: chronological with late-night awareness using dest_time
-      // (After enrichment, interventions have dest_time for post-arrival, origin_time for prep)
-      const aTime = a.dest_time;
-      const bTime = b.dest_time;
+      // Regular items: sort by display time (origin for pre-flight, dest for post-flight)
+      const aTime = isPreFlightPhase(a.phase_type)
+        ? a.origin_time
+        : a.dest_time;
+      const bTime = isPreFlightPhase(b.phase_type)
+        ? b.origin_time
+        : b.dest_time;
       return (
         toSortableMinutes(aTime, a.type) - toSortableMinutes(bTime, b.type)
       );

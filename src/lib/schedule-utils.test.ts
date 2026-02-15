@@ -537,6 +537,177 @@ describe("mergePhasesByDate", () => {
       expect(postArrivalItems.length).toBe(2);
     });
 
+    it("should sort phases correctly for HKG→SFO same-day cross-dateline flight", () => {
+      // HKG→SFO: depart 1:30 PM HKG (Feb 15), arrive 9:30 AM SFO (Feb 15)
+      // Pre-departure and post-arrival share the same calendar date.
+      // Pre-departure dest_times (SFO) can be numerically larger than post-arrival dest_times,
+      // but phases must maintain correct order: pre_departure before post_arrival.
+      const phases: DaySchedule[] = [
+        makeDaySchedule(
+          "2026-02-15",
+          0,
+          [
+            makeIntervention("wake_target", "07:00", {
+              phase_type: "pre_departure",
+              origin_time: "07:00",
+              dest_time: "15:00", // Previous day in SFO timezone
+              origin_tz: "Asia/Hong_Kong",
+              dest_tz: "America/Los_Angeles",
+            }),
+            makeIntervention("light_seek", "08:00", {
+              phase_type: "pre_departure",
+              origin_time: "08:00",
+              dest_time: "16:00",
+              origin_tz: "Asia/Hong_Kong",
+              dest_tz: "America/Los_Angeles",
+              duration_min: 30,
+            }),
+            makeIntervention("caffeine_ok", "07:00", {
+              phase_type: "pre_departure",
+              origin_time: "07:00",
+              dest_time: "15:00",
+              origin_tz: "Asia/Hong_Kong",
+              dest_tz: "America/Los_Angeles",
+            }),
+          ],
+          { phase_type: "pre_departure" }
+        ),
+        makeDaySchedule(
+          "2026-02-15",
+          0,
+          [
+            makeIntervention("nap_window", "21:30", {
+              phase_type: "in_transit",
+              origin_time: "13:30",
+              dest_time: "21:30",
+              origin_tz: "Asia/Hong_Kong",
+              dest_tz: "America/Los_Angeles",
+              flight_offset_hours: 0,
+            }),
+            makeIntervention("nap_window", "02:00", {
+              phase_type: "in_transit",
+              origin_time: "18:00",
+              dest_time: "02:00",
+              origin_tz: "Asia/Hong_Kong",
+              dest_tz: "America/Los_Angeles",
+              flight_offset_hours: 4.5,
+            }),
+          ],
+          { phase_type: "in_transit" }
+        ),
+        makeDaySchedule(
+          "2026-02-15",
+          1,
+          [
+            makeIntervention("wake_target", "09:30", {
+              phase_type: "post_arrival",
+              origin_time: "01:30",
+              dest_time: "09:30",
+              origin_tz: "Asia/Hong_Kong",
+              dest_tz: "America/Los_Angeles",
+            }),
+            makeIntervention("light_seek", "10:00", {
+              phase_type: "post_arrival",
+              origin_time: "02:00",
+              dest_time: "10:00",
+              origin_tz: "Asia/Hong_Kong",
+              dest_tz: "America/Los_Angeles",
+              duration_min: 60,
+            }),
+            makeIntervention("caffeine_cutoff", "14:00", {
+              phase_type: "post_arrival",
+              origin_time: "06:00",
+              dest_time: "14:00",
+              origin_tz: "Asia/Hong_Kong",
+              dest_tz: "America/Los_Angeles",
+            }),
+            makeIntervention("sleep_target", "22:00", {
+              phase_type: "post_arrival",
+              origin_time: "14:00",
+              dest_time: "22:00",
+              origin_tz: "Asia/Hong_Kong",
+              dest_tz: "America/Los_Angeles",
+            }),
+          ],
+          { phase_type: "post_arrival" }
+        ),
+      ];
+
+      const merged = mergePhasesByDate(phases);
+
+      // All phases merge into single day
+      expect(merged.length).toBe(1);
+      expect(merged[0].items.length).toBe(9);
+      expect(merged[0].hasSameDayArrival).toBe(true);
+
+      // Verify phase ordering: pre_departure → in_transit → post_arrival
+      const phaseOrder = merged[0].items.map((i) => i.phase_type);
+      const preDepIndices = phaseOrder
+        .map((p, i) => (p === "pre_departure" ? i : -1))
+        .filter((i) => i >= 0);
+      const inTransitIndices = phaseOrder
+        .map((p, i) => (p === "in_transit" ? i : -1))
+        .filter((i) => i >= 0);
+      const postArrIndices = phaseOrder
+        .map((p, i) => (p === "post_arrival" ? i : -1))
+        .filter((i) => i >= 0);
+
+      // All pre_departure items should come before in_transit
+      expect(Math.max(...preDepIndices)).toBeLessThan(
+        Math.min(...inTransitIndices)
+      );
+      // All in_transit items should come before post_arrival
+      expect(Math.max(...inTransitIndices)).toBeLessThan(
+        Math.min(...postArrIndices)
+      );
+
+      // Within post_arrival, items should be sorted by dest_time
+      const postArrItems = merged[0].items.filter(
+        (i) => i.phase_type === "post_arrival"
+      );
+      const postArrTimes = postArrItems.map((i) => i.dest_time);
+      expect(postArrTimes).toEqual(["09:30", "10:00", "14:00", "22:00"]);
+
+      // In-transit items sorted by flight_offset_hours
+      const transitItems = merged[0].items.filter(
+        (i) => i.phase_type === "in_transit"
+      );
+      expect(transitItems[0].flight_offset_hours).toBe(0);
+      expect(transitItems[1].flight_offset_hours).toBe(4.5);
+    });
+
+    it("should sort pre_departure items by origin_time, not dest_time", () => {
+      // When timezone offset is large, origin_time and dest_time ordering can differ.
+      // Pre-departure items should sort by origin_time (what the user sees).
+      const phases: DaySchedule[] = [
+        makeDaySchedule(
+          "2026-02-15",
+          0,
+          [
+            makeIntervention("caffeine_ok", "07:00", {
+              phase_type: "pre_departure",
+              origin_time: "07:00",
+              dest_time: "15:00",
+              origin_tz: "Asia/Hong_Kong",
+              dest_tz: "America/Los_Angeles",
+            }),
+            makeIntervention("light_seek", "09:00", {
+              phase_type: "pre_departure",
+              origin_time: "09:00",
+              dest_time: "17:00",
+              origin_tz: "Asia/Hong_Kong",
+              dest_tz: "America/Los_Angeles",
+            }),
+          ],
+          { phase_type: "pre_departure" }
+        ),
+      ];
+
+      const merged = mergePhasesByDate(phases);
+      const times = merged[0].items.map((i) => i.origin_time);
+      expect(times).toEqual(["07:00", "09:00"]);
+    });
+
     it("should not mutate input arrays (idempotent on repeated calls)", () => {
       // This test catches the bug where items were pushed to the original
       // phase.items array, causing duplicates on React re-renders
