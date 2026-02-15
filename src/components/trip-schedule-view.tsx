@@ -38,6 +38,7 @@ const DaySection = dynamic(
   }
 );
 import { SignInPrompt } from "@/components/auth/sign-in-prompt";
+import { SignInUpsellModal } from "@/components/auth/sign-in-upsell-modal";
 import { ShareButton } from "@/components/share-button";
 import { CalendarSyncButton } from "@/components/calendar-sync-button";
 import { EditPreferencesModal } from "@/components/trip/edit-preferences-modal";
@@ -130,6 +131,7 @@ export function TripScheduleView({
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showSignInUpsell, setShowSignInUpsell] = useState(false);
 
   // For minimal shifts: track if user wants to see full schedule
   const [showFullScheduleForMinimalShift, setShowFullScheduleForMinimalShift] =
@@ -610,14 +612,16 @@ export function TripScheduleView({
                   isExpanded={expandedDays.has(daySchedule.day)}
                   onExpandChange={() => toggleDayExpanded(daySchedule.day)}
                   onInterventionClick={
-                    isOwner && isLoggedIn
-                      ? (intervention, dayOffset, date, nestedChildren) =>
-                          setSelectedIntervention({
-                            intervention,
-                            dayOffset,
-                            date,
-                            nestedChildren,
-                          })
+                    isOwner
+                      ? isLoggedIn
+                        ? (intervention, dayOffset, date, nestedChildren) =>
+                            setSelectedIntervention({
+                              intervention,
+                              dayOffset,
+                              date,
+                              nestedChildren,
+                            })
+                        : () => setShowSignInUpsell(true)
                       : undefined
                   }
                 />
@@ -678,6 +682,15 @@ export function TripScheduleView({
               });
               setCurrentPreferences(updatedPreferences);
             }}
+          />
+        )}
+
+        {/* Sign-in upsell modal - for logged-out owners tapping edit */}
+        {isOwner && !isLoggedIn && (
+          <SignInUpsellModal
+            open={showSignInUpsell}
+            onClose={() => setShowSignInUpsell(false)}
+            callbackUrl={`/trip/${tripId}`}
           />
         )}
 
