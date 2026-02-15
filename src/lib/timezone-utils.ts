@@ -12,6 +12,12 @@ import { DateTime } from "luxon";
 /** Shift threshold below which no prep days are needed (adapts naturally) */
 export const MINIMAL_SHIFT_THRESHOLD_HOURS = 2;
 
+/** Balanced intensity shift rates (hours/day) from shift_calculator.py */
+const BALANCED_SHIFT_RATES = {
+  ADVANCE: 1.0, // Eastward (harder)
+  DELAY: 1.5, // Westward (easier, natural circadian period favors delays)
+} as const;
+
 /** Prep day thresholds by shift magnitude (in hours) */
 const PREP_DAYS_THRESHOLDS = {
   SMALL: 4, // 3-4 hours: 1 prep day
@@ -120,6 +126,25 @@ export function getRecommendedPrepDays(shiftHours: number): number {
   if (absShift <= PREP_DAYS_THRESHOLDS.MEDIUM) return 2;
   if (absShift <= PREP_DAYS_THRESHOLDS.LARGE) return 3;
   return 5;
+}
+
+/**
+ * Estimate post-arrival adaptation days based on the scheduler's shift rate model.
+ * Uses balanced intensity rates as a reasonable default for the preview teaser.
+ */
+export function getEstimatedAdaptationDays(
+  shiftHours: number,
+  prepDays: number
+): number {
+  const absShift = Math.abs(shiftHours);
+  if (absShift <= MINIMAL_SHIFT_THRESHOLD_HOURS) return 0;
+
+  const rate =
+    shiftHours > 0 ? BALANCED_SHIFT_RATES.ADVANCE : BALANCED_SHIFT_RATES.DELAY;
+  const totalDays = Math.ceil(absShift / rate);
+
+  // Subtract prep days and flight day (day 0)
+  return Math.max(1, totalDays - prepDays - 1);
 }
 
 /**

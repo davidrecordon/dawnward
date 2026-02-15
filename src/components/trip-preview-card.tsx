@@ -10,6 +10,7 @@ import {
   formatTimeShift,
   calculateFlightDuration,
   formatDuration,
+  getEstimatedAdaptationDays,
 } from "@/lib/timezone-utils";
 
 interface TripPreviewCardProps {
@@ -32,6 +33,12 @@ export function TripPreviewCard({
     if (!origin || !destination) return null;
     return calculateTimeShift(origin.tz, destination.tz);
   }, [origin, destination]);
+
+  // Estimate post-arrival adaptation days
+  const adaptationDays = React.useMemo(() => {
+    if (timeShift === null) return null;
+    return getEstimatedAdaptationDays(timeShift, prepDays);
+  }, [timeShift, prepDays]);
 
   // Calculate flight duration
   const duration = React.useMemo(() => {
@@ -79,8 +86,12 @@ export function TripPreviewCard({
             <p className="text-xs text-slate-500">Flight time</p>
           </div>
           <div className="rounded-lg bg-slate-50 p-3">
-            <p className="text-2xl font-bold text-purple-600">1</p>
-            <p className="text-xs text-slate-500">Day after</p>
+            <p className="text-2xl font-bold text-purple-600">
+              {adaptationDays ?? "---"}
+            </p>
+            <p className="text-xs text-slate-500">
+              {adaptationDays === 1 ? "Day" : "Days"} after
+            </p>
           </div>
         </div>
       </CardContent>

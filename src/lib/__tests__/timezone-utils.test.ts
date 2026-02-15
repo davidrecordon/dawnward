@@ -5,6 +5,7 @@ import {
   calculateFlightDuration,
   formatDuration,
   getRecommendedPrepDays,
+  getEstimatedAdaptationDays,
   getShiftDirectionLabel,
 } from "../timezone-utils";
 
@@ -305,6 +306,56 @@ describe("getRecommendedPrepDays", () => {
     expect(getRecommendedPrepDays(11)).toBe(5);
     expect(getRecommendedPrepDays(12)).toBe(5);
     expect(getRecommendedPrepDays(-11)).toBe(5);
+  });
+});
+
+describe("getEstimatedAdaptationDays", () => {
+  it("returns 0 for minimal shifts (≤2 hours)", () => {
+    expect(getEstimatedAdaptationDays(0, 0)).toBe(0);
+    expect(getEstimatedAdaptationDays(1, 0)).toBe(0);
+    expect(getEstimatedAdaptationDays(2, 0)).toBe(0);
+    expect(getEstimatedAdaptationDays(-1, 0)).toBe(0);
+    expect(getEstimatedAdaptationDays(-2, 0)).toBe(0);
+  });
+
+  it("calculates SFO→LHR (+8h advance, 3 prep days) = 4 days", () => {
+    // ceil(8/1.0) - 3 - 1 = 4
+    expect(getEstimatedAdaptationDays(8, 3)).toBe(4);
+  });
+
+  it("calculates LHR→SFO (-8h delay, 3 prep days) = 2 days", () => {
+    // ceil(8/1.5) - 3 - 1 = 6 - 3 - 1 = 2
+    expect(getEstimatedAdaptationDays(-8, 3)).toBe(2);
+  });
+
+  it("calculates NYC→Tokyo (+14h advance, 5 prep days) = 8 days", () => {
+    // ceil(14/1.0) - 5 - 1 = 8
+    expect(getEstimatedAdaptationDays(14, 5)).toBe(8);
+  });
+
+  it("eastward shifts produce more adaptation days than westward", () => {
+    // Same magnitude, different direction
+    const eastward = getEstimatedAdaptationDays(8, 3);
+    const westward = getEstimatedAdaptationDays(-8, 3);
+    expect(eastward).toBeGreaterThan(westward);
+  });
+
+  it("more prep days reduces adaptation days", () => {
+    const withLessPrep = getEstimatedAdaptationDays(8, 1);
+    const withMorePrep = getEstimatedAdaptationDays(8, 3);
+    expect(withLessPrep).toBeGreaterThan(withMorePrep);
+  });
+
+  it("returns minimum of 1 for non-minimal shifts", () => {
+    // +3h advance with 1 prep day: ceil(3/1.0) - 1 - 1 = 1
+    expect(getEstimatedAdaptationDays(3, 1)).toBe(1);
+    // Even with many prep days, floor is 1
+    expect(getEstimatedAdaptationDays(3, 5)).toBe(1);
+  });
+
+  it("handles small delay shifts", () => {
+    // -3h delay, 1 prep day: ceil(3/1.5) - 1 - 1 = 2 - 1 - 1 = 0 → clamped to 1
+    expect(getEstimatedAdaptationDays(-3, 1)).toBe(1);
   });
 });
 
