@@ -69,6 +69,7 @@ export default async function TripByIdPage({ params }: Props) {
         tripData={mapSharedScheduleToTripData(trip)}
         isOwner={isOwner}
         isLoggedIn={!!session?.user}
+        isAnonymousTrip={trip.userId === null}
         sharerName={trip.user?.name ?? null}
       />
     </DisplayPreferencesProvider>

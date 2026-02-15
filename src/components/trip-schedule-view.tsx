@@ -38,6 +38,7 @@ const DaySection = dynamic(
   }
 );
 import { SignInPrompt } from "@/components/auth/sign-in-prompt";
+import { SignInUpsellModal } from "@/components/auth/sign-in-upsell-modal";
 import { ShareButton } from "@/components/share-button";
 import { CalendarSyncButton } from "@/components/calendar-sync-button";
 import { EditPreferencesModal } from "@/components/trip/edit-preferences-modal";
@@ -70,6 +71,8 @@ interface TripScheduleViewProps {
   tripData: TripData;
   isOwner: boolean;
   isLoggedIn: boolean;
+  /** Trip has no userId - created by anonymous user, unclaimed */
+  isAnonymousTrip: boolean;
   sharerName: string | null;
 }
 
@@ -115,8 +118,12 @@ export function TripScheduleView({
   tripData,
   isOwner,
   isLoggedIn,
+  isAnonymousTrip,
   sharerName,
 }: TripScheduleViewProps) {
+  // Show edit upsell for logged-out users viewing anonymous (unclaimed) trips
+  const showEditUpsell = !isLoggedIn && isAnonymousTrip;
+
   // Get display preferences from context (provided by page-level wrapper)
   const { showDualTimezone } = useDisplayPreferences();
 
@@ -130,6 +137,7 @@ export function TripScheduleView({
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showSignInUpsell, setShowSignInUpsell] = useState(false);
 
   // For minimal shifts: track if user wants to see full schedule
   const [showFullScheduleForMinimalShift, setShowFullScheduleForMinimalShift] =
@@ -489,10 +497,8 @@ export function TripScheduleView({
           </Link>
         )}
 
-        {/* Sign-in prompt for anonymous users viewing their own trip */}
-        {isOwner && !isLoggedIn && (
-          <SignInPrompt callbackUrl={`/trip/${tripId}`} />
-        )}
+        {/* Sign-in prompt for logged-out users viewing unclaimed trips */}
+        {showEditUpsell && <SignInPrompt callbackUrl={`/trip/${tripId}`} />}
 
         {/* Schedule header */}
         <ScheduleHeader
@@ -618,7 +624,9 @@ export function TripScheduleView({
                             date,
                             nestedChildren,
                           })
-                      : undefined
+                      : showEditUpsell
+                        ? () => setShowSignInUpsell(true)
+                        : undefined
                   }
                 />
               ))}
@@ -678,6 +686,15 @@ export function TripScheduleView({
               });
               setCurrentPreferences(updatedPreferences);
             }}
+          />
+        )}
+
+        {/* Sign-in upsell modal - for logged-out users tapping edit */}
+        {showEditUpsell && (
+          <SignInUpsellModal
+            open={showSignInUpsell}
+            onClose={() => setShowSignInUpsell(false)}
+            callbackUrl={`/trip/${tripId}`}
           />
         )}
 
