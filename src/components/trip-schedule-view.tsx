@@ -71,6 +71,8 @@ interface TripScheduleViewProps {
   tripData: TripData;
   isOwner: boolean;
   isLoggedIn: boolean;
+  /** Trip has no userId - created by anonymous user, unclaimed */
+  isAnonymousTrip: boolean;
   sharerName: string | null;
 }
 
@@ -116,8 +118,12 @@ export function TripScheduleView({
   tripData,
   isOwner,
   isLoggedIn,
+  isAnonymousTrip,
   sharerName,
 }: TripScheduleViewProps) {
+  // Show edit upsell for logged-out users viewing anonymous (unclaimed) trips
+  const showEditUpsell = !isLoggedIn && isAnonymousTrip;
+
   // Get display preferences from context (provided by page-level wrapper)
   const { showDualTimezone } = useDisplayPreferences();
 
@@ -491,10 +497,8 @@ export function TripScheduleView({
           </Link>
         )}
 
-        {/* Sign-in prompt for anonymous users viewing their own trip */}
-        {isOwner && !isLoggedIn && (
-          <SignInPrompt callbackUrl={`/trip/${tripId}`} />
-        )}
+        {/* Sign-in prompt for logged-out users viewing unclaimed trips */}
+        {showEditUpsell && <SignInPrompt callbackUrl={`/trip/${tripId}`} />}
 
         {/* Schedule header */}
         <ScheduleHeader
@@ -612,17 +616,17 @@ export function TripScheduleView({
                   isExpanded={expandedDays.has(daySchedule.day)}
                   onExpandChange={() => toggleDayExpanded(daySchedule.day)}
                   onInterventionClick={
-                    isOwner
-                      ? isLoggedIn
-                        ? (intervention, dayOffset, date, nestedChildren) =>
-                            setSelectedIntervention({
-                              intervention,
-                              dayOffset,
-                              date,
-                              nestedChildren,
-                            })
-                        : () => setShowSignInUpsell(true)
-                      : undefined
+                    isOwner && isLoggedIn
+                      ? (intervention, dayOffset, date, nestedChildren) =>
+                          setSelectedIntervention({
+                            intervention,
+                            dayOffset,
+                            date,
+                            nestedChildren,
+                          })
+                      : showEditUpsell
+                        ? () => setShowSignInUpsell(true)
+                        : undefined
                   }
                 />
               ))}
@@ -685,8 +689,8 @@ export function TripScheduleView({
           />
         )}
 
-        {/* Sign-in upsell modal - for logged-out owners tapping edit */}
-        {isOwner && !isLoggedIn && (
+        {/* Sign-in upsell modal - for logged-out users tapping edit */}
+        {showEditUpsell && (
           <SignInUpsellModal
             open={showSignInUpsell}
             onClose={() => setShowSignInUpsell(false)}
