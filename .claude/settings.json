@@ -27,7 +27,7 @@
       "Skill(superpowers:*)",
       "Skill(vercel-react-best-practices)",
       "WebFetch(domain:arcascope.github.io)",
-      "WebFetch(domain:vercel.com)"
+      "WebFetch(domain:vercel.com)",
       "WebFetch(domain:www.prisma.io)",
       "WebSearch"
     ]
