@@ -99,7 +99,7 @@ npx tsx scripts/calendar.ts --preset=VS20           # Use preset flight for prev
 
 - Minimal: HA11 (Hawaii 2h), AA16 (domestic 3h)
 - Moderate: VS20, VS19, AF83, LH455 (transatlantic 8-9h)
-- Severe: EK226 (Dubai), SQ31, SQ32 (Singapore), CX879, CX872 (Hong Kong), JL1, JL2 (Tokyo), QF74, QF73 (Sydney)
+- Severe: EK226 (Dubai), SQ31, SQ32 (Singapore), CX879, CX872, CX870 (Hong Kong), JL1, JL2 (Tokyo), QF74, QF73 (Sydney)
 
 ## Before Committing
 
@@ -223,11 +223,12 @@ scripts/
 
 **Trip Storage**: All trips are stored in the database via `SharedSchedule` model. localStorage is only used for form draft state. Trips can optionally be shared via short codes (`/s/abc123`).
 
-**Intervention Sorting**: Interventions sort by `dest_time` using `toSortableMinutes()`. Special cases:
+**Intervention Sorting**: Items sort by phase order first (`PHASE_ORDER`), then by display time within same phase using `toSortableMinutes()`. Display time uses `origin_time` for pre-flight phases (`preparation`, `pre_departure`) and `dest_time` for post-flight phases (`in_transit`, `post_arrival`, `adaptation`) — matching what the user sees via `getDisplayTime()`. Special cases:
 
 - `sleep_target` at 00:00-05:59 sorts as "late night" (end of day, after 23:59)
 - `wake_target` at 00:00-05:59 sorts as "early morning" (start of day)
 - In-transit items with `flight_offset_hours` sort by offset, not time
+- Same-day cross-dateline flights (e.g., CX 870 HKG→SFO) merge pre_departure + in_transit + post_arrival into one calendar day — phase ordering ensures correct section order even when dest_time values would suggest wrong order
 
 **Schedule View Modes**: Viewport-driven behavior (no user preference):
 

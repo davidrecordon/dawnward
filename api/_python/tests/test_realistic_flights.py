@@ -1751,6 +1751,73 @@ class TestSevereJetLag:
             f"  - {e.category}: {e.message}" for e in errors
         )
 
+    def test_cathay_cx870_hong_kong_to_sfo_same_day(self):
+        """
+        Cathay Pacific CX870: HKG 13:30 → SFO 09:45 (~11h15m).
+
+        SPECIAL CASE: Same-day arrival due to date line crossing!
+        Afternoon departure, same-day morning arrival (arrives "before" departing).
+        Pre-departure and post-arrival share the same calendar date.
+        """
+        generator = ScheduleGenerator()
+        base_date = datetime.now() + timedelta(days=10)
+
+        # CX870: HKG 13:30 → SFO 09:45 same day (crosses date line)
+        departure = make_flight_datetime(base_date, "13:30")
+        arrival = make_flight_datetime(base_date, "09:45")
+
+        request = ScheduleRequest(
+            legs=[
+                TripLeg(
+                    origin_tz="Asia/Hong_Kong",
+                    dest_tz="America/Los_Angeles",
+                    departure_datetime=departure.strftime("%Y-%m-%dT%H:%M"),
+                    arrival_datetime=arrival.strftime("%Y-%m-%dT%H:%M"),
+                )
+            ],
+            prep_days=3,
+            wake_time="07:00",
+            sleep_time="22:00",
+            uses_melatonin=True,
+            uses_caffeine=True,
+        )
+
+        schedule = generator.generate_schedule(request)
+
+        flight = FlightInfo(
+            departure_datetime=departure,
+            arrival_datetime=arrival,
+            origin_tz="Asia/Hong_Kong",
+            dest_tz="America/Los_Angeles",
+        )
+
+        # 16h shift → 8h advance
+        assert schedule.direction == "advance", (
+            f"Expected advance direction, got {schedule.direction}"
+        )
+
+        issues = run_all_validations(schedule, flight)
+        errors = [i for i in issues if i.severity == "error"]
+
+        assert len(errors) == 0, f"Found {len(errors)} errors:\n" + "\n".join(
+            f"  - {e.category}: {e.message}" for e in errors
+        )
+
+        # Verify same-day arrival: pre_departure and post_arrival share a date
+        departure_date = departure.strftime("%Y-%m-%d")
+        pre_dep_dates = {
+            ds.date for ds in schedule.interventions if ds.phase_type == "pre_departure"
+        }
+        post_arr_dates = {
+            ds.date for ds in schedule.interventions if ds.phase_type == "post_arrival"
+        }
+        assert departure_date in pre_dep_dates, (
+            f"CX870: Pre-departure should include {departure_date}"
+        )
+        assert departure_date in post_arr_dates, (
+            f"CX870: Post-arrival should share date {departure_date} (same-day arrival)"
+        )
+
     def test_jal_jl1_sfo_to_tokyo(self):
         """
         Japan Airlines JL1: SFO 12:55 → HND 17:20+1 (~11h25m).
@@ -2013,6 +2080,7 @@ class TestPracticalValidation:
             ("SQ32 SIN-SFO", "Asia/Singapore", "America/Los_Angeles", "09:15", "07:50", 0),
             ("CX879 SFO-HKG", "America/Los_Angeles", "Asia/Hong_Kong", "11:25", "19:00", 1),
             ("CX872 HKG-SFO", "Asia/Hong_Kong", "America/Los_Angeles", "01:00", "21:15", -1),
+            ("CX870 HKG-SFO", "Asia/Hong_Kong", "America/Los_Angeles", "13:30", "09:45", 0),
             ("JL1 SFO-HND", "America/Los_Angeles", "Asia/Tokyo", "12:55", "17:20", 1),
             ("JL2 HND-SFO", "Asia/Tokyo", "America/Los_Angeles", "18:05", "10:15", 0),
             ("QF74 SFO-SYD", "America/Los_Angeles", "Australia/Sydney", "20:15", "06:10", 2),
@@ -2082,6 +2150,8 @@ class TestPracticalValidation:
             ("QF74 SFO-SYD", "America/Los_Angeles", "Australia/Sydney", "20:15", "06:10", 2),
             # Special: -1 day arrival (date line crossing)
             ("CX872 HKG-SFO", "Asia/Hong_Kong", "America/Los_Angeles", "01:00", "21:15", -1),
+            # Special: same-day arrival (date line crossing, afternoon departure)
+            ("CX870 HKG-SFO", "Asia/Hong_Kong", "America/Los_Angeles", "13:30", "09:45", 0),
         ],
     )
     def test_no_activities_before_landing(
@@ -2158,6 +2228,7 @@ FLIGHT_CONFIGS = [
     ("SQ32 SIN-SFO", "Asia/Singapore", "America/Los_Angeles", "09:15", "07:50", 0),
     ("CX879 SFO-HKG", "America/Los_Angeles", "Asia/Hong_Kong", "11:25", "19:00", 1),
     ("CX872 HKG-SFO", "Asia/Hong_Kong", "America/Los_Angeles", "01:00", "21:15", -1),
+    ("CX870 HKG-SFO", "Asia/Hong_Kong", "America/Los_Angeles", "13:30", "09:45", 0),
     ("JL1 SFO-HND", "America/Los_Angeles", "Asia/Tokyo", "12:55", "17:20", 1),
     ("JL2 HND-SFO", "Asia/Tokyo", "America/Los_Angeles", "18:05", "10:15", 0),
     ("QF74 SFO-SYD", "America/Los_Angeles", "Australia/Sydney", "20:15", "06:10", 2),

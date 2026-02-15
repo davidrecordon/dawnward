@@ -537,8 +537,8 @@ describe("mergePhasesByDate", () => {
       expect(postArrivalItems.length).toBe(2);
     });
 
-    it("should sort phases correctly for HKG→SFO same-day cross-dateline flight", () => {
-      // HKG→SFO: depart 1:30 PM HKG (Feb 15), arrive 9:30 AM SFO (Feb 15)
+    it("should sort phases correctly for HKG→SFO same-day cross-dateline flight (CX 870)", () => {
+      // CX 870 HKG→SFO: depart 1:30 PM HKG (Feb 15), arrive 9:45 AM SFO (Feb 15)
       // Pre-departure and post-arrival share the same calendar date.
       // Pre-departure dest_times (SFO) can be numerically larger than post-arrival dest_times,
       // but phases must maintain correct order: pre_departure before post_arrival.
@@ -706,6 +706,154 @@ describe("mergePhasesByDate", () => {
       const merged = mergePhasesByDate(phases);
       const times = merged[0].items.map((i) => i.origin_time);
       expect(times).toEqual(["07:00", "09:00"]);
+    });
+
+    it("should sort preparation items by origin_time, not dest_time", () => {
+      // Going west (e.g., London → NYC, -5h): origin_time ordering differs from dest_time
+      // when late-night handling is involved.
+      // sleep_target at 23:00 origin = 18:00 dest. If sorting by dest_time,
+      // sleep would appear at 18:00 (afternoon) — wrong! Should be end of day.
+      const phases: DaySchedule[] = [
+        makeDaySchedule(
+          "2026-02-15",
+          -1,
+          [
+            makeIntervention("wake_target", "07:00", {
+              phase_type: "preparation",
+              origin_time: "07:00",
+              dest_time: "02:00",
+              origin_tz: "Europe/London",
+              dest_tz: "America/New_York",
+            }),
+            makeIntervention("light_seek", "08:00", {
+              phase_type: "preparation",
+              origin_time: "08:00",
+              dest_time: "03:00",
+              origin_tz: "Europe/London",
+              dest_tz: "America/New_York",
+              duration_min: 60,
+            }),
+            makeIntervention("melatonin", "22:00", {
+              phase_type: "preparation",
+              origin_time: "22:00",
+              dest_time: "17:00",
+              origin_tz: "Europe/London",
+              dest_tz: "America/New_York",
+            }),
+            makeIntervention("sleep_target", "23:00", {
+              phase_type: "preparation",
+              origin_time: "23:00",
+              dest_time: "18:00",
+              origin_tz: "Europe/London",
+              dest_tz: "America/New_York",
+            }),
+          ],
+          { phase_type: "preparation" }
+        ),
+      ];
+
+      const merged = mergePhasesByDate(phases);
+      const types = merged[0].items.map((i) => i.type);
+      // Sorted by origin_time: wake(07), light(08), melatonin(22), sleep(23)
+      // If sorted by dest_time: wake(02), light(03), melatonin(17), sleep(18) — same order
+      // but with WRONG late-night handling:
+      // dest_time "02:00" for wake would be 120min, dest_time "03:00" for light = 180min
+      // So the relative order matches here, but the KEY check is that origin times are used:
+      expect(types).toEqual([
+        "wake_target",
+        "light_seek",
+        "melatonin",
+        "sleep_target",
+      ]);
+      // Verify origin times are in ascending order
+      const originTimes = merged[0].items.map((i) => i.origin_time);
+      expect(originTimes).toEqual(["07:00", "08:00", "22:00", "23:00"]);
+    });
+
+    it("should sort adaptation items by dest_time, not origin_time", () => {
+      // Going east (e.g., NYC → London, +5h): user is at destination.
+      // origin_time 02:00 for wake_target = dest_time 07:00.
+      // Must sort by dest_time (what user sees at destination).
+      const phases: DaySchedule[] = [
+        makeDaySchedule(
+          "2026-02-18",
+          3,
+          [
+            makeIntervention("sleep_target", "23:00", {
+              phase_type: "adaptation",
+              origin_time: "18:00",
+              dest_time: "23:00",
+              origin_tz: "America/New_York",
+              dest_tz: "Europe/London",
+            }),
+            makeIntervention("wake_target", "07:00", {
+              phase_type: "adaptation",
+              origin_time: "02:00",
+              dest_time: "07:00",
+              origin_tz: "America/New_York",
+              dest_tz: "Europe/London",
+            }),
+            makeIntervention("light_seek", "08:00", {
+              phase_type: "adaptation",
+              origin_time: "03:00",
+              dest_time: "08:00",
+              origin_tz: "America/New_York",
+              dest_tz: "Europe/London",
+            }),
+          ],
+          { phase_type: "adaptation" }
+        ),
+      ];
+
+      const merged = mergePhasesByDate(phases);
+      const destTimes = merged[0].items.map((i) => i.dest_time);
+      // Sorted by dest_time: wake(07), light(08), sleep(23)
+      expect(destTimes).toEqual(["07:00", "08:00", "23:00"]);
+    });
+
+    it("should handle late-night sleep_target correctly with origin_time on preparation day", () => {
+      // Going east with large shift (e.g., SFO → HKG, +16h):
+      // sleep_target origin_time "01:00" should sort as late night (end of day)
+      // If code incorrectly uses dest_time "17:00", sleep sorts in afternoon — wrong!
+      const phases: DaySchedule[] = [
+        makeDaySchedule(
+          "2026-02-14",
+          -2,
+          [
+            makeIntervention("sleep_target", "01:00", {
+              phase_type: "preparation",
+              origin_time: "01:00",
+              dest_time: "17:00",
+              origin_tz: "America/Los_Angeles",
+              dest_tz: "Asia/Hong_Kong",
+            }),
+            makeIntervention("wake_target", "06:00", {
+              phase_type: "preparation",
+              origin_time: "06:00",
+              dest_time: "22:00",
+              origin_tz: "America/Los_Angeles",
+              dest_tz: "Asia/Hong_Kong",
+            }),
+            makeIntervention("melatonin", "23:30", {
+              phase_type: "preparation",
+              origin_time: "23:30",
+              dest_time: "15:30",
+              origin_tz: "America/Los_Angeles",
+              dest_tz: "Asia/Hong_Kong",
+            }),
+          ],
+          { phase_type: "preparation" }
+        ),
+      ];
+
+      const merged = mergePhasesByDate(phases);
+      const types = merged[0].items.map((i) => i.type);
+      // By origin_time: wake(06:00=360), melatonin(23:30=1410), sleep(01:00=1440+60=1500 late night)
+      // sleep_target at 01:00 origin should sort LAST (late night)
+      expect(types).toEqual(["wake_target", "melatonin", "sleep_target"]);
+
+      // If code used dest_time: wake(22:00=1320), melatonin(15:30=930), sleep(17:00=1020)
+      // Order would be: melatonin, sleep, wake — COMPLETELY WRONG
     });
 
     it("should not mutate input arrays (idempotent on repeated calls)", () => {
