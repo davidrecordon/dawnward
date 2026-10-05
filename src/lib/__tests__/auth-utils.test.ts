@@ -54,6 +54,11 @@ describe("getSafeCallbackUrl", () => {
       expect(getSafeCallbackUrl("//evil.com/path")).toBe("/");
     });
 
+    it("blocks backslash variants browsers treat as protocol-relative", () => {
+      expect(getSafeCallbackUrl("/\\evil.com")).toBe("/");
+      expect(getSafeCallbackUrl("/\\/evil.com")).toBe("/");
+    });
+
     it("blocks absolute HTTP URLs", () => {
       expect(getSafeCallbackUrl("http://evil.com")).toBe("/");
       expect(getSafeCallbackUrl("http://evil.com/path")).toBe("/");

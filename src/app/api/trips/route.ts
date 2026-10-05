@@ -51,7 +51,7 @@ const tripRequestSchema = z.object({
   schedule_intensity: z
     .enum(["gentle", "balanced", "aggressive"])
     .default("balanced"),
-  route_label: z.string().optional(),
+  route_label: z.string().max(200).optional(),
 });
 
 /**
