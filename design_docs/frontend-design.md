@@ -93,13 +93,14 @@ background: linear-gradient(
 ```
 
 **Component Background Opacities:**
-| Component | Tailwind Classes |
-|-----------|------------------|
-| Header | `bg-white/70 backdrop-blur-sm` |
-| Main cards | `bg-white/90 backdrop-blur-sm rounded-xl shadow-sm border border-slate-200/50` |
-| Calendar sync card | `bg-white/50 border-2 border-dashed border-slate-200` |
-| "How it works" card | `bg-white/60 border border-purple-100` |
-| Footer | `bg-white/30 backdrop-blur-sm` |
+
+| Component           | Tailwind Classes                                                               |
+| ------------------- | ------------------------------------------------------------------------------ |
+| Header              | `bg-white/70 backdrop-blur-sm`                                                 |
+| Main cards          | `bg-white/90 backdrop-blur-sm rounded-xl shadow-sm border border-slate-200/50` |
+| Calendar sync card  | `bg-white/50 border-2 border-dashed border-slate-200`                          |
+| "How it works" card | `bg-white/60 border border-purple-100`                                         |
+| Footer              | `bg-white/30 backdrop-blur-sm`                                                 |
 
 **Hero Badge:**
 
@@ -112,18 +113,20 @@ background: linear-gradient(
 - Description: `text-xs text-slate-500 leading-relaxed`
 
 **Preference Toggle Backgrounds:**
-| Preference | Background | Icon Color |
-|------------|------------|------------|
-| Melatonin | `bg-emerald-50/80` | `text-emerald-600` |
-| Caffeine | `bg-orange-50/80` | `text-orange-600` |
-| Exercise | `bg-sky-50/80` | `text-sky-600` |
+
+| Preference | Background         | Icon Color         |
+| ---------- | ------------------ | ------------------ |
+| Melatonin  | `bg-emerald-50/80` | `text-emerald-600` |
+| Caffeine   | `bg-orange-50/80`  | `text-orange-600`  |
+| Exercise   | `bg-sky-50/80`     | `text-sky-600`     |
 
 **Trip Preview Stats Colors:**
-| Stat | Color |
-|------|-------|
-| Days before | `text-sky-600` |
+
+| Stat        | Color             |
+| ----------- | ----------------- |
+| Days before | `text-sky-600`    |
 | Flight time | `text-orange-600` |
-| Day after | `text-purple-600` |
+| Day after   | `text-purple-600` |
 
 ---
 
@@ -228,15 +231,16 @@ When multiple interventions occur at the same time as a `wake_target`, they disp
 - Only `wake_target` triggers nesting; other same-time items remain separate
 
 **Intervention types and icons:**
-| Type | Icon | Color | Example title |
-|------|------|-------|---------------|
-| Light seek | Sun | Sunrise/amber | "Seek bright light early" |
-| Light avoid | Glasses | Sky blue | "Avoid bright light" |
-| Caffeine window | Coffee | Sunset/orange | "Earlier coffee window" |
-| Caffeine cutoff | Coffee | Sunset/orange | "Last caffeine" |
-| Melatonin | Pill | Sage/green | "Take melatonin (0.5mg)" |
-| Sleep target | Moon | Night/purple | "Target sleep" |
-| Meal timing | Utensils | Rose/pink | "Light early dinner" |
+
+| Type            | Icon     | Color         | Example title             |
+| --------------- | -------- | ------------- | ------------------------- |
+| Light seek      | Sun      | Sunrise/amber | "Seek bright light early" |
+| Light avoid     | Glasses  | Sky blue      | "Avoid bright light"      |
+| Caffeine window | Coffee   | Sunset/orange | "Earlier coffee window"   |
+| Caffeine cutoff | Coffee   | Sunset/orange | "Last caffeine"           |
+| Melatonin       | Pill     | Sage/green    | "Take melatonin (0.5mg)"  |
+| Sleep target    | Moon     | Night/purple  | "Target sleep"            |
+| Meal timing     | Utensils | Rose/pink     | "Light early dinner"      |
 
 **Footer actions:**
 

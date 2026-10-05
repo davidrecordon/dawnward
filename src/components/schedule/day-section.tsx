@@ -85,8 +85,7 @@ type TimedItem =
 
 /** All items including transitions (used during rendering) */
 type ScheduleItem =
-  | TimedItem
-  | { kind: "timezone_transition"; fromTz: string; toTz: string };
+  TimedItem | { kind: "timezone_transition"; fromTz: string; toTz: string };
 
 /** Check if an item kind can have interventions (for sorting logic) */
 function isInterventionLike(kind: TimedItem["kind"]): boolean {

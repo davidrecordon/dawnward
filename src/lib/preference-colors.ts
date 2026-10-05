@@ -6,12 +6,7 @@
  */
 
 export type ColorScheme =
-  | "emerald"
-  | "orange"
-  | "sky"
-  | "purple"
-  | "amber"
-  | "violet";
+  "emerald" | "orange" | "sky" | "purple" | "amber" | "violet";
 
 export interface ColorSchemeStyles {
   bg: string;

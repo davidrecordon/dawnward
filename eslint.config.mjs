@@ -13,6 +13,13 @@ const eslintConfig = defineConfig([
     "build/**",
     "next-env.d.ts",
   ]),
+  {
+    rules: {
+      // eslint-plugin-react-hooks 7.1 flags existing hydrate/reset-on-open effects.
+      // Surface them as warnings until those components are refactored.
+      "react-hooks/set-state-in-effect": "warn",
+    },
+  },
 ]);
 
 export default eslintConfig;

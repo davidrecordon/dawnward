@@ -8,3 +8,4 @@ api/_python/.mypy_cache
 api/_python/.pytest_cache
 api/_python/__pycache__
 *.py
+design_docs/completed
