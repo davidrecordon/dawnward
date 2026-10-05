@@ -230,7 +230,7 @@ class TestGetAdaptationPlan:
         assert "shift_hours" in summary
         assert "key_advice" in summary
 
-    def test_respects_prep_days(self) -> None:
+    def test_respects_prep_days(self, frozen_time: None) -> None:
         """Plan should respect requested prep days."""
         result = get_adaptation_plan(
             {

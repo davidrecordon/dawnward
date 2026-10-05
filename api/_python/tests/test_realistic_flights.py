@@ -44,6 +44,10 @@ from circadian.types import ScheduleRequest, TripLeg
 # Use the phase-based scheduler (v2) which fixes flight timing issues
 ScheduleGenerator = ScheduleGeneratorV2
 
+# Flights are built relative to "now" but assertions assume winter UTC offsets,
+# so freeze the clock (Jan 1, 2026) to keep them valid year-round.
+pytestmark = pytest.mark.usefixtures("frozen_time")
+
 
 def make_flight_datetime(base_date: datetime, time_str: str, day_offset: int = 0) -> datetime:
     """Create a datetime from a base date, time string, and day offset."""
