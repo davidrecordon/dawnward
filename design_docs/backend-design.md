@@ -313,12 +313,13 @@ GET  /api/trips/[id]/feedback     → Get feedback if exists
 
 Public read-only endpoint at `POST /api/mcp`. No authentication required. Rate limit by IP (100 requests/hour).
 
-> **Implementation Note:** Uses JSON-RPC 2.0 protocol. See `src/app/api/mcp/route.ts` for the TypeScript handler and `src/lib/mcp/` for types and tool definitions.
+> **Implementation Note:** Streamable HTTP transport served by the official MCP TypeScript SDK (`@modelcontextprotocol/server` v2) in stateless mode. See `src/app/api/mcp/route.ts` for the route (rate limiting + CORS) and `src/lib/mcp/server.ts` for tool registration. Clients must send `Accept: application/json, text/event-stream`; responses may arrive as JSON or as a single SSE `message` event.
 
 ### Endpoint
 
 ```
-POST /api/mcp    → JSON-RPC 2.0 endpoint
+POST /api/mcp    → MCP Streamable HTTP endpoint (JSON-RPC 2.0 messages)
+GET/DELETE       → 405 (stateless; no session streams)
 ```
 
 **Methods:**
@@ -348,11 +349,12 @@ Request (tools/call):
     "arguments": {
       "origin_timezone": "America/Los_Angeles",
       "destination_timezone": "Asia/Tokyo",
-      "departure_datetime": "2026-02-15T11:30:00-08:00",
-      "prep_days_available": 3,
-      "uses_melatonin": true,
-      "uses_caffeine": true,
-      "usual_wake_time": "07:00"
+      "departure_datetime": "2026-02-15T11:30",
+      "arrival_datetime": "2026-02-16T15:45",
+      "prep_days": 3,
+      "usual_wake_time": "07:00",
+      "usual_sleep_time": "23:00",
+      "interventions": { "melatonin": true, "caffeine": true }
     }
   }
 }
@@ -368,7 +370,7 @@ Response:
     "content": [
       {
         "type": "text",
-        "text": "{\"total_shift_hours\": -8, \"direction\": \"advance\", ...}"
+        "text": "{\"summary\": {\"shift_hours\": 7, \"shift_direction\": \"delay\", ...}, \"days\": [...]}"
       }
     ]
   }

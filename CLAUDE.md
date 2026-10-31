@@ -351,7 +351,7 @@ interface Intervention {
 
 ### MCP Interface
 
-Public read-only JSON-RPC 2.0 endpoint at `POST /api/mcp` for AI assistants to query circadian science tools.
+Public read-only MCP Streamable HTTP endpoint at `POST /api/mcp` for AI assistants to query circadian science tools. Built on the official MCP TypeScript SDK (`@modelcontextprotocol/server` v2) in stateless mode: a fresh `McpServer` is created per request, so GET/DELETE session operations return 405.
 
 **Tools:**
 
@@ -360,16 +360,13 @@ Public read-only JSON-RPC 2.0 endpoint at `POST /api/mcp` for AI assistants to q
 
 **Rate limited:** 100 requests/hour per IP. No auth required.
 
-**Methods:**
-
-- `tools/list` - Return available tool definitions
-- `tools/call` - Execute a tool with arguments
+**Protocol handling** (initialize, ping, tools/list, tools/call, version negotiation) is done by the SDK. Tool input is validated against Zod schemas, which also generate the JSON Schema advertised by `tools/list`, so field `.describe()` text is what assistants see. Validation failures come back as tool results with `isError: true` (per MCP guidance) rather than JSON-RPC errors.
 
 **Files:**
 
-- `src/app/api/mcp/route.ts` - JSON-RPC handler (TypeScript)
-- `src/lib/mcp/types.ts` - Types and Zod schemas
-- `src/lib/mcp/tool-definitions.ts` - Tool JSON schemas
+- `src/app/api/mcp/route.ts` - Route handler: rate limiting + CORS around the SDK handler
+- `src/lib/mcp/server.ts` - `createDawnwardMcpServer()` factory, tool registration, Python tool client
+- `src/lib/mcp/types.ts` - Zod input schemas (single source of truth) and result types
 - `src/lib/rate-limiter.ts` - Sliding window rate limiter
 - `src/lib/ip-utils.ts` - IP extraction from headers
 - `api/mcp/tools.py` - Vercel Python endpoint (internal, called by route.ts)

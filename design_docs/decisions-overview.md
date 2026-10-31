@@ -130,7 +130,7 @@ Public, read-only circadian tools for Claude to answer jet lag questions in othe
 - **Hosting:** Part of main app (not standalone)
 - **Auth:** None required
 - **Rate limit:** By IP (100 requests/hour)
-- **Protocol:** JSON-RPC 2.0 at `POST /api/mcp`
+- **Protocol:** MCP Streamable HTTP at `POST /api/mcp`, served statelessly by the official `@modelcontextprotocol/server` SDK (chosen over Vercel's `mcp-handler`, which is a thin wrapper around the same SDK function)
 
 ### Implemented Tools
 

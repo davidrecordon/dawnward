@@ -129,7 +129,13 @@ design_docs/          # Specifications and design decisions
 
 Dawnward exposes a [Model Context Protocol](https://modelcontextprotocol.io/) (MCP) endpoint that allows AI assistants like Claude to answer jet lag questions using real circadian science.
 
-**Endpoint:** `POST https://dawnward.app/api/mcp`
+**Endpoint:** `POST https://dawnward.app/api/mcp` (MCP Streamable HTTP, no auth)
+
+Add it to any MCP client as a remote server URL, for example in Claude Code:
+
+```bash
+claude mcp add --transport http dawnward https://dawnward.app/api/mcp
+```
 
 ### Available Tools
 
@@ -143,6 +149,7 @@ Dawnward exposes a [Model Context Protocol](https://modelcontextprotocol.io/) (M
 ```bash
 curl -X POST https://dawnward.app/api/mcp \
   -H "Content-Type: application/json" \
+  -H "Accept: application/json, text/event-stream" \
   -d '{
     "jsonrpc": "2.0",
     "id": 1,
@@ -162,6 +169,7 @@ curl -X POST https://dawnward.app/api/mcp \
 ```bash
 curl -X POST https://dawnward.app/api/mcp \
   -H "Content-Type: application/json" \
+  -H "Accept: application/json, text/event-stream" \
   -d '{
     "jsonrpc": "2.0",
     "id": 2,
