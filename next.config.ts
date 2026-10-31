@@ -1,6 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // This project uses CLAUDE.md; do not generate AGENTS.md on `next dev`
+  agentRules: false,
   async headers() {
     return [
       {
